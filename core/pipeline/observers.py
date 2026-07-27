@@ -58,6 +58,7 @@ class ObserverContext:
     htf_context: Any
     runtime_session_id: str
     decision_funnel: Any
+    market_context: Any = None  # MarketContext object (optional, preferred over htf_context)
 
 
 # ─── OBSERVER REGISTRY ────────────────────────────────────────────────────────
@@ -73,6 +74,7 @@ class ObserverRegistry:
         4. Visibility layer — emit_visibility_trace
         5. Shadow rooms — run_shadow_rooms
         6. Decision trace — build + persist + funnel record
+        7. Strategy observer — strategy intelligence observation (read-only)
 
     Each observer is wrapped in try/except Exception: pass.
     Failure in one observer never blocks subsequent observers.
@@ -166,5 +168,18 @@ class ObserverRegistry:
             )
             persist_decision_trace(_trace)
             ctx.decision_funnel.record_trace(_trace)
+        except Exception:
+            pass
+
+        # ─── 7. Strategy observer: strategy intelligence observation ──
+        # READ ONLY. Evaluates which strategies match current context.
+        # Creates StrategyObservation records for research evidence.
+        # Never influences decisions. Never modifies engine_result.
+        # Failure here never affects trading pipeline.
+        try:
+            from core.strategies.strategy_intelligence_observer import (
+                observe_strategy_intelligence,
+            )
+            observe_strategy_intelligence(ctx)
         except Exception:
             pass

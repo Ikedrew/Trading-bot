@@ -1,16 +1,16 @@
 {
   "_meta": {
     "symbol": "EURUSD",
-    "saved_at_utc": "2026-07-27T18:43:20.333865+00:00",
-    "saved_at_unix": 1785177800.3338654
+    "saved_at_utc": "2026-07-27T23:31:51.793601+00:00",
+    "saved_at_unix": 1785195111.7936018
   },
-  "current_bias": "SELL",
-  "bias_phase": "CONFIRMED",
-  "bias_strength": 72.5,
+  "current_bias": "BUY",
+  "bias_phase": "FORMING",
+  "bias_strength": 35.0,
   "bias_age_seconds": 0.0,
   "bias_confirmation_score": 0.0,
-  "bias_confirmation_count": 5,
-  "bias_contradiction_count": 1,
+  "bias_confirmation_count": 1,
+  "bias_contradiction_count": 0,
   "last_strong_impulse_direction": null,
   "regime_state": "RANGING",
   "volatility_filter": 0.0,

@@ -1,16 +1,16 @@
 {
   "_meta": {
     "symbol": "NZDUSD",
-    "saved_at_utc": "2026-07-27T18:43:20.372377+00:00",
-    "saved_at_unix": 1785177800.3723772
+    "saved_at_utc": "2026-07-27T23:31:51.830418+00:00",
+    "saved_at_unix": 1785195111.8304188
   },
   "current_bias": "SELL",
   "bias_phase": "CONFIRMED",
-  "bias_strength": 68.0,
+  "bias_strength": 65.0,
   "bias_age_seconds": 300.0,
   "bias_confirmation_score": 0.0,
   "bias_confirmation_count": 5,
-  "bias_contradiction_count": 0,
+  "bias_contradiction_count": 1,
   "last_strong_impulse_direction": null,
   "regime_state": "RANGING",
   "volatility_filter": 0.0,

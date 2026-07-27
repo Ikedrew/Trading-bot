@@ -1,16 +1,16 @@
 {
   "_meta": {
     "symbol": "USDCHF",
-    "saved_at_utc": "2026-07-27T18:43:20.352888+00:00",
-    "saved_at_unix": 1785177800.3528886
+    "saved_at_utc": "2026-07-27T23:31:51.815434+00:00",
+    "saved_at_unix": 1785195111.8154342
   },
   "current_bias": "BUY",
   "bias_phase": "CONFIRMED",
-  "bias_strength": 100.0,
+  "bias_strength": 97.0,
   "bias_age_seconds": 1800.0,
   "bias_confirmation_score": 0.0,
   "bias_confirmation_count": 5,
-  "bias_contradiction_count": 0,
+  "bias_contradiction_count": 2,
   "last_strong_impulse_direction": null,
   "regime_state": "RANGING",
   "volatility_filter": 0.0,
