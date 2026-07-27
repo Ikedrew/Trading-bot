@@ -1,0 +1,20 @@
+{
+  "question_id": "Q8",
+  "question_name": "HTF Alignment Value",
+  "timestamp": "2026-07-21T22:40:45Z",
+  "dataset": {
+    "source": "decision_trace",
+    "sample_size": 4835
+  },
+  "metrics": {
+    "htf_mean": 0.506,
+    "h4_mean": 0.3232,
+    "n_traces": 4835
+  },
+  "finding": "HTF alignment mean=0.5060, H4 mean=0.3232",
+  "recommendation": {
+    "status": "COMPLETE",
+    "target": "context_weighting"
+  },
+  "data": {}
+}

@@ -1,0 +1,272 @@
+{
+  "generated": "2026-07-21T23:07:34Z",
+  "total_questions": 25,
+  "questions": {
+    "Q1": {
+      "question": "Which scoring components predict actual R-multiples?",
+      "priority": "P0",
+      "implementation_status": "ready",
+      "runner": "experiments.component_reward",
+      "last_run": "2026-07-21T22:40:39Z",
+      "recommendation": "WEIGHT_ADJUSTMENT",
+      "report_file": "analysis\\reports\\q1_component_reward.json",
+      "status": "COMPLETE"
+    },
+    "Q2": {
+      "question": "What is the optimal score threshold by regime?",
+      "priority": "P0",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:41Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q2_regime_threshold.json",
+      "status": "COMPLETE"
+    },
+    "Q3": {
+      "question": "Which terminal stages have the highest missed-opportunity cost?",
+      "priority": "P0",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:42Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q3_missed_opportunity.json",
+      "status": "COMPLETE"
+    },
+    "Q4": {
+      "question": "Is the engine's confidence calibrated?",
+      "priority": "P0",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:43Z",
+      "recommendation": "PROMOTE_CALIBRATION",
+      "report_file": "analysis\\reports\\q4_confidence_calibration.json",
+      "status": "COMPLETE"
+    },
+    "Q5": {
+      "question": "What patterns degrade over time?",
+      "priority": "P0",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:43Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q5_pattern_degradation.json",
+      "status": "COMPLETE"
+    },
+    "Q6": {
+      "question": "Does the regime classifier agree with realised outcomes?",
+      "priority": "P1",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:44Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q6_regime_accuracy.json",
+      "status": "COMPLETE"
+    },
+    "Q7": {
+      "question": "Which sessions produce the best edge?",
+      "priority": "P1",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:44Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q7_session_edge.json",
+      "status": "COMPLETE"
+    },
+    "Q8": {
+      "question": "How does HTF alignment affect outcomes?",
+      "priority": "P1",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:45Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q8_htf_alignment_value.json",
+      "status": "COMPLETE"
+    },
+    "Q9": {
+      "question": "What spread/volatility conditions produce the best fills?",
+      "priority": "P1",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:49Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q9_spread_fill_quality.json",
+      "status": "COMPLETE"
+    },
+    "Q10": {
+      "question": "Are guard rejections improving or degrading system performance?",
+      "priority": "P1",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:52Z",
+      "recommendation": "INSUFFICIENT_DATA",
+      "report_file": "analysis\\reports\\q10_guard_efficacy.json",
+      "status": "COMPLETE"
+    },
+    "Q11": {
+      "question": "What is the true slippage model per symbol per session?",
+      "priority": "P2",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:53Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q11_slippage_model.json",
+      "status": "COMPLETE"
+    },
+    "Q12": {
+      "question": "Is the broker rejecting orders in predictable patterns?",
+      "priority": "P2",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:53Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q12_broker_reliability.json",
+      "status": "COMPLETE"
+    },
+    "Q13": {
+      "question": "What is the optimal trade duration?",
+      "priority": "P2",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:53Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q13_optimal_duration.json",
+      "status": "COMPLETE"
+    },
+    "Q14": {
+      "question": "What causal chains produce the best trades?",
+      "priority": "P3",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:53Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q14_causal_chains.json",
+      "status": "COMPLETE"
+    },
+    "Q15": {
+      "question": "How does the engine learn over time?",
+      "priority": "P3",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:53Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q15_learning_velocity.json",
+      "status": "COMPLETE"
+    },
+    "Q16": {
+      "question": "What is the correlation between shadow and live outcomes?",
+      "priority": "P0",
+      "implementation_status": "blocked",
+      "runner": "experiments.shadow_validation",
+      "last_run": "2026-07-21T22:40:40Z",
+      "recommendation": "BLOCKED",
+      "report_file": "analysis\\reports\\q16_shadow_validation.json",
+      "status": "COMPLETE"
+    },
+    "Q17": {
+      "question": "What market conditions precede system drawdowns?",
+      "priority": "P3",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:53Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q17_drawdown_precursors.json",
+      "status": "COMPLETE"
+    },
+    "Q18": {
+      "question": "Are there symbols that should be removed or added?",
+      "priority": "P3",
+      "implementation_status": "not_implemented",
+      "runner": "not_implemented",
+      "last_run": "2026-07-21T22:40:53Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q18_symbol_universe.json",
+      "status": "COMPLETE"
+    },
+    "Q19": {
+      "question": "What is the system's true edge expressed as expected value?",
+      "priority": "P0",
+      "implementation_status": "ready",
+      "runner": "experiments.expected_value",
+      "last_run": "2026-07-21T22:40:40Z",
+      "recommendation": "POSITIVE_EDGE",
+      "report_file": "analysis\\reports\\q19_expected_value.json",
+      "status": "COMPLETE"
+    },
+    "Q20": {
+      "question": "Is score calibrated to observed outcomes?",
+      "priority": "P0",
+      "implementation_status": "ready",
+      "runner": "experiments.score_calibration",
+      "last_run": "2026-07-21T22:40:41Z",
+      "recommendation": "PROMOTE_CALIBRATION",
+      "report_file": "analysis\\reports\\q20_score_calibration.json",
+      "status": "COMPLETE"
+    },
+    "Q21": {
+      "question": "Does calibrated probability improve EV decisions?",
+      "priority": "P0",
+      "implementation_status": "ready",
+      "runner": "experiments.research_runner",
+      "last_run": "2026-07-21T22:40:54Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q21_calibration_ev_impact.json",
+      "status": "COMPLETE"
+    },
+    "Q22": {
+      "question": "What EV threshold maximises expectancy?",
+      "priority": "P0",
+      "implementation_status": "ready",
+      "runner": "experiments.research_runner",
+      "last_run": "2026-07-21T22:40:54Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q22_ev_threshold.json",
+      "status": "COMPLETE"
+    },
+    "Q23": {
+      "question": "Which regimes actually produce edge?",
+      "priority": "P1",
+      "implementation_status": "ready",
+      "runner": "experiments.research_runner",
+      "last_run": "2026-07-21T22:40:55Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q23_regime_edge.json",
+      "status": "COMPLETE"
+    },
+    "Q24": {
+      "question": "Which strategies contain real expectancy?",
+      "priority": "P1",
+      "implementation_status": "ready",
+      "runner": "experiments.research_runner",
+      "last_run": "2026-07-21T22:40:55Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q24_strategy_edge.json",
+      "status": "COMPLETE"
+    },
+    "Q25": {
+      "question": "Where does the bot perform best (symbol/session)?",
+      "priority": "P1",
+      "implementation_status": "ready",
+      "runner": "experiments.research_runner",
+      "last_run": "2026-07-21T22:40:56Z",
+      "recommendation": "COMPLETE",
+      "report_file": "analysis\\reports\\q25_symbol_session_edge.json",
+      "status": "COMPLETE"
+    }
+  },
+  "summary": {
+    "complete": 25,
+    "ready": 0,
+    "blocked": 0,
+    "not_implemented": 0
+  },
+  "audit_verification": {
+    "timestamp": "2026-07-21T23:07:34Z",
+    "verified_status": {
+      "IMPLEMENTED": 3,
+      "DATA_AVAILABLE": 0,
+      "ANALYSIS_COMPLETE": 18,
+      "PROMOTION_READY": 4,
+      "WAITING_FOR_DATA": 0
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "question_id": "Q3",
+  "question_name": "Missed Opportunity",
+  "timestamp": "2026-07-21T22:40:42Z",
+  "dataset": {
+    "source": "decision_trace",
+    "sample_size": 4531
+  },
+  "metrics": {
+    "rejection_stages": {
+      "ev_policy": 3109,
+      "swing": 1077,
+      "scoring": 231,
+      "unknown": 114
+    },
+    "top_reasons": {
+      "ev_policy_blocked: NEGATIVE_EXPECTED_VALUE": 3088,
+      "swing_blocked: swing_direction_bullish (SELL block": 546,
+      "swing_blocked: swing_direction_bearish (BUY blocke": 424,
+      "": 114,
+      "swing_blocked: swing_structure_not_broken (reversa": 56,
+      "swing_blocked: h1_swing_bearish (BUY blocked witho": 22,
+      "swing_blocked: h1_swing_bullish (SELL blocked with": 21,
+      "ev_policy_blocked: RR_BELOW_THRESHOLD": 21,
+      "score_below_threshold (0.328 < 0.35)": 9,
+      "swing_blocked: h1_bos_not_confirmed (reversal requ": 8
+    },
+    "total_rejected": 4531
+  },
+  "finding": "4531 trades rejected. Top stage: ev_policy",
+  "recommendation": {
+    "status": "COMPLETE",
+    "target": "filter_review"
+  },
+  "data": {}
+}

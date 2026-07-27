@@ -1,0 +1,23 @@
+{
+  "question_id": "Q6",
+  "question_name": "Regime Accuracy",
+  "timestamp": "2026-07-21T22:40:44Z",
+  "dataset": {
+    "source": "decision_trace+shadow",
+    "sample_size": 1220
+  },
+  "metrics": {
+    "regime_distribution": {
+      "TRANSITIONAL": 4138,
+      "RANGE": 558,
+      "TRENDING": 25
+    },
+    "total_traces": 4835
+  },
+  "finding": "Regime distribution: {'TRANSITIONAL': 4138, 'RANGE': 558, 'TRENDING': 25}",
+  "recommendation": {
+    "status": "COMPLETE",
+    "target": "regime_model"
+  },
+  "data": {}
+}

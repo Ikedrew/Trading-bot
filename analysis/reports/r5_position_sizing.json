@@ -1,0 +1,114 @@
+{
+  "question_id": "R5",
+  "status": "COMPLETE",
+  "overall": {
+    "kelly_fraction": 0.2626,
+    "best_model": "Fixed 0.5%",
+    "best_risk_fraction": 0.005,
+    "models": [
+      {
+        "model": "Fixed 0.5%",
+        "risk_fraction": 0.005,
+        "final_equity": 201733.43,
+        "total_return_pct": 1917.33,
+        "cagr_pct": 131.7,
+        "max_drawdown_pct": 46.27,
+        "volatility": 0.0092,
+        "sharpe_approx": 584.88,
+        "acceptable_dd": false
+      },
+      {
+        "model": "Fixed 1%",
+        "risk_fraction": 0.01,
+        "final_equity": 3780325.09,
+        "total_return_pct": 37703.25,
+        "cagr_pct": 425.9,
+        "max_drawdown_pct": 71.32,
+        "volatility": 0.0183,
+        "sharpe_approx": 5750.63,
+        "acceptable_dd": false
+      },
+      {
+        "model": "Fixed 2%",
+        "risk_fraction": 0.02,
+        "final_equity": 1071737311.6,
+        "total_return_pct": 10717273.12,
+        "cagr_pct": 2451.89,
+        "max_drawdown_pct": 91.98,
+        "volatility": 0.0367,
+        "sharpe_approx": 817317.06,
+        "acceptable_dd": false
+      },
+      {
+        "model": "Full Kelly (26.26%)",
+        "risk_fraction": 0.2626,
+        "final_equity": 1.2085741912861358e+49,
+        "total_return_pct": 1.2085741912861359e+47,
+        "cagr_pct": 406468129530035.5,
+        "max_drawdown_pct": 100.0,
+        "volatility": 0.4815,
+        "sharpe_approx": 7.0209556729900964e+44,
+        "acceptable_dd": false
+      },
+      {
+        "model": "Half Kelly (13.13%)",
+        "risk_fraction": 0.1313,
+        "final_equity": 1.0327766820219117e+30,
+        "total_return_pct": 1.0327766820219118e+28,
+        "cagr_pct": 1887285102.44,
+        "max_drawdown_pct": 100.0,
+        "volatility": 0.2407,
+        "sharpe_approx": 1.1999394587198995e+26,
+        "acceptable_dd": false
+      },
+      {
+        "model": "Quarter Kelly (6.56%)",
+        "risk_fraction": 0.0656,
+        "final_equity": 6.131225740995291e+18,
+        "total_return_pct": 6.131225740995282e+16,
+        "cagr_pct": 1367369.92,
+        "max_drawdown_pct": 99.98,
+        "volatility": 0.1204,
+        "sharpe_approx": 1424722270556317.8,
+        "acceptable_dd": false
+      }
+    ]
+  },
+  "confidence": "HIGH",
+  "dataset": {
+    "total_records": 901,
+    "r_multiples_used": 901,
+    "win_rate": 0.4584,
+    "avg_win_r": 2.2978,
+    "avg_loss_r": 0.8308,
+    "coverage": {
+      "outcome": 1.0,
+      "lineage": 0.07769145394006659,
+      "strategy": 0.12763596004439512,
+      "contamination_rate": 0.34517203107658156,
+      "sample_size": 901.0
+    }
+  },
+  "fingerprint": {
+    "dataset_id": "shadow_trades_2026-07-27",
+    "records_used": 901,
+    "records_excluded": 0,
+    "source": "shadow_trades",
+    "validation_score": "UNKNOWN",
+    "generated": "2026-07-27"
+  },
+  "recommendation": "PROMOTE",
+  "assumptions": [
+    "Starting equity: $10000",
+    "Max acceptable DD: 30%",
+    "Sequential replay of observed R distribution"
+  ],
+  "warnings": [],
+  "generated": "2026-07-27T04:26:02Z",
+  "provenance": {
+    "experiment_module": "research_engine.experiments.position_sizing",
+    "registry_id": "R5",
+    "function": "run_position_sizing",
+    "pipeline": "Question \u2192 Experiment \u2192 Dataset \u2192 Output \u2192 Knowledge \u2192 Command Centre"
+  }
+}

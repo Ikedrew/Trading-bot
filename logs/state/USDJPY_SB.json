@@ -1,0 +1,21 @@
+{
+  "_meta": {
+    "symbol": "USDJPY_SB",
+    "saved_at_utc": "2026-07-03T12:22:43.337461+00:00",
+    "saved_at_unix": 1783081363.337461
+  },
+  "current_bias": "SELL",
+  "bias_phase": "FORMING",
+  "bias_strength": 36.5,
+  "bias_age_seconds": 900.0,
+  "bias_confirmation_score": 0.0,
+  "bias_confirmation_count": 2,
+  "bias_contradiction_count": 0,
+  "last_strong_impulse_direction": null,
+  "regime_state": "RANGING",
+  "volatility_filter": 0.0,
+  "last_successful_open_mono": null,
+  "structure_score": 0.0,
+  "structure_regime": "WEAK",
+  "last_failed_setups": []
+}

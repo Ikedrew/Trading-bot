@@ -1,0 +1,27 @@
+{
+  "version": "calibration_v1",
+  "generated": "2026-07-21T22:40:41Z",
+  "source_question": "Q20",
+  "status": "RESEARCH_ARTIFACT",
+  "note": "This artifact does NOT alter runtime behaviour. It records the calibration curve for future promotion.",
+  "mapping": [
+    {
+      "score_min": 0.4,
+      "score_max": 0.5,
+      "probability": 0.3038,
+      "sample_size": 79
+    },
+    {
+      "score_min": 0.5,
+      "score_max": 0.6,
+      "probability": 0.3939,
+      "sample_size": 99
+    },
+    {
+      "score_min": 0.6,
+      "score_max": 0.7,
+      "probability": 0.4545,
+      "sample_size": 33
+    }
+  ]
+}

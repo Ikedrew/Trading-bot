@@ -1,0 +1,69 @@
+{
+  "question_id": "Q5",
+  "question_name": "Pattern Degradation",
+  "timestamp": "2026-07-21T22:40:43Z",
+  "dataset": {
+    "source": "shadow_trades",
+    "sample_size": 1220
+  },
+  "metrics": {
+    "pattern_performance": {
+      "TWEEZER_TOP": {
+        "n": 254,
+        "wr": 0.5433,
+        "avg_r": 0.1401
+      },
+      "THREE_WHITE_SOLDIERS": {
+        "n": 126,
+        "wr": 0.0079,
+        "avg_r": -0.9673
+      },
+      "THREE_BLACK_CROWS": {
+        "n": 205,
+        "wr": 0.0195,
+        "avg_r": -0.9451
+      },
+      "TWEEZER_BOTTOM": {
+        "n": 168,
+        "wr": 0.3571,
+        "avg_r": -0.1478
+      },
+      "MORNING_STAR": {
+        "n": 63,
+        "wr": 0.3968,
+        "avg_r": 0.0249
+      },
+      "THREE_INSIDE_DOWN": {
+        "n": 29,
+        "wr": 0.4828,
+        "avg_r": -0.1037
+      },
+      "EVENING_STAR": {
+        "n": 27,
+        "wr": 0.4444,
+        "avg_r": -0.0578
+      },
+      "BEARISH_ENGULFING": {
+        "n": 6,
+        "wr": 0.0,
+        "avg_r": -1.0
+      },
+      "BULLISH_ENGULFING": {
+        "n": 8,
+        "wr": 0.0,
+        "avg_r": -1.0
+      },
+      "HAMMER": {
+        "n": 5,
+        "wr": 0.6,
+        "avg_r": -0.1646
+      }
+    }
+  },
+  "finding": "10 patterns analysed from 1220 trades",
+  "recommendation": {
+    "status": "COMPLETE",
+    "target": "pattern_weights"
+  },
+  "data": {}
+}

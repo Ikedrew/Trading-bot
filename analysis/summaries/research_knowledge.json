@@ -1,0 +1,58 @@
+{
+  "generated": "2026-07-21T23:07:34Z",
+  "confirmed_facts": [
+    "Q1: Scoring component weights could be improved (best predictor identified)",
+    "Q2: Analysis complete \u2014 COMPLETE",
+    "Q3: Analysis complete \u2014 COMPLETE",
+    "Q4: Score calibration is needed (monotonic but miscalibrated by 15pp)",
+    "Q5: Analysis complete \u2014 COMPLETE",
+    "Q6: Analysis complete \u2014 COMPLETE",
+    "Q7: Analysis complete \u2014 COMPLETE",
+    "Q8: Analysis complete \u2014 COMPLETE",
+    "Q9: Analysis complete \u2014 COMPLETE",
+    "Q10: Analysis complete \u2014 INSUFFICIENT_DATA",
+    "Q11: Analysis complete \u2014 COMPLETE",
+    "Q13: Analysis complete \u2014 COMPLETE",
+    "Q16: Analysis complete \u2014 BLOCKED",
+    "Q17: Analysis complete \u2014 COMPLETE",
+    "Q18: Analysis complete \u2014 COMPLETE",
+    "Q19: System has positive expected value (+0.55R per shadow trade)",
+    "Q20: Score calibration is needed (monotonic but miscalibrated by 15pp)",
+    "Q21: Analysis complete \u2014 COMPLETE",
+    "Q22: Analysis complete \u2014 COMPLETE",
+    "Q23: Analysis complete \u2014 COMPLETE",
+    "Q24: Analysis complete \u2014 COMPLETE",
+    "Q25: Analysis complete \u2014 COMPLETE",
+    "ARCH: H4 owns regime classification (100% authority post-migration)",
+    "ARCH: H1 owns structural direction + BOS (positioned before scoring)",
+    "ARCH: M15 owns setup quality (market_quality + chop_clarity)",
+    "ARCH: M5 owns execution timing only (pattern, confirmation, bias FSM)",
+    "ARCH: Score is monotonically related to win probability (validated by Q20)",
+    "ARCH: ProbabilityEstimator interface separates probability from EV",
+    "ARCH: ScoreCalibrator ready for empirical mapping (currently identity_v1)",
+    "R3: Probability of ruin 0.00% is below 5% threshold. System survival acceptable.",
+    "R4: Recommended halt at 50% DD. Max observed DD: 108.3%. Avg recovery: 89.6 trades.",
+    "R5: Best sizing: Fixed 0.5% (return 1917.3%, DD 46.3%). Kelly=26.26%.",
+    "M9: Best combination: TWEEZER_BOTTOM in REVERSAL (EV=+0.0983R, n=37, MEDIUM). Analysed 22 phase\u00d7pattern cells from 728 trades.",
+    "M10: Interaction detected but no HIGH/MEDIUM confidence positive EV cell. Different phases favour different families: {'CONSOLIDATION': 'CONTINUATION', 'PULLBACK': 'REVERSAL', 'REVERSAL': 'REVERSAL', 'EXHAUSTION': 'REVERSAL', 'IMPULSE': 'REVERSAL'}. Need more data per cell."
+  ],
+  "rejected_hypotheses": [
+    "REJECTED: strategy_confidence is a valid probability input (always 0 in 98% of decisions)",
+    "REJECTED: M5 can determine market regime (collapsed to 99% TRANSITIONAL)",
+    "REJECTED: M5 can determine structural phase (now owned by H1)"
+  ],
+  "pending_questions": [],
+  "next_experiments": [
+    "NEXT: Apply empirical calibration curve to ScoreCalibrator (Q20 recommends PROMOTE)",
+    "NEXT: Run bot live to generate trade_truth for Q16 shadow validation",
+    "NEXT: Implement pattern-conditional probability (after calibration validated)"
+  ],
+  "data_foundation": {
+    "decision_trace": 4836,
+    "shadow_trades": 1232,
+    "trade_truth": 35,
+    "decision_ledger": 8155,
+    "execution_context": 14189
+  },
+  "last_updated": "2026-07-27T19:19:59Z"
+}

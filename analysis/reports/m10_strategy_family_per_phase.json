@@ -1,0 +1,227 @@
+{
+  "question_id": "M10",
+  "status": "COMPLETE",
+  "overall": {
+    "total_analysed": 728,
+    "cells_reported": 9,
+    "family_distribution": {
+      "CONTINUATION": 229,
+      "REVERSAL": 486,
+      "BREAKOUT": 13
+    },
+    "family_summaries": {
+      "REVERSAL": {
+        "n": 486,
+        "ev": -0.0607,
+        "win_rate": 0.4074,
+        "phases_present": 5
+      },
+      "CONTINUATION": {
+        "n": 229,
+        "ev": -0.2041,
+        "win_rate": 0.2707,
+        "phases_present": 5
+      },
+      "BREAKOUT": {
+        "n": 13,
+        "ev": 0.3183,
+        "win_rate": 0.9231,
+        "phases_present": 4
+      }
+    },
+    "best_family_per_phase": {
+      "CONSOLIDATION": {
+        "phase": "CONSOLIDATION",
+        "family": "CONTINUATION",
+        "n": 58,
+        "ev": -0.0419,
+        "win_rate": 0.3793,
+        "avg_mfe": 0.2999,
+        "avg_mae": 0.3667,
+        "directional_pct": 0.3448,
+        "confidence": "HIGH"
+      },
+      "PULLBACK": {
+        "phase": "PULLBACK",
+        "family": "REVERSAL",
+        "n": 94,
+        "ev": -0.0397,
+        "win_rate": 0.4255,
+        "avg_mfe": 0.2868,
+        "avg_mae": 0.3261,
+        "directional_pct": 0.4043,
+        "confidence": "HIGH"
+      },
+      "REVERSAL": {
+        "phase": "REVERSAL",
+        "family": "REVERSAL",
+        "n": 109,
+        "ev": -0.0191,
+        "win_rate": 0.5046,
+        "avg_mfe": 0.5006,
+        "avg_mae": 0.5739,
+        "directional_pct": 0.5321,
+        "confidence": "HIGH"
+      },
+      "EXHAUSTION": {
+        "phase": "EXHAUSTION",
+        "family": "REVERSAL",
+        "n": 24,
+        "ev": -0.0245,
+        "win_rate": 0.3333,
+        "avg_mfe": 0.1812,
+        "avg_mae": 0.2979,
+        "directional_pct": 0.3333,
+        "confidence": "LOW"
+      },
+      "IMPULSE": {
+        "phase": "IMPULSE",
+        "family": "REVERSAL",
+        "n": 154,
+        "ev": -0.1117,
+        "win_rate": 0.3571,
+        "avg_mfe": 0.2823,
+        "avg_mae": 0.4655,
+        "directional_pct": 0.3701,
+        "confidence": "HIGH"
+      }
+    },
+    "all_cells": [
+      {
+        "phase": "REVERSAL",
+        "family": "REVERSAL",
+        "n": 109,
+        "ev": -0.0191,
+        "win_rate": 0.5046,
+        "avg_mfe": 0.5006,
+        "avg_mae": 0.5739,
+        "directional_pct": 0.5321,
+        "confidence": "HIGH"
+      },
+      {
+        "phase": "EXHAUSTION",
+        "family": "REVERSAL",
+        "n": 24,
+        "ev": -0.0245,
+        "win_rate": 0.3333,
+        "avg_mfe": 0.1812,
+        "avg_mae": 0.2979,
+        "directional_pct": 0.3333,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "PULLBACK",
+        "family": "REVERSAL",
+        "n": 94,
+        "ev": -0.0397,
+        "win_rate": 0.4255,
+        "avg_mfe": 0.2868,
+        "avg_mae": 0.3261,
+        "directional_pct": 0.4043,
+        "confidence": "HIGH"
+      },
+      {
+        "phase": "CONSOLIDATION",
+        "family": "CONTINUATION",
+        "n": 58,
+        "ev": -0.0419,
+        "win_rate": 0.3793,
+        "avg_mfe": 0.2999,
+        "avg_mae": 0.3667,
+        "directional_pct": 0.3448,
+        "confidence": "HIGH"
+      },
+      {
+        "phase": "CONSOLIDATION",
+        "family": "REVERSAL",
+        "n": 105,
+        "ev": -0.0561,
+        "win_rate": 0.381,
+        "avg_mfe": 0.2161,
+        "avg_mae": 0.3918,
+        "directional_pct": 0.1714,
+        "confidence": "HIGH"
+      },
+      {
+        "phase": "PULLBACK",
+        "family": "CONTINUATION",
+        "n": 42,
+        "ev": -0.1012,
+        "win_rate": 0.3571,
+        "avg_mfe": 0.2549,
+        "avg_mae": 0.3779,
+        "directional_pct": 0.4286,
+        "confidence": "MEDIUM"
+      },
+      {
+        "phase": "IMPULSE",
+        "family": "REVERSAL",
+        "n": 154,
+        "ev": -0.1117,
+        "win_rate": 0.3571,
+        "avg_mfe": 0.2823,
+        "avg_mae": 0.4655,
+        "directional_pct": 0.3701,
+        "confidence": "HIGH"
+      },
+      {
+        "phase": "REVERSAL",
+        "family": "CONTINUATION",
+        "n": 38,
+        "ev": -0.1331,
+        "win_rate": 0.3158,
+        "avg_mfe": 0.9418,
+        "avg_mae": 1.0107,
+        "directional_pct": 0.4474,
+        "confidence": "MEDIUM"
+      },
+      {
+        "phase": "IMPULSE",
+        "family": "CONTINUATION",
+        "n": 83,
+        "ev": -0.3992,
+        "win_rate": 0.1566,
+        "avg_mfe": 0.9227,
+        "avg_mae": 0.6624,
+        "directional_pct": 0.4699,
+        "confidence": "HIGH"
+      }
+    ],
+    "interaction_detected": true,
+    "interaction_description": "Different phases favour different families: {'CONSOLIDATION': 'CONTINUATION', 'PULLBACK': 'REVERSAL', 'REVERSAL': 'REVERSAL', 'EXHAUSTION': 'REVERSAL', 'IMPULSE': 'REVERSAL'}",
+    "missing_families": [],
+    "finding": "Interaction detected but no HIGH/MEDIUM confidence positive EV cell. Different phases favour different families: {'CONSOLIDATION': 'CONTINUATION', 'PULLBACK': 'REVERSAL', 'REVERSAL': 'REVERSAL', 'EXHAUSTION': 'REVERSAL', 'IMPULSE': 'REVERSAL'}. Need more data per cell."
+  },
+  "confidence": "HIGH",
+  "dataset": {
+    "source": "shadow_trades_current_epoch",
+    "sample_size": 728,
+    "total_current": 772,
+    "family_mapping_version": "1.0",
+    "families_classified": 14
+  },
+  "fingerprint": {
+    "dataset_id": "shadow_trades_current_2026-07-27",
+    "records_used": 728,
+    "records_excluded": 44,
+    "source": "shadow_trades_current",
+    "validation_score": "UNKNOWN",
+    "generated": "2026-07-27"
+  },
+  "recommendation": "WAIT",
+  "assumptions": [
+    "Pattern \u2192 family mapping is fixed (see STRATEGY_FAMILIES dict)",
+    "Uses CURRENT-epoch data only (post-lineage migration)",
+    "Minimum 10 trades per phase\u00d7family cell",
+    "Interaction = best family differs across phases",
+    "BREAKOUT family has limited representation (only engulfing patterns)"
+  ],
+  "warnings": [],
+  "generated": "2026-07-27T19:19:59Z",
+  "provenance": {
+    "experiment_module": "research_engine.experiments.m10_strategy_family_per_phase",
+    "registry_id": "M10",
+    "function": "run_m10_strategy_family_per_phase",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "question_id": "Q4",
+  "question_name": "Confidence Calibration",
+  "timestamp": "2026-07-21T22:40:43Z",
+  "dataset": {
+    "source": "decision_trace+shadow_trades",
+    "sample_size": 1220
+  },
+  "metrics": {
+    "predicted_p": 0.2258,
+    "actual_wr": 0.4803,
+    "calibration_error": 0.2545,
+    "n_traces": 3413
+  },
+  "finding": "Predicted p=0.226 vs actual WR=0.480. Error=0.255",
+  "recommendation": {
+    "status": "PROMOTE_CALIBRATION",
+    "target": "probability_model"
+  },
+  "data": {}
+}

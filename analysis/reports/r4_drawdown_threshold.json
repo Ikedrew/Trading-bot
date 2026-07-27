@@ -1,0 +1,111 @@
+{
+  "question_id": "R4",
+  "status": "COMPLETE",
+  "overall": {
+    "recommended_halt_threshold": 0.5,
+    "resume_threshold": 0.25,
+    "max_observed_drawdown": 1.0832,
+    "avg_drawdown": 0.1389,
+    "avg_recovery_trades": 89.6,
+    "max_recovery_trades": 337,
+    "recovery_analysis": [
+      {
+        "threshold": 0.05,
+        "breaches": 3,
+        "recoveries": 2,
+        "recovery_probability": 0.6667,
+        "avg_recovery_trades": 115.0,
+        "recommendation": "MONITOR"
+      },
+      {
+        "threshold": 0.1,
+        "breaches": 2,
+        "recoveries": 1,
+        "recovery_probability": 0.5,
+        "avg_recovery_trades": 169.0,
+        "recommendation": "MONITOR"
+      },
+      {
+        "threshold": 0.15,
+        "breaches": 1,
+        "recoveries": 1,
+        "recovery_probability": 1.0,
+        "avg_recovery_trades": 164.0,
+        "recommendation": "CONTINUE"
+      },
+      {
+        "threshold": 0.2,
+        "breaches": 1,
+        "recoveries": 1,
+        "recovery_probability": 1.0,
+        "avg_recovery_trades": 159.0,
+        "recommendation": "CONTINUE"
+      },
+      {
+        "threshold": 0.25,
+        "breaches": 1,
+        "recoveries": 1,
+        "recovery_probability": 1.0,
+        "avg_recovery_trades": 154.0,
+        "recommendation": "CONTINUE"
+      },
+      {
+        "threshold": 0.3,
+        "breaches": 1,
+        "recoveries": 1,
+        "recovery_probability": 1.0,
+        "avg_recovery_trades": 149.0,
+        "recommendation": "CONTINUE"
+      },
+      {
+        "threshold": 0.4,
+        "breaches": 1,
+        "recoveries": 1,
+        "recovery_probability": 1.0,
+        "avg_recovery_trades": 132.0,
+        "recommendation": "CONTINUE"
+      },
+      {
+        "threshold": 0.5,
+        "breaches": 1,
+        "recoveries": 1,
+        "recovery_probability": 1.0,
+        "avg_recovery_trades": 95.0,
+        "recommendation": "CONTINUE"
+      }
+    ]
+  },
+  "confidence": "MEDIUM",
+  "dataset": {
+    "total_records": 901,
+    "r_multiples_used": 901,
+    "coverage": {
+      "outcome": 1.0,
+      "lineage": 0.07769145394006659,
+      "strategy": 0.12763596004439512,
+      "contamination_rate": 0.34517203107658156,
+      "sample_size": 901.0
+    }
+  },
+  "fingerprint": {
+    "dataset_id": "shadow_trades_2026-07-27",
+    "records_used": 901,
+    "records_excluded": 0,
+    "source": "shadow_trades",
+    "validation_score": "UNKNOWN",
+    "generated": "2026-07-27"
+  },
+  "recommendation": "PROMOTE",
+  "assumptions": [
+    "Risk per trade: 1.0%",
+    "Sequential simulation of observed R-multiples"
+  ],
+  "warnings": [],
+  "generated": "2026-07-27T04:26:01Z",
+  "provenance": {
+    "experiment_module": "research_engine.experiments.drawdown_threshold",
+    "registry_id": "R4",
+    "function": "run_drawdown_threshold",
+    "pipeline": "Question \u2192 Experiment \u2192 Dataset \u2192 Output \u2192 Knowledge \u2192 Command Centre"
+  }
+}

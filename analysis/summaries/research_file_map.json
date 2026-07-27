@@ -1,0 +1,90 @@
+{
+  "generated": "2026-07-21T23:30:00Z",
+  "purpose": "Documents all Research Engine output locations in the repository",
+
+  "reports": [
+    {"path": "analysis/reports/q1_component_reward.json", "question": "Q1", "purpose": "Component → R correlation"},
+    {"path": "analysis/reports/q2_regime_threshold.json", "question": "Q2", "purpose": "Regime-adaptive threshold"},
+    {"path": "analysis/reports/q3_missed_opportunity.json", "question": "Q3", "purpose": "Missed opportunity cost"},
+    {"path": "analysis/reports/q4_confidence_calibration.json", "question": "Q4", "purpose": "Confidence calibration"},
+    {"path": "analysis/reports/q5_pattern_degradation.json", "question": "Q5", "purpose": "Pattern degradation"},
+    {"path": "analysis/reports/q6_regime_accuracy.json", "question": "Q6", "purpose": "Regime accuracy"},
+    {"path": "analysis/reports/q7_session_edge.json", "question": "Q7", "purpose": "Session edge"},
+    {"path": "analysis/reports/q8_htf_alignment_value.json", "question": "Q8", "purpose": "HTF alignment value"},
+    {"path": "analysis/reports/q9_spread_fill_quality.json", "question": "Q9", "purpose": "Spread/fill quality"},
+    {"path": "analysis/reports/q10_guard_efficacy.json", "question": "Q10", "purpose": "Guard efficacy"},
+    {"path": "analysis/reports/q11_slippage_model.json", "question": "Q11", "purpose": "Slippage model"},
+    {"path": "analysis/reports/q12_broker_reliability.json", "question": "Q12", "purpose": "Broker reliability"},
+    {"path": "analysis/reports/q13_optimal_duration.json", "question": "Q13", "purpose": "Optimal duration"},
+    {"path": "analysis/reports/q14_causal_chains.json", "question": "Q14", "purpose": "Causal chains"},
+    {"path": "analysis/reports/q15_learning_velocity.json", "question": "Q15", "purpose": "Learning velocity"},
+    {"path": "analysis/reports/q16_shadow_validation.json", "question": "Q16", "purpose": "Shadow → Live accuracy"},
+    {"path": "analysis/reports/q17_drawdown_precursors.json", "question": "Q17", "purpose": "Drawdown precursors"},
+    {"path": "analysis/reports/q18_symbol_universe.json", "question": "Q18", "purpose": "Symbol universe"},
+    {"path": "analysis/reports/q19_expected_value.json", "question": "Q19", "purpose": "True edge / EV"},
+    {"path": "analysis/reports/q20_score_calibration.json", "question": "Q20", "purpose": "Score calibration"},
+    {"path": "analysis/reports/q20_score_calibration_raw.json", "question": "Q20", "purpose": "Raw Q20 data (backward compat)"},
+    {"path": "analysis/reports/q21_calibration_ev_impact.json", "question": "Q21", "purpose": "Calibration impact on EV"},
+    {"path": "analysis/reports/q22_ev_threshold.json", "question": "Q22", "purpose": "EV threshold optimisation"},
+    {"path": "analysis/reports/q23_regime_edge.json", "question": "Q23", "purpose": "Regime edge"},
+    {"path": "analysis/reports/q24_strategy_edge.json", "question": "Q24", "purpose": "Strategy edge"},
+    {"path": "analysis/reports/q25_symbol_session_edge.json", "question": "Q25", "purpose": "Symbol/session edge"}
+  ],
+
+  "artifacts": [
+    {
+      "path": "analysis/artifacts/calibration/score_calibration_curve.json",
+      "purpose": "Promotion artifact — empirical score→probability mapping",
+      "type": "bot_consumable_artifact",
+      "status": "RESEARCH_ARTIFACT (not yet applied to runtime)",
+      "source_question": "Q20",
+      "consumer": "core/pipeline/score_calibrator.py (when promoted)"
+    }
+  ],
+
+  "dashboards": [
+    {"path": "analysis/summaries/research_dashboard.json", "purpose": "All 25 questions status + recommendations"},
+    {"path": "analysis/summaries/research_knowledge.json", "purpose": "What the bot currently knows (facts, rejected, pending, next)"},
+    {"path": "analysis/summaries/research_file_map.json", "purpose": "This file — maps all research outputs"}
+  ],
+
+  "experiments": [
+    {"path": "research_engine/question_registry.py", "purpose": "Question definitions Q1-Q25"},
+    {"path": "research_engine/report_builder.py", "purpose": "Standard report wrapper + dashboard generator + artifact generator"},
+    {"path": "research_engine/experiments/component_reward.py", "purpose": "Q1 runner"},
+    {"path": "research_engine/experiments/shadow_validation.py", "purpose": "Q16 runner"},
+    {"path": "research_engine/experiments/expected_value.py", "purpose": "Q19 runner"},
+    {"path": "research_engine/experiments/score_calibration.py", "purpose": "Q20 runner"},
+    {"path": "research_engine/experiments/research_runner.py", "purpose": "Q2-Q15, Q17-Q18, Q21-Q25 unified runner"},
+    {"path": "research_engine/audit/run_audit.py", "purpose": "Reality audit — verifies all questions"},
+    {"path": "research_engine/audit/research_question_audit.json", "purpose": "Audit output"},
+    {"path": "analysis/run_all_research.py", "purpose": "Convenience: runs all experiments + dashboard"}
+  ],
+
+  "runtime_consumers": [
+    {
+      "path": "core/pipeline/score_calibrator.py",
+      "consumes": "analysis/artifacts/calibration/score_calibration_curve.json (FUTURE — not yet wired)",
+      "current_behaviour": "identity_v1 (calibrated = raw_score)",
+      "promotion_required": true,
+      "note": "ScoreCalibrator.calibrate() currently returns raw score. When promotion is approved, it would read the calibration curve artifact."
+    },
+    {
+      "path": "core/pipeline/probability_estimator.py",
+      "consumes": "ScoreCalibrator output (CalibrationResult)",
+      "current_behaviour": "Calls get_score_calibrator().calibrate(score) every decision",
+      "promotion_required": false,
+      "note": "Already wired. When ScoreCalibrator changes, ProbabilityEstimator automatically uses new calibration."
+    }
+  ],
+
+  "q20_flow_verification": {
+    "step_1_data": "logs/research_shadow_trades/ + logs/decision_trace/ → EXISTS ✅",
+    "step_2_runner": "research_engine/experiments/score_calibration.py run() → EXISTS ✅",
+    "step_3_report": "analysis/reports/q20_score_calibration.json → EXISTS ✅",
+    "step_4_artifact": "analysis/artifacts/calibration/score_calibration_curve.json → EXISTS ✅",
+    "step_5_consumer": "core/pipeline/score_calibrator.py ScoreCalibrator.calibrate() → EXISTS ✅ (identity_v1, not yet reading artifact)",
+    "complete_chain": true,
+    "promotion_gap": "Step 4→5: Artifact exists but ScoreCalibrator does not read it yet. Requires human approval + code change to apply."
+  }
+}

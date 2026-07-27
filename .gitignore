@@ -1,0 +1,17 @@
+# Runtime data
+runtime/
+data/*.jsonl
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Test artifacts
+MagicMock/
+
+# Local environment
+.env
+.venv/
+
+# Logs
+*.log

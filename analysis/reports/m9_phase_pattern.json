@@ -1,0 +1,526 @@
+{
+  "question_id": "M9",
+  "status": "COMPLETE",
+  "overall": {
+    "total_analysed": 728,
+    "cells_reported": 22,
+    "phases_with_data": 5,
+    "phase_summaries": {
+      "IMPULSE": {
+        "n": 242,
+        "ev": -0.2026,
+        "win_rate": 0.2975,
+        "patterns_analysed": 6
+      },
+      "REVERSAL": {
+        "n": 149,
+        "ev": -0.0444,
+        "win_rate": 0.4631,
+        "patterns_analysed": 5
+      },
+      "EXHAUSTION": {
+        "n": 32,
+        "ev": -0.0766,
+        "win_rate": 0.25,
+        "patterns_analysed": 1
+      },
+      "CONSOLIDATION": {
+        "n": 165,
+        "ev": -0.0485,
+        "win_rate": 0.3879,
+        "patterns_analysed": 6
+      },
+      "PULLBACK": {
+        "n": 140,
+        "ev": -0.0428,
+        "win_rate": 0.4214,
+        "patterns_analysed": 4
+      }
+    },
+    "best_per_phase": {
+      "IMPULSE": {
+        "phase": "IMPULSE",
+        "pattern": "TWEEZER_TOP",
+        "n": 48,
+        "ev": -0.0677,
+        "win_rate": 0.375,
+        "avg_mfe": 0.3609,
+        "avg_mae": 0.4313,
+        "directional_pct": 0.3125,
+        "total_r": -3.25,
+        "confidence": "MEDIUM"
+      },
+      "REVERSAL": {
+        "phase": "REVERSAL",
+        "pattern": "EVENING_STAR",
+        "n": 13,
+        "ev": 0.2656,
+        "win_rate": 0.3846,
+        "avg_mfe": 1.0195,
+        "avg_mae": 1.0344,
+        "directional_pct": 0.5385,
+        "total_r": 3.45,
+        "confidence": "LOW"
+      },
+      "EXHAUSTION": {
+        "phase": "EXHAUSTION",
+        "pattern": "TWEEZER_TOP",
+        "n": 18,
+        "ev": -0.0437,
+        "win_rate": 0.3333,
+        "avg_mfe": 0.1463,
+        "avg_mae": 0.2843,
+        "directional_pct": 0.2222,
+        "total_r": -0.79,
+        "confidence": "LOW"
+      },
+      "CONSOLIDATION": {
+        "phase": "CONSOLIDATION",
+        "pattern": "MORNING_STAR",
+        "n": 10,
+        "ev": 0.1182,
+        "win_rate": 0.2,
+        "avg_mfe": 0.2688,
+        "avg_mae": 0.399,
+        "directional_pct": 0.2,
+        "total_r": 1.18,
+        "confidence": "LOW"
+      },
+      "PULLBACK": {
+        "phase": "PULLBACK",
+        "pattern": "MORNING_STAR",
+        "n": 16,
+        "ev": 0.0002,
+        "win_rate": 0.5,
+        "avg_mfe": 0.3162,
+        "avg_mae": 0.2165,
+        "directional_pct": 0.5,
+        "total_r": 0.0,
+        "confidence": "LOW"
+      }
+    },
+    "worst_per_phase": {
+      "IMPULSE": {
+        "phase": "IMPULSE",
+        "pattern": "THREE_WHITE_SOLDIERS",
+        "n": 48,
+        "ev": -0.5188,
+        "win_rate": 0.1458,
+        "avg_mfe": 1.4723,
+        "avg_mae": 0.8603,
+        "directional_pct": 0.6042,
+        "total_r": -24.9,
+        "confidence": "MEDIUM"
+      },
+      "REVERSAL": {
+        "phase": "REVERSAL",
+        "pattern": "THREE_BLACK_CROWS",
+        "n": 22,
+        "ev": -0.171,
+        "win_rate": 0.3182,
+        "avg_mfe": 0.6541,
+        "avg_mae": 1.1674,
+        "directional_pct": 0.4091,
+        "total_r": -3.76,
+        "confidence": "LOW"
+      },
+      "EXHAUSTION": {
+        "phase": "EXHAUSTION",
+        "pattern": "TWEEZER_TOP",
+        "n": 18,
+        "ev": -0.0437,
+        "win_rate": 0.3333,
+        "avg_mfe": 0.1463,
+        "avg_mae": 0.2843,
+        "directional_pct": 0.2222,
+        "total_r": -0.79,
+        "confidence": "LOW"
+      },
+      "CONSOLIDATION": {
+        "phase": "CONSOLIDATION",
+        "pattern": "TWEEZER_TOP",
+        "n": 35,
+        "ev": -0.1005,
+        "win_rate": 0.3143,
+        "avg_mfe": 0.2273,
+        "avg_mae": 0.3506,
+        "directional_pct": 0.1714,
+        "total_r": -3.52,
+        "confidence": "MEDIUM"
+      },
+      "PULLBACK": {
+        "phase": "PULLBACK",
+        "pattern": "TWEEZER_TOP",
+        "n": 22,
+        "ev": -0.1434,
+        "win_rate": 0.3636,
+        "avg_mfe": 0.2407,
+        "avg_mae": 0.4602,
+        "directional_pct": 0.2727,
+        "total_r": -3.16,
+        "confidence": "LOW"
+      }
+    },
+    "all_cells": [
+      {
+        "phase": "REVERSAL",
+        "pattern": "EVENING_STAR",
+        "n": 13,
+        "ev": 0.2656,
+        "win_rate": 0.3846,
+        "avg_mfe": 1.0195,
+        "avg_mae": 1.0344,
+        "directional_pct": 0.5385,
+        "total_r": 3.45,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "CONSOLIDATION",
+        "pattern": "MORNING_STAR",
+        "n": 10,
+        "ev": 0.1182,
+        "win_rate": 0.2,
+        "avg_mfe": 0.2688,
+        "avg_mae": 0.399,
+        "directional_pct": 0.2,
+        "total_r": 1.18,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "REVERSAL",
+        "pattern": "TWEEZER_BOTTOM",
+        "n": 37,
+        "ev": 0.0983,
+        "win_rate": 0.5946,
+        "avg_mfe": 0.5313,
+        "avg_mae": 0.4773,
+        "directional_pct": 0.5946,
+        "total_r": 3.64,
+        "confidence": "MEDIUM"
+      },
+      {
+        "phase": "CONSOLIDATION",
+        "pattern": "THREE_WHITE_SOLDIERS",
+        "n": 20,
+        "ev": 0.0726,
+        "win_rate": 0.4,
+        "avg_mfe": 0.4233,
+        "avg_mae": 0.3494,
+        "directional_pct": 0.3,
+        "total_r": 1.45,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "PULLBACK",
+        "pattern": "MORNING_STAR",
+        "n": 16,
+        "ev": 0.0002,
+        "win_rate": 0.5,
+        "avg_mfe": 0.3162,
+        "avg_mae": 0.2165,
+        "directional_pct": 0.5,
+        "total_r": 0.0,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "PULLBACK",
+        "pattern": "TWEEZER_BOTTOM",
+        "n": 54,
+        "ev": -0.0279,
+        "win_rate": 0.4074,
+        "avg_mfe": 0.2897,
+        "avg_mae": 0.3063,
+        "directional_pct": 0.4074,
+        "total_r": -1.5,
+        "confidence": "HIGH"
+      },
+      {
+        "phase": "EXHAUSTION",
+        "pattern": "TWEEZER_TOP",
+        "n": 18,
+        "ev": -0.0437,
+        "win_rate": 0.3333,
+        "avg_mfe": 0.1463,
+        "avg_mae": 0.2843,
+        "directional_pct": 0.2222,
+        "total_r": -0.79,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "CONSOLIDATION",
+        "pattern": "TWEEZER_BOTTOM",
+        "n": 44,
+        "ev": -0.0447,
+        "win_rate": 0.5,
+        "avg_mfe": 0.1472,
+        "avg_mae": 0.3669,
+        "directional_pct": 0.1364,
+        "total_r": -1.97,
+        "confidence": "MEDIUM"
+      },
+      {
+        "phase": "CONSOLIDATION",
+        "pattern": "THREE_BLACK_CROWS",
+        "n": 32,
+        "ev": -0.0519,
+        "win_rate": 0.4375,
+        "avg_mfe": 0.2358,
+        "avg_mae": 0.3372,
+        "directional_pct": 0.4375,
+        "total_r": -1.66,
+        "confidence": "MEDIUM"
+      },
+      {
+        "phase": "REVERSAL",
+        "pattern": "MORNING_STAR",
+        "n": 14,
+        "ev": -0.0591,
+        "win_rate": 0.6429,
+        "avg_mfe": 0.4041,
+        "avg_mae": 0.4414,
+        "directional_pct": 0.6429,
+        "total_r": -0.83,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "IMPULSE",
+        "pattern": "TWEEZER_TOP",
+        "n": 48,
+        "ev": -0.0677,
+        "win_rate": 0.375,
+        "avg_mfe": 0.3609,
+        "avg_mae": 0.4313,
+        "directional_pct": 0.3125,
+        "total_r": -3.25,
+        "confidence": "MEDIUM"
+      },
+      {
+        "phase": "IMPULSE",
+        "pattern": "EVENING_STAR",
+        "n": 14,
+        "ev": -0.085,
+        "win_rate": 0.3571,
+        "avg_mfe": 0.179,
+        "avg_mae": 0.2897,
+        "directional_pct": 0.2857,
+        "total_r": -1.19,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "CONSOLIDATION",
+        "pattern": "EVENING_STAR",
+        "n": 16,
+        "ev": -0.0991,
+        "win_rate": 0.3125,
+        "avg_mfe": 0.3482,
+        "avg_mae": 0.5458,
+        "directional_pct": 0.25,
+        "total_r": -1.59,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "CONSOLIDATION",
+        "pattern": "TWEEZER_TOP",
+        "n": 35,
+        "ev": -0.1005,
+        "win_rate": 0.3143,
+        "avg_mfe": 0.2273,
+        "avg_mae": 0.3506,
+        "directional_pct": 0.1714,
+        "total_r": -3.52,
+        "confidence": "MEDIUM"
+      },
+      {
+        "phase": "PULLBACK",
+        "pattern": "THREE_BLACK_CROWS",
+        "n": 28,
+        "ev": -0.1028,
+        "win_rate": 0.4643,
+        "avg_mfe": 0.2494,
+        "avg_mae": 0.4326,
+        "directional_pct": 0.4286,
+        "total_r": -2.88,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "REVERSAL",
+        "pattern": "TWEEZER_TOP",
+        "n": 31,
+        "ev": -0.1049,
+        "win_rate": 0.4516,
+        "avg_mfe": 0.3582,
+        "avg_mae": 0.4116,
+        "directional_pct": 0.5161,
+        "total_r": -3.25,
+        "confidence": "MEDIUM"
+      },
+      {
+        "phase": "PULLBACK",
+        "pattern": "TWEEZER_TOP",
+        "n": 22,
+        "ev": -0.1434,
+        "win_rate": 0.3636,
+        "avg_mfe": 0.2407,
+        "avg_mae": 0.4602,
+        "directional_pct": 0.2727,
+        "total_r": -3.16,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "IMPULSE",
+        "pattern": "TWEEZER_BOTTOM",
+        "n": 61,
+        "ev": -0.1635,
+        "win_rate": 0.3607,
+        "avg_mfe": 0.2432,
+        "avg_mae": 0.5438,
+        "directional_pct": 0.4426,
+        "total_r": -9.97,
+        "confidence": "HIGH"
+      },
+      {
+        "phase": "REVERSAL",
+        "pattern": "THREE_BLACK_CROWS",
+        "n": 22,
+        "ev": -0.171,
+        "win_rate": 0.3182,
+        "avg_mfe": 0.6541,
+        "avg_mae": 1.1674,
+        "directional_pct": 0.4091,
+        "total_r": -3.76,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "IMPULSE",
+        "pattern": "MORNING_STAR",
+        "n": 19,
+        "ev": -0.1978,
+        "win_rate": 0.1579,
+        "avg_mfe": 0.1393,
+        "avg_mae": 0.4732,
+        "directional_pct": 0.2105,
+        "total_r": -3.76,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "IMPULSE",
+        "pattern": "THREE_BLACK_CROWS",
+        "n": 25,
+        "ev": -0.2162,
+        "win_rate": 0.16,
+        "avg_mfe": 0.1726,
+        "avg_mae": 0.3796,
+        "directional_pct": 0.28,
+        "total_r": -5.4,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "IMPULSE",
+        "pattern": "THREE_WHITE_SOLDIERS",
+        "n": 48,
+        "ev": -0.5188,
+        "win_rate": 0.1458,
+        "avg_mfe": 1.4723,
+        "avg_mae": 0.8603,
+        "directional_pct": 0.6042,
+        "total_r": -24.9,
+        "confidence": "MEDIUM"
+      }
+    ],
+    "positive_ev_cells": [
+      {
+        "phase": "REVERSAL",
+        "pattern": "EVENING_STAR",
+        "n": 13,
+        "ev": 0.2656,
+        "win_rate": 0.3846,
+        "avg_mfe": 1.0195,
+        "avg_mae": 1.0344,
+        "directional_pct": 0.5385,
+        "total_r": 3.45,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "CONSOLIDATION",
+        "pattern": "MORNING_STAR",
+        "n": 10,
+        "ev": 0.1182,
+        "win_rate": 0.2,
+        "avg_mfe": 0.2688,
+        "avg_mae": 0.399,
+        "directional_pct": 0.2,
+        "total_r": 1.18,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "REVERSAL",
+        "pattern": "TWEEZER_BOTTOM",
+        "n": 37,
+        "ev": 0.0983,
+        "win_rate": 0.5946,
+        "avg_mfe": 0.5313,
+        "avg_mae": 0.4773,
+        "directional_pct": 0.5946,
+        "total_r": 3.64,
+        "confidence": "MEDIUM"
+      },
+      {
+        "phase": "CONSOLIDATION",
+        "pattern": "THREE_WHITE_SOLDIERS",
+        "n": 20,
+        "ev": 0.0726,
+        "win_rate": 0.4,
+        "avg_mfe": 0.4233,
+        "avg_mae": 0.3494,
+        "directional_pct": 0.3,
+        "total_r": 1.45,
+        "confidence": "LOW"
+      },
+      {
+        "phase": "PULLBACK",
+        "pattern": "MORNING_STAR",
+        "n": 16,
+        "ev": 0.0002,
+        "win_rate": 0.5,
+        "avg_mfe": 0.3162,
+        "avg_mae": 0.2165,
+        "directional_pct": 0.5,
+        "total_r": 0.0,
+        "confidence": "LOW"
+      }
+    ],
+    "finding": "Best combination: TWEEZER_BOTTOM in REVERSAL (EV=+0.0983R, n=37, MEDIUM). Analysed 22 phase\u00d7pattern cells from 728 trades."
+  },
+  "confidence": "HIGH",
+  "dataset": {
+    "source": "shadow_trades_current_epoch",
+    "sample_size": 728,
+    "total_current": 772,
+    "phase_coverage": "94%"
+  },
+  "fingerprint": {
+    "dataset_id": "shadow_trades_current_2026-07-27",
+    "records_used": 728,
+    "records_excluded": 44,
+    "source": "shadow_trades_current",
+    "validation_score": "UNKNOWN",
+    "generated": "2026-07-27"
+  },
+  "recommendation": "MONITOR",
+  "assumptions": [
+    "Uses CURRENT-epoch data only (post-lineage migration)",
+    "Minimum 10 trades per phase\u00d7pattern cell",
+    "MFE/MAE measured over full trade life (look-ahead present in MFE)",
+    "Phase classified by MarketContextBuilder from H1 structure"
+  ],
+  "warnings": [
+    "Low sample phases (<50 trades): ['EXHAUSTION']"
+  ],
+  "generated": "2026-07-27T19:10:41Z",
+  "provenance": {
+    "experiment_module": "research_engine.experiments.m9_phase_pattern",
+    "registry_id": "M9",
+    "function": "run_m9_phase_pattern",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"
+  }
+}

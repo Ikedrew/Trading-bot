@@ -1,0 +1,18 @@
+{
+  "mode": "replay_validate",
+  "events_read": 3314,
+  "cycles_reconstructed": 2,
+  "symbols": [
+    "EURUSD_SB",
+    "GBPUSD_SB"
+  ],
+  "state_hash": "a7389dd378863152c203acf3caccd044a4f95dc7f938ef0434263c32e4bdb05a",
+  "deterministic": true,
+  "validation": {
+    "bias_match": true,
+    "pattern_match": true,
+    "decision_match": true,
+    "execution_match": true
+  },
+  "failures": []
+}

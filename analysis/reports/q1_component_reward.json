@@ -1,0 +1,242 @@
+{
+  "question_id": "Q1",
+  "status": "COMPLETE",
+  "overall": {
+    "total_decisions": 1189,
+    "matched_outcomes": 237,
+    "best_predictor": "confirmation_pre",
+    "worst_predictor": "pattern_quality",
+    "finding": "Strong predictors: confirmation_pre, bias_stability, bias_alignment. Negative contributors: pattern_quality. (n=237, confidence=HIGH)",
+    "decisions_with_outcome": 237,
+    "join_rate": 0.1993,
+    "component_stats": [
+      {
+        "name": "confirmation_pre",
+        "sample_size": 237,
+        "win_rate": 0.3797,
+        "avg_r": -0.0145,
+        "avg_r_when_high": 0.1974,
+        "avg_r_when_low": -0.2283,
+        "correlation": 0.1694,
+        "predictive_value": 0.4257
+      },
+      {
+        "name": "bias_stability",
+        "sample_size": 237,
+        "win_rate": 0.3797,
+        "avg_r": -0.0145,
+        "avg_r_when_high": 0.4034,
+        "avg_r_when_low": 0.0364,
+        "correlation": 0.0212,
+        "predictive_value": 0.367
+      },
+      {
+        "name": "bias_alignment",
+        "sample_size": 237,
+        "win_rate": 0.3797,
+        "avg_r": -0.0145,
+        "avg_r_when_high": 0.2782,
+        "avg_r_when_low": -0.0399,
+        "correlation": 0.1721,
+        "predictive_value": 0.3181
+      },
+      {
+        "name": "volatility_quality",
+        "sample_size": 237,
+        "win_rate": 0.3797,
+        "avg_r": -0.0145,
+        "avg_r_when_high": 0.1509,
+        "avg_r_when_low": -0.0958,
+        "correlation": 0.0671,
+        "predictive_value": 0.2467
+      },
+      {
+        "name": "market_quality",
+        "sample_size": 237,
+        "win_rate": 0.3797,
+        "avg_r": -0.0145,
+        "avg_r_when_high": 0.1037,
+        "avg_r_when_low": -0.1318,
+        "correlation": 0.0406,
+        "predictive_value": 0.2356
+      },
+      {
+        "name": "trend_alignment",
+        "sample_size": 237,
+        "win_rate": 0.3797,
+        "avg_r": -0.0145,
+        "avg_r_when_high": 0.0118,
+        "avg_r_when_low": -0.2012,
+        "correlation": 0.0373,
+        "predictive_value": 0.213
+      },
+      {
+        "name": "htf_alignment",
+        "sample_size": 237,
+        "win_rate": 0.3797,
+        "avg_r": -0.0145,
+        "avg_r_when_high": 0.0118,
+        "avg_r_when_low": -0.0742,
+        "correlation": 0.0275,
+        "predictive_value": 0.0859
+      },
+      {
+        "name": "h4_alignment",
+        "sample_size": 237,
+        "win_rate": 0.3797,
+        "avg_r": -0.0145,
+        "avg_r_when_high": -0.0877,
+        "avg_r_when_low": -0.052,
+        "correlation": 0.0083,
+        "predictive_value": -0.0357
+      },
+      {
+        "name": "chop_clarity",
+        "sample_size": 237,
+        "win_rate": 0.3797,
+        "avg_r": -0.0145,
+        "avg_r_when_high": -0.061,
+        "avg_r_when_low": 0.0323,
+        "correlation": -0.008,
+        "predictive_value": -0.0932
+      },
+      {
+        "name": "pattern_quality",
+        "sample_size": 237,
+        "win_rate": 0.3797,
+        "avg_r": -0.0145,
+        "avg_r_when_high": 0.0211,
+        "avg_r_when_low": 0.2043,
+        "correlation": 0.0107,
+        "predictive_value": -0.1832
+      }
+    ],
+    "negative_contributors": [
+      {
+        "name": "h4_alignment",
+        "avg_r_when_high": -0.0877,
+        "avg_r_when_low": -0.052,
+        "predictive_value": -0.0357,
+        "sample_size": 237
+      },
+      {
+        "name": "chop_clarity",
+        "avg_r_when_high": -0.061,
+        "avg_r_when_low": 0.0323,
+        "predictive_value": -0.0932,
+        "sample_size": 237
+      },
+      {
+        "name": "pattern_quality",
+        "avg_r_when_high": 0.0211,
+        "avg_r_when_low": 0.2043,
+        "predictive_value": -0.1832,
+        "sample_size": 237
+      }
+    ],
+    "interactions": [
+      {
+        "label": "Bias + Trend aligned",
+        "components": [
+          "bias_alignment",
+          "trend_alignment"
+        ],
+        "sample_size": 29,
+        "win_rate": 0.4828,
+        "avg_r": 0.3927
+      },
+      {
+        "label": "Bias + HTF aligned",
+        "components": [
+          "bias_alignment",
+          "htf_alignment"
+        ],
+        "sample_size": 29,
+        "win_rate": 0.4828,
+        "avg_r": 0.3927
+      },
+      {
+        "label": "Bias only (high)",
+        "components": [
+          "bias_alignment"
+        ],
+        "sample_size": 76,
+        "win_rate": 0.4079,
+        "avg_r": 0.2782
+      },
+      {
+        "label": "Pattern + Confirmation",
+        "components": [
+          "pattern_quality",
+          "confirmation_pre"
+        ],
+        "sample_size": 42,
+        "win_rate": 0.4762,
+        "avg_r": 0.0454
+      },
+      {
+        "label": "HTF only (high)",
+        "components": [
+          "htf_alignment"
+        ],
+        "sample_size": 96,
+        "win_rate": 0.4375,
+        "avg_r": 0.0118
+      },
+      {
+        "label": "Trend only (high)",
+        "components": [
+          "trend_alignment"
+        ],
+        "sample_size": 96,
+        "win_rate": 0.4375,
+        "avg_r": 0.0118
+      },
+      {
+        "label": "Volatility + Trend",
+        "components": [
+          "volatility_quality",
+          "trend_alignment"
+        ],
+        "sample_size": 52,
+        "win_rate": 0.3846,
+        "avg_r": 0.0043
+      },
+      {
+        "label": "HTF + H4 aligned",
+        "components": [
+          "htf_alignment",
+          "h4_alignment"
+        ],
+        "sample_size": 15,
+        "win_rate": 0.1333,
+        "avg_r": -0.2381
+      }
+    ],
+    "conclusion": "Strong predictors: confirmation_pre, bias_stability, bias_alignment. Negative contributors: pattern_quality. (n=237, confidence=HIGH)",
+    "confidence": "HIGH"
+  },
+  "confidence": "HIGH",
+  "dataset": {
+    "source": "decision_trace + shadow_trades",
+    "sample_size": 237
+  },
+  "fingerprint": {
+    "dataset_id": "decision_trace+shadow_trades_2026-07-27",
+    "records_used": 237,
+    "records_excluded": 952,
+    "source": "decision_trace+shadow_trades",
+    "validation_score": "UNKNOWN",
+    "generated": "2026-07-27"
+  },
+  "recommendation": "WEIGHT_ADJUSTMENT",
+  "assumptions": [],
+  "warnings": [],
+  "generated": "2026-07-27T04:26:00Z",
+  "provenance": {
+    "experiment_module": "research_engine.experiments.component_reward",
+    "registry_id": "Q1",
+    "function": "run",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "question_id": "R3",
+  "status": "COMPLETE",
+  "overall": {
+    "probability_of_ruin_analytical": 0.015625,
+    "probability_of_ruin_monte_carlo": 0.0,
+    "survival_probability": 1.0,
+    "expected_survival_trades": 5000,
+    "ev_per_trade": 1.4,
+    "win_rate": 0.8,
+    "avg_win_r": 2.0,
+    "avg_loss_r": 1.0,
+    "std_dev_r": 1.206,
+    "required_sample_size": 1000
+  },
+  "confidence": "HIGH",
+  "dataset": {
+    "total_records": 100,
+    "r_multiples_used": 100,
+    "wins": 80,
+    "losses": 20,
+    "coverage": {
+      "outcome": 1.0,
+      "lineage": 1.0,
+      "strategy": 1.0,
+      "contamination_rate": 0.0,
+      "sample_size": 100.0
+    }
+  },
+  "fingerprint": {
+    "dataset_id": "shadow_trades_2026-07-27",
+    "records_used": 100,
+    "records_excluded": 0,
+    "source": "shadow_trades",
+    "validation_score": "UNKNOWN",
+    "generated": "2026-07-27"
+  },
+  "recommendation": "PROMOTE",
+  "assumptions": [
+    "Risk per trade: 1.0%",
+    "Ruin threshold: 50% drawdown",
+    "Monte Carlo: 100 simulations, 100 trades forward",
+    "R-multiples sampled with replacement from observed distribution"
+  ],
+  "warnings": [],
+  "generated": "2026-07-27T02:20:56Z",
+  "provenance": {
+    "experiment_module": "research_engine.experiments.probability_of_ruin",
+    "registry_id": "R3",
+    "function": "run_probability_of_ruin",
+    "pipeline": "Question \u2192 Experiment \u2192 Dataset \u2192 Output \u2192 Knowledge \u2192 Command Centre"
+  },
+  "monte_carlo": {
+    "simulations": 10000,
+    "trade_horizon": 5000,
+    "ruin_threshold": 0.5,
+    "ruin_count": 0,
+    "ruin_probability": 0.0,
+    "survival_probability": 1.0,
+    "avg_survival_trades": 5000,
+    "avg_max_drawdown": 0.0,
+    "confidence_interval_95": [
+      0,
+      0.0
+    ]
+  }
+}

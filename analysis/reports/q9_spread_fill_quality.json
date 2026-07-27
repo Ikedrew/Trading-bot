@@ -1,0 +1,18 @@
+{
+  "question_id": "Q9",
+  "question_name": "Spread Fill Quality",
+  "timestamp": "2026-07-21T22:40:49Z",
+  "dataset": {
+    "source": "execution_context",
+    "sample_size": 14189
+  },
+  "metrics": {
+    "records_available": 14189
+  },
+  "finding": "14189 execution context records available",
+  "recommendation": {
+    "status": "COMPLETE",
+    "target": "execution_model"
+  },
+  "data": {}
+}

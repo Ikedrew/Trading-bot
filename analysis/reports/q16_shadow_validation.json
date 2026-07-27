@@ -1,0 +1,43 @@
+{
+  "question_id": "Q16",
+  "status": "BLOCKED",
+  "overall": {
+    "matched_trades": 0,
+    "correlation": null,
+    "mean_absolute_error": 0.0,
+    "directional_accuracy": 0.0,
+    "finding": "No matched shadow->live trades found. Q16 requires live trades with correlation_id.",
+    "total_shadow_trades": 0,
+    "total_live_trades": 0,
+    "avg_shadow_r": 0.0,
+    "avg_live_r": 0.0,
+    "avg_prediction_error": 0.0,
+    "shadow_win_rate": 0.0,
+    "live_win_rate": 0.0,
+    "conclusion": "No matched trades found. Cannot validate shadow model.",
+    "confidence": "INSUFFICIENT_DATA"
+  },
+  "confidence": "INSUFFICIENT_DATA",
+  "dataset": {
+    "source": "shadow_trades + trade_truth (matched by correlation_id)",
+    "sample_size": 0
+  },
+  "fingerprint": {
+    "dataset_id": "shadow_trades+trade_truth_2026-07-27",
+    "records_used": 0,
+    "records_excluded": 204,
+    "source": "shadow_trades+trade_truth",
+    "validation_score": "UNKNOWN",
+    "generated": "2026-07-27"
+  },
+  "recommendation": "BLOCKED",
+  "assumptions": [],
+  "warnings": [],
+  "generated": "2026-07-27T04:26:03Z",
+  "provenance": {
+    "experiment_module": "research_engine.experiments.shadow_validation",
+    "registry_id": "Q16",
+    "function": "run",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"
+  }
+}

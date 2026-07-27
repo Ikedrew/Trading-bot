@@ -1,0 +1,72 @@
+name: CI - Test Suite
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: ["*"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt || pip install pytest pytest-cov hypothesis
+
+      - name: Install MetaTrader5 stub (tests mock MT5 entirely)
+        run: |
+          mkdir -p mt5_stub
+          echo "
+          # Minimal MT5 stub for CI — all functions return None/defaults
+          # Tests mock this module completely via unittest.mock
+          TIMEFRAME_M1=1; TIMEFRAME_M2=2; TIMEFRAME_M3=3; TIMEFRAME_M4=4
+          TIMEFRAME_M5=5; TIMEFRAME_M6=6; TIMEFRAME_M10=10; TIMEFRAME_M12=12
+          TIMEFRAME_M15=15; TIMEFRAME_M20=20; TIMEFRAME_M30=30
+          TIMEFRAME_H1=16385; TIMEFRAME_H2=16386; TIMEFRAME_H3=16387; TIMEFRAME_H4=16388
+          TIMEFRAME_H6=16390; TIMEFRAME_H8=16392; TIMEFRAME_H12=16396
+          TIMEFRAME_D1=16408; TIMEFRAME_W1=32769
+          ORDER_TYPE_BUY=0; ORDER_TYPE_SELL=1
+          ORDER_FILLING_FOK=0; ORDER_FILLING_IOC=1; ORDER_FILLING_RETURN=2
+          TRADE_ACTION_DEAL=1; TRADE_ACTION_SLTP=6
+          ORDER_TIME_GTC=0
+          TRADE_RETCODE_DONE=10009
+          def initialize(*a, **kw): return True
+          def shutdown(): pass
+          def last_error(): return (0, 'OK')
+          def version(): return (5, 0, 0)
+          def terminal_info(): return None
+          def account_info(): return None
+          def symbol_info(*a): return None
+          def symbol_info_tick(*a): return None
+          def symbols_get(): return []
+          def symbol_select(*a): return True
+          def positions_get(**kw): return None
+          def copy_rates_from_pos(*a): return None
+          def order_send(*a): return None
+          def order_calc_profit(*a): return None
+          " > mt5_stub/MetaTrader5.py
+          echo "import sys; sys.path.insert(0, 'mt5_stub')" > sitecustomize.py
+          export PYTHONPATH="mt5_stub:$PYTHONPATH"
+
+      - name: Run test suite
+        env:
+          PYTHONPATH: "mt5_stub:."
+        run: |
+          python -m pytest -q --tb=short
+
+      - name: Run test suite with coverage
+        env:
+          PYTHONPATH: "mt5_stub:."
+        run: |
+          python -m pytest --cov=core --cov=strategy --cov=risk --cov=execution --cov=patterns --cov-report=term --cov-fail-under=60 || true

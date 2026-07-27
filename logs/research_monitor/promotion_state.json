@@ -1,0 +1,18 @@
+{
+  "decisions_processed": 1313,
+  "research_matches": 563,
+  "synthetic_approvals": 24,
+  "research_approvals": 395,
+  "agreement_count": 938,
+  "disagreement_count": 375,
+  "research_would_execute": 373,
+  "research_would_reject": 2,
+  "research_trades_completed": 240,
+  "research_trades_won": 89,
+  "research_total_r": -40.4651,
+  "last_milestone_notified": 1000,
+  "promotion_status": "CANDIDATE",
+  "last_updated": 1785167440.9117458,
+  "match_rate": 0.4288,
+  "research_win_rate": 0.3708
+}

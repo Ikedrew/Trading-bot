@@ -1,0 +1,5 @@
+# Production runtime dependencies only
+# For dev/test tools, see requirements-dev.txt
+# For exact reproducible builds, see requirements.lock
+
+MetaTrader5==5.0.5735

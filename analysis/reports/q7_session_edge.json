@@ -1,0 +1,59 @@
+{
+  "question_id": "Q7",
+  "question_name": "Session Edge",
+  "timestamp": "2026-07-21T22:40:44Z",
+  "dataset": {
+    "source": "shadow_trades",
+    "sample_size": 1220
+  },
+  "metrics": {
+    "symbol_performance": {
+      "AUDUSD": {
+        "n": 109,
+        "wr": 0.2569,
+        "avg_r": -0.3945
+      },
+      "EURUSD": {
+        "n": 336,
+        "wr": 0.8036,
+        "avg_r": 1.962
+      },
+      "GBPUSD": {
+        "n": 140,
+        "wr": 0.3286,
+        "avg_r": -0.2351
+      },
+      "NZDUSD": {
+        "n": 151,
+        "wr": 0.2715,
+        "avg_r": -0.4229
+      },
+      "USDCAD": {
+        "n": 184,
+        "wr": 0.2935,
+        "avg_r": -0.3734
+      },
+      "USDCHF": {
+        "n": 135,
+        "wr": 0.3185,
+        "avg_r": -0.3273
+      },
+      "USDJPY": {
+        "n": 70,
+        "wr": 0.1286,
+        "avg_r": -0.536
+      },
+      "EURUSD_SB": {
+        "n": 95,
+        "wr": 1.0,
+        "avg_r": 3.0
+      }
+    }
+  },
+  "finding": "Per-symbol analysis from 1220 trades",
+  "recommendation": {
+    "status": "COMPLETE",
+    "target": "session_filter"
+  },
+  "data": {}
+}
