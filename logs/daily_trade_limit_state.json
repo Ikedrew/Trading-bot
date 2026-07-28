@@ -1,13 +1,9 @@
 {
-  "current_day_key": "2026-07-27",
-  "total_trades_today": 17,
+  "current_day_key": "2026-07-28",
+  "total_trades_today": 2,
   "per_symbol": {
-    "USDCHF": 2,
-    "NZDUSD": 5,
-    "USDCAD": 5,
-    "AUDUSD": 2,
-    "EURUSD": 2,
-    "GBPUSD": 1
+    "USDCAD": 1,
+    "NZDUSD": 1
   },
-  "last_updated": 1785167440.5417235
+  "last_updated": 1785196871.0554628
 }

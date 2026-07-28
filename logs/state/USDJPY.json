@@ -1,15 +1,15 @@
 {
   "_meta": {
     "symbol": "USDJPY",
-    "saved_at_utc": "2026-07-27T23:31:51.809393+00:00",
-    "saved_at_unix": 1785195111.8093936
+    "saved_at_utc": "2026-07-28T00:19:34.375932+00:00",
+    "saved_at_unix": 1785197974.375933
   },
-  "current_bias": null,
-  "bias_phase": "EXPIRED",
-  "bias_strength": 0.0,
-  "bias_age_seconds": 5400.0,
+  "current_bias": "SELL",
+  "bias_phase": "CONFIRMING",
+  "bias_strength": 44.0,
+  "bias_age_seconds": 900.0,
   "bias_confirmation_score": 0.0,
-  "bias_confirmation_count": 0,
+  "bias_confirmation_count": 3,
   "bias_contradiction_count": 0,
   "last_strong_impulse_direction": null,
   "regime_state": "RANGING",

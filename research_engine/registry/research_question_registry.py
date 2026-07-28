@@ -921,6 +921,156 @@ M11 = ResearchQuestion(
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY EX — EXIT MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+EX1 = ResearchQuestion(
+    id="EX1",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Exit policy improves EV",
+    description="Does modifying exit policy (trailing stop, reduced TP, time-based) improve system expected value compared to the current max_bars timeout?",
+    required_fields=("pnl_r_multiple", "mfe_r", "mae_r", "exit_reason", "bars_held", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need R-multiple for almost all trades"),
+        ValidationRule("sample_size", ">=", 200, "Need sufficient trades for paired comparison"),
+    ),
+)
+
+EX2 = ResearchQuestion(
+    id="EX2",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Trailing stop improves MFE capture",
+    description="Does a trailing stop mechanism capture more of the available MFE than the current exit, using bar-by-bar sequential simulation?",
+    required_fields=("mfe_r", "pnl_r_multiple", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes for comparison"),
+        ValidationRule("sample_size", ">=", 200, "Need sufficient trades for statistical test"),
+    ),
+)
+
+EX3 = ResearchQuestion(
+    id="EX3",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Optimal TP distance",
+    description="What take-profit distance maximises expectancy? Tests TP at 0.25R through 3.0R using MFE data to determine reachability.",
+    required_fields=("mfe_r", "mae_r", "pnl_r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need R + MFE for simulation"),
+        ValidationRule("sample_size", ">=", 200, "Need sufficient sample per TP level"),
+    ),
+)
+
+EX4 = ResearchQuestion(
+    id="EX4",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Optimal SL distance",
+    description="Does the current SL distance preserve signal quality, or does widening/tightening SL improve outcomes?",
+    required_fields=("mae_r", "mfe_r", "pnl_r_multiple", "exit_reason"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcome data"),
+        ValidationRule("sample_size", ">=", 200, "Need per-SL-variant comparison"),
+    ),
+)
+
+EX5 = ResearchQuestion(
+    id="EX5",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Horizon changes optimal exit",
+    description="Does trade horizon (SCALP/INTRADAY/EXTENDED) require a different exit policy? Tests trailing parameters per horizon.",
+    required_fields=("trade_horizon", "mfe_r", "pnl_r_multiple", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("horizon_coverage", ">=", 0.50, "Need horizon field populated"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
+    ),
+    depends_on=("EX2",),
+)
+
+EX6 = ResearchQuestion(
+    id="EX6",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Exit depends on strategy family",
+    description="Does each strategy family (REVERSAL/MOMENTUM/CONTINUATION) require a different exit policy?",
+    required_fields=("strategy", "pattern", "mfe_r", "pnl_r_multiple", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("strategy_coverage", ">=", 0.50, "Need strategy field for segmentation"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
+    ),
+    depends_on=("EX2",),
+)
+
+EX7 = ResearchQuestion(
+    id="EX7",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Exit depends on market regime",
+    description="Does market regime (TRENDING/RANGING/TRANSITIONAL) require a different exit policy?",
+    required_fields=("h4_regime", "mfe_r", "pnl_r_multiple", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("h4_regime_coverage", ">=", 0.80, "Need regime for segmentation"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
+    ),
+    depends_on=("EX2",),
+)
+
+EX8 = ResearchQuestion(
+    id="EX8",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Exit depends on pattern type",
+    description="Do different candlestick patterns require different exit policies based on their MFE/MAE profiles?",
+    required_fields=("pattern", "mfe_r", "mae_r", "pnl_r_multiple", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P2,
+    validation_rules=(
+        ValidationRule("pattern_coverage", ">=", 0.50, "Need pattern field"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
+    ),
+    depends_on=("EX2",),
+)
+
+EX9 = ResearchQuestion(
+    id="EX9",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Exit reduces timeout losses",
+    description="Does the proposed exit policy reduce the timeout exit rate and convert timeout losses into captured profits?",
+    required_fields=("exit_reason", "bars_held", "mfe_r", "pnl_r_multiple", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need exit_reason + outcome"),
+        ValidationRule("sample_size", ">=", 200, "Need sufficient trades"),
+    ),
+)
+
+EX10 = ResearchQuestion(
+    id="EX10",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Exit survives walk-forward",
+    description="Does the exit policy improvement hold on out-of-sample data using time-ordered walk-forward validation?",
+    required_fields=("pnl_r_multiple", "trade_state_progression", "entry_time"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes for train/test split"),
+        ValidationRule("sample_size", ">=", 200, "Need sufficient sample for temporal split"),
+    ),
+    depends_on=("EX1", "EX2"),
+)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # REGISTRY
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -943,6 +1093,8 @@ REGISTRY: tuple[ResearchQuestion, ...] = (
     G1, G2, G3,
     # Promotion Intelligence
     P1,
+    # Exit Management
+    EX1, EX2, EX3, EX4, EX5, EX6, EX7, EX8, EX9, EX10,
 )
 
 REGISTRY_BY_ID: dict[str, ResearchQuestion] = {q.id: q for q in REGISTRY}

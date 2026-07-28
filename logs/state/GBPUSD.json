@@ -1,16 +1,16 @@
 {
   "_meta": {
     "symbol": "GBPUSD",
-    "saved_at_utc": "2026-07-27T23:31:51.797606+00:00",
-    "saved_at_unix": 1785195111.7976062
+    "saved_at_utc": "2026-07-28T00:19:34.370929+00:00",
+    "saved_at_unix": 1785197974.370929
   },
   "current_bias": "BUY",
-  "bias_phase": "FORMING",
-  "bias_strength": 29.0,
-  "bias_age_seconds": 300.0,
+  "bias_phase": "CONFIRMING",
+  "bias_strength": 44.0,
+  "bias_age_seconds": 1200.0,
   "bias_confirmation_score": 0.0,
-  "bias_confirmation_count": 1,
-  "bias_contradiction_count": 1,
+  "bias_confirmation_count": 3,
+  "bias_contradiction_count": 0,
   "last_strong_impulse_direction": null,
   "regime_state": "RANGING",
   "volatility_filter": 0.0,

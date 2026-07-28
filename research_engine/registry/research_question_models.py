@@ -26,6 +26,7 @@ class QuestionCategory(str, Enum):
     RISK_MANAGEMENT = "RISK_MANAGEMENT"   # R: Guard effectiveness, risk layer value
     DATA_GOVERNANCE = "DATA_GOVERNANCE"   # G: Lineage, validity, research confidence
     PROMOTION_INTELLIGENCE = "PROMOTION_INTELLIGENCE"  # P: Promotion impact and readiness
+    EXIT_MANAGEMENT = "EXIT_MANAGEMENT"   # EX: Exit policy optimisation and validation
 
 
 class QuestionStatus(str, Enum):

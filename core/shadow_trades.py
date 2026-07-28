@@ -147,6 +147,11 @@ class ShadowTrade:
     h1_bias: str = ""                 # BULLISH | BEARISH | NEUTRAL | ""
     trade_horizon: str = ""           # SCALP | INTRADAY | EXTENDED | "" (independent of strategy)
 
+    # ─── EXECUTION COST CONTEXT (captured at entry for research) ──────
+    spread_at_entry: float = 0.0      # ask - bid at decision time (price units)
+    bid_at_entry: float = 0.0         # Bid price at decision time
+    ask_at_entry: float = 0.0         # Ask price at decision time
+
     # ─── LIFECYCLE SIMULATION STATE (MUTABLE, forward-only) ───────────
     # Updated only through deterministic forward bar progression.
     bars_elapsed: int = 0
@@ -226,6 +231,9 @@ class ShadowTradeEngine:
         h4_regime: str = "",
         h1_bias: str = "",
         trade_horizon: str = "",
+        spread_at_entry: float = 0.0,
+        bid_at_entry: float = 0.0,
+        ask_at_entry: float = 0.0,
     ) -> ShadowTrade:
         """
         Open a new shadow trade from a live signal.
@@ -256,6 +264,9 @@ class ShadowTradeEngine:
             h4_regime=h4_regime,
             h1_bias=h1_bias,
             trade_horizon=trade_horizon,
+            spread_at_entry=spread_at_entry,
+            bid_at_entry=bid_at_entry,
+            ask_at_entry=ask_at_entry,
         )
         self._active[trade_id] = trade
         return trade
@@ -449,6 +460,9 @@ class ShadowTradeEngine:
                 "h4_regime": trade.h4_regime or None,
                 "h1_bias": trade.h1_bias or None,
                 "trade_horizon": trade.trade_horizon or None,
+                "spread_at_entry": round(trade.spread_at_entry, 8) if trade.spread_at_entry else None,
+                "bid_at_entry": round(trade.bid_at_entry, 8) if trade.bid_at_entry else None,
+                "ask_at_entry": round(trade.ask_at_entry, 8) if trade.ask_at_entry else None,
             },
 
             # ─── DOMAIN 3: SIMULATION ENVIRONMENT REFERENCE ───────────

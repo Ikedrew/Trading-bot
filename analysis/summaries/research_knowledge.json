@@ -1,40 +1,102 @@
 {
   "generated": "2026-07-21T23:07:34Z",
+  "schema_version": "research_knowledge_v2",
+  "last_updated": "2026-07-27T22:00:00Z",
+  "current_epoch_ev": -0.1999,
+  "current_epoch_sample_size": 846,
+  "findings": {
+    "Q1": {
+      "finding": "Scoring component weights could be improved (best predictor: confirmation_pre)",
+      "status": "REQUIRES_RERUN",
+      "reason": "Based on ALL-epoch data with 20% join rate. Needs CURRENT-epoch reproduction.",
+      "epoch": "ALL/MIXED",
+      "original_date": "2026-07-21"
+    },
+    "Q4": {
+      "finding": "Score calibration is needed (monotonic but miscalibrated by 15pp)",
+      "status": "REQUIRES_RERUN",
+      "reason": "Finding may be valid but needs verification in negative-EV context.",
+      "epoch": "ALL/MIXED",
+      "original_date": "2026-07-21"
+    },
+    "Q19": {
+      "finding": "System has positive expected value (+0.55R per shadow trade)",
+      "status": "INVALIDATED",
+      "reason": "Based on mixed/legacy epoch data and not representative of current architecture. CURRENT-epoch EV = -0.20R (n=846, p<0.000001).",
+      "epoch": "ALL/MIXED",
+      "invalidated_date": "2026-07-27",
+      "invalidated_by": "Current Truth Restoration Audit",
+      "current_truth": "System EV = -0.1999R (CURRENT epoch, n=846, 95% CI [-0.236, -0.164])"
+    },
+    "R3": {
+      "finding": "Probability of ruin 0.00% is below 5% threshold. System survival acceptable.",
+      "status": "INVALIDATED",
+      "reason": "Based on mixed/legacy epoch data and not representative of current architecture. Used WR=80%, avg_win=2.0R — real CURRENT values are WR=33%, avg_win=0.33R. Monte Carlo on CURRENT data shows P(ruin)=100% at >=0.5% risk.",
+      "epoch": "INVALID_INPUTS",
+      "invalidated_date": "2026-07-27",
+      "invalidated_by": "Current Truth Restoration Audit",
+      "current_truth": "P(ruin) = 100% at 0.5%+ risk per trade. P(ruin) = 0% only at <=0.2% risk."
+    },
+    "R4": {
+      "finding": "Recommended halt at 50% DD. Max observed DD: 108.3%. Avg recovery: 89.6 trades.",
+      "status": "INVALIDATED",
+      "reason": "Based on mixed/legacy epoch data and not representative of current architecture. Assumed positive EV (+0.675R) where recovery is possible. CURRENT EV=-0.20R means drawdown is monotonic, not temporary.",
+      "epoch": "ALL/MIXED",
+      "invalidated_date": "2026-07-27",
+      "invalidated_by": "Current Truth Restoration Audit",
+      "current_truth": "System reaches 50% DD in 81.6% of its history at 1% risk. Halt threshold is correct but should trigger immediately."
+    },
+    "R5": {
+      "finding": "Best sizing: Fixed 0.5% (return 1917.3%, DD 46.3%). Kelly=26.26%.",
+      "status": "INVALIDATED",
+      "reason": "Based on mixed/legacy epoch data and not representative of current architecture. Fixed 0.5% on CURRENT data produces -57.2% return. No sizing model converts negative EV into profit.",
+      "epoch": "ALL/MIXED",
+      "invalidated_date": "2026-07-27",
+      "invalidated_by": "Current Truth Restoration Audit",
+      "current_truth": "All sizing models lose money with CURRENT EV=-0.20R. Lowest loss at 0.1% risk (-15.6% return)."
+    },
+    "M9": {
+      "finding": "Best combination: TWEEZER_BOTTOM in REVERSAL (EV=+0.0983R, n=37, MEDIUM). Analysed 22 phase x pattern cells from 728 trades.",
+      "status": "VALIDATED",
+      "reason": "Used CURRENT-epoch data only. Correct experimental design.",
+      "epoch": "CURRENT",
+      "original_date": "2026-07-27"
+    },
+    "M10": {
+      "finding": "Interaction detected but no HIGH/MEDIUM confidence positive EV cell. Different phases favour different families.",
+      "status": "VALIDATED",
+      "reason": "Used CURRENT-epoch data only. Correct experimental design.",
+      "epoch": "CURRENT",
+      "original_date": "2026-07-27"
+    }
+  },
   "confirmed_facts": [
-    "Q1: Scoring component weights could be improved (best predictor identified)",
-    "Q2: Analysis complete \u2014 COMPLETE",
-    "Q3: Analysis complete \u2014 COMPLETE",
-    "Q4: Score calibration is needed (monotonic but miscalibrated by 15pp)",
-    "Q5: Analysis complete \u2014 COMPLETE",
-    "Q6: Analysis complete \u2014 COMPLETE",
-    "Q7: Analysis complete \u2014 COMPLETE",
-    "Q8: Analysis complete \u2014 COMPLETE",
-    "Q9: Analysis complete \u2014 COMPLETE",
-    "Q10: Analysis complete \u2014 INSUFFICIENT_DATA",
-    "Q11: Analysis complete \u2014 COMPLETE",
-    "Q13: Analysis complete \u2014 COMPLETE",
-    "Q16: Analysis complete \u2014 BLOCKED",
-    "Q17: Analysis complete \u2014 COMPLETE",
-    "Q18: Analysis complete \u2014 COMPLETE",
-    "Q19: System has positive expected value (+0.55R per shadow trade)",
-    "Q20: Score calibration is needed (monotonic but miscalibrated by 15pp)",
-    "Q21: Analysis complete \u2014 COMPLETE",
-    "Q22: Analysis complete \u2014 COMPLETE",
-    "Q23: Analysis complete \u2014 COMPLETE",
-    "Q24: Analysis complete \u2014 COMPLETE",
-    "Q25: Analysis complete \u2014 COMPLETE",
+    "CURRENT_EPOCH: System EV = -0.1999R (n=846, p<0.000001, 95% CI [-0.236, -0.164])",
+    "CURRENT_EPOCH: Win rate = 33.3%, Loss rate = 64.3%",
+    "CURRENT_EPOCH: 78.7% of trades exit by timeout (max_bars=60)",
+    "CURRENT_EPOCH: Take profit hit rate = 0.5% (4/846 trades)",
+    "CURRENT_EPOCH: Average MFE = 0.696R (entries have directional signal)",
+    "CURRENT_EPOCH: MFE capture ratio = -1.51 (exits destroy signal)",
+    "CURRENT_EPOCH: P(ruin at 0.5% risk) = 100% over 1000 trades",
+    "CURRENT_EPOCH: P(ruin at 0.2% risk) = 0% over 1000 trades",
+    "CURRENT_EPOCH: Trailing stop improves EV by +0.185R (t=6.66, p<0.001, n=846)",
+    "CURRENT_EPOCH: Trailing stop does NOT convert system to positive EV (best: -0.015R)",
+    "CURRENT_EPOCH: REVERSAL family + trailing = +0.055R (marginal, n=630)",
+    "M9: Phase x pattern interaction confirmed (CURRENT epoch, n=728)",
+    "M10: Phase x family interaction confirmed (CURRENT epoch, n=728)",
     "ARCH: H4 owns regime classification (100% authority post-migration)",
     "ARCH: H1 owns structural direction + BOS (positioned before scoring)",
     "ARCH: M15 owns setup quality (market_quality + chop_clarity)",
     "ARCH: M5 owns execution timing only (pattern, confirmation, bias FSM)",
     "ARCH: Score is monotonically related to win probability (validated by Q20)",
     "ARCH: ProbabilityEstimator interface separates probability from EV",
-    "ARCH: ScoreCalibrator ready for empirical mapping (currently identity_v1)",
-    "R3: Probability of ruin 0.00% is below 5% threshold. System survival acceptable.",
-    "R4: Recommended halt at 50% DD. Max observed DD: 108.3%. Avg recovery: 89.6 trades.",
-    "R5: Best sizing: Fixed 0.5% (return 1917.3%, DD 46.3%). Kelly=26.26%.",
-    "M9: Best combination: TWEEZER_BOTTOM in REVERSAL (EV=+0.0983R, n=37, MEDIUM). Analysed 22 phase\u00d7pattern cells from 728 trades.",
-    "M10: Interaction detected but no HIGH/MEDIUM confidence positive EV cell. Different phases favour different families: {'CONSOLIDATION': 'CONTINUATION', 'PULLBACK': 'REVERSAL', 'REVERSAL': 'REVERSAL', 'EXHAUSTION': 'REVERSAL', 'IMPULSE': 'REVERSAL'}. Need more data per cell."
+    "ARCH: ScoreCalibrator ready for empirical mapping (currently identity_v1)"
+  ],
+  "invalidated_findings": [
+    "INVALIDATED [2026-07-27]: Q19 positive EV finding (+0.675R) — epoch contamination. Real: -0.20R",
+    "INVALIDATED [2026-07-27]: R3 P(ruin)=0% — wrong inputs (WR=80% vs real 33%). Real: P(ruin)=100%",
+    "INVALIDATED [2026-07-27]: R4 halt at 50% DD — based on positive EV system. System already past 50%",
+    "INVALIDATED [2026-07-27]: R5 Fixed 0.5% optimal — produces -57.2% on current data"
   ],
   "rejected_hypotheses": [
     "REJECTED: strategy_confidence is a valid probability input (always 0 in 98% of decisions)",
@@ -43,16 +105,26 @@
   ],
   "pending_questions": [],
   "next_experiments": [
-    "NEXT: Apply empirical calibration curve to ScoreCalibrator (Q20 recommends PROMOTE)",
-    "NEXT: Run bot live to generate trade_truth for Q16 shadow validation",
-    "NEXT: Implement pattern-conditional probability (after calibration validated)"
+    "PRIORITY 1: Validate trailing stop via walk-forward (use E5 runner on simulated R-values)",
+    "PRIORITY 2: Re-run E1/Q19 — will now correctly show -0.20R due to epoch safety fix",
+    "PRIORITY 3: Re-run R3/R4/R5 with CURRENT data — establish real risk baseline",
+    "PRIORITY 4: Register Exit Management research domain (EX1-EX10)",
+    "PRIORITY 5: Investigate entry quality filtering (can 14.5% that reach +0.5R be identified at entry?)"
+  ],
+  "promotion_blockers": [
+    "System EV is negative (-0.20R). No promotions possible until EV > 0.",
+    "Exit mechanism is primary failure (78.7% timeout). Must fix exits before promoting strategies.",
+    "All previous PROMOTE recommendations (R3/R4/R5) are INVALIDATED."
   ],
   "data_foundation": {
-    "decision_trace": 4836,
-    "shadow_trades": 1232,
-    "trade_truth": 35,
-    "decision_ledger": 8155,
-    "execution_context": 14189
-  },
-  "last_updated": "2026-07-27T19:19:59Z"
+    "shadow_trades_total": 2250,
+    "shadow_trades_current_epoch": 846,
+    "shadow_trades_transitional": 992,
+    "shadow_trades_legacy": 412,
+    "decision_trace": 2248,
+    "trade_truth": 4931,
+    "decision_ledger": 3789,
+    "execution_context": 4010,
+    "strategy_observations": 159
+  }
 }

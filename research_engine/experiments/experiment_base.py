@@ -46,8 +46,27 @@ class ReadinessStatus:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def load_shadow_trades() -> list[dict[str, Any]]:
-    """Load all shadow trade records from both directories."""
+def load_shadow_trades(
+    *,
+    epoch: str = "CURRENT",
+    include_all_epochs: bool = False,
+) -> list[dict[str, Any]]:
+    """
+    Load shadow trade records filtered by data epoch.
+
+    Default: CURRENT epoch only (safe for implementation decisions).
+    Historical data requires explicit opt-in via include_all_epochs=True.
+
+    Args:
+        epoch: Which epoch to load. "CURRENT" (default), "TRANSITIONAL", "LEGACY", or "ALL".
+        include_all_epochs: If True, ignores epoch filter and returns everything.
+                           MUST be explicitly set — prevents accidental contamination.
+
+    Returns:
+        List of shadow trade dicts matching the requested epoch.
+    """
+    from research_engine.data_quality.classifier import classify_record, DataEpoch
+
     records: list[dict[str, Any]] = []
     for directory in (_SHADOW_DIR, _RESEARCH_SHADOW_DIR):
         if not directory.exists():
@@ -62,7 +81,29 @@ def load_shadow_trades() -> list[dict[str, Any]]:
                             pass
             except OSError:
                 pass
-    return records
+
+    # Epoch filtering (default: CURRENT only)
+    if include_all_epochs or epoch == "ALL":
+        return records
+
+    epoch_map = {
+        "CURRENT": DataEpoch.CURRENT,
+        "TRANSITIONAL": DataEpoch.TRANSITIONAL,
+        "LEGACY": DataEpoch.LEGACY,
+    }
+    target_epoch = epoch_map.get(epoch, DataEpoch.CURRENT)
+    return [r for r in records if classify_record(r) == target_epoch]
+
+
+def load_shadow_trades_all() -> list[dict[str, Any]]:
+    """
+    Load ALL shadow trades (all epochs). Use for historical comparison ONLY.
+
+    WARNING: Results from this function MUST NOT be used to make
+    implementation decisions about the current system. Use load_shadow_trades()
+    (CURRENT epoch) for all promotion/implementation research.
+    """
+    return load_shadow_trades(include_all_epochs=True)
 
 
 def extract_r_multiples(records: list[dict[str, Any]]) -> list[float]:
@@ -101,14 +142,17 @@ def build_fingerprint(
     records_excluded: int,
     source: str = "shadow_trades",
     validation_score: str = "UNKNOWN",
+    epoch: str = "CURRENT",
 ) -> dict[str, Any]:
-    """Build a standard dataset fingerprint."""
+    """Build a standard dataset fingerprint with epoch metadata."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     return {
         "dataset_id": f"{source}_{today}",
         "records_used": records_used,
         "records_excluded": records_excluded,
         "source": source,
+        "epoch": epoch,
+        "architecture_version": "new_pipeline_v1.2",
         "validation_score": validation_score,
         "generated": today,
     }
@@ -217,6 +261,18 @@ def build_report(
     provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a standard experiment report following the common contract."""
+    # Epoch safety: warn if fingerprint indicates mixed or non-CURRENT data
+    _epoch = fingerprint.get("epoch", "UNKNOWN")
+    _epoch_warnings: list[str] = []
+    if _epoch not in ("CURRENT", "CURRENT_ONLY", "shadow_trades_current"):
+        _epoch_warnings.append(
+            f"EPOCH_WARNING: Data epoch is '{_epoch}'. "
+            f"Results may not represent current system. "
+            f"Use load_shadow_trades(epoch='CURRENT') for implementation decisions."
+        )
+
+    all_warnings = (warnings or []) + _epoch_warnings
+
     report = {
         "question_id": question_id,
         "status": status,
@@ -226,7 +282,8 @@ def build_report(
         "fingerprint": fingerprint,
         "recommendation": recommendation,
         "assumptions": assumptions or [],
-        "warnings": warnings or [],
+        "warnings": all_warnings,
+        "epoch": _epoch,
         "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "provenance": provenance or {
             "experiment_module": f"research_engine.experiments.{question_id.lower()}",
