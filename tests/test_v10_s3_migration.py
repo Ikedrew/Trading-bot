@@ -114,8 +114,9 @@ class TestSchemaEnforcement:
 
 
 class TestUploadBehavior:
+    @patch("core.v10.s3_writer._production_write_guard", return_value=(True, "V10_LIVE"))
     @patch("core.v10.s3_writer._append_to_s3", return_value=True)
-    def test_no_trade_decision_uploads(self, mock_s3):
+    def test_no_trade_decision_uploads(self, mock_s3, mock_guard):
         record = _make_record("GBPUSD", 1785475200.0, "NO_TRADE")
         result = upload_decision(record)
         assert result is True
@@ -126,8 +127,9 @@ class TestUploadBehavior:
         result = upload_decision(record)
         assert result is False
 
+    @patch("core.v10.s3_writer._production_write_guard", return_value=(True, "V10_LIVE"))
     @patch("core.v10.s3_writer._append_to_s3", return_value=True)
-    def test_s3_unavailable_returns_false(self, mock_s3):
+    def test_s3_unavailable_returns_false(self, mock_s3, mock_guard):
         """When validation passes, _append_to_s3 is called. Transport is mocked."""
         record = _make_record("EURUSD", 1785475200.0, "NO_TRADE")
         result = upload_decision(record)

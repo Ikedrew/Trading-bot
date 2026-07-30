@@ -59,6 +59,7 @@ def build_v10_market_state(
         structural_clarity=understanding.h1.structural_clarity,
         bos_confirmed=understanding.h1.bos_confirmed,
         bos_direction=understanding.h1.bos_direction,
+        bos_level=understanding.h1.bos_level,
         choch_detected=understanding.h1.choch_detected,
         choch_direction=understanding.h1.choch_direction,
         swing_high=understanding.h1.swing_high,

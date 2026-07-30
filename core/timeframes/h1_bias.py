@@ -125,11 +125,12 @@ def _detect_bos(candles: list[Candle], lookback: int) -> tuple[bool, str]:
         lookback: number of recent bars to scan for pivots
 
     Returns:
-        (bos_confirmed: bool, bos_direction: str)
+        (bos_confirmed: bool, bos_direction: str, bos_level: float | None)
         bos_direction is "BULLISH", "BEARISH", or ""
+        bos_level is the swing price that was broken (or None)
     """
     if len(candles) < lookback + 1 or lookback < 4:
-        return False, ""
+        return False, "", None
 
     window = candles[-lookback:]
     current_close = candles[-1].close
@@ -146,21 +147,21 @@ def _detect_bos(candles: list[Candle], lookback: int) -> tuple[bool, str]:
             swing_lows.append(window[i].low)
 
     if not swing_highs and not swing_lows:
-        return False, ""
+        return False, "", None
 
     # Check bullish BOS: current close > last swing high
     if swing_highs:
         last_swing_high = swing_highs[-1]
         if current_close > last_swing_high:
-            return True, "BULLISH"
+            return True, "BULLISH", last_swing_high
 
     # Check bearish BOS: current close < last swing low
     if swing_lows:
         last_swing_low = swing_lows[-1]
         if current_close < last_swing_low:
-            return True, "BEARISH"
+            return True, "BEARISH", last_swing_low
 
-    return False, ""
+    return False, "", None
 
 
 def analyze_bias(candles: list[Candle]) -> BiasSnapshot:
@@ -262,7 +263,7 @@ def analyze_bias(candles: list[Candle]) -> BiasSnapshot:
 
     # 6. Break of Structure detection
     bos_lookback = min(20, len(candles) - 2)
-    bos_confirmed, bos_direction = _detect_bos(candles, bos_lookback)
+    bos_confirmed, bos_direction, bos_level = _detect_bos(candles, bos_lookback)
 
     return BiasSnapshot(
         direction=direction,
@@ -272,6 +273,7 @@ def analyze_bias(candles: list[Candle]) -> BiasSnapshot:
         swing_structure=structure_type,
         bos_confirmed=bos_confirmed,
         bos_direction=bos_direction,
+        bos_level=round(bos_level, 8) if bos_level is not None else None,
         last_swing_high=round(_last_swing_high, 8) if _last_swing_high is not None else None,
         last_swing_low=round(_last_swing_low, 8) if _last_swing_low is not None else None,
     )

@@ -18,6 +18,8 @@ Key rules:
 
 from __future__ import annotations
 
+import logging
+
 from core.v10.market_state import V10MarketState
 from core.v10.opportunity_assessment import OpportunityAssessment
 from core.v10.strategy_family import StrategyDecision, StrategyFamily
@@ -26,6 +28,8 @@ from core.v10.entry_model import (
     EntryDecision, TradeDirection, EntryMethod, EntryStatus,
     EntryZone, StopReference, TargetReference,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def build_entry_decision(
@@ -75,6 +79,17 @@ def build_entry_decision(
     risk_distance = abs(entry_price - stop.price) if entry_price > 0 and stop.price > 0 else 0
     reward_distance = abs(target.price - entry_price) if entry_price > 0 and target.price > 0 else 0
     expected_rr = reward_distance / risk_distance if risk_distance > 0 else 0
+
+    # ─── DIAGNOSTIC: structural level visibility ──────────────
+    logger.info(
+        "[V10 ENTRY] symbol=%s dir=%s bos_dir=%s bos_level=%.5f "
+        "swing_high=%.5f swing_low=%.5f entry=%.5f stop=%.5f target=%.5f "
+        "risk_dist=%.5f rr=%.2f stop_src=%s",
+        state.symbol, direction, state.h1.bos_direction, state.h1.bos_level,
+        state.h1.swing_high, state.h1.swing_low,
+        entry_price, stop.price, target.price,
+        risk_distance, expected_rr, stop.structure_source,
+    )
 
     # ─── VALIDATE GEOMETRY ────────────────────────────────────
     if risk_distance == 0:
@@ -214,13 +229,13 @@ def _determine_entry(direction: str, method: str, state: V10MarketState) -> tupl
                 entry_price = state.h1.swing_high if state.h1.swing_high > 0 else 0
     else:
         # Market/confirmation entry — use current level approximation
-        # (In live: would use bid/ask. In model: use midpoint of M5 context)
-        if state.m5.atr > 0:
-            # Approximate: midpoint of H1 swing
-            if state.h1.swing_high > 0 and state.h1.swing_low > 0:
-                entry_price = (state.h1.swing_high + state.h1.swing_low) / 2
-            else:
-                entry_price = 0
+        if state.h1.swing_high > 0 and state.h1.swing_low > 0:
+            entry_price = (state.h1.swing_high + state.h1.swing_low) / 2
+        elif state.h1.bos_level > 0:
+            # BOS level is the structural anchor — use it as entry reference
+            # In a bullish BOS: price is above bos_level, entry near current price
+            # In a bearish BOS: price is below bos_level
+            entry_price = state.h1.bos_level
         else:
             entry_price = 0
 
@@ -240,6 +255,9 @@ def _determine_stop(direction: str, state: V10MarketState) -> StopReference:
             candidates.append((state.h1.swing_low, "below_H1_swing_low"))
         if state.m15.swing_low > 0:
             candidates.append((state.m15.swing_low, "below_M15_swing_low"))
+        # BOS level fallback: in bullish BOS, the broken swing high becomes support
+        if state.h1.bos_level > 0 and state.h1.bos_direction == "BULLISH":
+            candidates.append((state.h1.bos_level, "below_H1_bos_level"))
 
         if candidates:
             # Use the tightest structural level (highest price below entry)
@@ -262,6 +280,9 @@ def _determine_stop(direction: str, state: V10MarketState) -> StopReference:
             candidates.append((state.h1.swing_high, "above_H1_swing_high"))
         if state.m15.swing_high > 0:
             candidates.append((state.m15.swing_high, "above_M15_swing_high"))
+        # BOS level fallback: in bearish BOS, the broken swing low becomes resistance
+        if state.h1.bos_level > 0 and state.h1.bos_direction == "BEARISH":
+            candidates.append((state.h1.bos_level, "above_H1_bos_level"))
 
         if candidates:
             # Tightest structural level (lowest price above entry)
@@ -300,6 +321,14 @@ def _determine_target(direction: str, horizon: HorizonDecision, state: V10Market
                 return TargetReference(state.h1.session_high, "session_high", "Session high (EXTENDED)")
             if state.h4.major_liquidity_above > 0:
                 return TargetReference(state.h4.major_liquidity_above, "H4_liquidity", "Major liquidity (EXTENDED)")
+
+        # BOS level fallback for BUY: project target above bos_level
+        # In bullish BOS, bos_level is the broken swing_high — target is above it
+        if state.h1.bos_level > 0 and state.h1.bos_direction == "BULLISH" and state.m5.atr > 0:
+            # Target = bos_level + 3x ATR (structural projection)
+            projected = state.h1.bos_level + (state.m5.atr * 3.0 * 12)  # M5 ATR × 12 ≈ H1 ATR, × 3 for target
+            return TargetReference(projected, "bos_projection", "Projected from BOS level (BULLISH)")
+
     else:
         # Target BELOW — find support targets
         if horizon_type == HorizonType.SCALP.value:
@@ -319,5 +348,10 @@ def _determine_target(direction: str, horizon: HorizonDecision, state: V10Market
                 return TargetReference(state.h1.session_low, "session_low", "Session low (EXTENDED)")
             if state.h4.major_liquidity_below > 0:
                 return TargetReference(state.h4.major_liquidity_below, "H4_liquidity", "Major liquidity (EXTENDED)")
+
+        # BOS level fallback for SELL: bos_level is below current price
+        # In bearish BOS, bos_level is the broken swing_low — target is at/below it
+        if state.h1.bos_level > 0 and state.h1.bos_direction == "BEARISH":
+            return TargetReference(state.h1.bos_level, "bos_level", "Broken swing low (BEARISH BOS target)")
 
     return TargetReference()

@@ -68,6 +68,84 @@ def validate_observation_id(obs_id: str) -> tuple[bool, str]:
 
 
 # ═══════════════════════════════════════════════════════════════
+# PRODUCTION WRITE GUARD
+# ═══════════════════════════════════════════════════════════════
+
+
+def _is_test_environment() -> bool:
+    """
+    Detect if running under a test/dev environment.
+
+    Returns True if ANY of these are true:
+      - PYTEST_CURRENT_TEST env var exists (set by pytest automatically)
+      - 'pytest' or '_pytest' is in sys.modules (pytest is imported)
+      - TEST_MODE config flag is True
+      - ENVIRONMENT config is "TEST" or "DEV"
+    """
+    import os
+    import sys
+
+    # Env var set by pytest for every test
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return True
+
+    # pytest loaded in process
+    if "pytest" in sys.modules or "_pytest" in sys.modules:
+        return True
+
+    # Explicit config flags
+    try:
+        from core import config
+        if getattr(config, "TEST_MODE", False):
+            return True
+        env = getattr(config, "ENVIRONMENT", "PRODUCTION").upper()
+        if env in ("TEST", "DEV", "DEVELOPMENT", "STAGING"):
+            return True
+    except ImportError:
+        pass
+
+    return False
+
+
+def _production_write_guard() -> tuple[bool, str]:
+    """
+    Runtime gate: blocks ALL S3 writes unless production conditions are met.
+
+    Requires ALL of:
+      1. NOT running under test environment
+      2. ENGINE_MODE == "V10"
+      3. LIVE_MODE == True
+      4. ALLOW_PRODUCTION_S3_WRITE == True
+
+    This guard lives inside s3_writer.py so that even direct callers
+    (scripts, notebooks, smoke tests) are blocked.
+
+    Returns (allowed, reason).
+    """
+    # Hard stop: test environment can NEVER write to production bucket
+    if _is_test_environment():
+        return False, "test_environment_detected"
+
+    try:
+        from core import config
+    except ImportError:
+        return False, "config module unavailable"
+
+    engine_mode = getattr(config, "ENGINE_MODE", "LEGACY")
+    live_mode = getattr(config, "LIVE_MODE", False)
+    allow_write = getattr(config, "ALLOW_PRODUCTION_S3_WRITE", False)
+
+    if engine_mode != "V10":
+        return False, f"ENGINE_MODE={engine_mode} (requires V10)"
+    if not live_mode:
+        return False, "LIVE_MODE=False (not live trading runtime)"
+    if not allow_write:
+        return False, "ALLOW_PRODUCTION_S3_WRITE=False (production writes disabled)"
+
+    return True, "V10_LIVE"
+
+
+# ═══════════════════════════════════════════════════════════════
 # PUBLIC API
 # ═══════════════════════════════════════════════════════════════
 
@@ -79,8 +157,18 @@ def upload_decision(record: dict[str, Any]) -> bool:
     Validates schema and symbol before upload.
     Returns True if uploaded, False if rejected or failed.
     """
-    if not _validate_for_upload(record, "decision"):
+    obs_id = record.get("observation_id", "?")
+
+    allowed, reason = _production_write_guard()
+    if not allowed:
+        logger.info("[S3 GUARD] obs_id=%s action=BLOCKED reason=%s", obs_id, reason)
         return False
+
+    if not _validate_for_upload(record, "decision"):
+        logger.info("[S3 GUARD] obs_id=%s action=BLOCKED reason=validation_failed", obs_id)
+        return False
+
+    logger.info("[S3 GUARD] obs_id=%s action=ALLOWED mode=%s", obs_id, reason)
     symbol = _normalize_symbol(record.get("symbol", ""))
     date_str = _extract_date(record.get("timestamp_utc", 0))
     key = f"v10/decisions/symbol={symbol}/date={date_str}/decisions.jsonl"
@@ -89,8 +177,13 @@ def upload_decision(record: dict[str, Any]) -> bool:
 
 def upload_execution(record: dict[str, Any]) -> bool:
     """Upload an execution attempt record to S3."""
+    allowed, reason = _production_write_guard()
+    if not allowed:
+        logger.debug("[S3 GUARD] bucket=%s action=BLOCKED reason=%s", BUCKET_NAME, reason)
+        return False
     if not _validate_for_upload(record, "execution"):
         return False
+    logger.debug("[S3 GUARD] bucket=%s action=ALLOWED mode=%s", BUCKET_NAME, reason)
     symbol = _normalize_symbol(record.get("symbol", ""))
     date_str = _extract_date(record.get("timestamp_utc", 0))
     key = f"v10/executions/symbol={symbol}/date={date_str}/executions.jsonl"
@@ -99,8 +192,13 @@ def upload_execution(record: dict[str, Any]) -> bool:
 
 def upload_outcome(record: dict[str, Any]) -> bool:
     """Upload a trade outcome record to S3."""
+    allowed, reason = _production_write_guard()
+    if not allowed:
+        logger.debug("[S3 GUARD] bucket=%s action=BLOCKED reason=%s", BUCKET_NAME, reason)
+        return False
     if not _validate_for_upload(record, "outcome"):
         return False
+    logger.debug("[S3 GUARD] bucket=%s action=ALLOWED mode=%s", BUCKET_NAME, reason)
     symbol = _normalize_symbol(record.get("symbol", ""))
     date_str = _extract_date(record.get("timestamp_utc", record.get("exit_time", 0)))
     key = f"v10/outcomes/symbol={symbol}/date={date_str}/outcomes.jsonl"
@@ -115,6 +213,12 @@ def upload_events(events: list[dict[str, Any]], observation_id: str = "") -> boo
     Schema: v10_event_v1
     """
     if not events:
+        return False
+
+    # Production write guard
+    allowed, reason = _production_write_guard()
+    if not allowed:
+        logger.debug("[S3 GUARD] bucket=%s action=BLOCKED dataset=events reason=%s", BUCKET_NAME, reason)
         return False
 
     # Validate first event for symbol/timestamp
@@ -280,29 +384,28 @@ def _extract_date(timestamp: float) -> str:
 
 def _append_to_s3(key: str, record: dict) -> bool:
     """Append a JSONL record to S3. Never raises."""
+    obs_id = record.get("observation_id", record.get("decision_id", "unknown"))
     try:
         import boto3
         client = boto3.client("s3", region_name=BUCKET_REGION)
         line = json.dumps(record, default=str) + "\n"
 
         # S3 doesn't support append — use a unique key per record
-        # For production: use Firehose or batch uploads
-        # For now: append observation_id to make key unique
-        obs_id = record.get("observation_id", record.get("decision_id", "unknown"))
         unique_key = key.replace(".jsonl", f"_{obs_id}.jsonl")
 
+        logger.info("[V10_S3] step=put_object obs_id=%s key=%s", obs_id, unique_key)
         client.put_object(
             Bucket=BUCKET_NAME,
             Key=unique_key,
             Body=line.encode("utf-8"),
             ContentType="application/jsonl",
         )
-        logger.info("[V10_S3] uploaded: %s", unique_key)
+        logger.info("[V10_S3] step=uploaded obs_id=%s key=%s", obs_id, unique_key)
         return True
 
     except ImportError:
-        logger.debug("[V10_S3] boto3 not available — S3 upload skipped")
+        logger.info("[V10_S3] step=skipped obs_id=%s reason=boto3_unavailable", obs_id)
         return False
     except Exception as exc:
-        logger.warning("[V10_S3] upload failed: %s", exc)
+        logger.warning("[V10_S3] step=failed obs_id=%s error=%s", obs_id, exc)
         return False

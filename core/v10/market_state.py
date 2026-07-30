@@ -64,6 +64,7 @@ class H1State:
 
     bos_confirmed: bool = False
     bos_direction: str = ""               # BULLISH / BEARISH
+    bos_level: float = 0.0               # The swing price that was broken (structural stop reference)
     choch_detected: bool = False
     choch_direction: str = ""             # BULLISH / BEARISH
 

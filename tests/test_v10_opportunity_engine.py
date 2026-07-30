@@ -18,23 +18,21 @@ def _strong_opportunity_state():
             dominant_trend="BEARISH", structure_type="LH_LL",
             bos_confirmed=True, bos_direction="BEARISH",
             structural_clarity=0.80,
-            supply_ob_high=1.0920, supply_ob_low=1.0915,
+            swing_high=1.0920, swing_low=1.0850,
         ),
         m15=M15State(
             pullback_active=True, pullback_depth_atr=1.5,
-            retracement_pct=0.6,
+            retracement_pct=0.6, range_position=0.82,
             internal_bos=True, internal_bos_direction="BEARISH",
         ),
         m5=M5State(
             rejection_present=True, rejection_direction="BEARISH",
             rejection_strength_atr=0.9, confirmation_candle=True,
-            at_institutional_zone=True, zone_type="SUPPLY_OB",
             spread=0.00012, spread_atr_ratio=0.2, atr=0.0006,
         ),
         regime=RegimeState(regime="RANGING", volatility_state="NEUTRAL"),
         location=LocationState(
-            location_type="SUPPLY_OB", inside_institutional_zone=True,
-            zone_quality=0.85, premium_discount="PREMIUM", range_position=0.75,
+            premium_discount="PREMIUM", range_position=0.82,
             liquidity_below=True,
         ),
         htf_alignment=HTFAlignment(

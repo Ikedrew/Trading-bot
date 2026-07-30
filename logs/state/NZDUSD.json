@@ -1,12 +1,12 @@
 {
   "_meta": {
     "symbol": "NZDUSD",
-    "saved_at_utc": "2026-07-30T09:26:18.217058+00:00",
-    "saved_at_unix": 1785403578.2170587
+    "saved_at_utc": "2026-07-30T22:12:26.735898+00:00",
+    "saved_at_unix": 1785449546.7358983
   },
   "current_bias": "BUY",
   "bias_phase": "CONFIRMED",
-  "bias_strength": 53.0,
+  "bias_strength": 100.0,
   "bias_age_seconds": 1500.0,
   "bias_confirmation_score": 0.0,
   "bias_confirmation_count": 5,

@@ -60,6 +60,7 @@ class H1Summary:
     ema_position: float = 0.0
     bos_confirmed: bool = False       # Break of Structure detected
     bos_direction: str = ""           # BULLISH | BEARISH | ""
+    bos_level: float = 0.0            # The swing price that was broken (structural stop reference)
     # Swing price levels (propagated from BiasSnapshot for location research)
     swing_high: float = 0.0           # Most recent confirmed H1 swing high
     swing_low: float = 0.0            # Most recent confirmed H1 swing low

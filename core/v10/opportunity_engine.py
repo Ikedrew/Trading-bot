@@ -97,34 +97,101 @@ def _evaluate_location(
     conflicting: list[str],
     reasoning: list[str],
 ) -> float:
-    """Evaluate: is price at a meaningful institutional level?"""
+    """Evaluate: is price at a meaningful institutional level?
+    
+    Uses ONLY data populated in production:
+      - H1 swing_high / swing_low (from BiasSnapshot pivot detection)
+      - M15 range_position (0=discount extreme, 1=premium extreme)
+      - H1 BOS direction (structural authority)
+      - M5 rejection (confirms but never defines)
+    
+    "At institutional zone" means: price is at a structural extreme
+    where institutional interest is expected (swing boundary areas).
+    
+    H1 OB fields are NOT used (dead fields in production — no tracker exists).
+    """
     score = 0.0
+    h1 = state.h1
+    m15 = state.m15
+    m5 = state.m5
     loc = state.location
 
-    # Inside institutional zone
-    if loc.inside_institutional_zone:
-        score += 0.5
-        supporting.append(f"Inside institutional zone: {loc.location_type}")
-        reasoning.append(f"Price at {loc.location_type}")
+    # ─── Range position (primary location signal) ──────────────
+    # In production: populated from M15 candle analysis
+    # Fallback: LocationState.range_position from V3 context
+    range_pos = m15.range_position if m15.range_position > 0 else loc.range_position
+
+    # ─── H1 Swing Levels (structural boundaries) ──────────────
+    has_swing_structure = h1.swing_high > 0 and h1.swing_low > 0
+
+    if not has_swing_structure and range_pos == 0:
+        conflicting.append("No H1 swing structure and no range data")
+        return 0.0
+
+    # ─── At Structural Extreme (price near swing boundary) ─────
+    at_premium_extreme = range_pos >= 0.78
+    at_discount_extreme = range_pos <= 0.22
+
+    if at_premium_extreme:
+        # Price at H1 swing high area — potential supply reaction
+        score += 0.40
+        supporting.append(f"Price at premium extreme (range_pos={range_pos:.2f})")
+        reasoning.append("At H1 premium boundary — institutional supply expected")
+    elif at_discount_extreme:
+        # Price at H1 swing low area — potential demand reaction
+        score += 0.40
+        supporting.append(f"Price at discount extreme (range_pos={range_pos:.2f})")
+        reasoning.append("At H1 discount boundary — institutional demand expected")
+    elif range_pos >= 0.65 or range_pos <= 0.35:
+        # Approaching extreme — partial credit
+        score += 0.20
+        label = "premium" if range_pos >= 0.65 else "discount"
+        supporting.append(f"Approaching {label} zone (range_pos={range_pos:.2f})")
     else:
-        conflicting.append("Not inside institutional zone")
+        # Equilibrium — no location edge
+        conflicting.append(f"Price in equilibrium (range_pos={range_pos:.2f})")
 
-    # Zone quality
-    if loc.zone_quality >= 0.7:
-        score += 0.25
-        supporting.append(f"High zone quality: {loc.zone_quality:.2f}")
-    elif loc.zone_quality >= 0.4:
+    # ─── H1 BOS Alignment with Position ───────────────────────
+    # Bearish BOS + price at premium = strong supply location
+    # Bullish BOS + price at discount = strong demand location
+    if h1.bos_confirmed:
+        if h1.bos_direction == "BEARISH" and range_pos >= 0.65:
+            score += 0.20
+            supporting.append("Bearish BOS + premium position (aligned for sell)")
+        elif h1.bos_direction == "BULLISH" and range_pos <= 0.35:
+            score += 0.20
+            supporting.append("Bullish BOS + discount position (aligned for buy)")
+        elif h1.bos_direction == "BEARISH" and range_pos <= 0.35:
+            # Bearish BOS at discount = continuation, less location value
+            score += 0.05
+        elif h1.bos_direction == "BULLISH" and range_pos >= 0.65:
+            score += 0.05
+
+    # ─── H1 Swing Level Proximity (liquidity) ─────────────────
+    if h1.equal_highs_level > 0 or h1.equal_lows_level > 0:
         score += 0.10
+        supporting.append("Liquidity pool present (equal highs/lows)")
 
-    # Premium/discount alignment (at extremes = more mean-reversion potential)
-    if loc.premium_discount in ("PREMIUM", "DISCOUNT"):
-        score += 0.15
-        supporting.append(f"At {loc.premium_discount} zone (range_pos={loc.range_position:.2f})")
+    if h1.session_high > 0 or h1.session_low > 0:
+        if range_pos >= 0.85 or range_pos <= 0.15:
+            score += 0.10
+            supporting.append("Near session extreme — high liquidity area")
 
-    # Liquidity proximity
-    if loc.liquidity_above or loc.liquidity_below:
-        score += 0.10
-        supporting.append("Liquidity target present")
+    # ─── M15 Pullback Confirmation ────────────────────────────
+    # Pullback into zone area adds confidence
+    if m15.pullback_active and m15.pullback_depth_atr >= 0.8:
+        if at_premium_extreme or at_discount_extreme:
+            score += 0.10
+            supporting.append(f"M15 pullback into zone (depth={m15.pullback_depth_atr:.1f} ATR)")
+
+    # ─── M5 Rejection CONFIRMS location (never defines it) ────
+    if m5.rejection_present and (at_premium_extreme or at_discount_extreme):
+        if at_premium_extreme and m5.rejection_direction == "BEARISH":
+            score += 0.10
+            supporting.append("M5 bearish rejection at premium extreme")
+        elif at_discount_extreme and m5.rejection_direction == "BULLISH":
+            score += 0.10
+            supporting.append("M5 bullish rejection at discount extreme")
 
     return min(score, 1.0)
 
@@ -244,12 +311,15 @@ def _evaluate_formation(
         supporting.append(f"M15 internal BOS: {m15.internal_bos_direction}")
 
     # Pullback into zone (zone reaction setup)
-    if m15.pullback_active and state.location.inside_institutional_zone:
+    # Use range_position to determine zone proximity (not dead inside_institutional_zone)
+    _range_pos = m15.range_position if m15.range_position > 0 else state.location.range_position
+    _at_structural_extreme = _range_pos >= 0.75 or _range_pos <= 0.25
+    if m15.pullback_active and _at_structural_extreme:
         score += 0.30
         if opp_type == "NONE":
             opp_type = "ZONE_REACTION"
-        supporting.append("Pullback into institutional zone")
-        reasoning.append("M15 pullback into zone")
+        supporting.append("Pullback into structural zone")
+        reasoning.append("M15 pullback at structural extreme")
 
     # M5 rejection present (execution-layer confirmation of M15 formation)
     if m5.rejection_present:
@@ -268,7 +338,7 @@ def _evaluate_formation(
             score += 0.15
             if opp_type == "NONE":
                 opp_type = "TREND_CONTINUATION"
-        elif state.location.inside_institutional_zone:
+        elif _at_structural_extreme:
             score += 0.10
             if opp_type == "NONE":
                 opp_type = "RANGE_REACTION"
@@ -277,7 +347,7 @@ def _evaluate_formation(
     if opp_type == "NONE" and score > 0.3:
         if m15.pullback_active and m15.retracement_pct > 0.5:
             opp_type = "TREND_CONTINUATION"
-        elif state.location.inside_institutional_zone:
+        elif _at_structural_extreme:
             opp_type = "ZONE_REACTION"
 
     return min(score, 1.0), opp_type

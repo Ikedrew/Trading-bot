@@ -130,6 +130,7 @@ def build_h1_understanding(
     """
     bos_confirmed = False
     bos_direction = ""
+    bos_level = 0.0
     dominant_trend = ""
     swing_high = 0.0
     swing_low = 0.0
@@ -142,6 +143,7 @@ def build_h1_understanding(
             dominant_trend = getattr(h1, "direction", "") or ""
             bos_confirmed = bool(getattr(h1, "bos_confirmed", False))
             bos_direction = getattr(h1, "bos_direction", "") or ""
+            bos_level = float(getattr(h1, "bos_level", 0) or 0)
             swing_high = float(getattr(h1, "swing_high", 0) or 0)
             swing_low = float(getattr(h1, "swing_low", 0) or 0)
             structure_type = getattr(h1, "swing_structure", "") or ""
@@ -154,6 +156,7 @@ def build_h1_understanding(
             dominant_trend = direction.value if direction and hasattr(direction, "value") else ""
             bos_confirmed = bool(getattr(bias_snap, "bos_confirmed", False))
             bos_direction = getattr(bias_snap, "bos_direction", "") or ""
+            bos_level = float(getattr(bias_snap, "bos_level", 0) or 0)
             swing_high = float(getattr(bias_snap, "last_swing_high", 0) or 0)
             swing_low = float(getattr(bias_snap, "last_swing_low", 0) or 0)
             structure_type = getattr(bias_snap, "swing_structure", "") or ""
@@ -175,6 +178,7 @@ def build_h1_understanding(
     return H1Understanding(
         bos_confirmed=bos_confirmed,
         bos_direction=bos_direction,
+        bos_level=bos_level,
         dominant_trend=dominant_trend,
         swing_high=swing_high,
         swing_low=swing_low,

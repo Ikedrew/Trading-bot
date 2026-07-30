@@ -182,8 +182,9 @@ class TestUploadPathRejection:
         assert result is False
         mock_s3.assert_not_called()
 
+    @patch("core.v10.s3_writer._production_write_guard", return_value=(True, "V10_LIVE"))
     @patch("core.v10.s3_writer._append_to_s3", return_value=True)
-    def test_valid_record_reaches_transport(self, mock_s3):
+    def test_valid_record_reaches_transport(self, mock_s3, mock_guard):
         """A fully valid record DOES reach _append_to_s3."""
         record = _valid_record()
         result = upload_decision(record)
@@ -337,8 +338,9 @@ class TestExecutionOutcomeObservationId:
         assert result is False
         mock_s3.assert_not_called()
 
+    @patch("core.v10.s3_writer._production_write_guard", return_value=(True, "V10_LIVE"))
     @patch("core.v10.s3_writer._append_to_s3", return_value=True)
-    def test_execution_valid_obs_id_passes(self, mock_s3):
+    def test_execution_valid_obs_id_passes(self, mock_s3, mock_guard):
         record = _valid_record()
         result = upload_execution(record)
         assert result is True
@@ -351,8 +353,9 @@ class TestExecutionOutcomeObservationId:
         assert result is False
         mock_s3.assert_not_called()
 
+    @patch("core.v10.s3_writer._production_write_guard", return_value=(True, "V10_LIVE"))
     @patch("core.v10.s3_writer._append_to_s3", return_value=True)
-    def test_outcome_valid_obs_id_passes(self, mock_s3):
+    def test_outcome_valid_obs_id_passes(self, mock_s3, mock_guard):
         record = _valid_record()
         result = upload_outcome(record)
         assert result is True

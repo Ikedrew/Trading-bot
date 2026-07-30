@@ -75,6 +75,7 @@ class BiasSnapshot:
     swing_structure: str  # "HH_HL" | "LH_LL" | "MIXED"
     bos_confirmed: bool = False  # True if price broke last swing level (Break of Structure)
     bos_direction: str = ""  # "BULLISH" | "BEARISH" | "" (direction of the break)
+    bos_level: float | None = None  # The swing price that was broken (structural reference for stop/target)
     # H1 structure price levels (Phase 4C.1 — for horizon-aware SL/TP)
     last_swing_high: float | None = None  # Most recent confirmed H1 swing high price
     last_swing_low: float | None = None   # Most recent confirmed H1 swing low price

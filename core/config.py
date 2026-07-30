@@ -92,6 +92,12 @@ ENABLE_LEGACY_SHADOW_PIPELINE = False  # When True, old pipeline runs as shadow 
 # "LEGACY" — Existing New Engine remains active (V10 unused)
 ENGINE_MODE = "V10"
 
+# --- V10 S3 Production Write Guard ---
+# ALL three conditions must be True for S3 writes to v10-engine bucket.
+# This prevents tests, replay, development, and accidental scripts from polluting production data.
+LIVE_MODE = True                        # True only in live trading runtime (False in test/replay/dev)
+ALLOW_PRODUCTION_S3_WRITE = True        # Explicit opt-in for production S3 writes
+
 # --- Research Integration (feature flag) ---
 USE_EMPIRICAL_PROBABILITY = False  # When True, EV gate uses empirical pattern win rates from Research Engine. When False (default), existing synthetic p_success formula is used.
 RESEARCH_ASSESSMENT_LOGGING = True  # When True, research assessment is computed and logged alongside decisions (observability only, never affects execution)
