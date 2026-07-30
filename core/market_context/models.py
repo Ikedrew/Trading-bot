@@ -60,6 +60,9 @@ class H1Summary:
     ema_position: float = 0.0
     bos_confirmed: bool = False       # Break of Structure detected
     bos_direction: str = ""           # BULLISH | BEARISH | ""
+    # Swing price levels (propagated from BiasSnapshot for location research)
+    swing_high: float = 0.0           # Most recent confirmed H1 swing high
+    swing_low: float = 0.0            # Most recent confirmed H1 swing low
 
 
 @dataclass(frozen=True)
@@ -76,6 +79,9 @@ class M15Summary:
     order_block_present: bool = False   # Institutional interest detected
     nearest_support: float = 0.0        # Nearest support price level
     nearest_resistance: float = 0.0     # Nearest resistance price level
+    # Swing price levels (from M15 pivot detection — same as nearest S/R)
+    swing_high: float = 0.0             # Most recent confirmed M15 swing high
+    swing_low: float = 0.0              # Most recent confirmed M15 swing low
 
 
 @dataclass(frozen=True)
@@ -177,6 +183,8 @@ class MarketContext:
                 "ema_position": round(self.h1.ema_position, 4),
                 "bos_confirmed": self.h1.bos_confirmed,
                 "bos_direction": self.h1.bos_direction,
+                "swing_high": round(self.h1.swing_high, 8),
+                "swing_low": round(self.h1.swing_low, 8),
             },
             "m15": {
                 "quality_score": round(self.m15.quality_score, 4),
@@ -184,6 +192,8 @@ class MarketContext:
                 "order_block_present": self.m15.order_block_present,
                 "nearest_support": round(self.m15.nearest_support, 6),
                 "nearest_resistance": round(self.m15.nearest_resistance, 6),
+                "swing_high": round(self.m15.swing_high, 8),
+                "swing_low": round(self.m15.swing_low, 8),
             },
             "m5": {
                 "bias_phase": self.m5.bias_phase,

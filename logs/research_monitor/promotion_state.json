@@ -1,9 +1,9 @@
 {
-  "decisions_processed": 1314,
+  "decisions_processed": 1351,
   "research_matches": 563,
-  "synthetic_approvals": 24,
-  "research_approvals": 395,
-  "agreement_count": 939,
+  "synthetic_approvals": 26,
+  "research_approvals": 397,
+  "agreement_count": 976,
   "disagreement_count": 375,
   "research_would_execute": 373,
   "research_would_reject": 2,
@@ -12,7 +12,7 @@
   "research_total_r": -40.4651,
   "last_milestone_notified": 1000,
   "promotion_status": "CANDIDATE",
-  "last_updated": 1785196844.1868157,
-  "match_rate": 0.4285,
+  "last_updated": 1785373842.2978263,
+  "match_rate": 0.4167,
   "research_win_rate": 0.3708
 }

@@ -2,11 +2,12 @@
 
 ---
 
-## Current Stage: FOUNDATION VALIDATION
+## Current Stage: FOUNDATION VALIDATION — CONCLUDED
 
 **Date:** 2026-07-27
+**Result:** ❌ STAGE 0 FAILED
 **Architecture:** M5 candlestick pattern detection + 10-factor scoring + strategy activation
-**Proven so far:** System EV = -0.70R after costs. No subset positive. Signal has no directional value at current scale.
+**Proven:** Entry signal has no directional predictive value. No filter creates positive EV after costs.
 
 ---
 
@@ -14,99 +15,51 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  STAGE 0: FOUNDATION VALIDATION (CURRENT)               │
+│  STAGE 0: FOUNDATION VALIDATION — CONCLUDED             │
 │                                                         │
-│  Hypothesis:                                            │
-│  "The existing M5 pattern architecture may contain      │
-│   edge ONLY after contextual filtering."                │
+│  Tests completed:                                       │
+│  ✅ CE1 — Cost-adjusted EV = -0.70R                     │
+│  ✅ EQ1 — Zero positive subsets across all dimensions   │
+│  ✅ MS1-3 — Signal has no direction at any scale        │
+│  ✅ SV1 — Structure geometry helps costs, not signal    │
+│  ✅ EI10 — Best pre-registered filter still negative    │
 │                                                         │
-│  Required tests:                                        │
-│  □ EI6  — Risk distance filter (≥6 pips)               │
-│  □ EI1  — First-bar velocity predictor                  │
-│  □ EI10 — Combined multi-filter                         │
-│  □ E5   — Walk-forward on any positive finding          │
+│  RESULT: ❌ FAIL                                        │
+│  The current information set cannot identify            │
+│  profitable entries after transaction costs.            │
 │                                                         │
-│  Unlock condition:                                      │
-│  Cost-adjusted EV > 0 with:                             │
-│    • n ≥ 100                                            │
-│    • 95% CI entirely above zero                         │
-│    • Walk-forward test period confirms                  │
+│  DECISION: Architecture transition required.            │
 └───────────────────────┬─────────────────────────────────┘
                         │
-            ┌───────────┴───────────┐
-            │                       │
-            ▼                       ▼
-┌───────────────────┐   ┌───────────────────────────────┐
-│  IF PASSED:       │   │  IF FAILED:                   │
-│                   │   │                               │
-│  STAGE 1:        │   │  DECISION POINT:              │
-│  EDGE ISOLATION  │   │  RE-ARCHITECT OR HALT         │
-│                   │   │                               │
-│  Unlock 41       │   │  Options:                     │
-│  Level 1-3       │   │  A) Higher timeframe (H1/H4)  │
-│  questions       │   │  B) Different entry source     │
-│                   │   │  C) New risk geometry          │
-│  Research:       │   │  D) Halt project               │
-│  • Which filter  │   │                               │
-│    matters most? │   │  Each requires NEW foundation │
-│  • Does it hold  │   │  validation cycle             │
-│    across time?  │   │                               │
-│  • Minimum sample│   │                               │
-│    for live?     │   │                               │
-└────────┬──────────┘   └───────────────────────────────┘
-         │
-         ▼
-┌───────────────────────────────────────┐
-│  STAGE 2: EDGE OPTIMISATION           │
-│                                       │
-│  Prerequisite: Stage 1 validated      │
-│                                       │
-│  Research:                             │
-│  • Exit policy per validated subset   │
-│  • Stop distance per context          │
-│  • Position sizing for positive EV    │
-│  • Risk guards (which help, which     │
-│    block good trades?)                │
-│                                       │
-│  Unlock condition:                    │
-│  Optimised EV > raw EV with          │
-│  walk-forward validation              │
-└────────┬──────────────────────────────┘
-         │
-         ▼
-┌───────────────────────────────────────┐
-│  STAGE 3: SHADOW DEPLOYMENT           │
-│                                       │
-│  Prerequisite: Stage 2 validated      │
-│                                       │
-│  Actions:                             │
-│  • Run optimised system in shadow     │
-│  • n ≥ 200 NEW trades                 │
-│  • Compare shadow vs baseline         │
-│  • Measure execution quality          │
-│  • Confirm EV holds in live market    │
-│                                       │
-│  Unlock condition:                    │
-│  Shadow EV > 0 for 200+ trades        │
-│  with CI above zero                   │
-└────────┬──────────────────────────────┘
-         │
-         ▼
-┌───────────────────────────────────────┐
-│  STAGE 4: LIVE DEPLOYMENT             │
-│                                       │
-│  Prerequisite: Stage 3 validated      │
-│                                       │
-│  Actions:                             │
-│  • Deploy with minimum position size  │
-│  • Monitor live EV vs shadow EV       │
-│  • Measure slippage/execution gap     │
-│  • Scale only if live matches shadow  │
-│                                       │
-│  Kill condition:                      │
-│  Live EV < 0 for 100 consecutive      │
-│  trades → halt and re-evaluate        │
-└───────────────────────────────────────┘
+                        ▼
+┌───────────────────────────────────────────────────────┐
+│  TRANSITION: ARCHITECTURAL RESEARCH                    │
+│                                                       │
+│  Current entry model: FALSIFIED                       │
+│  (Pattern shape does not predict direction)           │
+│                                                       │
+│  Next steps (ordered):                                │
+│                                                       │
+│  □ EI1 — Bar-1 velocity test (last quick check)      │
+│    "Does first-bar movement predict outcome?"         │
+│    If YES → time-based exit research path             │
+│    If NO → confirm signal is purely random            │
+│                                                       │
+│  □ PATH 1 — Context as signal                         │
+│    Direction from H1 structure (not pattern)          │
+│    Pattern becomes timing trigger only                │
+│    Requires: new directional source                   │
+│                                                       │
+│  □ PATH 2 — Higher timeframe                          │
+│    Move signal detection to H1/H4                     │
+│    Where movement scale >> spread                     │
+│    Requires: new pattern/signal detection             │
+│                                                       │
+│  □ PATH 3 — Probabilistic model                       │
+│    Replace deterministic direction assignment          │
+│    with statistical probability estimation            │
+│    Requires: ML infrastructure                        │
+└───────────────────────────────────────────────────────┘
 ```
 
 ---

@@ -1,7 +1,7 @@
 {
   "generated": "2026-07-21T23:07:34Z",
   "schema_version": "research_knowledge_v2",
-  "last_updated": "2026-07-27T22:00:00Z",
+  "last_updated": "2026-07-28T01:00:00Z",
   "current_epoch_ev": -0.1999,
   "current_epoch_sample_size": 846,
   "findings": {
@@ -68,6 +68,50 @@
       "reason": "Used CURRENT-epoch data only. Correct experimental design.",
       "epoch": "CURRENT",
       "original_date": "2026-07-27"
+    },
+    "SV1": {
+      "finding": "M15 structure geometry improves cost-adjusted EV by +0.47R vs M5 candle geometry (p<0.001, walk-forward validated). But variant EV still -0.34R (not viable alone).",
+      "status": "VALIDATED",
+      "reason": "CURRENT epoch, n=323 paired trades, walk-forward confirmed (test CI [+0.15, +0.38] above zero). Single variable isolated (SL distance only).",
+      "epoch": "CURRENT",
+      "original_date": "2026-07-27",
+      "experiment": "SV1_structure_geometry",
+      "improvement": "+0.468R per trade (cost reduction)",
+      "variant_ev": "-0.342R (still negative)",
+      "walk_forward": "PASSED (train +0.60R, test +0.27R, both CI positive)",
+      "next_step": "Run EI10 on structure-geometry subset to test if filtering creates positive EV"
+    },
+    "EI10": {
+      "finding": "Pre-registered filter (PULLBACK + H1 aligned + risk>=6 + score>=0.60) produces n=36, adj EV=-0.136R [CI: -0.179, -0.092]. No positive cost-adjusted EV achievable with current information set.",
+      "status": "VALIDATED",
+      "reason": "CURRENT epoch, pre-registered hypothesis, all validity gates pass. Result is definitive: current entry signal has zero directional value.",
+      "epoch": "CURRENT",
+      "original_date": "2026-07-27",
+      "experiment": "EI10_foundation_decision",
+      "conclusion": "FAIL — current information set insufficient for profitable entries",
+      "stage_0_result": "FAILED",
+      "implication": "Architecture transition required. Optimisation within current entry model is not justified."
+    },
+    "V2_CONTEXT": {
+      "finding": "V2 context validation: H4 regime (INCONCLUSIVE—single class), H1 bias (FAIL—inverted prediction), Phase (FAIL—all negative). CQ5 bar-1 velocity: r=0.42 with outcome, raw EV=+0.21R when bar1>0.1R (first positive raw signal found). Adj EV CI includes zero.",
+      "status": "VALIDATED",
+      "reason": "CURRENT epoch INTRADAY trades, n=328. Context variables tested independently. Bar-1 velocity is the only signal with positive raw EV.",
+      "epoch": "CURRENT",
+      "original_date": "2026-07-27",
+      "h4_regime_result": "INCONCLUSIVE (100% RANGE, no comparison)",
+      "h1_bias_result": "FAIL (counter > aligned by 0.08R — inverted)",
+      "phase_result": "FAIL (all negative, PULLBACK best at -0.21R adj)",
+      "bar1_velocity_result": "PARTIAL PASS (r=0.42, raw EV=+0.21R when bar1>0.1R, adj CI includes zero)",
+      "next_step": "Test confirm-or-cut model: exit immediately if bar1 < 0, hold if bar1 > 0"
+    },
+    "V2_1": {
+      "finding": "V2.1 Confirm-or-Cut: Exiting trades where bar1<=0 does NOT improve EV. Best variant produces -0.362R (WORSE than baseline -0.343R). Walk-forward shows degradation in test period.",
+      "status": "VALIDATED",
+      "reason": "CURRENT epoch, n=328, all thresholds tested, walk-forward FAILS. Cutting early locks in spread cost without sufficient benefit.",
+      "epoch": "CURRENT",
+      "original_date": "2026-07-28",
+      "conclusion": "FAIL — bar-1 correlation is descriptive not prescriptive. Cannot be used as viable exit mechanism.",
+      "implication": "All three hypotheses (V1 pattern, V2 context, V2.1 bar-1 confirm) now disproven."
     }
   },
   "confirmed_facts": [
@@ -90,7 +134,11 @@
     "ARCH: M5 owns execution timing only (pattern, confirmation, bias FSM)",
     "ARCH: Score is monotonically related to win probability (validated by Q20)",
     "ARCH: ProbabilityEstimator interface separates probability from EV",
-    "ARCH: ScoreCalibrator ready for empirical mapping (currently identity_v1)"
+    "ARCH: ScoreCalibrator ready for empirical mapping (currently identity_v1)",
+    "SV1: M15 structure SL (5.6 pips) reduces cost-to-risk ratio by 2.6x vs M5 candle SL (2.5 pips). Improvement +0.47R/trade, walk-forward validated. System still -0.34R (needs signal improvement).",
+    "EI10 STAGE 0 DECISION: FAIL. No combination of available entry-time information produces positive cost-adjusted EV. Best subset (PULLBACK+H1+risk6+score60, n=36): adj EV=-0.136R. Current architecture cannot be made profitable.",
+    "V2 CONTEXT: Pre-entry context (H1/H4/Phase) has NO directional predictive value. Post-entry bar-1 velocity (r=0.42) is the ONLY signal with positive raw EV (+0.21R when bar1>0.1R).",
+    "V2.1: Bar-1 confirm-or-cut FAILS. Cutting early locks in spread (0.30R) without saving money. All variants produce WORSE adj EV than baseline. Walk-forward degrades. No information in this system creates positive EV after costs."
   ],
   "invalidated_findings": [
     "INVALIDATED [2026-07-27]: Q19 positive EV finding (+0.675R) — epoch contamination. Real: -0.20R",
@@ -105,16 +153,14 @@
   ],
   "pending_questions": [],
   "next_experiments": [
-    "PRIORITY 1: Validate trailing stop via walk-forward (use E5 runner on simulated R-values)",
-    "PRIORITY 2: Re-run E1/Q19 — will now correctly show -0.20R due to epoch safety fix",
-    "PRIORITY 3: Re-run R3/R4/R5 with CURRENT data — establish real risk baseline",
-    "PRIORITY 4: Register Exit Management research domain (EX1-EX10)",
-    "PRIORITY 5: Investigate entry quality filtering (can 14.5% that reach +0.5R be identified at entry?)"
+    "PROJECT DECISION REQUIRED: All testable hypotheses within current architecture exhausted.",
+    "Options: (A) Higher timeframe signals with real H1/H4 entries, (B) External data (order flow), (C) Different market, (D) Halt.",
+    "Current research infrastructure is complete and validated — transfers to any new architecture."
   ],
   "promotion_blockers": [
-    "System EV is negative (-0.20R). No promotions possible until EV > 0.",
-    "Exit mechanism is primary failure (78.7% timeout). Must fix exits before promoting strategies.",
-    "All previous PROMOTE recommendations (R3/R4/R5) are INVALIDATED."
+    "ALL HYPOTHESES DISPROVEN: V1 (pattern), V2 (context), V2.1 (bar-1 confirm) all produce negative EV after costs.",
+    "The information set (candles + H1/H4 context + M15 structure) does not contain exploitable prediction on M5 FX.",
+    "Architecture transition to fundamentally different information source is required."
   ],
   "data_foundation": {
     "shadow_trades_total": 2250,

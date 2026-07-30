@@ -202,6 +202,8 @@ class MarketContextBuilder:
             ema_position=getattr(bias_snap, "ema_position", 0.0),
             bos_confirmed=getattr(bias_snap, "bos_confirmed", False),
             bos_direction=getattr(bias_snap, "bos_direction", "") or "",
+            swing_high=float(getattr(bias_snap, "last_swing_high", 0.0) or 0.0),
+            swing_low=float(getattr(bias_snap, "last_swing_low", 0.0) or 0.0),
         )
 
     def _extract_m15(self, htf_context: Any) -> M15Summary:
@@ -217,6 +219,8 @@ class MarketContextBuilder:
             order_block_present=getattr(struct_snap, "order_block_present", False),
             nearest_support=getattr(struct_snap, "nearest_support", 0.0),
             nearest_resistance=getattr(struct_snap, "nearest_resistance", 0.0),
+            swing_high=float(getattr(struct_snap, "nearest_resistance", 0.0) or 0.0),
+            swing_low=float(getattr(struct_snap, "nearest_support", 0.0) or 0.0),
         )
 
     def _extract_m5(self, engine_state: Any) -> M5Summary:

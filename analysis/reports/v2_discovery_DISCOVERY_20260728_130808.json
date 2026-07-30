@@ -1,0 +1,174 @@
+{
+  "report_id": "DISCOVERY_20260728_130808",
+  "generated_utc": "2026-07-28T13:08:08.123425+00:00",
+  "total_records": 437,
+  "linked_records": 437,
+  "cq1": {
+    "features_analysed": 21,
+    "significant_features": 0,
+    "top_features": [
+      {
+        "feature": "risk_distance_pips",
+        "type": "continuous",
+        "best_category": "Q2",
+        "best_ev": -0.4923,
+        "baseline_ev": -0.1224,
+        "total_sample": 437,
+        "predictive": false,
+        "categories_tested": 4
+      },
+      {
+        "feature": "session",
+        "type": "categorical",
+        "best_category": "LONDON",
+        "best_ev": -0.5246,
+        "baseline_ev": -0.1224,
+        "total_sample": 437,
+        "predictive": false,
+        "categories_tested": 3
+      },
+      {
+        "feature": "m15_structure_state",
+        "type": "categorical",
+        "best_category": "CONSOLIDATION",
+        "best_ev": -0.526,
+        "baseline_ev": -0.1224,
+        "total_sample": 432,
+        "predictive": false,
+        "categories_tested": 4
+      },
+      {
+        "feature": "spread_atr_ratio",
+        "type": "continuous",
+        "best_category": "Q1",
+        "best_ev": -0.5443,
+        "baseline_ev": -0.1224,
+        "total_sample": 437,
+        "predictive": false,
+        "categories_tested": 4
+      },
+      {
+        "feature": "atr",
+        "type": "continuous",
+        "best_category": "Q1",
+        "best_ev": -0.5443,
+        "baseline_ev": -0.1224,
+        "total_sample": 437,
+        "predictive": false,
+        "categories_tested": 4
+      },
+      {
+        "feature": "volatility",
+        "type": "continuous",
+        "best_category": "Q1",
+        "best_ev": -0.5443,
+        "baseline_ev": -0.1224,
+        "total_sample": 437,
+        "predictive": false,
+        "categories_tested": 4
+      },
+      {
+        "feature": "candle_range",
+        "type": "continuous",
+        "best_category": "Q1",
+        "best_ev": -0.5443,
+        "baseline_ev": -0.1224,
+        "total_sample": 437,
+        "predictive": false,
+        "categories_tested": 4
+      },
+      {
+        "feature": "body_ratio",
+        "type": "continuous",
+        "best_category": "Q1",
+        "best_ev": -0.5443,
+        "baseline_ev": -0.1224,
+        "total_sample": 437,
+        "predictive": false,
+        "categories_tested": 4
+      },
+      {
+        "feature": "wick_ratio",
+        "type": "continuous",
+        "best_category": "Q1",
+        "best_ev": -0.5443,
+        "baseline_ev": -0.1224,
+        "total_sample": 437,
+        "predictive": false,
+        "categories_tested": 4
+      },
+      {
+        "feature": "m15_displacement",
+        "type": "continuous",
+        "best_category": "Q1",
+        "best_ev": -0.5443,
+        "baseline_ev": -0.1224,
+        "total_sample": 437,
+        "predictive": false,
+        "categories_tested": 4
+      }
+    ],
+    "conclusion": "Analysed 21 features. No individual feature shows statistically significant positive cost-adjusted EV. Individual features alone do not predict outcomes."
+  },
+  "cq2": {
+    "hypotheses_tested": 8,
+    "validated_combinations": 0,
+    "best_combination": "",
+    "best_ev": 0.0,
+    "conclusion": "Tested 8 hypotheses. No combination achieves positive cost-adjusted EV in out-of-sample validation."
+  },
+  "cq3": {
+    "favourable_environments": 0,
+    "unfavourable_environments": 0,
+    "best_environments": [],
+    "worst_environments": [],
+    "conclusion": "No statistically significant environment effects detected."
+  },
+  "cq4": {
+    "model_accuracy": 0.6364,
+    "baseline_accuracy": 0.623,
+    "model_useful": false,
+    "brier_score": 0.2537,
+    "calibration_error": 0.1745,
+    "top_features": [
+      {
+        "feature": "h4_regime",
+        "importance": 0.0
+      },
+      {
+        "feature": "h1_bias",
+        "importance": 0.0
+      },
+      {
+        "feature": "h1_bos_confirmed",
+        "importance": 0.0
+      },
+      {
+        "feature": "session",
+        "importance": 0.0
+      },
+      {
+        "feature": "near_support",
+        "importance": 0.0
+      }
+    ],
+    "conclusion": "Model accuracy: 63.6% vs baseline 62.3%. Brier score: 0.2537. Model does NOT beat baseline \u2014 available features do not reliably estimate outcome probability."
+  },
+  "conclusion": {
+    "outcome": "NO_PREDICTIVE_VALUE",
+    "confidence": "HIGH",
+    "summary": "No available feature or combination in the V2Opportunity schema predicts positive cost-adjusted outcomes. The information captured does not contain exploitable predictive value.",
+    "evidence": [
+      "CQ1: No individual feature predicts positive outcomes",
+      "CQ2: No combination validates out-of-sample",
+      "CQ3: No significant favourable environments",
+      "CQ4: Probability model does not beat baseline"
+    ],
+    "next_steps": [
+      "Consider alternative information sources (order flow, news, cross-pair)",
+      "Increase observation granularity (tick data, L2)",
+      "Test different market (different pair, different asset class)",
+      "Accept null result \u2014 current architecture lacks edge"
+    ]
+  }
+}

@@ -75,6 +75,9 @@ class ObserverRegistry:
         5. Shadow rooms — run_shadow_rooms
         6. Decision trace — build + persist + funnel record
         7. Strategy observer — strategy intelligence observation (read-only)
+        8. V2 opportunity observer — full market state capture (read-only)
+        9. V3 opportunity observer — location + liquidity capture (read-only)
+        10. V3 shadow — market understanding engine (read-only)
 
     Each observer is wrapped in try/except Exception: pass.
     Failure in one observer never blocks subsequent observers.
@@ -181,5 +184,43 @@ class ObserverRegistry:
                 observe_strategy_intelligence,
             )
             observe_strategy_intelligence(ctx)
+        except Exception:
+            pass
+
+        # ─── 8. V2 opportunity observer: full market state capture ────
+        # READ ONLY. Captures complete market context for V2 research.
+        # Builds V2Opportunity records for predictive analysis.
+        # Never influences decisions. Never modifies engine_result.
+        # Failure here never affects trading pipeline.
+        try:
+            from core.observers.v2_opportunity_observer import (
+                observe_v2_opportunity,
+            )
+            observe_v2_opportunity(ctx)
+        except Exception:
+            pass
+
+        # ─── 9. V3 opportunity observer: location + liquidity capture ─
+        # READ ONLY. Captures market location and liquidity context
+        # for V3 research (where is price relative to structure/levels).
+        # Never influences decisions. Never modifies engine_result.
+        # Failure here never affects trading pipeline.
+        try:
+            from core.observers.v3_opportunity_observer import (
+                observe_v3_opportunity,
+            )
+            observe_v3_opportunity(ctx)
+        except Exception:
+            pass
+
+        # ─── 10. V3 shadow: market understanding engine ───────────────
+        # READ ONLY. Builds complete MarketUnderstanding for V3 research.
+        # Describes market objectively. Never influences decisions.
+        # Failure here never affects trading pipeline.
+        try:
+            from core.v3_shadow.observer import (
+                observe_market_understanding,
+            )
+            observe_market_understanding(ctx)
         except Exception:
             pass

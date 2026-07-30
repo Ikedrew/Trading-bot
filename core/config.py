@@ -14,7 +14,10 @@ SYMBOLS = ["EURUSD",
            "USDCHF", 
            "USDCAD", 
            "AUDUSD", 
-           "NZDUSD"
+           "NZDUSD",
+           "NAS100",
+           "US500",
+           "XAUUSD",
 ]
 
 # Canonical symbols (broker-agnostic base names).
@@ -28,6 +31,9 @@ CANONICAL_SYMBOLS = [
     "USDCAD",
     "AUDUSD",
     "NZDUSD",
+    "NAS100",
+    "US500",
+    "XAUUSD",
 ]
 
 
@@ -79,6 +85,12 @@ DRY_RUN_EXECUTION_LOGS = True   # "[DRY RUN] Trade blocked" output
 USE_NEW_PIPELINE = True         # New engine is now the SOLE execution authority
 ALLOW_LEGACY_FALLBACK = False   # When False, new engine failure blocks trading (fail-safe). When True, falls back to old pipeline.
 ENABLE_LEGACY_SHADOW_PIPELINE = False  # When True, old pipeline runs as shadow (comparison). When False, old pipeline never executes during live trading.
+
+# --- V10 Engine Mode ---
+# Controls which decision engine the live scanner uses.
+# "V10"    — V10Pipeline is the active trading brain (default)
+# "LEGACY" — Existing New Engine remains active (V10 unused)
+ENGINE_MODE = "V10"
 
 # --- Research Integration (feature flag) ---
 USE_EMPIRICAL_PROBABILITY = False  # When True, EV gate uses empirical pattern win rates from Research Engine. When False (default), existing synthetic p_success formula is used.
@@ -181,6 +193,8 @@ MAX_CORRELATION_GROUP_POSITIONS = 2     # Max open positions in same correlation
 CORRELATION_GROUPS = [
     ["EURUSD", "GBPUSD", "AUDUSD", "NZDUSD"],
     ["USDJPY", "USDCHF", "USDCAD"],
+    ["NAS100", "US500"],            # Index group
+    ["XAUUSD"],                     # Commodity group (uncorrelated)
 ]
 
 # --- Layer 9: trade management (post-entry only; never influences DecisionEngine) ---
@@ -291,7 +305,7 @@ MAX_TOTAL_RISK_EXPOSURE_PCT = 3.0       # Maximum aggregate portfolio risk % (su
 # Which horizons are permitted to execute live trades.
 # Phase 1: Only SCALP executes. INTRADAY/EXTENDED remain shadow-only.
 # Expand this list to enable higher horizons (requires validated shadow data).
-PERMITTED_HORIZONS = ["SCALP"]
+PERMITTED_HORIZONS = ["SCALP", "INTRADAY", "EXTENDED"]
 
 # Horizon Execution Authority (Phase 2)
 # Controls portfolio allocation across horizons.
@@ -427,6 +441,9 @@ MIN_SL_PIPS = {                         # Per-symbol FIXED minimum (used when AD
     "USDCAD": 5.0,
     "AUDUSD": 5.0,
     "NZDUSD": 5.0,
+    "NAS100": 10.0,             # ~10 points minimum stop for NAS100
+    "US500": 30.0,              # ~3.0 price units (in 0.1-point pips)
+    "XAUUSD": 50.0,             # ~0.50 price units (in 0.01-point pips)
 }
 MIN_SL_PIPS_DEFAULT = 5.0              # Fallback for symbols not in the dict above
 
@@ -444,6 +461,9 @@ MAX_SPREAD_ABSOLUTE = {                 # Per-symbol absolute spread caps (price
     "USDCAD": 0.00040,
     "AUDUSD": 0.00030,
     "NZDUSD": 0.00040,
+    "NAS100": 3.0,              # ~1.5 points typical, cap at 3
+    "US500": 1.0,               # ~0.4 points typical, cap at 1
+    "XAUUSD": 0.50,             # ~0.20 typical, cap at 0.50
 }
 
 # --- Candle replay cache ---
