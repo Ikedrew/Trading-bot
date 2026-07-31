@@ -1,15 +1,15 @@
 {
   "_meta": {
     "symbol": "NAS100",
-    "saved_at_utc": "2026-07-30T22:12:26.741513+00:00",
-    "saved_at_unix": 1785449546.741513
+    "saved_at_utc": "2026-07-31T12:31:27.984415+00:00",
+    "saved_at_unix": 1785501087.9844153
   },
-  "current_bias": "BUY",
-  "bias_phase": "CONFIRMED",
-  "bias_strength": 92.0,
-  "bias_age_seconds": 5100.0,
+  "current_bias": null,
+  "bias_phase": "EXPIRED",
+  "bias_strength": 0.0,
+  "bias_age_seconds": 0.0,
   "bias_confirmation_score": 0.0,
-  "bias_confirmation_count": 5,
+  "bias_confirmation_count": 0,
   "bias_contradiction_count": 0,
   "last_strong_impulse_direction": null,
   "regime_state": "RANGING",

@@ -114,6 +114,7 @@ class HTFContext:
     Lifetime: single M5 cycle (created, consumed, discarded)
     """
 
+    macro: MacroSnapshot | None = None
     regime: RegimeSnapshot | None = None
     bias: BiasSnapshot | None = None
     structure: StructureSnapshot | None = None
@@ -122,6 +123,46 @@ class HTFContext:
     def is_populated(self) -> bool:
         """True if at least one HTF layer has data."""
         return any(x is not None for x in (self.regime, self.bias, self.structure))
+
+
+# ─── MACRO CONTEXT TYPE ───────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class MacroSnapshot:
+    """
+    MN/W1/D1 macro context — the market story before H4.
+
+    Produced by: TimeframeCache (from D1/W1/MN analyzers)
+    Consumed by: macro_alignment.py (compute_macro_alignment)
+
+    Ownership: nobody (value object)
+    Lifetime: refreshed on D1/W1/MN bar close, cached between.
+    """
+
+    # Monthly (from RegimeSnapshot on MN1 candles)
+    monthly_trend: str = ""              # BULLISH / BEARISH / NEUTRAL
+    monthly_trend_strength: float = 0.0  # 0.0–1.0
+    monthly_phase: str = ""              # IMPULSE / PULLBACK / CONSOLIDATION / VOLATILE
+
+    # Weekly (from BiasSnapshot on W1 candles)
+    weekly_trend: str = ""               # BULLISH / BEARISH / NEUTRAL
+    weekly_trend_strength: float = 0.0   # 0.0–1.0
+    weekly_swing_high: float = 0.0       # Price level
+    weekly_swing_low: float = 0.0        # Price level
+    weekly_bos_level: float = 0.0        # Institutional reference
+    weekly_range_position: float = 0.0   # 0.0–1.0
+
+    # Daily (from RegimeSnapshot + BiasSnapshot on D1 candles)
+    daily_bias: str = ""                 # BULLISH / BEARISH / NEUTRAL
+    daily_bias_strength: float = 0.0     # 0.0–1.0
+    daily_swing_high: float = 0.0        # Today's structural high
+    daily_swing_low: float = 0.0         # Today's structural low
+    daily_range_position: float = 0.0    # 0.0–1.0
+    daily_atr_ratio: float = 1.0         # Today's ATR vs average (volatility context)
+
+    # Meta
+    bar_time: int = 0                    # Timestamp of latest daily bar
 
 
 @dataclass(frozen=True)

@@ -24,17 +24,17 @@ def _opp(state="VALID", bias="BEARISH", obs_id="test123"):
 
 
 def _mean_reversion_state():
-    """Neutral HTF + range extreme + zone reaction."""
+    """Neutral HTF + range extreme + structural level present."""
     return V10MarketState(
         symbol="TEST", timestamp_utc=1000.0,
         h4=H4State(trend="NEUTRAL", trend_strength=0.15),
-        h1=H1State(dominant_trend="NEUTRAL", structural_clarity=0.5),
+        h1=H1State(dominant_trend="NEUTRAL", structural_clarity=0.5,
+                   swing_high=1.0920, swing_low=1.0850),
         m15=M15State(pullback_active=True),
         m5=M5State(rejection_present=True, rejection_strength_atr=0.8, rejection_direction="BEARISH"),
         regime=RegimeState(regime="RANGING", momentum_strength=0.2),
         location=LocationState(
-            inside_institutional_zone=True, location_type="SUPPLY_OB",
-            range_position=0.80, zone_quality=0.7,
+            range_position=0.80,
             premium_discount="PREMIUM",
         ),
         htf_alignment=HTFAlignment(macro_bias="NEUTRAL", structure_alignment=0.3),
@@ -134,17 +134,17 @@ def _breakout_expansion_state():
 
 
 def _range_reaction_state():
-    """Ranging + at extreme + high quality zone. Uses TRANSITIONAL regime + directional H4 to avoid mean_reversion."""
+    """Ranging + at extreme + established range with clear boundaries."""
     return V10MarketState(
         symbol="TEST", timestamp_utc=1000.0,
         h4=H4State(trend="BEARISH", trend_strength=0.5),
-        h1=H1State(dominant_trend="BEARISH", structural_clarity=0.4),
+        h1=H1State(dominant_trend="BEARISH", structural_clarity=0.75,
+                   swing_high=1.0920, swing_low=1.0850),
         m15=M15State(),
-        m5=M5State(rejection_present=False),
-        regime=RegimeState(regime="TRANSITIONAL", momentum_strength=0.15),
+        m5=M5State(rejection_present=True),
+        regime=RegimeState(regime="RANGING", momentum_strength=0.15),
         location=LocationState(
-            inside_institutional_zone=True, location_type="DEMAND_OB",
-            range_position=0.20, zone_quality=0.8,
+            range_position=0.20,
         ),
         htf_alignment=HTFAlignment(macro_bias="BEARISH", structure_alignment=0.6),
     )
@@ -166,7 +166,7 @@ class TestMeanReversion:
         state = _mean_reversion_state()
         result = select_strategy(state, _opp())
         assert result.supporting_conditions.get("htf_neutral") is True
-        assert result.supporting_conditions.get("zone_reaction") is True
+        assert result.supporting_conditions.get("structural_level") is True
 
 
 class TestTrendContinuation:
@@ -218,26 +218,24 @@ class TestBreakoutExpansion:
 
 class TestRangeReaction:
     def test_ranging_extreme_zone_qualifies_as_range_reaction(self):
-        """RANGE_REACTION conditions are met (though MEAN_REVERSION may take priority)."""
+        """RANGE_REACTION conditions are met (established range with clear boundaries)."""
         state = V10MarketState(
             symbol="TEST", timestamp_utc=1000.0,
             h4=H4State(trend="BEARISH", trend_strength=0.5),  # Not neutral → blocks MEAN_REVERSION
-            h1=H1State(dominant_trend="BEARISH", structural_clarity=0.4),
+            h1=H1State(dominant_trend="BEARISH", structural_clarity=0.75,
+                       swing_high=1.0920, swing_low=1.0850),
             m15=M15State(),
-            m5=M5State(rejection_present=False),
+            m5=M5State(rejection_present=True),
             regime=RegimeState(regime="RANGING", momentum_strength=0.15),
             location=LocationState(
-                inside_institutional_zone=True, location_type="DEMAND_OB",
-                range_position=0.20, zone_quality=0.8,
+                range_position=0.20,
             ),
             htf_alignment=HTFAlignment(macro_bias="BEARISH", structure_alignment=0.6),
         )
         opp = _opp(bias="BULLISH")
         result = select_strategy(state, opp)
-        # This state qualifies for BOTH mean_reversion and range_reaction
-        # but since htf is not fully neutral (trend_strength=0.5), mean_reversion's
-        # htf_neutral catches it via regime="RANGING". Priority gives mean_reversion.
-        # Accept either MEAN_REVERSION or RANGE_REACTION as valid.
+        # This state qualifies for BOTH mean_reversion and range_reaction.
+        # Mean_reversion R1 catches via regime="RANGING". Priority order determines winner.
         assert result.strategy_family in (
             StrategyFamily.MEAN_REVERSION.value,
             StrategyFamily.RANGE_REACTION.value,

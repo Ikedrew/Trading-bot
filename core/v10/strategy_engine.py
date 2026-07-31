@@ -178,9 +178,14 @@ def _evaluate_false_break(state: V10MarketState, opp: OpportunityAssessment) -> 
     near_session_extreme = (
         state.h1.session_high > 0 and state.h1.session_low > 0
     )
-    # Check if liquidity was taken (proxy for false break)
-    liquidity_taken = (state.location.liquidity_above or state.location.liquidity_below)
-    conditions["breakout_attempted"] = liquidity_taken
+    # Check if a key structural level existed (expanded: swing levels + liquidity flags)
+    level_existed = (
+        state.location.liquidity_above or
+        state.location.liquidity_below or
+        state.h1.swing_high > 0 or
+        state.h1.swing_low > 0
+    )
+    conditions["breakout_attempted"] = level_existed
 
     # Required: failure to continue (rejection present)
     has_rejection = state.m5.rejection_present
@@ -194,9 +199,9 @@ def _evaluate_false_break(state: V10MarketState, opp: OpportunityAssessment) -> 
     if has_rejection:
         score += 0.30
         reasons.append("Rejection after break attempt")
-    if liquidity_taken:
+    if level_existed:
         score += 0.30
-        reasons.append("Liquidity taken (false break trigger)")
+        reasons.append("Structural level existed (breakable boundary)")
     if reclaimed:
         score += 0.20
         reasons.append("Level reclaimed — back inside range")
@@ -209,7 +214,7 @@ def _evaluate_false_break(state: V10MarketState, opp: OpportunityAssessment) -> 
     else:
         conditions["strong_rejection"] = False
 
-    required_met = liquidity_taken and has_rejection and reclaimed
+    required_met = level_existed and has_rejection and reclaimed
     if not required_met:
         return 0.0, [], conditions
 
@@ -247,12 +252,14 @@ def _evaluate_trend_continuation(state: V10MarketState, opp: OpportunityAssessme
         score += 0.20
         reasons.append(f"M15 pullback (depth={state.m15.pullback_depth_atr:.1f} ATR)")
 
-    # Supporting: continuation structure (M15 internal BOS in trend direction)
-    continuation_bos = state.m15.internal_bos and state.m15.internal_bos_direction == state.h4.trend
-    conditions["continuation_structure"] = continuation_bos
-    if continuation_bos:
+    # Supporting: pullback exhaustion signal (M5 rejection in trend direction)
+    pullback_exhaustion = (
+        state.m5.rejection_present and state.m5.rejection_direction == state.h4.trend
+    )
+    conditions["continuation_structure"] = pullback_exhaustion
+    if pullback_exhaustion:
         score += 0.15
-        reasons.append("M15 internal BOS continues trend")
+        reasons.append(f"M5 rejection {state.m5.rejection_direction} confirms pullback ending")
 
     # Supporting: trending regime
     conditions["trend_regime"] = state.regime.regime == "TRENDING"
@@ -272,42 +279,27 @@ def _evaluate_breakout_expansion(state: V10MarketState, opp: OpportunityAssessme
     reasons: list[str] = []
     score = 0.0
 
-    # Required: compression period (low volatility or compression state)
-    compressed = (
-        state.regime.expansion_state == "COMPRESSING" or
-        state.regime.volatility_state == "CONTRACTION" or
-        state.regime.compression_bars > 5
-    )
+    # Required: compression period (low volatility environment)
+    compressed = state.regime.volatility_state == "CONTRACTION"
     conditions["compression_period"] = compressed
     if compressed:
         score += 0.25
-        reasons.append("Compression/contraction detected")
+        reasons.append("Volatility contraction detected")
 
-    # Required: volatility expansion (displacement or expansion state)
-    expanding = (
-        state.m15.displacement_present or
-        state.regime.expansion_state == "EXPANDING" or
-        state.regime.volatility_state == "EXPANSION"
-    )
-    conditions["volatility_expansion"] = expanding
-    if expanding:
-        score += 0.30
-        reasons.append("Volatility expanding")
-
-    # Required: displacement
+    # Required: displacement (institutional expansion trigger)
     has_displacement = state.m15.displacement_present
     conditions["displacement"] = has_displacement
     if has_displacement:
-        score += 0.25
+        score += 0.40
         reasons.append(f"Displacement: {state.m15.displacement_direction} ({state.m15.displacement_magnitude_atr:.1f} ATR)")
 
-    # Supporting: range break
+    # Supporting: strong displacement magnitude
     conditions["strong_movement"] = state.m15.displacement_magnitude_atr >= 1.5
     if state.m15.displacement_magnitude_atr >= 1.5:
-        score += 0.15
+        score += 0.20
         reasons.append("Strong displacement (>1.5 ATR)")
 
-    required_met = compressed and expanding and has_displacement
+    required_met = compressed and has_displacement
     if not required_met:
         return 0.0, [], conditions
 
@@ -333,18 +325,27 @@ def _evaluate_mean_reversion(state: V10MarketState, opp: OpportunityAssessment) 
         reasons.append("HTF neutral/ranging environment")
 
     # Required: price near range boundary (premium or discount)
-    at_extreme = state.location.range_position >= 0.70 or state.location.range_position <= 0.30
+    # Guard: range_position == 0 is missing data, not a legitimate extreme
+    at_extreme = (
+        state.location.range_position >= 0.70 or
+        (state.location.range_position <= 0.30 and state.location.range_position > 0)
+    )
     conditions["at_range_boundary"] = at_extreme
     if at_extreme:
         score += 0.25
         reasons.append(f"At range extreme (position={state.location.range_position:.2f})")
 
-    # Required: institutional zone reaction
-    zone_reaction = state.location.inside_institutional_zone
-    conditions["zone_reaction"] = zone_reaction
-    if zone_reaction:
+    # Required: structural evidence at this level
+    # (replaces dead inside_institutional_zone with available V10 structural signals)
+    has_structural_level = (
+        state.h1.swing_high > 0 or
+        state.h1.swing_low > 0 or
+        state.h1.bos_level > 0
+    ) and state.h1.structural_clarity >= 0.5
+    conditions["structural_level"] = has_structural_level
+    if has_structural_level:
         score += 0.20
-        reasons.append(f"Zone reaction: {state.location.location_type}")
+        reasons.append(f"Structural level present (clarity={state.h1.structural_clarity:.2f})")
 
     # Supporting: rejection / weak momentum
     if state.m5.rejection_present:
@@ -361,7 +362,7 @@ def _evaluate_mean_reversion(state: V10MarketState, opp: OpportunityAssessment) 
         score += 0.10
         reasons.append("Weak momentum (supports reversion)")
 
-    required_met = htf_neutral and at_extreme and zone_reaction
+    required_met = htf_neutral and at_extreme and has_structural_level
     if not required_met:
         return 0.0, [], conditions
 
@@ -382,26 +383,35 @@ def _evaluate_range_reaction(state: V10MarketState, opp: OpportunityAssessment) 
         reasons.append("Ranging regime")
 
     # Required: at range extreme
-    at_extreme = state.location.range_position >= 0.70 or state.location.range_position <= 0.30
+    # Guard: range_position == 0 is missing data, not a legitimate extreme
+    at_extreme = (
+        state.location.range_position >= 0.70 or
+        (state.location.range_position <= 0.30 and state.location.range_position > 0)
+    )
     conditions["at_range_extreme"] = at_extreme
     if at_extreme:
         score += 0.25
         reasons.append(f"Range extreme (pos={state.location.range_position:.2f})")
 
-    # Required: institutional zone present
-    has_zone = state.location.inside_institutional_zone or state.location.zone_quality >= 0.5
-    conditions["institutional_zone"] = has_zone
-    if has_zone:
+    # Required: established range with clear defended boundaries
+    # (replaces dead inside_institutional_zone / zone_quality with structural clarity)
+    established_range = (
+        state.h1.structural_clarity >= 0.7 and
+        state.h1.swing_high > 0 and
+        state.h1.swing_low > 0
+    )
+    conditions["established_range"] = established_range
+    if established_range:
         score += 0.20
-        reasons.append("Institutional zone present")
+        reasons.append(f"Established range (clarity={state.h1.structural_clarity:.2f}, both boundaries defined)")
 
-    # Supporting: repeated reactions (stable boundaries = high zone quality)
-    if state.location.zone_quality >= 0.7:
+    # Supporting: live boundary defence (M5 rejection at extreme)
+    if state.m5.rejection_present and at_extreme:
         score += 0.15
-        conditions["stable_boundaries"] = True
-        reasons.append("High zone quality (stable boundary)")
+        conditions["boundary_defence"] = True
+        reasons.append("M5 rejection at boundary (active defence)")
     else:
-        conditions["stable_boundaries"] = False
+        conditions["boundary_defence"] = False
 
     # Supporting: mean-reverting behaviour
     if state.regime.momentum_strength < 0.3:
@@ -410,7 +420,7 @@ def _evaluate_range_reaction(state: V10MarketState, opp: OpportunityAssessment) 
     else:
         conditions["mean_reverting"] = False
 
-    required_met = is_ranging and at_extreme and has_zone
+    required_met = is_ranging and at_extreme and established_range
     if not required_met:
         return 0.0, [], conditions
 

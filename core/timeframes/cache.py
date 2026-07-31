@@ -26,6 +26,7 @@ from typing import Any
 from core.timeframes.types import (
     BiasSnapshot,
     HTFContext,
+    MacroSnapshot,
     RegimeSnapshot,
     StructureSnapshot,
 )
@@ -41,6 +42,9 @@ _TF_M1 = 1
 _TF_M15 = 15
 _TF_H1 = 16385
 _TF_H4 = 16388
+_TF_D1 = 16408
+_TF_W1 = 32769
+_TF_MN = 49153
 
 # Timeframe durations in seconds
 _TF_SECONDS = {
@@ -48,6 +52,9 @@ _TF_SECONDS = {
     _TF_M15: 900,
     _TF_H1: 3600,
     _TF_H4: 14400,
+    _TF_D1: 86400,
+    _TF_W1: 604800,
+    _TF_MN: 2592000,
 }
 
 # Staleness multiplier (snapshot stale after 3x timeframe duration)
@@ -94,6 +101,9 @@ class TimeframeCache:
             _TF_H1: _CacheEntry(),
             _TF_M15: _CacheEntry(),
             _TF_M1: _CacheEntry(),
+            _TF_D1: _CacheEntry(),
+            _TF_W1: _CacheEntry(),
+            _TF_MN: _CacheEntry(),
         }
         self._last_price: float = 0.0  # cached for M15 structure analysis
 
@@ -122,6 +132,25 @@ class TimeframeCache:
                 candle_count=int(getattr(config, "MTF_M1_CANDLE_COUNT", 60)) if config else 60,
                 enabled=bool(getattr(config, "MTF_M1_ENABLED", False)) if config else False,
                 name="M1",
+            ),
+            # Macro timeframes (D1/W1/MN — refresh infrequently)
+            _TimeframeConfig(
+                tf_constant=_TF_D1,
+                candle_count=int(getattr(config, "MTF_D1_CANDLE_COUNT", 100)) if config else 100,
+                enabled=bool(getattr(config, "MTF_D1_ENABLED", True)) if config else True,
+                name="D1",
+            ),
+            _TimeframeConfig(
+                tf_constant=_TF_W1,
+                candle_count=int(getattr(config, "MTF_W1_CANDLE_COUNT", 52)) if config else 52,
+                enabled=bool(getattr(config, "MTF_W1_ENABLED", True)) if config else True,
+                name="W1",
+            ),
+            _TimeframeConfig(
+                tf_constant=_TF_MN,
+                candle_count=int(getattr(config, "MTF_MN_CANDLE_COUNT", 24)) if config else 24,
+                enabled=bool(getattr(config, "MTF_MN_ENABLED", True)) if config else True,
+                name="MN",
             ),
         ]
 
@@ -268,6 +297,12 @@ class TimeframeCache:
                 return analyze_bias(candles)
             elif tf == _TF_M15:
                 return analyze_structure(candles, self._last_price)
+            elif tf == _TF_D1:
+                return analyze_regime(candles)  # Reuse regime analyzer for daily
+            elif tf == _TF_W1:
+                return analyze_bias(candles)    # Reuse bias analyzer for weekly (swings/BOS)
+            elif tf == _TF_MN:
+                return analyze_regime(candles)  # Reuse regime analyzer for monthly
             else:
                 return None  # M1 refinement handled separately
         except Exception as exc:
@@ -303,7 +338,95 @@ class TimeframeCache:
         if m15_entry and isinstance(m15_entry.snapshot, StructureSnapshot):
             structure = m15_entry.snapshot
 
-        return HTFContext(regime=regime, bias=bias, structure=structure)
+        return HTFContext(macro=self._build_macro_snapshot(current_price), regime=regime, bias=bias, structure=structure)
+
+    def _build_macro_snapshot(self, current_price: float) -> MacroSnapshot | None:
+        """
+        Build MacroSnapshot from cached D1/W1/MN analyzer outputs.
+
+        Returns None if no macro data is available at all.
+        Partially populated if only some timeframes have data.
+        """
+        mn_entry = self._entries.get(_TF_MN)
+        w1_entry = self._entries.get(_TF_W1)
+        d1_entry = self._entries.get(_TF_D1)
+
+        mn_snap = mn_entry.snapshot if mn_entry else None
+        w1_snap = w1_entry.snapshot if w1_entry else None
+        d1_snap = d1_entry.snapshot if d1_entry else None
+
+        # If ALL macro entries are empty, return None (no macro data yet)
+        if mn_snap is None and w1_snap is None and d1_snap is None:
+            return None
+
+        # Extract monthly fields (from RegimeSnapshot)
+        monthly_trend = ""
+        monthly_trend_strength = 0.0
+        monthly_phase = ""
+        if isinstance(mn_snap, RegimeSnapshot):
+            monthly_trend = mn_snap.trend_bias or "NEUTRAL"
+            monthly_trend_strength = mn_snap.trend_strength
+            monthly_phase = mn_snap.classification.value if mn_snap.classification else ""
+
+        # Extract weekly fields (from BiasSnapshot)
+        weekly_trend = ""
+        weekly_trend_strength = 0.0
+        weekly_swing_high = 0.0
+        weekly_swing_low = 0.0
+        weekly_bos_level = 0.0
+        weekly_range_position = 0.0
+        if isinstance(w1_snap, BiasSnapshot):
+            weekly_trend = w1_snap.direction.value if w1_snap.direction else "NEUTRAL"
+            weekly_trend_strength = w1_snap.confidence
+            weekly_swing_high = w1_snap.last_swing_high or 0.0
+            weekly_swing_low = w1_snap.last_swing_low or 0.0
+            weekly_bos_level = w1_snap.bos_level or 0.0
+            # Compute weekly range position
+            if weekly_swing_high > weekly_swing_low and current_price > 0:
+                if current_price <= weekly_swing_low:
+                    weekly_range_position = 0.0
+                elif current_price >= weekly_swing_high:
+                    weekly_range_position = 1.0
+                else:
+                    weekly_range_position = (current_price - weekly_swing_low) / (weekly_swing_high - weekly_swing_low)
+
+        # Extract daily fields (from RegimeSnapshot)
+        daily_bias = ""
+        daily_bias_strength = 0.0
+        daily_swing_high = 0.0
+        daily_swing_low = 0.0
+        daily_range_position = 0.0
+        daily_atr_ratio = 1.0
+        if isinstance(d1_snap, RegimeSnapshot):
+            daily_bias = d1_snap.trend_bias or "NEUTRAL"
+            daily_bias_strength = d1_snap.trend_strength
+            daily_atr_ratio = d1_snap.atr_ratio if d1_snap.atr_ratio > 0 else 1.0
+
+        # Use the most recent bar_time from available entries
+        bar_time = max(
+            (mn_entry.bar_time if mn_entry else 0),
+            (w1_entry.bar_time if w1_entry else 0),
+            (d1_entry.bar_time if d1_entry else 0),
+        )
+
+        return MacroSnapshot(
+            monthly_trend=monthly_trend,
+            monthly_trend_strength=monthly_trend_strength,
+            monthly_phase=monthly_phase,
+            weekly_trend=weekly_trend,
+            weekly_trend_strength=weekly_trend_strength,
+            weekly_swing_high=weekly_swing_high,
+            weekly_swing_low=weekly_swing_low,
+            weekly_bos_level=weekly_bos_level,
+            weekly_range_position=weekly_range_position,
+            daily_bias=daily_bias,
+            daily_bias_strength=daily_bias_strength,
+            daily_swing_high=daily_swing_high,
+            daily_swing_low=daily_swing_low,
+            daily_range_position=daily_range_position,
+            daily_atr_ratio=daily_atr_ratio,
+            bar_time=bar_time,
+        )
 
     def invalidate_all(self) -> None:
         """

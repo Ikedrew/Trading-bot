@@ -78,14 +78,13 @@ def build_h4_understanding(
     if not trend and htf_context is not None:
         regime_snap = getattr(htf_context, "regime", None)
         if regime_snap:
-            classification = getattr(regime_snap, "classification", None)
-            if classification:
-                regime_str = classification.value if hasattr(classification, "value") else str(classification)
-                if "TRENDING" in regime_str.upper():
-                    trend = getattr(regime_snap, "trend_bias", "NEUTRAL") or "NEUTRAL"
-                    trend_strength = float(getattr(regime_snap, "trend_strength", 0) or 0)
-                elif "RANG" in regime_str.upper():
-                    trend = "NEUTRAL"
+            # Unconditionally propagate trend_bias/trend_strength from RegimeSnapshot.
+            # The analyzer computes these for ALL classifications (TRENDING, RANGING,
+            # VOLATILE, TRANSITIONAL). Previously only extracted for TRENDING/RANGING,
+            # causing VOLATILE/TRANSITIONAL to lose directional information.
+            trend = getattr(regime_snap, "trend_bias", "NEUTRAL") or "NEUTRAL"
+            trend_strength = float(getattr(regime_snap, "trend_strength", 0) or 0)
+
             atr_ratio = float(getattr(regime_snap, "atr_ratio", 1.0) or 1.0)
             volatility_state = (
                 "EXPANSION" if atr_ratio > 1.3
