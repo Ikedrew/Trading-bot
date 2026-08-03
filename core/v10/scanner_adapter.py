@@ -64,8 +64,6 @@ def run_v10_cycle(
             from core.v10.decision_report import format_v10_decision
             if result.get("v10_pipeline_result"):
                 persist_v10_full(result["v10_pipeline_result"])
-                # Persist pipeline events to S3
-                _persist_events(result["v10_pipeline_result"])
                 # Print V10 reasoning chain for all decisions
                 print(format_v10_decision(result["v10_pipeline_result"]))
         except Exception:
@@ -200,20 +198,3 @@ def _build_order_intent(result, symbol: str):
     )
 
 
-def _persist_events(pipeline_result) -> None:
-    """Persist pipeline events to S3. Never raises."""
-    try:
-        from core.v10.s3_writer import upload_events, EVENT_SCHEMA_VERSION
-        if not pipeline_result.events:
-            return
-        events = pipeline_result.events
-        # Serialize events with schema version
-        event_records = []
-        for event in events.events:
-            record = event.to_dict()
-            record["schema_version"] = EVENT_SCHEMA_VERSION
-            event_records.append(record)
-        if event_records:
-            upload_events(event_records, observation_id=events.observation_id)
-    except Exception:
-        pass  # Event persistence must never block

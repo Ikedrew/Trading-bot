@@ -25,8 +25,6 @@ from core.v10.entry_model import EntryStatus, TradeDirection
 logger = logging.getLogger(__name__)
 
 _SCHEMA_VERSION = "v10_decision_v1"
-_OUTPUT_DIR = "logs/v10_decisions"
-_EVENTS_DIR = "logs/v10_events"
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -239,80 +237,20 @@ def persist_v10_full(result: PipelineResult, cycle_id: int = 0) -> None:
     Logs correlation_id at every step for observability.
     """
     try:
-        # 1. Build V10 decision record (research-grade)
-        record = build_v10_decision_record(result, cycle_id)
-        obs_id = record.get("observation_id", "?")
+        obs_id = result.opportunity.observation_id if result.opportunity else "?"
         logger.info(
-            "[V10_PERSIST] step=record_built obs_id=%s action=%s symbol=%s",
-            obs_id, record.get("final_action"), record.get("symbol"),
+            "[V10_PERSIST] step=begin obs_id=%s action=%s symbol=%s",
+            obs_id, "EXECUTE" if result.approved else "NO_TRADE",
+            result.market_state.symbol if result.market_state else "?",
         )
 
-        # 2. Write to local JSONL (always succeeds if filesystem ok)
-        _write_v10_record(record)
-        logger.info("[V10_PERSIST] step=local_jsonl_written obs_id=%s", obs_id)
-
-        # 3. Upload to S3 (guarded by production write guard + validation)
-        from core.v10.s3_writer import upload_decision
-        s3_result = upload_decision(record)
-        if s3_result:
-            logger.info("[V10_PERSIST] step=s3_uploaded obs_id=%s bucket=v10-engine", obs_id)
-        else:
-            logger.info("[V10_PERSIST] step=s3_skipped obs_id=%s reason=guard_or_validation", obs_id)
-
-        # 4. Write to decision ledger (existing infrastructure)
+        # Write to decision ledger (existing infrastructure)
         ledger_entry = build_v10_ledger_entry(result, cycle_id)
         _write_to_ledger(ledger_entry)
         logger.info("[V10_PERSIST] step=ledger_written obs_id=%s", obs_id)
 
-        # 5. Write pipeline events locally (full reasoning timeline)
-        if result.events and result.events.events:
-            _write_events_local(result.events, obs_id)
-            logger.info(
-                "[V10_PERSIST] step=events_written obs_id=%s count=%d",
-                obs_id, result.events.stage_count,
-            )
-
     except Exception as exc:
         logger.debug("[V10_PERSIST] full persistence failed: %s", exc)
-
-
-def _write_v10_record(record: dict) -> None:
-    """Write V10 decision record to dedicated JSONL."""
-    symbol = record.get("symbol", "UNKNOWN")
-    ts = record.get("timestamp_utc", 0)
-    dt = datetime.fromtimestamp(ts, tz=timezone.utc) if ts > 0 else datetime.now(timezone.utc)
-    date_str = dt.strftime("%Y-%m-%d")
-
-    out_dir = Path(_OUTPUT_DIR) / symbol
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / f"{date_str}.jsonl"
-
-    with open(out_file, "a") as f:
-        f.write(json.dumps(record, default=str) + "\n")
-
-
-def _write_events_local(events: "PipelineEventCollector", obs_id: str) -> None:
-    """Write all pipeline events for one evaluation to local JSONL.
-    
-    Creates one file per date per symbol under logs/v10_events/.
-    Each line is one stage event — the full reasoning timeline.
-    """
-    if not events.events:
-        return
-    symbol = events.symbol or "UNKNOWN"
-    ts = events.timestamp_utc or 0
-    dt = datetime.fromtimestamp(ts, tz=timezone.utc) if ts > 0 else datetime.now(timezone.utc)
-    date_str = dt.strftime("%Y-%m-%d")
-
-    out_dir = Path(_EVENTS_DIR) / symbol
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / f"{date_str}.jsonl"
-
-    with open(out_file, "a") as f:
-        for event in events.events:
-            record = event.to_dict()
-            record["correlation_id"] = obs_id
-            f.write(json.dumps(record, default=str) + "\n")
 
 
 def _write_to_ledger(entry: dict) -> None:

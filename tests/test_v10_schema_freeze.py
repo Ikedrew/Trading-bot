@@ -198,8 +198,6 @@ class TestHistoricalCompatibility:
 class TestS3DatasetStructure:
     def test_datasets_defined(self):
         assert "decisions" in S3_DATASETS
-        assert "executions" in S3_DATASETS
-        assert "outcomes" in S3_DATASETS
 
     def test_all_datasets_have_path(self):
         for name, ds in S3_DATASETS.items():
@@ -207,11 +205,10 @@ class TestS3DatasetStructure:
             assert "{symbol}" in ds["path"]
             assert "{date}" in ds["path"]
 
-    def test_all_datasets_join_on_observation_id(self):
+    def test_decisions_use_decision_trace_path(self):
+        """Decisions now route through decision_trace dataset."""
+        assert "decision_trace" in S3_DATASETS["decisions"]["path"]
+
+    def test_decisions_join_on_observation_id(self):
         """Primary join key is observation_id for research queries."""
         assert S3_DATASETS["decisions"]["join_key"] == "observation_id"
-        assert S3_DATASETS["outcomes"]["join_key"] == "observation_id"
-
-    def test_executions_join_on_decision_id(self):
-        """Execution attempts link via decision_id."""
-        assert S3_DATASETS["executions"]["join_key"] == "decision_id"

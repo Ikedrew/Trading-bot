@@ -17,7 +17,7 @@ from core.v10.pipeline import V10Pipeline, PipelineResult
 from core.v10.risk_model import AccountContext
 from core.v10.broker_context import BrokerContext
 from core.v10.decision_report import format_v10_decision
-from core.v10.decision_persistence import build_decision_record
+from core.v10.persistence_adapter import build_v10_decision_record as build_decision_record
 
 
 def _run_pipeline(strong=True):
@@ -109,11 +109,11 @@ class TestDecisionPersistence:
         assert "timestamp_utc" in record
         assert "market_state" in record
         assert "opportunity" in record
-        assert "strategy" in record
+        assert "strategy_family" in record
         assert "horizon" in record
-        assert "entry" in record
-        assert "risk" in record
-        assert "execution" in record
+        assert "entry_method" in record
+        assert "risk_approved" in record
+        assert "execution_approved" in record
         assert "final_action" in record
         assert "rejection_stage" in record
 
@@ -130,7 +130,7 @@ class TestDecisionPersistence:
         # Opportunity should be VALID or WATCHING
         assert record["opportunity"]["state"] in ("VALID", "WATCHING")
         # Strategy should be populated
-        assert record["strategy"]["family"] != "NONE"
+        assert record["strategy_family"] is not None and record["strategy_family"] != "NONE"
 
     def test_invalid_opportunity_stops_early(self):
         result = _run_pipeline(strong=False)
@@ -144,7 +144,7 @@ class TestDecisionPersistence:
         record = build_decision_record(result)
         ms = record["market_state"]
         assert "h4_trend" in ms
-        assert "h1_bos" in ms
+        assert "h1_bos_direction" in ms
         assert "regime" in ms
         assert "location_type" in ms
 

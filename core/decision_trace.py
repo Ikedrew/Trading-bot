@@ -19,12 +19,16 @@ It ONLY:
 
 Persistence:
     Local: logs/decision_trace/{SYMBOL}/{YYYY-MM-DD}.jsonl
-    S3:    s3://trading-bot-data-mk1/decision_trace/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
+    S3:    s3://v10-engine/decision_trace/schema_version=decision_trace_v2/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
 
 Usage:
     from core.decision_trace import build_decision_trace, persist_decision_trace
 
-    trace = build_decision_trace(engine_result=_new_result, runtime_session_id=_session_id)
+    trace = build_decision_trace(
+        engine_result=_new_result,
+        runtime_session_id=_session_id,
+        v10_pipeline_result=_new_result.get("v10_pipeline_result"),
+    )
     persist_decision_trace(trace)
 """
 
@@ -43,7 +47,7 @@ logger = logging.getLogger(__name__)
 _LOCAL_DIR = "logs/decision_trace"
 _S3_BUCKET = "v10-engine"
 _S3_PREFIX = "decision_trace"
-_SCHEMA_VERSION = "decision_trace_v1"
+_SCHEMA_VERSION = "decision_trace_v2"
 
 # ─── SCORE THRESHOLD (must match new_engine.py — read-only reference) ─────────
 _MIN_SCORE_THRESHOLD = 0.35
@@ -299,6 +303,40 @@ class DecisionTrace:
     # ─── METADATA ─────────────────────────────────────────────────────
     metadata: dict[str, Any] = field(default_factory=dict)
 
+    # ─── V10 PIPELINE (full reasoning chain — decision_trace_v2) ──────
+    # Identity (V10-specific IDs for cross-dataset joins)
+    observation_id: str = ""
+    decision_id: str = ""
+    correlation_id: str = ""
+    engine_version: str = ""
+
+    # V10 Market Understanding (multi-timeframe state at decision time)
+    v10_market_state: dict[str, Any] = field(default_factory=dict)
+
+    # V10 Opportunity Assessment (quality scores + reasoning)
+    v10_opportunity: dict[str, Any] = field(default_factory=dict)
+
+    # V10 Strategy Selection
+    v10_strategy: dict[str, Any] = field(default_factory=dict)
+
+    # V10 Horizon Assessment
+    v10_horizon: dict[str, Any] = field(default_factory=dict)
+
+    # V10 Entry Geometry
+    v10_entry: dict[str, Any] = field(default_factory=dict)
+
+    # V10 Risk Decision
+    v10_risk: dict[str, Any] = field(default_factory=dict)
+
+    # V10 Execution Decision (broker constraint check)
+    v10_execution: dict[str, Any] = field(default_factory=dict)
+
+    # Account snapshot at decision time
+    v10_account_snapshot: dict[str, Any] | None = None
+
+    # Broker snapshot at decision time
+    v10_broker_snapshot: dict[str, Any] | None = None
+
     def to_dict(self) -> dict[str, Any]:
         """Serialize for JSONL persistence."""
         return {
@@ -352,6 +390,20 @@ class DecisionTrace:
             "confirmation_score": round(self.confirmation_score, 4) if self.confirmation_score is not None else None,
             "policy_reasoning": self.policy_reasoning,
             "metadata": self.metadata,
+            # V10 Pipeline (decision_trace_v2)
+            "observation_id": self.observation_id,
+            "decision_id": self.decision_id,
+            "correlation_id": self.correlation_id,
+            "engine_version": self.engine_version,
+            "v10_market_state": self.v10_market_state,
+            "v10_opportunity": self.v10_opportunity,
+            "v10_strategy": self.v10_strategy,
+            "v10_horizon": self.v10_horizon,
+            "v10_entry": self.v10_entry,
+            "v10_risk": self.v10_risk,
+            "v10_execution": self.v10_execution,
+            "v10_account_snapshot": self.v10_account_snapshot,
+            "v10_broker_snapshot": self.v10_broker_snapshot,
         }
 
 
@@ -364,15 +416,19 @@ def build_decision_trace(
     engine_result: dict[str, Any],
     runtime_session_id: str = "",
     pattern_count: int = 0,
+    v10_pipeline_result: Any = None,
 ) -> DecisionTrace:
     """
     Build a DecisionTrace from a run_new_engine() result dict.
+
+    If v10_pipeline_result is provided (PipelineResult from V10 engine),
+    extracts full V10 reasoning chain into the trace record.
 
     Reads only — never modifies engine_result.
     Never raises — returns minimal trace on error.
     """
     try:
-        return _build_trace(engine_result, runtime_session_id, pattern_count)
+        return _build_trace(engine_result, runtime_session_id, pattern_count, v10_pipeline_result)
     except Exception:
         return DecisionTrace(
             entity_id=engine_result.get("entity_id", ""),
@@ -390,6 +446,7 @@ def _build_trace(
     engine_result: dict[str, Any],
     runtime_session_id: str,
     pattern_count: int,
+    v10_pipeline_result: Any = None,
 ) -> DecisionTrace:
     """Internal trace construction — may raise."""
     action = engine_result.get("action", "NO_TRADE")
@@ -480,6 +537,199 @@ def _build_trace(
     confirmation_score = engine_result.get("confirmation_score")
     policy_reasoning = engine_result.get("policy_reasoning", "")
 
+    # ─── V10 PIPELINE EXTRACTION ─────────────────────────────────────
+    _obs_id = ""
+    _decision_id = ""
+    _correlation_id = ""
+    _engine_version = ""
+    _v10_market_state: dict[str, Any] = {}
+    _v10_opportunity: dict[str, Any] = {}
+    _v10_strategy: dict[str, Any] = {}
+    _v10_horizon: dict[str, Any] = {}
+    _v10_entry: dict[str, Any] = {}
+    _v10_risk: dict[str, Any] = {}
+    _v10_execution: dict[str, Any] = {}
+    _v10_account: dict[str, Any] | None = None
+    _v10_broker: dict[str, Any] | None = None
+
+    if v10_pipeline_result is not None:
+        _engine_version = "V10"
+        _pr = v10_pipeline_result
+
+        # Observation/decision IDs
+        _obs_id = getattr(_pr.opportunity, "observation_id", "") or ""
+        _decision_id = _obs_id
+        _correlation_id = f"v10_{getattr(_pr.market_state, 'symbol', '')}_{int(getattr(_pr.market_state, 'timestamp_utc', 0))}_{cycle_id}"
+
+        # Market State (full multi-timeframe snapshot)
+        try:
+            ms = _pr.market_state
+            _v10_market_state = {
+                "h4": {
+                    "trend": ms.h4.trend, "trend_strength": ms.h4.trend_strength,
+                    "market_phase": ms.h4.market_phase, "structure_type": ms.h4.structure_type,
+                    "swing_high": ms.h4.swing_high, "swing_low": ms.h4.swing_low,
+                    "last_bos_direction": ms.h4.last_bos_direction,
+                    "atr": ms.h4.atr, "volatility_state": ms.h4.volatility_state,
+                },
+                "h1": {
+                    "dominant_trend": ms.h1.dominant_trend, "structural_clarity": ms.h1.structural_clarity,
+                    "bos_confirmed": ms.h1.bos_confirmed, "bos_direction": ms.h1.bos_direction,
+                    "choch_detected": ms.h1.choch_detected, "choch_direction": ms.h1.choch_direction,
+                    "swing_high": ms.h1.swing_high, "swing_low": ms.h1.swing_low,
+                },
+                "m15": {
+                    "pullback_active": ms.m15.pullback_active,
+                    "displacement_present": ms.m15.displacement_present,
+                    "displacement_direction": ms.m15.displacement_direction,
+                    "range_position": ms.m15.range_position,
+                    "internal_bos": ms.m15.internal_bos,
+                    "internal_bos_direction": ms.m15.internal_bos_direction,
+                },
+                "m5": {
+                    "momentum_direction": ms.m5.momentum_direction,
+                    "momentum_strength": ms.m5.momentum_strength,
+                    "rejection_present": ms.m5.rejection_present,
+                    "confirmation_candle": ms.m5.confirmation_candle,
+                    "atr": ms.m5.atr, "spread_atr_ratio": ms.m5.spread_atr_ratio,
+                },
+                "regime": {
+                    "regime": ms.regime.regime, "regime_confidence": ms.regime.regime_confidence,
+                    "volatility_state": ms.regime.volatility_state,
+                    "expansion_state": ms.regime.expansion_state,
+                },
+                "location": {
+                    "location_type": ms.location.location_type,
+                    "inside_institutional_zone": ms.location.inside_institutional_zone,
+                    "zone_quality": ms.location.zone_quality,
+                    "range_position": ms.location.range_position,
+                    "premium_discount": ms.location.premium_discount,
+                },
+                "htf_alignment": {
+                    "macro_bias": ms.htf_alignment.macro_bias,
+                    "macro_bias_strength": ms.htf_alignment.macro_bias_strength,
+                    "structure_alignment": ms.htf_alignment.structure_alignment,
+                },
+            }
+        except Exception:
+            pass
+
+        # Opportunity
+        try:
+            opp = _pr.opportunity
+            _v10_opportunity = {
+                "state": opp.opportunity_state,
+                "directional_bias": opp.directional_bias,
+                "opportunity_type": opp.opportunity_type,
+                "overall_quality": opp.quality.overall_quality,
+                "location_score": opp.quality.location_score,
+                "structure_score": opp.quality.structure_score,
+                "behaviour_score": opp.quality.behaviour_score,
+                "formation_score": opp.quality.formation_score,
+                "reasoning": list(opp.reasoning)[:5] if opp.reasoning else [],
+            }
+        except Exception:
+            pass
+
+        # Strategy
+        try:
+            strat = _pr.strategy
+            _v10_strategy = {
+                "family": strat.strategy_family,
+                "confidence": strat.strategy_confidence,
+                "direction": strat.directional_context,
+                "reasoning": list(strat.reasoning)[:3] if strat.reasoning else [],
+            }
+        except Exception:
+            pass
+
+        # Horizon
+        try:
+            hz = _pr.horizon
+            _v10_horizon = {
+                "type": hz.horizon_type,
+                "min_move": hz.movement_expectation.minimum_expected_move,
+                "max_move": hz.movement_expectation.maximum_expected_move,
+                "unit": hz.movement_expectation.measurement_unit,
+                "duration_minutes": hz.trade_lifecycle.expected_duration_minutes,
+            }
+        except Exception:
+            pass
+
+        # Entry
+        try:
+            ent = _pr.entry
+            _v10_entry = {
+                "method": ent.entry_method,
+                "status": ent.entry_status,
+                "direction": ent.trade_direction,
+                "entry_price": ent.entry_price,
+                "stop_price": ent.stop_reference.price,
+                "target_price": ent.target_reference.price,
+                "risk_distance": ent.risk_distance,
+                "reward_distance": ent.reward_distance,
+                "expected_rr": ent.expected_rr,
+            }
+        except Exception:
+            pass
+
+        # Risk
+        try:
+            rsk = _pr.risk
+            _v10_risk = {
+                "approved": rsk.approved,
+                "rejection_reason": rsk.rejection_reason or None,
+                "risk_percentage": rsk.risk_profile.risk_percentage,
+                "position_size": rsk.risk_profile.position_size,
+                "max_loss_amount": rsk.risk_profile.max_loss_amount,
+            }
+        except Exception:
+            pass
+
+        # Execution Decision
+        try:
+            exe = _pr.execution
+            _v10_execution = {
+                "approved": exe.approved,
+                "rejection_reason": exe.rejection_reason or None,
+                "order_type": exe.order_details.order_type if exe.approved else None,
+                "volume": exe.order_details.volume if exe.approved else None,
+            }
+        except Exception:
+            pass
+
+        # Account Snapshot
+        try:
+            if _pr.account_snapshot and _pr.account_snapshot.available:
+                _v10_account = {
+                    "balance": _pr.account_snapshot.balance,
+                    "equity": _pr.account_snapshot.equity,
+                    "margin_free": _pr.account_snapshot.margin_free,
+                    "leverage": _pr.account_snapshot.leverage,
+                    "open_positions": _pr.account_snapshot.open_positions,
+                    "daily_loss_pct": _pr.account_snapshot.daily_loss_pct,
+                }
+        except Exception:
+            pass
+
+        # Broker Snapshot
+        try:
+            if _pr.broker_snapshot and _pr.broker_snapshot.available:
+                _v10_broker = {
+                    "symbol": _pr.broker_snapshot.symbol,
+                    "spread": _pr.broker_snapshot.spread,
+                    "tick_value": _pr.broker_snapshot.tick_value,
+                    "volume_min": _pr.broker_snapshot.volume_min,
+                    "volume_step": _pr.broker_snapshot.volume_step,
+                    "stops_level": _pr.broker_snapshot.stops_level,
+                    "bid": _pr.broker_snapshot.bid,
+                    "ask": _pr.broker_snapshot.ask,
+                    "market_open": _pr.broker_snapshot.market_open,
+                }
+        except Exception:
+            pass
+    # ─── END V10 PIPELINE EXTRACTION ─────────────────────────────────
+
     return DecisionTrace(
         entity_id=entity_id,
         symbol=symbol,
@@ -531,6 +781,20 @@ def _build_trace(
         confirmation_score=confirmation_score,
         policy_reasoning=policy_reasoning,
         metadata={},
+        # V10 Pipeline (decision_trace_v2)
+        observation_id=_obs_id,
+        decision_id=_decision_id,
+        correlation_id=_correlation_id,
+        engine_version=_engine_version,
+        v10_market_state=_v10_market_state,
+        v10_opportunity=_v10_opportunity,
+        v10_strategy=_v10_strategy,
+        v10_horizon=_v10_horizon,
+        v10_entry=_v10_entry,
+        v10_risk=_v10_risk,
+        v10_execution=_v10_execution,
+        v10_account_snapshot=_v10_account,
+        v10_broker_snapshot=_v10_broker,
     )
 
 
@@ -561,7 +825,7 @@ def _write_s3(symbol: str, date_str: str, line: str) -> None:
                 retries={"max_attempts": 0},
             ),
         )
-        key = f"{_S3_PREFIX}/symbol={symbol}/date={date_str}/part-000.jsonl"
+        key = f"{_S3_PREFIX}/schema_version={_SCHEMA_VERSION}/symbol={symbol}/date={date_str}/part-000.jsonl"
         body = line + "\n"
 
         # Read-append-write (acceptable for trace volume)

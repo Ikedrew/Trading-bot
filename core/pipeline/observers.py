@@ -168,6 +168,7 @@ class ObserverRegistry:
                 engine_result=ctx.engine_result,
                 runtime_session_id=ctx.runtime_session_id,
                 pattern_count=len(ctx.detected_patterns),
+                v10_pipeline_result=ctx.engine_result.get("v10_pipeline_result"),
             )
             persist_decision_trace(_trace)
             ctx.decision_funnel.record_trace(_trace)

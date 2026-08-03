@@ -114,20 +114,14 @@ SCHEMA_FIELDS = {
 # S3 DATASET STRUCTURE
 # ═══════════════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════════════
+# S3 DATASET STRUCTURE (LEGACY — v10/ prefix removed, now in decision_trace)
+# ═══════════════════════════════════════════════════════════════
+
 S3_DATASETS = {
     "decisions": {
-        "path": "v10/decisions/symbol={symbol}/date={date}/",
-        "contains": "Every V10 evaluation (EXECUTE and NO_TRADE)",
-        "join_key": "observation_id",
-    },
-    "executions": {
-        "path": "v10/executions/symbol={symbol}/date={date}/",
-        "contains": "Execution attempts and broker responses",
-        "join_key": "decision_id",
-    },
-    "outcomes": {
-        "path": "v10/outcomes/symbol={symbol}/date={date}/",
-        "contains": "Completed trades with P&L and exit reason",
+        "path": "decision_trace/schema_version=decision_trace_v2/symbol={symbol}/date={date}/",
+        "contains": "Every V10 evaluation (EXECUTE and NO_TRADE) — merged into decision_trace_v2",
         "join_key": "observation_id",
     },
 }
