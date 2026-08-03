@@ -1,6 +1,8 @@
 {
   "current_day_key": "2026-08-03",
-  "total_trades_today": 0,
-  "per_symbol": {},
-  "last_updated": 1785725461.6215663
+  "total_trades_today": 1,
+  "per_symbol": {
+    "AUDUSD": 1
+  },
+  "last_updated": 1785763456.6762614
 }

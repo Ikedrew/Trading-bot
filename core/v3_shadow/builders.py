@@ -306,6 +306,8 @@ def build_m5_understanding(
     rejection_direction = ""
     rejection_strength = 0.0
     local_bos = False
+    local_bos_direction = ""
+    confirmation_candle = False
     momentum_direction = ""
     momentum_strength = 0.0
 
@@ -340,6 +342,34 @@ def build_m5_understanding(
             momentum_direction = "NEUTRAL"
             momentum_strength = 0.0
 
+        # ─── LOCAL BOS (reuse existing swing_context BOS detection) ───
+        # Only compute if we have enough candles for swing analysis (50+)
+        if len(candles) > 50:
+            try:
+                from core.pipeline.swing_context import compute_swing_context
+                _closed_i = len(candles) - 1
+                _swing = compute_swing_context(candles, _closed_i)
+                if _swing.swing_break_confirmed:
+                    local_bos = True
+                    local_bos_direction = _swing.current_swing_direction.value
+            except Exception:
+                pass  # BOS detection failure must never block
+
+        # ─── CONFIRMATION CANDLE (directional body commitment) ────────
+        # Detects: strong directional close confirming intent.
+        # Rule: body > 60% of range AND body > previous candle body × 1.2
+        #        AND body > 0.4 × ATR (filters out tiny candles)
+        # Direction: from close vs open of the candle itself.
+        if len(candles) >= 2 and atr > 0:
+            prev = candles[-2]
+            prev_body = abs(prev.close - prev.open)
+            if c_range > 0:
+                body_ratio = body / c_range
+                body_exceeds_prev = body > prev_body * 1.2
+                body_significant = body > atr * 0.4
+                if body_ratio >= 0.6 and body_exceeds_prev and body_significant:
+                    confirmation_candle = True
+
     # At institutional zone?
     at_zone = False
     zone_type = ""
@@ -356,6 +386,7 @@ def build_m5_understanding(
 
     return M5Understanding(
         local_bos=local_bos,
+        local_bos_direction=local_bos_direction,
         momentum_direction=momentum_direction,
         momentum_strength=round(momentum_strength, 4),
         rejection_present=rejection_present,
@@ -363,6 +394,7 @@ def build_m5_understanding(
         rejection_strength_atr=round(rejection_strength, 4),
         at_institutional_zone=at_zone,
         zone_type=zone_type,
+        confirmation_candle=confirmation_candle,
         atr=atr,
         spread=spread,
         spread_atr_ratio=round(spread_atr, 6),

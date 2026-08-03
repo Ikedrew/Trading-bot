@@ -1,8 +1,8 @@
 {
   "_meta": {
     "symbol": "AUDUSD",
-    "saved_at_utc": "2026-08-03T12:21:41.785199+00:00",
-    "saved_at_unix": 1785759701.7851992
+    "saved_at_utc": "2026-08-03T14:42:25.210984+00:00",
+    "saved_at_unix": 1785768145.2109842
   },
   "current_bias": null,
   "bias_phase": "EXPIRED",
@@ -14,7 +14,7 @@
   "last_strong_impulse_direction": null,
   "regime_state": "RANGING",
   "volatility_filter": 0.0,
-  "last_successful_open_mono": null,
+  "last_successful_open_mono": 1785774000.0,
   "structure_score": 0.0,
   "structure_regime": "WEAK",
   "last_failed_setups": []
