@@ -140,6 +140,13 @@ def _do_v10_cycle(
             "volume": order.volume,
             "pattern": result.strategy.strategy_family,
             "strategy": result.strategy.strategy_family,
+            "strategy_confidence": result.strategy.strategy_confidence,
+            "components": {
+                "location_score": result.opportunity.quality.location_score,
+                "structure_score": result.opportunity.quality.structure_score,
+                "behaviour_score": result.opportunity.quality.behaviour_score,
+                "formation_score": result.opportunity.quality.formation_score,
+            },
             "v10_pipeline_result": result,
         }
     else:
@@ -166,6 +173,15 @@ def _do_v10_cycle(
             "action": "NO_TRADE",
             "reason": f"V10 [{stage}]: {reason}",
             "score": result.opportunity.quality.overall_quality if result.opportunity else 0.0,
+            "pattern": result.strategy.strategy_family if result.strategy and result.strategy.strategy_family != "NONE" else None,
+            "strategy": result.strategy.strategy_family if result.strategy and result.strategy.strategy_family != "NONE" else None,
+            "strategy_confidence": result.strategy.strategy_confidence if result.strategy else 0.0,
+            "components": {
+                "location_score": result.opportunity.quality.location_score,
+                "structure_score": result.opportunity.quality.structure_score,
+                "behaviour_score": result.opportunity.quality.behaviour_score,
+                "formation_score": result.opportunity.quality.formation_score,
+            } if result.opportunity and result.opportunity.opportunity_state != "INVALID" else None,
             "v10_pipeline_result": result,
         }
 
