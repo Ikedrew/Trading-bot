@@ -64,7 +64,7 @@ class DecisionOutcome(str, Enum):
 # CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "decision_ledger"
 _LOCAL_DIR = "logs/decision_ledger"
 _SCHEMA_VERSION = "decision_ledger_v1"
@@ -235,7 +235,7 @@ def build_ledger_entry(
     # Performance
     decision_latency_ms: int = 0,
     # Metadata
-    engine_version: str = "new_engine",
+    engine_version: str = "V10",
     last_stage: str = "",
 ) -> dict[str, Any]:
     """

@@ -32,7 +32,7 @@ from core.timeframes.macro_alignment import (
 def _full_bullish_macro() -> MacroSnapshot:
     """All layers strongly bullish."""
     return MacroSnapshot(
-        monthly_trend="BULLISH", monthly_trend_strength=0.80, monthly_phase="IMPULSE",
+        monthly_trend="BULLISH", monthly_trend_strength=0.80, monthly_classification="TRENDING_BULLISH",
         weekly_trend="BULLISH", weekly_trend_strength=0.75,
         weekly_swing_high=1.10, weekly_swing_low=1.05, weekly_range_position=0.60,
         daily_bias="BULLISH", daily_bias_strength=0.70,
@@ -44,7 +44,7 @@ def _full_bullish_macro() -> MacroSnapshot:
 def _full_bearish_macro() -> MacroSnapshot:
     """All layers strongly bearish."""
     return MacroSnapshot(
-        monthly_trend="BEARISH", monthly_trend_strength=0.80, monthly_phase="IMPULSE",
+        monthly_trend="BEARISH", monthly_trend_strength=0.80, monthly_classification="TRENDING_BEARISH",
         weekly_trend="BEARISH", weekly_trend_strength=0.75,
         weekly_swing_high=1.10, weekly_swing_low=1.05, weekly_range_position=0.30,
         daily_bias="BEARISH", daily_bias_strength=0.70,

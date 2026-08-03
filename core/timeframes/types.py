@@ -143,7 +143,7 @@ class MacroSnapshot:
     # Monthly (from RegimeSnapshot on MN1 candles)
     monthly_trend: str = ""              # BULLISH / BEARISH / NEUTRAL
     monthly_trend_strength: float = 0.0  # 0.0–1.0
-    monthly_phase: str = ""              # IMPULSE / PULLBACK / CONSOLIDATION / VOLATILE
+    monthly_classification: str = ""   # TRENDING_BULLISH / TRENDING_BEARISH / RANGING / VOLATILE / TRANSITIONAL
 
     # Weekly (from BiasSnapshot on W1 candles)
     weekly_trend: str = ""               # BULLISH / BEARISH / NEUTRAL

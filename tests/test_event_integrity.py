@@ -372,7 +372,8 @@ class TestFailureResilience:
         events = read_stream(event_dir=str(isolated_event_dir))
         assert len(events) == 0
         s = stats()
-        assert s["total_errors"] == 1
+        # Invalid type is silently rejected (allowlist enforcement), not an error
+        assert s["total_errors"] == 0
 
     def test_none_payload_accepted(self, isolated_event_dir, deterministic_clock):
         """None payload creates event without payload field."""

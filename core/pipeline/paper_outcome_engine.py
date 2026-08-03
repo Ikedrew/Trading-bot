@@ -88,7 +88,7 @@ class PaperOutcomeEngine:
         This engine does NOT accept hypothetical/predictive signals.
         """
         # Allowed sources: executed trades + old system shadow (for comparison only)
-        _VALID_SOURCES = ("executed_trade", "old_system_shadow", "new_engine", "old_system")
+        _VALID_SOURCES = ("executed_trade", "old_system_shadow", "new_engine", "old_system", "V10")
         if source not in _VALID_SOURCES:
             print(f"[PAPER] REJECTED invalid source '{source}' — only post-execution tracking allowed")
             return

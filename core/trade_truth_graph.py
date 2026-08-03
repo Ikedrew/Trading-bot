@@ -51,7 +51,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "trade_truth_graph"
 _LOCAL_DIR = "logs/trade_truth_graph"
 _SCHEMA_VERSION = "trade_truth_graph_v2"
@@ -302,6 +302,24 @@ def persist_graph_node(node: dict[str, Any]) -> bool:
     valid, reason = validate_graph_node(node)
     if not valid:
         logger.warning("[TRADE_TRUTH_GRAPH] rejected: %s", reason)
+        try:
+            from core.contracts.quarantine import QuarantineStore
+            from core.contracts.violation import ContractViolation
+            from core.contracts.severity import Severity
+            _qs = QuarantineStore()
+            _qs.quarantine(
+                record_id=node.get("trade_id", "unknown"),
+                layer="trade_truth_graph",
+                violations=[ContractViolation(
+                    contract_name="trade_truth_graph_schema",
+                    contract_version="v2",
+                    severity=Severity.MEDIUM,
+                    reason=reason,
+                )],
+                original_payload=node,
+            )
+        except Exception:
+            pass
         return False
 
     try:

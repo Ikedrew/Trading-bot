@@ -54,7 +54,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "edge_attribution"
 _LOCAL_DIR = "logs/edge_attribution"
 _SCHEMA_VERSION = "edge_attribution_v2"
@@ -280,6 +280,24 @@ def persist_attribution(record: dict[str, Any]) -> bool:
     valid, reason = validate_attribution(record)
     if not valid:
         logger.warning("[EDGE_ATTRIBUTION] rejected: %s", reason)
+        try:
+            from core.contracts.quarantine import QuarantineStore
+            from core.contracts.violation import ContractViolation
+            from core.contracts.severity import Severity
+            _qs = QuarantineStore()
+            _qs.quarantine(
+                record_id=record.get("attribution_id", "unknown"),
+                layer="edge_attribution",
+                violations=[ContractViolation(
+                    contract_name="edge_attribution_schema",
+                    contract_version="v2",
+                    severity=Severity.MEDIUM,
+                    reason=reason,
+                )],
+                original_payload=record,
+            )
+        except Exception:
+            pass
         return False
 
     try:

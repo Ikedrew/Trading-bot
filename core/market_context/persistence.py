@@ -18,9 +18,9 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/market_context"
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "market_context"
-_SCHEMA_VERSION = "market_context_v1"
+_SCHEMA_VERSION = "market_context_v2"
 
 
 class MarketContextPersistence:

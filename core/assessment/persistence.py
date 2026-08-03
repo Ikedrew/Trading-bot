@@ -31,7 +31,7 @@ from core.assessment.assessment import Assessment
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/assessments"
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "assessments"
 _SCHEMA_VERSION = "assessments_v1"
 

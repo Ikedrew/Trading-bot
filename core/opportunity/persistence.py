@@ -30,7 +30,7 @@ from core.opportunity.opportunity import Opportunity
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/opportunities"
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "opportunities"
 _SCHEMA_VERSION = "opportunities_v1"
 

@@ -51,7 +51,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_TRADES_PREFIX = "trades"
 _SCHEMA_VERSION = "trade_truth_v3"
 
@@ -333,6 +333,25 @@ def persist_trade_truth(record: dict[str, Any], *, local_dir: str = "logs/trade_
     valid, reason = validate_trade_truth(record)
     if not valid:
         logger.warning("[TRADE_TRUTH] rejected: %s", reason)
+        # Quarantine the rejected record (preserves evidence for forensics)
+        try:
+            from core.contracts.quarantine import QuarantineStore
+            from core.contracts.violation import ContractViolation
+            from core.contracts.severity import Severity
+            _qs = QuarantineStore()
+            _qs.quarantine(
+                record_id=record.get("identity", {}).get("trade_id", "unknown"),
+                layer="trade_truth",
+                violations=[ContractViolation(
+                    contract_name="trade_truth_schema",
+                    contract_version="v3",
+                    severity=Severity.HIGH,
+                    reason=reason,
+                )],
+                original_payload=record,
+            )
+        except Exception:
+            pass  # Quarantine failure must never block
         return False
 
     try:

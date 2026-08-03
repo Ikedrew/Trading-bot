@@ -32,13 +32,13 @@ from typing import Any
 # VERSION CONSTANTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-CURRENT_SCHEMA_VERSION: int = 2
+CURRENT_SCHEMA_VERSION: int = 3
 
 # Legacy version (pre-canonical normalisation)
 SCHEMA_VERSION_LEGACY: int = 1
 
-# Current version (canonical fields enforced)
-SCHEMA_VERSION_CANONICAL: int = 2
+# Current version (observation-only, decision fields removed)
+SCHEMA_VERSION_CANONICAL: int = 3
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -97,10 +97,33 @@ SCHEMA_V2: dict[str, Any] = {
     ],
 }
 
+SCHEMA_V3: dict[str, Any] = {
+    "description": "Observation-only schema — legacy decision fields removed",
+    "version": 3,
+    "fields": {
+        # Core identifiers
+        "ts_utc_ms": {"type": "int", "required": True},
+        "type": {"type": "str", "required": True},
+        "symbol": {"type": "str", "required": False},
+        "source": {"type": "str", "required": False},
+        "schema_version": {"type": "int", "required": True, "value": 3},
+        "feature_version": {"type": "str", "required": False},
+        # Raw payload (type-specific observation data)
+        "payload": {"type": "dict", "required": False},
+    },
+    "guarantees": [
+        "Only observation event types reach disk (CANDLE, FEATURE_UPDATE, FEED_HEALTH, DATA_GAP, RECONNECT, SYSTEM_HEALTH, CLOCK_SYNC)",
+        "No decision/trading fields (pattern, regime, bias, side, guard_result removed)",
+        "schema_version = 3 always present",
+        "payload contains type-specific observation data",
+    ],
+}
+
 # Registry of all known schemas (for future v3, v4, etc.)
 SCHEMA_REGISTRY: dict[int, dict[str, Any]] = {
     1: SCHEMA_V1,
     2: SCHEMA_V2,
+    3: SCHEMA_V3,
 }
 
 

@@ -33,7 +33,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/portfolio_rankings"
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "portfolio_rankings"
 
 SCHEMA_VERSION = "portfolio_ranking_v1"

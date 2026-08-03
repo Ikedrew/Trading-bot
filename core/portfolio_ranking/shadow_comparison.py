@@ -28,7 +28,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/portfolio_shadow"
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "portfolio_shadow"
 _SCHEMA_VERSION = "portfolio_shadow_v1"
 

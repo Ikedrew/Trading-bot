@@ -40,16 +40,11 @@ CORE_FIELDS: tuple[str, ...] = (
     "type",         # str — event type enum value
 )
 
-# ─── Immutable trading features (write-once at emit, never recomputed) ────────
-# These are resolved inside emit() via _resolve_* helpers.
-# After serialisation, no system may modify these.
-IMMUTABLE_FIELDS: tuple[str, ...] = (
-    "pattern",       # str — trading pattern name (e.g. "BULLISH_ENGULFING")
-    "regime",        # str — market regime (e.g. "TREND_UP", "RANGING")
-    "bias",          # str — directional bias (e.g. "BUY", "SELL")
-    "side",          # str — signal direction: "BUY" | "SELL" | "FLAT"
-    "guard_result",  # str — risk gate outcome: "APPROVED" | "REJECTED" | "UNKNOWN"
-)
+# ─── V3 Schema: observation-only (no trading features) ───────────────────────
+# Legacy immutable trading features have been removed from the event schema.
+# Events now only persist raw observations. Trading context lives in
+# Market Context, Decision Ledger, and Execution Context datasets.
+IMMUTABLE_FIELDS: tuple[str, ...] = ()  # No trading fields in v3 observation schema
 
 # ─── Decision metrics (finalised at emit-time, nullable for non-decision events)
 DECISION_METRICS: tuple[str, ...] = (
@@ -128,6 +123,7 @@ def validate_canonical_event(event: dict[str, Any]) -> None:
         )
 
     # ─── Immutable trading features ───────────────────────────────────
+    # V3: no immutable trading fields (observation-only schema)
     for field in IMMUTABLE_FIELDS:
         if field not in event:
             raise SchemaViolation(f"[SCHEMA VIOLATION] missing immutable field: {field}")
@@ -146,19 +142,7 @@ def validate_canonical_event(event: dict[str, Any]) -> None:
                 f"[SCHEMA VIOLATION] {field} must not be empty/blank, got: {value!r}"
             )
 
-    # ─── Constrained value checks ────────────────────────────────────
-    side = event["side"]
-    if side not in VALID_SIDE_VALUES:
-        raise SchemaViolation(
-            f"[SCHEMA VIOLATION] side must be one of {sorted(VALID_SIDE_VALUES)}, got: {side!r}"
-        )
-
-    guard_result = event["guard_result"]
-    if guard_result not in VALID_GUARD_RESULT_VALUES:
-        raise SchemaViolation(
-            f"[SCHEMA VIOLATION] guard_result must be one of "
-            f"{sorted(VALID_GUARD_RESULT_VALUES)}, got: {guard_result!r}"
-        )
+    # ─── Constrained value checks (V3: no trading fields to validate) ─
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

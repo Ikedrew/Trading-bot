@@ -35,7 +35,7 @@ from core.trade_truth import compute_r_multiple, compute_mfe_r, compute_mae_r
 
 logger = logging.getLogger(__name__)
 
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "shadow_trades"
 _LOCAL_DIR = "logs/shadow_trades"
 _MAX_BARS_DEFAULT = 60  # 5h at M5

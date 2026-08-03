@@ -42,6 +42,44 @@ class Phase(str, Enum):
 
 
 @dataclass(frozen=True)
+class MonthlySummary:
+    """Condensed MN state for MarketContext macro section."""
+    trend: str = ""                     # BULLISH | BEARISH | NEUTRAL
+    trend_strength: float = 0.0         # 0.0–1.0
+    classification: str = ""            # TRENDING_BULLISH | RANGING | VOLATILE | TRANSITIONAL
+
+
+@dataclass(frozen=True)
+class WeeklySummary:
+    """Condensed W1 state for MarketContext macro section."""
+    trend: str = ""                     # BULLISH | BEARISH | NEUTRAL
+    trend_strength: float = 0.0         # 0.0–1.0
+    swing_high: float = 0.0             # Weekly structural high
+    swing_low: float = 0.0              # Weekly structural low
+    bos_level: float = 0.0              # Weekly BOS reference
+    range_position: float = 0.0         # 0.0–1.0 within weekly range
+
+
+@dataclass(frozen=True)
+class DailySummary:
+    """Condensed D1 state for MarketContext macro section."""
+    bias: str = ""                      # BULLISH | BEARISH | NEUTRAL
+    bias_strength: float = 0.0          # 0.0–1.0
+    swing_high: float = 0.0             # Daily structural high
+    swing_low: float = 0.0              # Daily structural low
+    range_position: float = 0.0         # 0.0–1.0 within daily range
+    atr_ratio: float = 1.0             # Today's ATR vs average
+
+
+@dataclass(frozen=True)
+class MacroSummary:
+    """MN/W1/D1 macro context embedded in MarketContext."""
+    monthly: MonthlySummary = field(default_factory=MonthlySummary)
+    weekly: WeeklySummary = field(default_factory=WeeklySummary)
+    daily: DailySummary = field(default_factory=DailySummary)
+
+
+@dataclass(frozen=True)
 class H4Summary:
     """Condensed H4 state for MarketContext."""
     regime: str = "TRANSITIONAL"      # TRENDING_BULLISH | TRENDING_BEARISH | RANGING | VOLATILE | TRANSITIONAL
@@ -141,6 +179,7 @@ class MarketContext:
     alignment_score: float = 0.0
 
     # ─── TIMEFRAME COMPONENTS ─────────────────────────────────────────
+    macro: MacroSummary = field(default_factory=MacroSummary)
     h4: H4Summary = field(default_factory=H4Summary)
     h1: H1Summary = field(default_factory=H1Summary)
     m15: M15Summary = field(default_factory=M15Summary)
@@ -170,6 +209,29 @@ class MarketContext:
             "phase_confidence": round(self.phase_confidence, 4),
             "tradability_score": round(self.tradability_score, 4),
             "alignment_score": round(self.alignment_score, 4),
+            "macro": {
+                "monthly": {
+                    "trend": self.macro.monthly.trend,
+                    "trend_strength": round(self.macro.monthly.trend_strength, 4),
+                    "classification": self.macro.monthly.classification,
+                },
+                "weekly": {
+                    "trend": self.macro.weekly.trend,
+                    "trend_strength": round(self.macro.weekly.trend_strength, 4),
+                    "swing_high": round(self.macro.weekly.swing_high, 8),
+                    "swing_low": round(self.macro.weekly.swing_low, 8),
+                    "bos_level": round(self.macro.weekly.bos_level, 8),
+                    "range_position": round(self.macro.weekly.range_position, 4),
+                },
+                "daily": {
+                    "bias": self.macro.daily.bias,
+                    "bias_strength": round(self.macro.daily.bias_strength, 4),
+                    "swing_high": round(self.macro.daily.swing_high, 8),
+                    "swing_low": round(self.macro.daily.swing_low, 8),
+                    "range_position": round(self.macro.daily.range_position, 4),
+                    "atr_ratio": round(self.macro.daily.atr_ratio, 4),
+                },
+            },
             "h4": {
                 "regime": self.h4.regime,
                 "confidence": round(self.h4.confidence, 4),

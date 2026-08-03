@@ -23,7 +23,7 @@ from core.timeframes.macro_decision_log import format_macro_alignment_log
 
 def _full_bullish_macro() -> MacroSnapshot:
     return MacroSnapshot(
-        monthly_trend="BULLISH", monthly_trend_strength=0.82, monthly_phase="IMPULSE",
+        monthly_trend="BULLISH", monthly_trend_strength=0.82, monthly_classification="TRENDING_BULLISH",
         weekly_trend="BULLISH", weekly_trend_strength=0.74,
         weekly_swing_high=1.10, weekly_swing_low=1.05, weekly_range_position=0.60,
         daily_bias="BEARISH", daily_bias_strength=0.61,

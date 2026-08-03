@@ -57,7 +57,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "execution_context"
 _LOCAL_DIR = "logs/execution_context"
 _SCHEMA_VERSION = "execution_context_v1"

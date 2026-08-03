@@ -158,7 +158,7 @@ class TestLayerPrefixOwnership:
         """event_stream S3 key construction must only use events/ prefix."""
         source = (ROOT / "core" / "event_stream.py").read_text(encoding="utf-8")
         # Check _S3_BUCKET reference uses canonical bucket
-        assert '_S3_BUCKET: str = "trading-bot-data-mk1"' in source
+        assert '_S3_BUCKET: str = "v10-engine"' in source
         # The S3 batch writer (storage/s3_batch_writer.py) handles actual S3 keys
         # event_stream.py delegates to it — no direct key construction with foreign prefixes
         # Verify no _S3_PREFIX assignment to other layers
@@ -195,13 +195,13 @@ class TestLayerPrefixOwnership:
         assert '_S3_PREFIX = "execution_context"' in source
 
     def test_all_writers_use_canonical_bucket(self):
-        """Every S3 writer must target trading-bot-data-mk1 only."""
+        """Every S3 writer must target v10-engine only."""
         for writer_path in ALLOWED_S3_WRITERS:
             if not writer_path.exists():
                 continue
             source = writer_path.read_text(encoding="utf-8")
             if "_S3_BUCKET" in source:
-                assert 'trading-bot-data-mk1' in source, (
+                assert 'v10-engine' in source, (
                     f"{writer_path.name} does not use canonical bucket"
                 )
 

@@ -22,7 +22,7 @@ from core.shadow_trades import ShadowTradeEngine
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/research_shadow_trades"
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "research_shadow_trades"
 _SCHEMA_VERSION = "research_shadow_trades_v1"
 _engine: ShadowTradeEngine | None = None

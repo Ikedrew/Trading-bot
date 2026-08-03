@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 # ─── CONFIGURATION ───────────────────────────────────────────────────────────
 
 _JOURNAL_DIR = "logs/trade_journal"
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "trade_journal"
 _SCHEMA_VERSION = "trade_journal_v1"
 
@@ -437,6 +437,46 @@ def persist_trade(record: TradeRecord) -> bool:
         except Exception:
             pass  # Risk deviation failure must never block journal persistence
         # ─── END RISK DEVIATION TRACKING ──────────────────────────────
+
+        # ─── TRADE TRUTH GRAPH (relationship node) ────────────────────
+        # Build a graph node linking this trade to its source datasets.
+        # Pure references only — no execution data, no P&L.
+        try:
+            from core.trade_truth_graph import build_graph_node, persist_graph_node
+            from datetime import datetime, timezone as _tz
+
+            _graph_date = datetime.fromtimestamp(record.exit_time, tz=_tz.utc).strftime("%Y-%m-%d")
+            _graph_node = build_graph_node(
+                trade_id=record.trade_id,
+                correlation_id=record.correlation_id or f"RECOVERED-{record.trade_id}",
+                symbol=record.symbol,
+                cycle_id=0,  # Not available at trade close time
+                event_window_start_ts=record.entry_time,
+                event_window_end_ts=record.exit_time,
+                decision_to_execution_lag_ms=0.0,
+                execution_to_exit_lag_ms=(record.exit_time - record.entry_time) * 1000,
+                trade_truth_ref=f"s3://v10-engine/trades/schema_version=trade_truth_v3/symbol={record.symbol}/date={_graph_date}/part-000.jsonl",
+                execution_context_ref=record.correlation_id or "",
+            )
+            persist_graph_node(_graph_node)
+        except Exception:
+            pass  # Graph node failure must never block journal persistence
+        # ─── END TRADE TRUTH GRAPH ────────────────────────────────────
+
+        # ─── EDGE ATTRIBUTION (deferred — requires post-processing) ───
+        # Edge Attribution needs market context from ENTRY time (not exit time).
+        # It must JOIN: Trade Truth + Execution Context + Market Context.
+        # This is computed by a separate batch process, not inline.
+        # Log that attribution is pending for this trade.
+        try:
+            logger.info(
+                "[EDGE_ATTRIBUTION_PENDING] trade_id=%s cor_id=%s symbol=%s r=%.4f — needs offline computation",
+                record.trade_id, record.correlation_id or "", record.symbol,
+                _r_realised if "_r_realised" in dir() else 0.0,
+            )
+        except Exception:
+            pass
+        # ─── END EDGE ATTRIBUTION ─────────────────────────────────────
 
         logger.info(
             "[TRADE_JOURNAL] PERSISTED trade_id=%s symbol=%s pnl=%.2f reason=%s",

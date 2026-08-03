@@ -31,7 +31,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 
 REQUIRED_BUCKET_PREFIXES = {
     "events",

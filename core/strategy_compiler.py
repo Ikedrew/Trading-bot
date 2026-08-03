@@ -53,7 +53,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "strategy_compiler"
 _LOCAL_DIR = "logs/strategy_compiler"
 _SCHEMA_VERSION = "strategy_compiler_v2"

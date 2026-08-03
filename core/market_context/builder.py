@@ -20,6 +20,10 @@ from core.market_context.models import (
     H4Summary,
     M15Summary,
     M5Summary,
+    MacroSummary,
+    MonthlySummary,
+    WeeklySummary,
+    DailySummary,
     MarketContext,
     Phase,
     Regime,
@@ -96,6 +100,9 @@ class MarketContextBuilder:
     ) -> MarketContext:
         """Internal build logic. May raise — caught by build()."""
 
+        # ─── EXTRACT MACRO (MN/W1/D1) ────────────────────────────────
+        macro = self._extract_macro(htf_context)
+
         # ─── EXTRACT H4 ──────────────────────────────────────────────
         h4 = self._extract_h4(htf_context)
 
@@ -138,6 +145,7 @@ class MarketContextBuilder:
             phase_confidence=phase_conf,
             tradability_score=tradability,
             alignment_score=alignment,
+            macro=macro,
             h4=h4,
             h1=h1,
             m15=m15,
@@ -168,6 +176,37 @@ class MarketContextBuilder:
         return ctx
 
     # ─── EXTRACTION HELPERS ───────────────────────────────────────────────────
+
+    def _extract_macro(self, htf_context: Any) -> MacroSummary:
+        """Extract macro (MN/W1/D1) summary from HTFContext.macro. Returns empty on failure."""
+        if htf_context is None:
+            return MacroSummary()
+        macro_snap = getattr(htf_context, "macro", None)
+        if macro_snap is None:
+            return MacroSummary()
+        return MacroSummary(
+            monthly=MonthlySummary(
+                trend=getattr(macro_snap, "monthly_trend", "") or "",
+                trend_strength=getattr(macro_snap, "monthly_trend_strength", 0.0),
+                classification=getattr(macro_snap, "monthly_classification", "") or "",
+            ),
+            weekly=WeeklySummary(
+                trend=getattr(macro_snap, "weekly_trend", "") or "",
+                trend_strength=getattr(macro_snap, "weekly_trend_strength", 0.0),
+                swing_high=getattr(macro_snap, "weekly_swing_high", 0.0),
+                swing_low=getattr(macro_snap, "weekly_swing_low", 0.0),
+                bos_level=getattr(macro_snap, "weekly_bos_level", 0.0),
+                range_position=getattr(macro_snap, "weekly_range_position", 0.0),
+            ),
+            daily=DailySummary(
+                bias=getattr(macro_snap, "daily_bias", "") or "",
+                bias_strength=getattr(macro_snap, "daily_bias_strength", 0.0),
+                swing_high=getattr(macro_snap, "daily_swing_high", 0.0),
+                swing_low=getattr(macro_snap, "daily_swing_low", 0.0),
+                range_position=getattr(macro_snap, "daily_range_position", 0.0),
+                atr_ratio=getattr(macro_snap, "daily_atr_ratio", 1.0),
+            ),
+        )
 
     def _extract_h4(self, htf_context: Any) -> H4Summary:
         """Extract H4 summary from HTFContext. Returns neutral on failure."""

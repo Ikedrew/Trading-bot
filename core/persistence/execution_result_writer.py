@@ -26,7 +26,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/execution_results"
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "execution_results"
 _SCHEMA_VERSION = "execution_results_v1"
 

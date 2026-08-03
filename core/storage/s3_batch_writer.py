@@ -45,7 +45,7 @@ class S3BatchWriter:
     Batched S3 writer with Hive-compatible partitioning.
 
     Usage:
-        writer = S3BatchWriter(bucket="trading-bot-data-mk1")
+        writer = S3BatchWriter(bucket="v10-engine")
         writer.add_event(event_dict)
         # Events auto-flush on size/time thresholds
         writer.shutdown()  # Final flush on exit
@@ -53,7 +53,7 @@ class S3BatchWriter:
 
     def __init__(
         self,
-        bucket: str = "trading-bot-data-mk1",
+        bucket: str = "v10-engine",
         base_prefix: str = "events",
         flush_interval: float = 30.0,
         max_buffer_size: int = 100,
@@ -246,7 +246,7 @@ def get_batch_writer() -> S3BatchWriter:
     global _writer
     if _writer is None:
         _writer = S3BatchWriter(
-            bucket="trading-bot-data-mk1",
+            bucket="v10-engine",
             base_prefix="events",
             flush_interval=30.0,
             max_buffer_size=100,

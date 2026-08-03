@@ -103,9 +103,6 @@ class Opportunity:
     bias_direction: str = ""         # Current M5 bias FSM direction
     bias_phase: str = ""             # "BUILDING" | "CONFIRMED" | "EXPIRED" | ""
 
-    # Market context
-    market_state: str = ""           # "STRUCTURED" | "TRANSITIONAL" | "CHOP" | ""
-
     # ─── D) CONFIDENCE ────────────────────────────────────────────────
     pattern_confidence: float = 0.0  # From pattern detector (0.0–1.0)
     evidence_scores: dict[str, float] = field(default_factory=dict)

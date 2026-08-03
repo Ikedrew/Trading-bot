@@ -42,7 +42,7 @@ from core.mt5_timeout import mt5_call
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/protection_audit"
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "protection_audit"
 _SCHEMA_VERSION = "protection_audit_v1"
 _MAX_VERIFY_ATTEMPTS = 3

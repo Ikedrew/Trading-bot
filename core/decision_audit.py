@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 # ─── S3 MIRROR CONFIGURATION ─────────────────────────────────────────────────
 
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "decision_audit"
 _SCHEMA_VERSION = "decision_audit_v1"
 
@@ -418,7 +418,7 @@ def persist_new_engine_decision_audit(
             "runtime_mode": "LIVE",
             "cycle_id": cycle_id,
             "timeframe": getattr(config, "TIMEFRAME", None),
-            "engine_version": "new_engine",
+            "engine_version": "V10",
 
             # Decision snapshot
             "should_trade": action == "EXECUTE",

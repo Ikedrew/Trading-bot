@@ -45,6 +45,7 @@ _TF_H4 = 16388
 _TF_D1 = 16408
 _TF_W1 = 32769
 _TF_MN = 49153
+_TF_D1_BIAS = 16409  # Virtual — same MT5 TF as D1 but runs analyze_bias for swing levels
 
 # Timeframe durations in seconds
 _TF_SECONDS = {
@@ -53,6 +54,7 @@ _TF_SECONDS = {
     _TF_H1: 3600,
     _TF_H4: 14400,
     _TF_D1: 86400,
+    _TF_D1_BIAS: 86400,  # Same duration as D1
     _TF_W1: 604800,
     _TF_MN: 2592000,
 }
@@ -102,6 +104,7 @@ class TimeframeCache:
             _TF_M15: _CacheEntry(),
             _TF_M1: _CacheEntry(),
             _TF_D1: _CacheEntry(),
+            _TF_D1_BIAS: _CacheEntry(),
             _TF_W1: _CacheEntry(),
             _TF_MN: _CacheEntry(),
         }
@@ -139,6 +142,12 @@ class TimeframeCache:
                 candle_count=int(getattr(config, "MTF_D1_CANDLE_COUNT", 100)) if config else 100,
                 enabled=bool(getattr(config, "MTF_D1_ENABLED", True)) if config else True,
                 name="D1",
+            ),
+            _TimeframeConfig(
+                tf_constant=_TF_D1_BIAS,
+                candle_count=int(getattr(config, "MTF_D1_CANDLE_COUNT", 100)) if config else 100,
+                enabled=bool(getattr(config, "MTF_D1_ENABLED", True)) if config else True,
+                name="D1_BIAS",
             ),
             _TimeframeConfig(
                 tf_constant=_TF_W1,
@@ -258,7 +267,9 @@ class TimeframeCache:
         Returns True if a new closed bar is available.
         """
         try:
-            latest = self._feed.copy_rates_closed(self._symbol, tf, 2)
+            # Map virtual TF constants to real MT5 constants
+            mt5_tf = _TF_D1 if tf == _TF_D1_BIAS else tf
+            latest = self._feed.copy_rates_closed(self._symbol, mt5_tf, 2)
             if not latest or len(latest) < 2:
                 return False
             # latest[-1] is forming, latest[-2] is last closed
@@ -284,7 +295,9 @@ class TimeframeCache:
     def _fetch_candles(self, tf: int, count: int) -> list[Candle]:
         """Fetch candles from MT5 feed. Returns empty list on failure."""
         try:
-            return self._feed.copy_rates_closed(self._symbol, tf, count)
+            # Map virtual TF constants to real MT5 constants
+            mt5_tf = _TF_D1 if tf == _TF_D1_BIAS else tf
+            return self._feed.copy_rates_closed(self._symbol, mt5_tf, count)
         except (RuntimeError, Exception):
             return []
 
@@ -299,6 +312,8 @@ class TimeframeCache:
                 return analyze_structure(candles, self._last_price)
             elif tf == _TF_D1:
                 return analyze_regime(candles)  # Reuse regime analyzer for daily
+            elif tf == _TF_D1_BIAS:
+                return analyze_bias(candles)    # Reuse bias analyzer for daily swing levels
             elif tf == _TF_W1:
                 return analyze_bias(candles)    # Reuse bias analyzer for weekly (swings/BOS)
             elif tf == _TF_MN:
@@ -362,11 +377,11 @@ class TimeframeCache:
         # Extract monthly fields (from RegimeSnapshot)
         monthly_trend = ""
         monthly_trend_strength = 0.0
-        monthly_phase = ""
+        monthly_classification = ""
         if isinstance(mn_snap, RegimeSnapshot):
             monthly_trend = mn_snap.trend_bias or "NEUTRAL"
             monthly_trend_strength = mn_snap.trend_strength
-            monthly_phase = mn_snap.classification.value if mn_snap.classification else ""
+            monthly_classification = mn_snap.classification.value if mn_snap.classification else ""
 
         # Extract weekly fields (from BiasSnapshot)
         weekly_trend = ""
@@ -390,7 +405,7 @@ class TimeframeCache:
                 else:
                     weekly_range_position = (current_price - weekly_swing_low) / (weekly_swing_high - weekly_swing_low)
 
-        # Extract daily fields (from RegimeSnapshot)
+        # Extract daily fields (from RegimeSnapshot for trend/ATR + BiasSnapshot for swings)
         daily_bias = ""
         daily_bias_strength = 0.0
         daily_swing_high = 0.0
@@ -402,6 +417,25 @@ class TimeframeCache:
             daily_bias_strength = d1_snap.trend_strength
             daily_atr_ratio = d1_snap.atr_ratio if d1_snap.atr_ratio > 0 else 1.0
 
+        # Extract daily swing levels from D1 BiasSnapshot (separate analysis)
+        d1_bias_entry = self._entries.get(_TF_D1_BIAS)
+        d1_bias_snap = d1_bias_entry.snapshot if d1_bias_entry else None
+        if isinstance(d1_bias_snap, BiasSnapshot):
+            daily_swing_high = d1_bias_snap.last_swing_high or 0.0
+            daily_swing_low = d1_bias_snap.last_swing_low or 0.0
+            # Compute daily range position
+            if daily_swing_high > daily_swing_low and current_price > 0:
+                if current_price <= daily_swing_low:
+                    daily_range_position = 0.0
+                elif current_price >= daily_swing_high:
+                    daily_range_position = 1.0
+                else:
+                    daily_range_position = (current_price - daily_swing_low) / (daily_swing_high - daily_swing_low)
+            # If regime snapshot didn't provide bias, fall back to bias snapshot direction
+            if not daily_bias or daily_bias == "NEUTRAL":
+                daily_bias = d1_bias_snap.direction.value if d1_bias_snap.direction else "NEUTRAL"
+                daily_bias_strength = max(daily_bias_strength, d1_bias_snap.confidence)
+
         # Use the most recent bar_time from available entries
         bar_time = max(
             (mn_entry.bar_time if mn_entry else 0),
@@ -412,7 +446,7 @@ class TimeframeCache:
         return MacroSnapshot(
             monthly_trend=monthly_trend,
             monthly_trend_strength=monthly_trend_strength,
-            monthly_phase=monthly_phase,
+            monthly_classification=monthly_classification,
             weekly_trend=weekly_trend,
             weekly_trend_strength=weekly_trend_strength,
             weekly_swing_high=weekly_swing_high,

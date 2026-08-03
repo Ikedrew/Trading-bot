@@ -63,19 +63,13 @@ _ALLOWED_OBSERVATION_TYPES = frozenset({
     # FEATURE_STATE — calculated market features
     "FEATURE_UPDATE",
 
-    # SESSION_MARKERS — trading session observations
-    "SESSION_TRANSITION",
-    "SESSION_STATE",
-
     # INFRASTRUCTURE_STATE — connectivity observations
-    "LATENCY_OBSERVATION",
     "FEED_HEALTH",
     "DATA_GAP",
     "RECONNECT",
 
     # SYSTEM_DIAGNOSTICS — system health observations
     "SYSTEM_HEALTH",
-    "PIPELINE_HEALTH",
     "CLOCK_SYNC",
 })
 
@@ -391,16 +385,16 @@ def _resolve_guard_result(event: dict[str, Any]) -> str:
 # Writes batched JSONL files per (symbol, date) partition.
 
 _S3_ENABLED: bool = False
-_S3_BUCKET: str = "trading-bot-data-mk1"  # CANONICAL SINK — do not change
+_S3_BUCKET: str = "v10-engine"  # CANONICAL SINK — do not change
 
 
 def _s3_validate_bucket() -> None:
     """Guardrail: ensure only canonical bucket is used. Raises on misconfiguration."""
-    bucket = os.getenv("AWS_S3_BUCKET", "trading-bot-data-mk1")
-    if bucket != "trading-bot-data-mk1":
+    bucket = os.getenv("AWS_S3_BUCKET", "v10-engine")
+    if bucket != "v10-engine":
         raise ValueError(
-            f"[EVENT_S3] Invalid S3 sink '{bucket}' — only 'trading-bot-data-mk1' allowed. "
-            f"Unset AWS_S3_BUCKET or set it to 'trading-bot-data-mk1'."
+            f"[EVENT_S3] Invalid S3 sink '{bucket}' — only 'v10-engine' allowed. "
+            f"Unset AWS_S3_BUCKET or set it to 'v10-engine'."
         )
 
 
@@ -505,18 +499,6 @@ def emit(
 
         if source:
             event["source"] = source
-
-        # ─── CANONICAL FIELD NORMALISATION (write-time resolution) ──
-        # Resolve all canonical fields from nested sources. Guarantees
-        # every row has consistent, queryable top-level string fields.
-        # These are immutable after this point — no downstream mutation.
-        event["pattern"] = _resolve_pattern(event)
-        event["regime"] = _resolve_regime(event)
-        event["market_phase"] = _resolve_market_phase(event)
-        event["trade_horizon"] = _resolve_trade_horizon(event)
-        event["bias"] = _resolve_bias(event)
-        event["side"] = _resolve_side(event)
-        event["guard_result"] = _resolve_guard_result(event)
 
         # ─── SCHEMA VERSION STAMP ────────────────────────────────
         # Tag event with current schema version (v2). This enables

@@ -41,7 +41,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/decision_trace"
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "decision_trace"
 _SCHEMA_VERSION = "decision_trace_v1"
 

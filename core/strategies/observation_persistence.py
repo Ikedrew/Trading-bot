@@ -31,7 +31,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/strategy_observations"
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "strategy_observations"
 _SCHEMA_VERSION = "strategy_observation_v1"
 

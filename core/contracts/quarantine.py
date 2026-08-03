@@ -29,7 +29,7 @@ from core.contracts.violation import ContractViolation
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/quarantine"
-_S3_BUCKET = "trading-bot-data-mk1"
+_S3_BUCKET = "v10-engine"
 _S3_PREFIX = "quarantine"
 _SCHEMA_VERSION = "quarantine_v1"
 
