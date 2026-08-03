@@ -113,6 +113,13 @@ def persist_opportunity_batch(opportunities: list[Opportunity]) -> None:
             finally:
                 os.close(fd)
 
+            # ─── S3 MIRROR (batch — one put per symbol/date) ─────────
+            try:
+                _write_s3_opportunity_batch(symbol, date_str, content)
+            except Exception:
+                pass  # S3 failure must NEVER affect opportunity persistence
+            # ─── END S3 MIRROR ────────────────────────────────────────
+
     except Exception as exc:
         logger.error("[OPPORTUNITY_BATCH_PERSIST_ERROR] count=%d error=%s",
                      len(opportunities), exc)
@@ -158,6 +165,53 @@ def _write_s3_opportunity(symbol: str, date_str: str, line: str) -> None:
             f"/symbol={symbol}/date={date_str}/part-000.jsonl"
         )
         body = line
+
+        # Read-append-write (acceptable for opportunity volume)
+        try:
+            existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
+            body = existing["Body"].read().decode("utf-8") + body
+        except Exception:
+            pass  # New file
+
+        s3.put_object(
+            Bucket=_S3_BUCKET, Key=key,
+            Body=body.encode("utf-8"),
+            ContentType="application/x-ndjson",
+        )
+    except Exception:
+        pass  # S3 failure must NEVER affect opportunity persistence
+
+
+def _write_s3_opportunity_batch(symbol: str, date_str: str, content: str) -> None:
+    """
+    Mirror a batch of opportunity records to S3. Fire-and-forget. Never raises.
+
+    Same S3 key format as _write_s3_opportunity — appends to existing object.
+    More efficient: one S3 round-trip per symbol/date batch instead of per record.
+    """
+    try:
+        from core import config as _cfg
+        if not getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
+            return
+
+        import boto3
+        from botocore.config import Config as BotoConfig
+        s3 = boto3.client(
+            "s3",
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=os.getenv("AWS_REGION", "eu-west-2"),
+            config=BotoConfig(
+                connect_timeout=3,
+                read_timeout=5,
+                retries={"max_attempts": 0},
+            ),
+        )
+        key = (
+            f"{_S3_PREFIX}/schema_version={_SCHEMA_VERSION}"
+            f"/symbol={symbol}/date={date_str}/part-000.jsonl"
+        )
+        body = content
 
         # Read-append-write (acceptable for opportunity volume)
         try:
