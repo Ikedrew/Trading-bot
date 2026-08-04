@@ -172,6 +172,16 @@ class StructuredLogger:
             except Exception:
                 pass  # Discord failure must never affect pipeline
 
+        # 4. Discord V2 renderer (parallel path — gated by feature flag)
+        try:
+            from core import config as _v2_cfg
+            if getattr(_v2_cfg, "ENABLE_DISCORD_V2", False):
+                from core.discord.renderer import DiscordRenderer
+                _v2_renderer = DiscordRenderer()
+                _v2_renderer.render(event_type, data)
+        except Exception:
+            pass  # V2 renderer failure must never affect pipeline
+
 
 # ─── PAIR-CHANNEL DUPLICATION ─────────────────────────────────────────────────
 # Events that should also appear in pair-{symbol} channels for per-symbol visibility.

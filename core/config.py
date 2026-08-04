@@ -231,6 +231,9 @@ DECISION_AUDIT_FLUSH_EVERY_WRITE = True      # fsync after each write (crash res
 NO_TRADE_ALERT_THRESHOLD = 100          # First alert after N consecutive no-trade cycles
 NO_TRADE_ALERT_REPEAT_INTERVAL = 25     # Repeat alert every N cycles while still no-trade
 
+# --- Discord V2 rendering layer (Phase 1 — foundation) ---
+ENABLE_DISCORD_V2 = False                   # When True, V2 renderer receives events (parallel to existing webhooks)
+
 # --- External alerting ---
 DISCORD_WEBHOOK_URL = ""                # Discord webhook URL (empty = disabled)
 
