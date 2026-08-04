@@ -278,3 +278,146 @@ class TestRendererLiveMarketLifecycle:
         assert card["message_id"] == "new_msg_123"
         # State file should exist
         assert (tmp_path / "state.json").exists()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: CHANNEL CONSOLIDATION TESTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestOpportunityChannel:
+    """Opportunity events route to opportunities channel."""
+
+    def test_trade_decision_routes_to_opportunity(self):
+        renderer = DiscordRenderer()
+        renderer._state = MagicMock()
+        renderer._state.get_live_card.return_value = None
+        renderer._client = DiscordBotClient()
+
+        result = renderer.render("TRADE_DECISION", {
+            "symbol": "EURUSD", "decision": "EXECUTE",
+            "pattern": "TREND_CONTINUATION", "score": 0.85,
+            "side": "BUY", "strategy": "TREND_CONTINUATION",
+        })
+        assert result["category"] == "OPPORTUNITY"
+        assert result["action"] == "send"
+        assert result["channel"] == "opportunities"
+        assert result["card"]["fields"]["pattern"] == "TREND_CONTINUATION"
+        assert result["card"]["fields"]["direction"] == "BUY"
+
+    def test_decision_rejected_routes_to_opportunity(self):
+        renderer = DiscordRenderer()
+        renderer._state = MagicMock()
+        renderer._client = DiscordBotClient()
+
+        result = renderer.render("DECISION_REJECTED", {
+            "symbol": "AUDUSD", "reason": "exposure_limit",
+            "stage": "risk", "score": 0.28,
+        })
+        assert result["category"] == "OPPORTUNITY"
+        assert result["channel"] == "opportunities"
+        assert result["card"]["fields"]["reason"] == "exposure_limit"
+
+    def test_pipeline_drop_routes_to_opportunity(self):
+        renderer = DiscordRenderer()
+        renderer._state = MagicMock()
+        renderer._client = DiscordBotClient()
+
+        result = renderer.render("PIPELINE_DROP", {"symbol": "GBPUSD", "reason": "no_viable_pattern"})
+        # Phase 3.5: PIPELINE_DROP is now suppressed (noise)
+        assert result is None
+
+
+class TestExecutionChannel:
+    """Execution events route to executions channel."""
+
+    def test_order_filled_routes_to_executions(self):
+        renderer = DiscordRenderer()
+        renderer._state = MagicMock()
+        renderer._client = DiscordBotClient()
+
+        result = renderer.render("ORDER_FILLED", {
+            "symbol": "AUDUSD", "side": "SELL",
+            "fill_price": 0.699, "volume": 2.32, "deal": 54488302,
+        })
+        assert result["category"] == "EXECUTION"
+        assert result["channel"] == "executions"
+        assert result["card"]["fields"]["fill_price"] == 0.699
+        assert result["card"]["fields"]["deal"] == 54488302
+
+    def test_trade_closed_routes_to_executions(self):
+        renderer = DiscordRenderer()
+        renderer._state = MagicMock()
+        renderer._client = DiscordBotClient()
+
+        result = renderer.render("TRADE_CLOSED", {
+            "symbol": "EURUSD", "reason": "stop_loss",
+            "details": {"pnl_r": -1.0, "close_type": "stop_loss", "duration_min": 45},
+        })
+        assert result["category"] == "EXECUTION"
+        assert result["channel"] == "executions"
+        assert result["card"]["fields"]["r_multiple"] == -1.0
+        assert result["card"]["fields"]["exit_reason"] == "stop_loss"
+
+    def test_risk_block_routes_to_executions(self):
+        renderer = DiscordRenderer()
+        renderer._state = MagicMock()
+        renderer._client = DiscordBotClient()
+
+        result = renderer.render("RISK_BLOCK", {
+            "symbol": "USDJPY", "guard": "spread_guard", "reason": "SPREAD_EXCEEDED",
+        })
+        assert result["category"] == "EXECUTION"
+        assert result["channel"] == "executions"
+        assert result["card"]["fields"]["guard"] == "spread_guard"
+
+
+class TestSystemChannel:
+    """System events route to system channel."""
+
+    def test_startup_routes_to_system(self):
+        renderer = DiscordRenderer()
+        state = DiscordState(state_file="logs/_test_system.json")
+        state.load()
+        renderer._state = state
+        renderer._client = DiscordBotClient()
+
+        result = renderer.render("SYSTEM_STARTUP", {"mode": "LIVE_V10", "symbols": 10})
+        assert result["category"] == "SYSTEM"
+        # Phase 3.5: startup updates health card
+        assert result["action"] in ("health_create", "health_update")
+        assert result["card"]["fields"]["mode"] == "LIVE_V10"
+
+    def test_error_routes_to_system(self):
+        renderer = DiscordRenderer()
+        renderer._state = MagicMock()
+        renderer._client = DiscordBotClient()
+
+        result = renderer.render("ERROR", {
+            "error_type": "TimeoutError", "location": "mt5",
+            "message": "Connection lost",
+        })
+        assert result["category"] == "SYSTEM"
+        assert result["channel"] == "system"
+        assert result["card"]["fields"]["error_type"] == "TimeoutError"
+
+    def test_kill_switch_routes_to_system(self):
+        renderer = DiscordRenderer()
+        renderer._state = MagicMock()
+        renderer._client = DiscordBotClient()
+
+        result = renderer.render("KILL_SWITCH", {"reason": "Manual stop"})
+        assert result["category"] == "SYSTEM"
+        assert result["channel"] == "system"
+
+
+class TestPhase3Config:
+    """Phase 3 configuration exists."""
+
+    def test_v2_channels_config_exists(self):
+        from core import config
+        channels = getattr(config, "DISCORD_V2_CHANNELS", None)
+        assert channels is not None
+        assert "opportunities" in channels
+        assert "executions" in channels
+        assert "system" in channels

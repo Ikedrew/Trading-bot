@@ -43,7 +43,8 @@ class DiscordState:
 
     def __init__(self, state_file: str = _DEFAULT_STATE_FILE) -> None:
         self._path = Path(state_file)
-        self._live_cards: dict[str, dict[str, str]] = {}
+        self._live_cards: dict[str, dict[str, Any]] = {}
+        self._system_health: dict[str, str] = {}
         self._loaded = False
 
     def load(self) -> None:
@@ -53,6 +54,7 @@ class DiscordState:
                 data = json.loads(self._path.read_text(encoding="utf-8"))
                 if data.get("version") == _STATE_VERSION:
                     self._live_cards = data.get("live_cards", {})
+                    self._system_health = data.get("system_health", {})
                     self._loaded = True
                     logger.info("[DISCORD_STATE] loaded %d live cards", len(self._live_cards))
                 else:
@@ -74,6 +76,7 @@ class DiscordState:
             data = {
                 "version": _STATE_VERSION,
                 "live_cards": self._live_cards,
+                "system_health": self._system_health,
             }
             self._path.write_text(
                 json.dumps(data, indent=2, default=str),
@@ -82,7 +85,7 @@ class DiscordState:
         except Exception as exc:
             logger.warning("[DISCORD_STATE] save failed: %s", exc)
 
-    def get_live_card(self, symbol: str) -> dict[str, str] | None:
+    def get_live_card(self, symbol: str) -> dict[str, Any] | None:
         """
         Get stored live card info for a symbol.
 
@@ -105,7 +108,48 @@ class DiscordState:
         message_id: str,
     ) -> None:
         """Store a live card message reference."""
-        self._live_cards[symbol] = {
+        existing = self._live_cards.get(symbol, {})
+        existing.update({
+            "channel_id": channel_id,
+            "message_id": message_id,
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+        })
+        self._live_cards[symbol] = existing
+
+    def get_market_state(self, symbol: str) -> dict[str, Any]:
+        """Get accumulated market state for a symbol."""
+        card = self._live_cards.get(symbol, {})
+        return card.get("market_state", {})
+
+    def merge_market_state(self, symbol: str, new_fields: dict[str, Any]) -> dict[str, Any]:
+        """
+        Merge new market data into existing accumulated state.
+
+        Only overwrites fields that have non-empty/non-zero values in new_fields.
+        Returns the merged state.
+        """
+        if symbol not in self._live_cards:
+            self._live_cards[symbol] = {}
+        card = self._live_cards[symbol]
+        current = card.get("market_state", {})
+
+        for key, value in new_fields.items():
+            # Only overwrite if new value is meaningful
+            if value is not None and value != "" and value != 0 and value != 0.0:
+                current[key] = value
+
+        current["last_merged"] = datetime.now(timezone.utc).isoformat()
+        card["market_state"] = current
+        self._live_cards[symbol] = card
+        return current
+
+    def get_system_health(self) -> dict[str, str] | None:
+        """Get stored system health card info."""
+        return self._system_health if self._system_health.get("message_id") else None
+
+    def set_system_health(self, *, channel_id: str, message_id: str) -> None:
+        """Store system health card message reference."""
+        self._system_health = {
             "channel_id": channel_id,
             "message_id": message_id,
             "last_updated": datetime.now(timezone.utc).isoformat(),
@@ -115,7 +159,7 @@ class DiscordState:
         """Remove a live card reference (e.g., if message was deleted)."""
         self._live_cards.pop(symbol, None)
 
-    def all_live_cards(self) -> dict[str, dict[str, str]]:
+    def all_live_cards(self) -> dict[str, dict[str, Any]]:
         """Return all stored live card references."""
         if not self._loaded:
             self.load()

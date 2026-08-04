@@ -50,7 +50,8 @@ class TestCategoryRouting:
         assert classify_event("DECISION_REJECTED") == Category.OPPORTUNITY
 
     def test_pipeline_drop_routes_to_opportunity(self):
-        assert classify_event("PIPELINE_DROP") == Category.OPPORTUNITY
+        # Phase 3.5: PIPELINE_DROP is suppressed (noise for Discord)
+        assert classify_event("PIPELINE_DROP") == Category.UNKNOWN
 
     def test_order_attempt_routes_to_execution(self):
         assert classify_event("ORDER_ATTEMPT") == Category.EXECUTION
@@ -210,7 +211,7 @@ class TestCardBuilders:
         card = build_execution_card("TRADE_CLOSED", {
             "symbol": "EURUSD", "details": {"close_type": "stop_loss"},
         })
-        assert card["fields"]["close_type"] == "stop_loss"
+        assert card["fields"]["exit_reason"] == "stop_loss"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -223,7 +224,8 @@ class TestFeatureFlag:
 
     def test_flag_defaults_to_false(self):
         from core import config
-        assert getattr(config, "ENABLE_DISCORD_V2", None) is False
+        # V2 is now the active Discord path
+        assert getattr(config, "ENABLE_DISCORD_V2", None) is True
 
     @patch("core.discord_notifier.send_discord")
     @patch("core.aws_uploader.upload_event")

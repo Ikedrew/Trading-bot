@@ -2,6 +2,16 @@
 
 from __future__ import annotations
 
+import os as _os
+
+# Load .env file (project root) for secrets/configuration.
+# python-dotenv reads .env without affecting system environment.
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not required — env vars can be set directly
+
 import MetaTrader5 as mt5
 
 SYMBOL = "EURUSD", "GBPUSD", "USDJPY","USDCHF","USDCAD", "AUDUSD", "NZDUSD"
@@ -232,22 +242,35 @@ NO_TRADE_ALERT_THRESHOLD = 100          # First alert after N consecutive no-tra
 NO_TRADE_ALERT_REPEAT_INTERVAL = 25     # Repeat alert every N cycles while still no-trade
 
 # --- Discord V2 rendering layer (Phase 1 — foundation) ---
-ENABLE_DISCORD_V2 = False                   # When True, V2 renderer receives events (parallel to existing webhooks)
+ENABLE_DISCORD_V2 = True                    # Discord V2 active — legacy webhooks disabled
+
+# --- Discord V2 Bot Token (Phase 4 — API delivery) ---
+# Load from environment variable for security. Never hardcode.
+DISCORD_BOT_TOKEN = _os.getenv("DISCORD_BOT_TOKEN", "")
 
 # --- Discord V2 Live Market Channels (Phase 2) ---
 # Channel IDs for editable live market cards (one per symbol).
 # Leave empty until Discord bot is connected.
 DISCORD_LIVE_CHANNELS: dict = {
-    "AUDUSD": "",
-    "EURUSD": "",
-    "GBPUSD": "",
-    "USDJPY": "",
-    "USDCAD": "",
-    "USDCHF": "",
-    "NZDUSD": "",
-    "NAS100": "",
-    "US500": "",
-    "XAUUSD": "",
+    "AUDUSD": "1534253542670602331",
+    "EURUSD": "1534253692193083506",
+    "GBPUSD": "1534253775219589202",
+    "USDJPY": "1534254092619219034",
+    "USDCAD": "1534253951371968532",
+    "USDCHF": "1534253997140217937",
+    "NZDUSD": "1534253857927073912",
+    "NAS100": "1534254217936769054",
+    "US500": "1534254290816995568",
+    "XAUUSD": "1534254416432201898",
+}
+
+# --- Discord V2 Consolidated Channels (Phase 3) ---
+# Channel IDs for human-question based channels.
+# Leave empty until Discord bot is connected.
+DISCORD_V2_CHANNELS: dict = {
+    "opportunities": "1534256381606232114",      # "What opportunities happened?"
+    "executions": "1534256459121168525",         # "What trades happened?"
+    "system": "1534256711664271440",             # "Is the machine alive?"
 }
 
 # --- External alerting ---

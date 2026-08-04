@@ -52,7 +52,6 @@ _CATEGORY_MAP: dict[str, Category] = {
     # OPPORTUNITY: "What opportunities happened?"
     "TRADE_DECISION": Category.OPPORTUNITY,
     "DECISION_REJECTED": Category.OPPORTUNITY,
-    "PIPELINE_DROP": Category.OPPORTUNITY,
 
     # EXECUTION: "What trades happened?"
     "ORDER_ATTEMPT": Category.EXECUTION,
@@ -113,40 +112,74 @@ class DiscordRenderer:
         """
         Render an event into a Discord V2 card structure.
 
-        For LIVE_MARKET events: manages create/edit lifecycle.
-        For other categories: builds card (delivery in future phases).
-
-        Returns:
-            Structured render instruction:
-                {"category": str, "event_type": str, "card": dict, "action": str}
-            Or None if event_type is not recognised.
+        Intelligence layer:
+            - LIVE_MARKET: accumulates state, edits card
+            - OPPORTUNITY: filtered (only strategy-matched or deeper)
+            - EXECUTION: always sent
+            - SYSTEM: health-card events edit; critical events send new
         """
         category = classify_event(event_type)
         if category == Category.UNKNOWN:
             return None
 
+        # ─── NOISE FILTER: suppress events that don't belong in Discord ───
+        if self._should_suppress(category, event_type, data or {}):
+            return None
+
         card = self._build_card(category, event_type, data or {})
 
-        # Live market cards have create/edit lifecycle
+        # Live market cards: accumulate state + edit
         if category == Category.LIVE_MARKET:
-            return self._handle_live_market(event_type, card)
+            return self._handle_live_market(event_type, data or {}, card)
 
-        return {
-            "category": category.value,
-            "event_type": event_type,
-            "card": card,
-            "action": "send",
-        }
+        # System health events: some edit card, some send new message
+        if category == Category.SYSTEM:
+            return self._handle_system(event_type, data or {}, card)
 
-    def _handle_live_market(self, event_type: str, card: dict[str, Any]) -> dict[str, Any]:
+        # Opportunity + Execution: send new messages
+        return self._handle_standard_event(category, event_type, card)
+
+    def _should_suppress(self, category: Category, event_type: str, data: dict[str, Any]) -> bool:
         """
-        Handle live market card lifecycle: create new or edit existing.
+        Intelligence filter: suppress events that are noise for humans.
 
-        Checks state for existing message_id:
-            - If exists → action=edit (update card in place)
-            - If missing → action=create (new card needed)
+        Suppressed (S3 only, not Discord):
+            - PIPELINE_DROP (no pattern = nothing happened)
+            - EXPOSURE_UPDATE (internal state)
+            - RISK_CHECK where result is not a block
+            - PNL_UPDATE / DRAWDOWN_UPDATE as discrete events (folded into health card)
+            - DECISION_REJECTED at early stages (opportunity/strategy)
+        """
+        # Events completely removed from Discord
+        if event_type == "PIPELINE_DROP":
+            return True
+        if event_type == "EXPOSURE_UPDATE":
+            return True
+        if event_type == "RISK_CHECK":
+            result = data.get("result", "")
+            if result == "APPROVED" or result != "REJECTED":
+                return True
 
-        Also attempts delivery via bot_client (placeholder in Phase 2).
+        # PNL/DRAWDOWN handled by health card edit, not new message
+        # (They'll be routed to _handle_system which edits the card)
+        # Don't suppress here — let _handle_system manage them
+
+        # Opportunity filtering: only show meaningful near-misses
+        if event_type == "DECISION_REJECTED":
+            stage = data.get("stage") or data.get("terminal_stage") or ""
+            # Only send if reached risk stage or deeper
+            _deep_stages = ("risk", "execution", "ev_policy", "data_validation", "swing")
+            if not any(s in stage.lower() for s in _deep_stages):
+                return True
+
+        return False
+
+    def _handle_live_market(self, event_type: str, data: dict[str, Any], card: dict[str, Any]) -> dict[str, Any]:
+        """
+        Handle live market card with STATE ACCUMULATION.
+
+        Merges new event fields into existing per-symbol state.
+        Card always shows the full combined picture.
         """
         self._ensure_initialized()
         symbol = card.get("symbol") or ""
@@ -160,25 +193,26 @@ class DiscordRenderer:
                 "reason": "no_symbol",
             }
 
-        # Check for existing card
+        # Accumulate state: merge new fields into existing
+        card_fields = card.get("fields", {})
+        merged_state = self._state.merge_market_state(symbol, card_fields)
+
+        # Rebuild card with full accumulated state
+        card["fields"] = merged_state
+
+        # Check for existing message
         existing = self._state.get_live_card(symbol)
 
-        if existing:
-            # Edit existing card
+        if existing and existing.get("message_id"):
             channel_id = existing.get("channel_id", "")
             message_id = existing.get("message_id", "")
 
             try:
                 self._client.edit_message(channel_id, message_id, card)
             except Exception:
-                pass  # Delivery failure must not crash renderer
+                pass
 
-            # Update timestamp in state
-            self._state.set_live_card(
-                symbol,
-                channel_id=channel_id,
-                message_id=message_id,
-            )
+            self._state.set_live_card(symbol, channel_id=channel_id, message_id=message_id)
 
             return {
                 "category": Category.LIVE_MARKET.value,
@@ -188,7 +222,6 @@ class DiscordRenderer:
                 "message_id": message_id,
             }
         else:
-            # Create new card
             try:
                 from core import config as _cfg
                 channels = getattr(_cfg, "DISCORD_LIVE_CHANNELS", {})
@@ -200,14 +233,10 @@ class DiscordRenderer:
             try:
                 new_message_id = self._client.send_message(channel_id, card)
             except Exception:
-                pass  # Delivery failure must not crash renderer
+                pass
 
             if new_message_id:
-                self._state.set_live_card(
-                    symbol,
-                    channel_id=channel_id,
-                    message_id=new_message_id,
-                )
+                self._state.set_live_card(symbol, channel_id=channel_id, message_id=new_message_id)
                 self._state.save()
 
             return {
@@ -218,6 +247,119 @@ class DiscordRenderer:
                 "channel_id": channel_id,
                 "message_id": new_message_id or "",
             }
+
+    def _handle_system(self, event_type: str, data: dict[str, Any], card: dict[str, Any]) -> dict[str, Any]:
+        """
+        Handle system events: health-card updates vs critical new messages.
+
+        Editable health card events (update existing card):
+            HEARTBEAT, PNL_UPDATE, DRAWDOWN_UPDATE, SYSTEM_STARTUP, SYSTEM_SHUTDOWN
+
+        New message events (critical, always post):
+            ERROR, KILL_SWITCH, DAILY_REPORT
+        """
+        self._ensure_initialized()
+
+        # These events UPDATE the system health card (no new message)
+        _HEALTH_CARD_EVENTS = {"HEARTBEAT", "PNL_UPDATE", "DRAWDOWN_UPDATE", "SYSTEM_STARTUP", "SYSTEM_SHUTDOWN"}
+
+        if event_type in _HEALTH_CARD_EVENTS:
+            return self._update_system_health_card(event_type, data, card)
+
+        # Critical events: send new message to system channel
+        return self._handle_standard_event(Category.SYSTEM, event_type, card)
+
+    def _update_system_health_card(self, event_type: str, data: dict[str, Any], card: dict[str, Any]) -> dict[str, Any]:
+        """Edit the persistent system health card."""
+        existing = self._state.get_system_health()
+
+        if existing:
+            channel_id = existing.get("channel_id", "")
+            message_id = existing.get("message_id", "")
+            try:
+                self._client.edit_message(channel_id, message_id, card)
+            except Exception:
+                pass
+            self._state.set_system_health(channel_id=channel_id, message_id=message_id)
+            return {
+                "category": Category.SYSTEM.value,
+                "event_type": event_type,
+                "card": card,
+                "action": "health_update",
+                "message_id": message_id,
+            }
+        else:
+            # Create new health card
+            channel_id = ""
+            try:
+                from core import config as _cfg
+                channels = getattr(_cfg, "DISCORD_V2_CHANNELS", {})
+                channel_id = channels.get("system", "")
+            except Exception:
+                pass
+
+            new_id = None
+            try:
+                new_id = self._client.send_message(channel_id, card)
+            except Exception:
+                pass
+
+            if new_id:
+                self._state.set_system_health(channel_id=channel_id, message_id=new_id)
+                self._state.save()
+
+            return {
+                "category": Category.SYSTEM.value,
+                "event_type": event_type,
+                "card": card,
+                "action": "health_create",
+                "message_id": new_id or "",
+            }
+
+    def _handle_standard_event(self, category: Category, event_type: str, card: dict[str, Any]) -> dict[str, Any]:
+        """
+        Handle non-LIVE_MARKET events: send to consolidated channel.
+
+        Routes:
+            OPPORTUNITY → "opportunities" channel
+            EXECUTION   → "executions" channel
+            SYSTEM      → "system" channel
+
+        Attempts delivery via bot_client. Fire-and-forget.
+        """
+        self._ensure_initialized()
+
+        # Map category to channel config key
+        _CATEGORY_TO_CHANNEL = {
+            Category.OPPORTUNITY: "opportunities",
+            Category.EXECUTION: "executions",
+            Category.SYSTEM: "system",
+        }
+        channel_key = _CATEGORY_TO_CHANNEL.get(category, "")
+
+        # Look up channel ID from config
+        channel_id = ""
+        if channel_key:
+            try:
+                from core import config as _cfg
+                channels = getattr(_cfg, "DISCORD_V2_CHANNELS", {})
+                channel_id = channels.get(channel_key, "")
+            except Exception:
+                pass
+
+        # Attempt delivery (placeholder — logs intention)
+        try:
+            self._client.send_message(channel_id, card)
+        except Exception:
+            pass  # Delivery failure must not crash renderer
+
+        return {
+            "category": category.value,
+            "event_type": event_type,
+            "card": card,
+            "action": "send",
+            "channel": channel_key,
+        }
 
     def _build_card(self, category: Category, event_type: str, data: dict[str, Any]) -> dict[str, Any]:
         """Route to the appropriate card builder."""

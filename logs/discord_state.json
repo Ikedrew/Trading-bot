@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "live_cards": {
+    "AUDUSD": {
+      "channel_id": "1534253542670602331",
+      "message_id": "1534272146094686392",
+      "last_updated": "2026-08-04T18:49:46.725575+00:00",
+      "market_state": {
+        "regime": "TRENDING",
+        "h4_trend": "BULLISH",
+        "h1_bos_direction": "BULLISH",
+        "range_position": 0.45,
+        "strategy": "MEAN_REVERSION",
+        "updated_at": "18:49 UTC",
+        "last_merged": "2026-08-04T18:49:46.145172+00:00",
+        "volatility_state": "EXPANDING"
+      }
+    },
+    "USDJPY": {
+      "market_state": {
+        "regime": "TRENDING",
+        "h4_trend": "BULLISH",
+        "updated_at": "19:04 UTC",
+        "last_merged": "2026-08-04T19:04:02.266171+00:00"
+      },
+      "channel_id": "1534254092619219034",
+      "message_id": "1534275743423664231",
+      "last_updated": "2026-08-04T19:04:02.940784+00:00"
+    }
+  },
+  "system_health": {
+    "channel_id": "1534256711664271440",
+    "message_id": "1534275746795622462",
+    "last_updated": "2026-08-04T19:04:04.021505+00:00"
+  }
+}

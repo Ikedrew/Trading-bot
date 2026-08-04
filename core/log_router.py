@@ -159,20 +159,27 @@ class StructuredLogger:
         except Exception:
             pass  # S3 failure must never affect pipeline
 
-        # 2. THEN optionally send Discord (notification layer — best effort)
-        channel = CHANNEL_MAP.get(event_type)
-        if channel and _should_send(event_type):
-            try:
-                from core.discord_notifier import send_discord
-                _msg = _format_event_message(event_type, data)
-                send_discord(channel, _msg)
+        # 2. THEN optionally send legacy Discord webhooks (disabled when V2 is active)
+        try:
+            from core import config as _legacy_cfg
+            _v2_active = getattr(_legacy_cfg, "ENABLE_DISCORD_V2", False)
+        except Exception:
+            _v2_active = False
 
-                # 3. Duplicate to pair-{symbol} channel for per-symbol visibility
-                _duplicate_to_pair_channel(event_type, data, _msg)
-            except Exception:
-                pass  # Discord failure must never affect pipeline
+        if not _v2_active:
+            channel = CHANNEL_MAP.get(event_type)
+            if channel and _should_send(event_type):
+                try:
+                    from core.discord_notifier import send_discord
+                    _msg = _format_event_message(event_type, data)
+                    send_discord(channel, _msg)
 
-        # 4. Discord V2 renderer (parallel path — gated by feature flag)
+                    # 3. Duplicate to pair-{symbol} channel for per-symbol visibility
+                    _duplicate_to_pair_channel(event_type, data, _msg)
+                except Exception:
+                    pass  # Discord failure must never affect pipeline
+
+        # 4. Discord V2 renderer (active path when feature flag enabled)
         try:
             from core import config as _v2_cfg
             if getattr(_v2_cfg, "ENABLE_DISCORD_V2", False):

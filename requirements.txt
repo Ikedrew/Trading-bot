@@ -3,3 +3,4 @@
 # For exact reproducible builds, see requirements.lock
 
 MetaTrader5==5.0.5735
+python-dotenv==1.0.1
