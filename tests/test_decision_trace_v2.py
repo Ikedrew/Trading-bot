@@ -712,3 +712,59 @@ class TestS3KeyFormat:
         source = inspect.getsource(_write_s3)
         assert "schema_version=" in source
         assert "decision_trace_v2" in source or "_SCHEMA_VERSION" in source
+
+
+class TestEntityIdPresent:
+    """Every decision_trace_v2 record must contain entity_id."""
+
+    def test_execute_has_entity_id(self):
+        """EXECUTE decision must have non-empty entity_id."""
+        result = _engine_result_with_v10()
+        # Simulate the entity_id that scanner_adapter now provides
+        result["entity_id"] = "EURUSD_1785400000"
+        trace = build_decision_trace(
+            engine_result=result,
+            runtime_session_id="test_session",
+            v10_pipeline_result=_MockPipelineResult(),
+        )
+        assert trace.entity_id == "EURUSD_1785400000"
+        assert trace.entity_id != ""
+
+    def test_no_trade_has_entity_id(self):
+        """NO_TRADE decision must have non-empty entity_id."""
+        result = _engine_result_without_v10()
+        result["entity_id"] = "EURUSD_1785400000"
+        trace = build_decision_trace(
+            engine_result=result,
+            runtime_session_id="test_session",
+        )
+        assert trace.entity_id == "EURUSD_1785400000"
+        assert trace.entity_id != ""
+
+    def test_execute_has_both_ids(self):
+        """EXECUTE decision must have both entity_id and correlation_id."""
+        result = _engine_result_with_v10()
+        result["entity_id"] = "EURUSD_1785400000"
+        trace = build_decision_trace(
+            engine_result=result,
+            runtime_session_id="test_session",
+            v10_pipeline_result=_MockPipelineResult(),
+        )
+        # entity_id from engine_result
+        assert trace.entity_id == "EURUSD_1785400000"
+        # correlation_id from V10 pipeline extraction
+        assert trace.correlation_id.startswith("v10_EURUSD_")
+
+    def test_entity_id_format(self):
+        """entity_id must be {symbol}_{bar_time} format."""
+        result = _engine_result_with_v10()
+        result["entity_id"] = "AUDUSD_1785763456"
+        result["symbol"] = "AUDUSD"
+        trace = build_decision_trace(
+            engine_result=result,
+            runtime_session_id="test_session",
+            v10_pipeline_result=_MockPipelineResult(),
+        )
+        parts = trace.entity_id.split("_")
+        assert parts[0] == "AUDUSD"
+        assert parts[1].isdigit()

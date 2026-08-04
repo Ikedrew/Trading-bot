@@ -118,6 +118,10 @@ def _do_v10_cycle(
     pipeline = V10Pipeline()
     result = pipeline.process(understanding, v3_context, account, broker)
 
+    # ─── Entity Identity (stable: symbol + bar_time) ──────────
+    _bar_time = int(candles[closed_i].time) if candles and closed_i >= 0 else 0
+    _entity_id = f"{symbol}_{_bar_time}"
+
     # ─── Convert to scanner-compatible format ──────────────────
     if result.approved:
         order = result.execution.order_details
@@ -141,6 +145,7 @@ def _do_v10_cycle(
             "pattern": result.strategy.strategy_family,
             "strategy": result.strategy.strategy_family,
             "strategy_confidence": result.strategy.strategy_confidence,
+            "entity_id": _entity_id,
             "components": {
                 "location_score": result.opportunity.quality.location_score,
                 "structure_score": result.opportunity.quality.structure_score,
@@ -176,6 +181,7 @@ def _do_v10_cycle(
             "pattern": result.strategy.strategy_family if result.strategy and result.strategy.strategy_family != "NONE" else None,
             "strategy": result.strategy.strategy_family if result.strategy and result.strategy.strategy_family != "NONE" else None,
             "strategy_confidence": result.strategy.strategy_confidence if result.strategy else 0.0,
+            "entity_id": _entity_id,
             "components": {
                 "location_score": result.opportunity.quality.location_score,
                 "structure_score": result.opportunity.quality.structure_score,
