@@ -234,6 +234,22 @@ NO_TRADE_ALERT_REPEAT_INTERVAL = 25     # Repeat alert every N cycles while stil
 # --- Discord V2 rendering layer (Phase 1 — foundation) ---
 ENABLE_DISCORD_V2 = False                   # When True, V2 renderer receives events (parallel to existing webhooks)
 
+# --- Discord V2 Live Market Channels (Phase 2) ---
+# Channel IDs for editable live market cards (one per symbol).
+# Leave empty until Discord bot is connected.
+DISCORD_LIVE_CHANNELS: dict = {
+    "AUDUSD": "",
+    "EURUSD": "",
+    "GBPUSD": "",
+    "USDJPY": "",
+    "USDCAD": "",
+    "USDCHF": "",
+    "NZDUSD": "",
+    "NAS100": "",
+    "US500": "",
+    "XAUUSD": "",
+}
+
 # --- External alerting ---
 DISCORD_WEBHOOK_URL = ""                # Discord webhook URL (empty = disabled)
 

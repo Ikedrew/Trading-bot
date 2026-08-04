@@ -23,25 +23,49 @@ from typing import Any
 
 def build_market_card(event_type: str, data: dict[str, Any]) -> dict[str, Any]:
     """
-    Build a market status card from a market-related event.
+    Build a live market status card from a market-related event.
 
     Used for: MARKET_CONTEXT, H4_CONTEXT, HTF_CONTEXT_BUNDLE, MARKET_SNAPSHOT
 
-    Future: This becomes a Discord embed with regime/trend/location fields.
+    Contains all fields needed for an editable live market card:
+        Symbol, Status, Regime, H4 Trend, H1 BOS, Location,
+        M5 Momentum, Opportunity state, Strategy, Entry status, Timestamp.
     """
+    from datetime import datetime, timezone
+
+    symbol = data.get("symbol") or ""
+    now_utc = datetime.now(timezone.utc).strftime("%H:%M UTC")
+
     return {
         "type": "market",
-        "symbol": data.get("symbol"),
+        "symbol": symbol,
         "event_type": event_type,
         "fields": {
-            "regime": data.get("regime") or data.get("h4_regime"),
-            "h4_bias": data.get("h4_bias") or data.get("bias"),
-            "h4_trend": data.get("h4_trend"),
-            "h1_direction": data.get("h1_direction") or data.get("h1_bias"),
-            "location": data.get("location_type"),
-            "range_position": data.get("range_position"),
-            "volatility": data.get("volatility_state"),
-            "session": data.get("session"),
+            # Market structure
+            "regime": data.get("regime") or data.get("h4_regime") or "",
+            "h4_trend": data.get("h4_trend") or data.get("h4_bias") or "",
+            "h4_trend_strength": data.get("h4_strength") or data.get("h4_trend_strength") or 0.0,
+            "h1_bos_direction": data.get("h1_bos") or data.get("h1_direction") or data.get("h1_bias") or "",
+            "h1_structural_clarity": data.get("h1_clarity") or data.get("h1_structural_clarity") or 0.0,
+            # Location
+            "location_type": data.get("location_type") or "",
+            "range_position": data.get("range_position") or 0.0,
+            # Momentum
+            "m5_momentum": data.get("m5_momentum") or data.get("m5_bias") or "",
+            "volatility_state": data.get("volatility_state") or "",
+            # Opportunity context (if available in event payload)
+            "opportunity_state": data.get("opportunity_state") or data.get("opp_state") or "",
+            "opportunity_type": data.get("opportunity_type") or "",
+            "opportunity_quality": data.get("opportunity_quality") or data.get("quality") or 0.0,
+            # Strategy context
+            "strategy": data.get("strategy") or data.get("strategy_family") or "",
+            "strategy_confidence": data.get("strategy_confidence") or 0.0,
+            # Entry context
+            "entry_status": data.get("entry_status") or "",
+            # Session
+            "session": data.get("session") or "",
+            # Timestamp
+            "updated_at": now_utc,
         },
     }
 

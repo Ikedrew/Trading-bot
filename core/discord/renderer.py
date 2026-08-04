@@ -88,25 +88,37 @@ class DiscordRenderer:
     Discord V2 rendering entry point.
 
     Accepts an event, classifies it, and builds a structured card.
-    Does NOT send to Discord — that is a future phase responsibility.
+    For LIVE_MARKET events, manages the card lifecycle (create vs edit).
 
     Usage:
         renderer = DiscordRenderer()
         result = renderer.render("ORDER_FILLED", {"symbol": "EURUSD", ...})
-        # result = {"category": "EXECUTION", "card": {...}}
     """
+
+    def __init__(self) -> None:
+        self._state: "DiscordState | None" = None
+        self._client: "DiscordBotClient | None" = None
+
+    def _ensure_initialized(self) -> None:
+        """Lazy-initialize state and client on first use."""
+        if self._state is None:
+            from core.discord.state import DiscordState
+            self._state = DiscordState()
+            self._state.load()
+        if self._client is None:
+            from core.discord.bot_client import DiscordBotClient
+            self._client = DiscordBotClient()
 
     def render(self, event_type: str, data: dict[str, Any] | None = None) -> dict[str, Any] | None:
         """
         Render an event into a Discord V2 card structure.
 
-        Args:
-            event_type: Event name (from CHANNEL_MAP keys)
-            data: Event payload dict
+        For LIVE_MARKET events: manages create/edit lifecycle.
+        For other categories: builds card (delivery in future phases).
 
         Returns:
             Structured render instruction:
-                {"category": Category, "event_type": str, "card": dict}
+                {"category": str, "event_type": str, "card": dict, "action": str}
             Or None if event_type is not recognised.
         """
         category = classify_event(event_type)
@@ -115,11 +127,97 @@ class DiscordRenderer:
 
         card = self._build_card(category, event_type, data or {})
 
+        # Live market cards have create/edit lifecycle
+        if category == Category.LIVE_MARKET:
+            return self._handle_live_market(event_type, card)
+
         return {
             "category": category.value,
             "event_type": event_type,
             "card": card,
+            "action": "send",
         }
+
+    def _handle_live_market(self, event_type: str, card: dict[str, Any]) -> dict[str, Any]:
+        """
+        Handle live market card lifecycle: create new or edit existing.
+
+        Checks state for existing message_id:
+            - If exists → action=edit (update card in place)
+            - If missing → action=create (new card needed)
+
+        Also attempts delivery via bot_client (placeholder in Phase 2).
+        """
+        self._ensure_initialized()
+        symbol = card.get("symbol") or ""
+
+        if not symbol:
+            return {
+                "category": Category.LIVE_MARKET.value,
+                "event_type": event_type,
+                "card": card,
+                "action": "skip",
+                "reason": "no_symbol",
+            }
+
+        # Check for existing card
+        existing = self._state.get_live_card(symbol)
+
+        if existing:
+            # Edit existing card
+            channel_id = existing.get("channel_id", "")
+            message_id = existing.get("message_id", "")
+
+            try:
+                self._client.edit_message(channel_id, message_id, card)
+            except Exception:
+                pass  # Delivery failure must not crash renderer
+
+            # Update timestamp in state
+            self._state.set_live_card(
+                symbol,
+                channel_id=channel_id,
+                message_id=message_id,
+            )
+
+            return {
+                "category": Category.LIVE_MARKET.value,
+                "event_type": event_type,
+                "card": card,
+                "action": "edit",
+                "message_id": message_id,
+            }
+        else:
+            # Create new card
+            try:
+                from core import config as _cfg
+                channels = getattr(_cfg, "DISCORD_LIVE_CHANNELS", {})
+                channel_id = channels.get(symbol, "")
+            except Exception:
+                channel_id = ""
+
+            new_message_id = None
+            try:
+                new_message_id = self._client.send_message(channel_id, card)
+            except Exception:
+                pass  # Delivery failure must not crash renderer
+
+            if new_message_id:
+                self._state.set_live_card(
+                    symbol,
+                    channel_id=channel_id,
+                    message_id=new_message_id,
+                )
+                self._state.save()
+
+            return {
+                "category": Category.LIVE_MARKET.value,
+                "event_type": event_type,
+                "card": card,
+                "action": "create",
+                "channel_id": channel_id,
+                "message_id": new_message_id or "",
+            }
 
     def _build_card(self, category: Category, event_type: str, data: dict[str, Any]) -> dict[str, Any]:
         """Route to the appropriate card builder."""

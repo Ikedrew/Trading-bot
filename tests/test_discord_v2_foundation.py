@@ -203,8 +203,8 @@ class TestCardBuilders:
     def test_cards_handle_missing_fields_gracefully(self):
         card = build_market_card("H4_CONTEXT", {})
         assert card["type"] == "market"
-        assert card["symbol"] is None
-        assert card["fields"]["regime"] is None
+        assert card["symbol"] == ""
+        assert card["fields"]["regime"] == ""
 
     def test_execution_card_extracts_nested_details(self):
         card = build_execution_card("TRADE_CLOSED", {

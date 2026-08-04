@@ -24,10 +24,14 @@ from core.discord.cards import (
     build_execution_card,
     build_system_card,
 )
+from core.discord.state import DiscordState
+from core.discord.bot_client import DiscordBotClient
 
 __all__ = [
     "DiscordRenderer",
     "Category",
+    "DiscordState",
+    "DiscordBotClient",
     "build_market_card",
     "build_opportunity_card",
     "build_execution_card",
