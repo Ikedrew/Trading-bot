@@ -1,17 +1,17 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "USDCAD",
-  "cycle_id": 2003,
-  "bar_time": 1785951600,
-  "updated_at": "2026-08-05T14:40:07.566Z",
-  "updated_at_unix": 1785940807.566,
+  "cycle_id": 695,
+  "bar_time": 1785953100,
+  "updated_at": "2026-08-05T15:05:34.472Z",
+  "updated_at_unix": 1785942334.472,
   "action": "NO_TRADE",
-  "score": 0.4625,
+  "score": 0.5825,
   "reason": "V10 [strategy]: No strategy matched",
   "identity": {
-    "entity_id": "USDCAD_1785951600",
-    "observation_id": "79ceff239c006616",
-    "cycle_id": 2003,
+    "entity_id": "USDCAD_1785953100",
+    "observation_id": "bff5e86c94ea57c9",
+    "cycle_id": 695,
     "correlation_id": "",
     "trade_id": ""
   },
@@ -21,9 +21,9 @@
     "volatility_state": "NEUTRAL",
     "h4_trend": "NEUTRAL",
     "h4_trend_strength": 0.0,
-    "h4_phase": "CONSOLIDATION",
+    "h4_phase": "IMPULSE",
     "h1_bos_direction": "BEARISH",
-    "h1_structural_clarity": 0.3297,
+    "h1_structural_clarity": 0.7422,
     "h1_dominant_trend": "BEARISH",
     "m15_pullback_active": true,
     "m15_displacement": false,
@@ -39,18 +39,18 @@
     "range_position": 0.0,
     "premium_discount": "",
     "htf_macro_bias": "BEARISH",
-    "htf_structure_alignment": 0.5
+    "htf_structure_alignment": 1.0
   },
   "opportunity": {
     "state": "WATCHING",
     "directional_bias": "BEARISH",
     "opportunity_type": "ZONE_REACTION",
-    "overall_quality": 0.4625,
+    "overall_quality": 0.5825,
     "location_score": 0.55,
-    "structure_score": 0.30000000000000004,
+    "structure_score": 0.7000000000000001,
     "behaviour_score": 0.7999999999999999,
     "formation_score": 0.3,
-    "observation_id": "79ceff239c006616"
+    "observation_id": "bff5e86c94ea57c9"
   },
   "strategy": {
     "family": "NONE",

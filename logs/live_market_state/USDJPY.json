@@ -1,17 +1,17 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "USDJPY",
-  "cycle_id": 1484,
-  "bar_time": 1785950700,
-  "updated_at": "2026-08-05T14:25:08.851Z",
-  "updated_at_unix": 1785939908.852,
+  "cycle_id": 695,
+  "bar_time": 1785953100,
+  "updated_at": "2026-08-05T15:05:29.725Z",
+  "updated_at_unix": 1785942329.725,
   "action": "NO_TRADE",
-  "score": 0.5,
-  "reason": "V10 [strategy]: No strategy matched",
+  "score": 0.34,
+  "reason": "V10 [opportunity]: No opportunity (INVALID)",
   "identity": {
-    "entity_id": "USDJPY_1785950700",
-    "observation_id": "9c422b308f03d9d1",
-    "cycle_id": 1484,
+    "entity_id": "USDJPY_1785953100",
+    "observation_id": "de830cf6313fc74b",
+    "cycle_id": 695,
     "correlation_id": "",
     "trade_id": ""
   },
@@ -21,13 +21,13 @@
     "volatility_state": "NEUTRAL",
     "h4_trend": "BEARISH",
     "h4_trend_strength": 0.472,
-    "h4_phase": "REVERSAL",
-    "h1_bos_direction": "BEARISH",
-    "h1_structural_clarity": 0.3,
-    "h1_dominant_trend": "BULLISH",
+    "h4_phase": "CONSOLIDATION",
+    "h1_bos_direction": "",
+    "h1_structural_clarity": 0.1468,
+    "h1_dominant_trend": "NEUTRAL",
     "m15_pullback_active": true,
     "m15_displacement": false,
-    "m15_range_position": 1.0,
+    "m15_range_position": 0.1446,
     "m5_momentum": "NEUTRAL",
     "m5_momentum_strength": 0.0,
     "m5_rejection": false,
@@ -36,26 +36,26 @@
     "location_type": "OPEN_SPACE",
     "inside_zone": false,
     "zone_quality": 0.0,
-    "range_position": 1.0,
-    "premium_discount": "PREMIUM",
+    "range_position": 0.1446,
+    "premium_discount": "DISCOUNT",
     "htf_macro_bias": "CONFLICTED",
-    "htf_structure_alignment": 0.6
+    "htf_structure_alignment": 0.0
   },
   "opportunity": {
-    "state": "WATCHING",
-    "directional_bias": "BEARISH",
+    "state": "INVALID",
+    "directional_bias": "NEUTRAL",
     "opportunity_type": "ZONE_REACTION",
-    "overall_quality": 0.5,
-    "location_score": 0.7000000000000001,
-    "structure_score": 0.30000000000000004,
+    "overall_quality": 0.34,
+    "location_score": 0.5,
+    "structure_score": 0.0,
     "behaviour_score": 0.7,
     "formation_score": 0.3,
-    "observation_id": "9c422b308f03d9d1"
+    "observation_id": "de830cf6313fc74b"
   },
   "strategy": {
     "family": "NONE",
     "confidence": 0.0,
-    "direction": "BEARISH"
+    "direction": "NEUTRAL"
   },
   "horizon": {
     "type": "SCALP",
@@ -87,6 +87,6 @@
     "order_type": "",
     "volume": 0.0
   },
-  "rejection_stage": "strategy",
+  "rejection_stage": "opportunity",
   "approved": false
 }

@@ -96,6 +96,7 @@ def build_opportunity_card(event_type: str, data: dict[str, Any]) -> dict[str, A
             # Identity
             "opportunity_id": data.get("opportunity_id") or "",
             "entity_id": data.get("entity_id") or "",
+            "observation_id": data.get("observation_id") or "",
             "cycle_id": data.get("cycle_id") or "",
             # Lifecycle
             "lifecycle_state": lifecycle_state,
@@ -385,7 +386,19 @@ def _opportunity_embed(symbol: str, event_type: str, f: dict[str, Any], color: i
 
     embed_fields = []
 
-    # Pattern + confidence
+    # ─── Identity block (always present, normalized across all symbols) ───
+    _opp_id = f.get("opportunity_id") or ""
+    _ent_id = f.get("entity_id") or ""
+    _obs_id = f.get("observation_id") or ""
+    identity_parts = []
+    if _opp_id:
+        identity_parts.append(f"opp:`{_opp_id[:8]}`")
+    if _ent_id:
+        identity_parts.append(f"ent:`{_ent_id[:8]}`")
+    if _obs_id:
+        identity_parts.append(f"obs:`{_obs_id[:8]}`")
+    if identity_parts:
+        embed_fields.append({"name": "\U0001f194 Identity", "value": " | ".join(identity_parts), "inline": False})
     if f.get("pattern"):
         conf = f.get("pattern_confidence")
         val = f["pattern"] + (f" ({conf:.0%})" if conf else "")
@@ -450,7 +463,7 @@ def _opportunity_embed(symbol: str, event_type: str, f: dict[str, Any], color: i
         "title": f"{icon} {title}",
         "color": embed_color,
         "fields": embed_fields,
-        "footer": {"text": f"{lifecycle} | {f.get('session', '')} | {f.get('timestamp', '')}"},
+        "footer": {"text": f"{lifecycle} | {f.get('session', '')} | {f.get('timestamp', '')} | opp:{_opp_id[:8] if f.get('opportunity_id') else '?'}"},
     }
 
 

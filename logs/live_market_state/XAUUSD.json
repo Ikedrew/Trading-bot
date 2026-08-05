@@ -1,17 +1,17 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "XAUUSD",
-  "cycle_id": 1302,
-  "bar_time": 1785950400,
-  "updated_at": "2026-08-05T14:20:29.550Z",
-  "updated_at_unix": 1785939629.551,
-  "action": "NO_TRADE",
-  "score": 0.5025,
-  "reason": "V10 [strategy]: No strategy matched",
+  "cycle_id": 694,
+  "bar_time": 1785953100,
+  "updated_at": "2026-08-05T15:05:05.612Z",
+  "updated_at_unix": 1785942305.613,
+  "action": "EXECUTE",
+  "score": 0.5675,
+  "reason": "V10: TREND_CONTINUATION \u2192 EXTENDED",
   "identity": {
-    "entity_id": "XAUUSD_1785950400",
-    "observation_id": "af13311e367211fa",
-    "cycle_id": 1302,
+    "entity_id": "XAUUSD_1785953100",
+    "observation_id": "c3b8f772a478798f",
+    "cycle_id": 694,
     "correlation_id": "",
     "trade_id": ""
   },
@@ -23,13 +23,13 @@
     "h4_trend_strength": 0.578,
     "h4_phase": "IMPULSE",
     "h1_bos_direction": "BULLISH",
-    "h1_structural_clarity": 0.7226,
+    "h1_structural_clarity": 0.7355,
     "h1_dominant_trend": "BULLISH",
-    "m15_pullback_active": false,
+    "m15_pullback_active": true,
     "m15_displacement": false,
     "m15_range_position": 1.0,
     "m5_momentum": "BULLISH",
-    "m5_momentum_strength": 1.0,
+    "m5_momentum_strength": 0.8,
     "m5_rejection": false,
     "m5_confirmation": false,
     "m5_local_bos": true,
@@ -44,49 +44,49 @@
   "opportunity": {
     "state": "WATCHING",
     "directional_bias": "BULLISH",
-    "opportunity_type": "TREND_CONTINUATION",
-    "overall_quality": 0.5025,
-    "location_score": 0.45,
+    "opportunity_type": "ZONE_REACTION",
+    "overall_quality": 0.5675,
+    "location_score": 0.55,
     "structure_score": 0.7000000000000001,
     "behaviour_score": 0.7,
-    "formation_score": 0.15,
-    "observation_id": "af13311e367211fa"
+    "formation_score": 0.3,
+    "observation_id": "c3b8f772a478798f"
   },
   "strategy": {
-    "family": "NONE",
-    "confidence": 0.0,
+    "family": "TREND_CONTINUATION",
+    "confidence": 0.7999999999999999,
     "direction": "BULLISH"
   },
   "horizon": {
-    "type": "SCALP",
-    "min_move": 0.5,
-    "max_move": 1.5,
-    "duration_minutes": 30
+    "type": "EXTENDED",
+    "min_move": 3.0,
+    "max_move": 8.0,
+    "duration_minutes": 720
   },
   "entry": {
-    "status": "INVALID",
+    "status": "READY",
     "method": "CONFIRMATION_ENTRY",
-    "direction": "NONE",
-    "price": 0.0,
-    "stop": 0.0,
-    "target": 0.0,
-    "risk_distance": 0.0,
-    "reward_distance": 0.0,
-    "expected_rr": 0.0
+    "direction": "BUY",
+    "price": 4181.889999999999,
+    "stop": 4208.397857142857,
+    "target": 4579.39428571429,
+    "risk_distance": 26.507857142857574,
+    "reward_distance": 397.50428571429075,
+    "expected_rr": 15.0
   },
   "risk": {
-    "approved": false,
-    "rejection_reason": "Entry is INVALID \u2014 cannot assess risk",
-    "risk_percentage": 0.0,
-    "position_size": 0.0,
-    "max_loss": 0.0
+    "approved": true,
+    "rejection_reason": "",
+    "risk_percentage": 0.001875,
+    "position_size": 0.05,
+    "max_loss": 101.10493124999999
   },
   "execution": {
-    "approved": false,
-    "rejection_reason": "Risk rejected: Entry is INVALID \u2014 cannot assess risk",
-    "order_type": "",
-    "volume": 0.0
+    "approved": true,
+    "rejection_reason": "",
+    "order_type": "MARKET",
+    "volume": 0.05
   },
-  "rejection_stage": "strategy",
-  "approved": false
+  "rejection_stage": "",
+  "approved": true
 }
