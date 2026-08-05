@@ -174,18 +174,10 @@ class DiscordRenderer:
             if not any(s in stage.lower() for s in _deep_stages):
                 return True
 
-        # OPPORTUNITY_LIFECYCLE: only show ASSESSED and EXECUTED (not every REJECTED)
+        # OPPORTUNITY_LIFECYCLE: show all in opportunity_flow (no filtering)
+        # The flow channel shows the complete funnel including early rejections
         if event_type == "OPPORTUNITY_LIFECYCLE":
-            state = data.get("lifecycle_state", "")
-            # Only show opportunities that progressed meaningfully
-            if state == "REJECTED":
-                # Only show rejections that had strategy selected (not pattern_not_selected)
-                reason = data.get("rejection_reason", "")
-                if reason == "pattern_not_selected":
-                    return True
-                # Show decision_engine rejections that had a strategy
-                if not data.get("strategy_classification"):
-                    return True
+            return False  # Never suppress — flow channel shows everything
 
         return False
 
@@ -496,6 +488,10 @@ class DiscordRenderer:
             Category.SYSTEM: "system",
         }
         channel_key = _CATEGORY_TO_CHANNEL.get(category, "")
+
+        # OPPORTUNITY_LIFECYCLE goes to dedicated flow channel
+        if event_type == "OPPORTUNITY_LIFECYCLE":
+            channel_key = "opportunity_flow"
 
         # Look up channel ID from config
         channel_id = ""

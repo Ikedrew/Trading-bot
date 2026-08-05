@@ -1,17 +1,17 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "USDJPY",
-  "cycle_id": 2654,
-  "bar_time": 1785946800,
-  "updated_at": "2026-08-05T13:20:01.769Z",
-  "updated_at_unix": 1785936001.769,
+  "cycle_id": 393,
+  "bar_time": 1785948300,
+  "updated_at": "2026-08-05T13:45:04.574Z",
+  "updated_at_unix": 1785937504.574,
   "action": "NO_TRADE",
-  "score": 0.365,
-  "reason": "V10 [opportunity]: No opportunity (INVALID)",
+  "score": 0.4775,
+  "reason": "V10 [strategy]: No strategy matched",
   "identity": {
-    "entity_id": "USDJPY_1785946800",
-    "observation_id": "2318f3e7ddfad535",
-    "cycle_id": 2654,
+    "entity_id": "USDJPY_1785948300",
+    "observation_id": "cbea9c5a057831cd",
+    "cycle_id": 393,
     "correlation_id": "",
     "trade_id": ""
   },
@@ -27,7 +27,7 @@
     "h1_dominant_trend": "BULLISH",
     "m15_pullback_active": true,
     "m15_displacement": false,
-    "m15_range_position": 0.675,
+    "m15_range_position": 0.1727,
     "m5_momentum": "BEARISH",
     "m5_momentum_strength": 0.8,
     "m5_rejection": false,
@@ -36,21 +36,21 @@
     "location_type": "OPEN_SPACE",
     "inside_zone": false,
     "zone_quality": 0.0,
-    "range_position": 0.675,
-    "premium_discount": "PREMIUM",
+    "range_position": 0.1727,
+    "premium_discount": "DISCOUNT",
     "htf_macro_bias": "CONFLICTED",
     "htf_structure_alignment": 0.6
   },
   "opportunity": {
-    "state": "INVALID",
+    "state": "WATCHING",
     "directional_bias": "BEARISH",
-    "opportunity_type": "NONE",
-    "overall_quality": 0.365,
-    "location_score": 0.4,
+    "opportunity_type": "ZONE_REACTION",
+    "overall_quality": 0.4775,
+    "location_score": 0.55,
     "structure_score": 0.4,
     "behaviour_score": 0.7,
-    "formation_score": 0.0,
-    "observation_id": "2318f3e7ddfad535"
+    "formation_score": 0.3,
+    "observation_id": "cbea9c5a057831cd"
   },
   "strategy": {
     "family": "NONE",
@@ -87,6 +87,6 @@
     "order_type": "",
     "volume": 0.0
   },
-  "rejection_stage": "opportunity",
+  "rejection_stage": "strategy",
   "approved": false
 }
