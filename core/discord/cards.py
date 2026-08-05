@@ -295,17 +295,69 @@ def _market_embed(symbol: str, f: dict[str, Any], color: int) -> dict[str, Any]:
     if market_lines:
         embed_fields.append({"name": "Market", "value": "\n".join(market_lines), "inline": False})
 
-    # Opportunity
-    opp_lines = []
-    if f.get("opportunity_state"):
-        opp_lines.append(f"State: **{f['opportunity_state']}**")
-    if f.get("opportunity_type"):
-        opp_lines.append(f"Type: {f['opportunity_type']}")
-    if f.get("opportunity_quality"):
-        opp_lines.append(f"Quality: {f['opportunity_quality']:.2f}")
+    # ─── SECTION 2: ACTIVE OPPORTUNITIES ─────────────────────────
+    _active_opps = f.get("_active_opportunities", [])
+    _terminal_opps = f.get("_terminal_opportunities", [])
 
-    if opp_lines:
-        embed_fields.append({"name": "Opportunity", "value": "\n".join(opp_lines), "inline": True})
+    if _active_opps:
+        active_text_parts = []
+        for idx, opp in enumerate(_active_opps, 1):
+            lines = []
+            pattern = opp.get("pattern", "?")
+            state = opp.get("lifecycle_state", "?")
+            lines.append(f"**{idx}. {pattern}**")
+            lines.append(f"State: {state}")
+            if opp.get("direction"):
+                lines.append(f"Direction: {opp['direction']}")
+            if opp.get("strategy"):
+                conf = opp.get("strategy_confidence")
+                val = opp["strategy"] + (f" ({float(conf):.2f})" if conf else "")
+                lines.append(f"Strategy: {val}")
+            if opp.get("overall_score"):
+                lines.append(f"Score: {float(opp['overall_score']):.2f}")
+            # Per-opportunity timeline
+            opp_timeline = opp.get("_timeline", [])
+            if opp_timeline:
+                lines.append("")
+                for e in opp_timeline[-6:]:
+                    lines.append(f"`{e['time']}` {e['text']}")
+            active_text_parts.append("\n".join(lines))
+        embed_fields.append({
+            "name": "Active Opportunities",
+            "value": "\n\n".join(active_text_parts)[:1024],
+            "inline": False,
+        })
+    else:
+        # Fallback to live_market_state snapshot fields if no tracked opps
+        opp_lines = []
+        if f.get("opportunity_state"):
+            opp_lines.append(f"State: **{f['opportunity_state']}**")
+        if f.get("opportunity_type"):
+            opp_lines.append(f"Type: {f['opportunity_type']}")
+        if f.get("opportunity_quality"):
+            opp_lines.append(f"Quality: {f['opportunity_quality']:.2f}")
+        if opp_lines:
+            embed_fields.append({"name": "Opportunity", "value": "\n".join(opp_lines), "inline": True})
+
+    # ─── SECTION 3: RECENT (terminal) OPPORTUNITIES ───────────────
+    if _terminal_opps:
+        recent_lines = []
+        for opp in _terminal_opps[-3:]:
+            pattern = opp.get("pattern", "?")
+            state = opp.get("lifecycle_state", "?")
+            reason = opp.get("rejection_reason", "")
+            trade_id = opp.get("outcome_trade_id", "")
+            line = f"**{pattern}** — {state}"
+            if reason:
+                line += f"\n  {reason[:50]}"
+            elif trade_id:
+                line += f"\n  Trade: `{trade_id}`"
+            recent_lines.append(line)
+        embed_fields.append({
+            "name": "Recent",
+            "value": "\n\n".join(recent_lines)[:1024],
+            "inline": False,
+        })
 
     # Strategy
     strat_lines = []
@@ -329,21 +381,30 @@ def _market_embed(symbol: str, f: dict[str, Any], color: int) -> dict[str, Any]:
     if entry_risk_lines:
         embed_fields.append({"name": "Entry / Risk", "value": "\n".join(entry_risk_lines), "inline": True})
 
-    # ─── SECTION 2: TIMELINE ──────────────────────────────────────
+    # ─── SECTION 4: MARKET TIMELINE (symbol-level state changes) ─
     timeline = f.get("_timeline", [])
     if timeline:
-        timeline_text = "\n".join(f"`{e['time']}` {e['text']}" for e in timeline[-12:])
-        embed_fields.append({"name": "Timeline", "value": timeline_text, "inline": False})
+        timeline_text = "\n".join(f"`{e['time']}` {e['text']}" for e in timeline[-8:])
+        embed_fields.append({"name": "Market Timeline", "value": timeline_text, "inline": False})
 
-    # ─── IDENTITY (compact) ───────────────────────────────────────
+    # ─── IDENTITY (most recent active opportunity) ────────────────
     identity = f.get("_identity", {})
-    if identity.get("observation_id"):
-        id_lines = [f"Obs: `{identity['observation_id'][:12]}`"]
-        if identity.get("cycle_id"):
-            id_lines.append(f"Cycle: {identity['cycle_id']}")
-        trade_id = identity.get("trade_id")
-        id_lines.append(f"Trade: {'`' + trade_id + '`' if trade_id else 'Pending'}")
-        embed_fields.append({"name": "\U0001f194 Identity", "value": " | ".join(id_lines), "inline": False})
+    if identity.get("opportunity_id") or identity.get("observation_id"):
+        id_lines = []
+        _opp_id_raw = identity.get("opportunity_id", "")
+        _ent_id_raw = identity.get("entity_id", "")
+        _obs_id_raw = identity.get("observation_id", "")
+        # Strip symbol prefix for readability
+        _opp_display = _opp_id_raw.split("_", 1)[1] if "_" in _opp_id_raw else _opp_id_raw
+        _ent_display = _ent_id_raw.split("_", 1)[1] if "_" in _ent_id_raw else _ent_id_raw
+        if _opp_display:
+            id_lines.append(f"Opp: `{_opp_display}`")
+        if _ent_display:
+            id_lines.append(f"Ent: `{_ent_display}`")
+        if _obs_id_raw:
+            id_lines.append(f"Obs: `{_obs_id_raw}`")
+        if id_lines:
+            embed_fields.append({"name": "\U0001f194 Identity", "value": "\n".join(id_lines), "inline": False})
 
     # Footer
     footer_parts = []

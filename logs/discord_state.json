@@ -9,18 +9,18 @@
         "regime": "TRENDING",
         "h4_trend": "BULLISH",
         "h1_bos_direction": "BULLISH",
-        "range_position": 0.8205,
+        "range_position": 0.641,
         "strategy": "NONE",
-        "updated_at": "16:55 UTC",
-        "last_merged": "2026-08-05T16:55:18.385418+00:00",
+        "updated_at": "17:22 UTC",
+        "last_merged": "2026-08-05T17:22:11.138758+00:00",
         "volatility_state": "NEUTRAL",
-        "h4_trend_strength": 0.552,
-        "h1_structural_clarity": 0.3445,
+        "h4_trend_strength": 0.586,
+        "h1_structural_clarity": 0.4432,
         "location_type": "OPEN_SPACE",
-        "m5_momentum": "NEUTRAL",
+        "m5_momentum": "BEARISH",
         "opportunity_state": "INVALID",
-        "opportunity_type": "ZONE_REACTION",
-        "opportunity_quality": 0.355,
+        "opportunity_type": "NONE",
+        "opportunity_quality": 0.15,
         "entry_status": "INVALID",
         "_timeline": [
           {
@@ -66,131 +66,131 @@
           {
             "time": "16:55",
             "text": "M5 \u2192 **NEUTRAL**"
+          },
+          {
+            "time": "17:22",
+            "text": "M5 \u2192 **BEARISH**"
           }
         ],
         "_identity": {
-          "entity_id": "AUDUSD_1785959700",
-          "observation_id": "9412527e62692b95",
-          "cycle_id": 4229,
+          "entity_id": "AUDUSD_1785961200",
+          "observation_id": "44cf7fc04c9e44bc",
+          "cycle_id": 1,
           "correlation_id": "",
           "trade_id": ""
         },
-        "strategy_confidence": 0.7999999999999999
+        "strategy_confidence": 0.7999999999999999,
+        "_opportunity": {}
       },
       "timeline": [
         {
-          "time": "15:45",
+          "time": "17:22",
           "text": "New opportunity detected"
         },
         {
-          "time": "15:45",
-          "text": "Strategy \u2192 **TREND_CONTINUATION**"
-        },
-        {
-          "time": "15:45",
-          "text": "Entry \u2192 **WAITING**"
-        },
-        {
-          "time": "15:45",
-          "text": "Opportunity \u2192 **WATCHING**"
-        },
-        {
-          "time": "15:50",
-          "text": "M5 \u2192 **BEARISH**"
-        },
-        {
-          "time": "15:50",
-          "text": "Strategy \u2192 **NONE**"
-        },
-        {
-          "time": "15:50",
-          "text": "Entry \u2192 **INVALID**"
-        },
-        {
-          "time": "15:50",
-          "text": "Opportunity \u2192 **INVALID**"
-        },
-        {
-          "time": "15:55",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "16:45",
-          "text": "M5 \u2192 **BEARISH**"
-        },
-        {
-          "time": "16:55",
-          "text": "M5 \u2192 **NEUTRAL**"
+          "time": "17:22",
+          "text": "Rejected: V10 [opportunity]: No opportunity (INVALID)"
         }
       ],
-      "observation_id": "9412527e62692b95"
+      "observation_id": "44cf7fc04c9e44bc",
+      "opportunity": {
+        "opportunity_id": "AUDUSD_1785961200_EVENING_STAR",
+        "entity_id": "AUDUSD_1785961200",
+        "observation_id": "44cf7fc04c9e44bc",
+        "cycle_id": 1,
+        "lifecycle_state": "REJECTED",
+        "pattern": "EVENING_STAR",
+        "direction": "SELL",
+        "strategy": "",
+        "strategy_confidence": 0.0,
+        "overall_score": 0.15,
+        "rejection_reason": "V10 [opportunity]: No opportunity (INVALID)",
+        "rejection_stage": "decision_engine",
+        "entry_price": 0.0,
+        "stop_price": 0.0,
+        "target_price": 0.0,
+        "position_size": 0.0,
+        "outcome_trade_id": ""
+      }
     },
     "USDJPY": {
       "market_state": {
         "regime": "TRENDING",
         "h4_trend": "BEARISH",
-        "updated_at": "16:55 UTC",
-        "last_merged": "2026-08-05T16:55:08.347339+00:00",
-        "h4_trend_strength": 0.472,
-        "h1_structural_clarity": 0.3114,
+        "updated_at": "17:21 UTC",
+        "last_merged": "2026-08-05T17:21:59.777965+00:00",
+        "h4_trend_strength": 0.46,
+        "h1_structural_clarity": 0.3,
         "location_type": "OPEN_SPACE",
-        "range_position": 0.4878,
-        "m5_momentum": "BULLISH",
+        "range_position": 1.0,
+        "m5_momentum": "NEUTRAL",
         "volatility_state": "NEUTRAL",
-        "opportunity_state": "INVALID",
-        "opportunity_type": "TREND_CONTINUATION",
-        "opportunity_quality": 0.255,
+        "opportunity_state": "WATCHING",
+        "opportunity_type": "ZONE_REACTION",
+        "opportunity_quality": 0.4775,
         "strategy": "NONE",
         "entry_status": "INVALID",
         "_timeline": [
           {
-            "time": "16:20",
+            "time": "17:21",
             "text": "New opportunity detected"
           },
           {
-            "time": "16:20",
-            "text": "M5 \u2192 **BULLISH**"
+            "time": "17:21",
+            "text": "M5 \u2192 **NEUTRAL**"
           },
           {
-            "time": "16:20",
+            "time": "17:21",
             "text": "Opportunity \u2192 **WATCHING**"
-          },
-          {
-            "time": "16:55",
-            "text": "Opportunity \u2192 **INVALID**"
           }
         ],
         "_identity": {
-          "entity_id": "USDJPY_1785959700",
-          "observation_id": "3c2022b3eaa0ea3a",
-          "cycle_id": 4229,
+          "entity_id": "USDJPY_1785961200",
+          "observation_id": "54d1e7df4ddb0516",
+          "cycle_id": 1,
           "correlation_id": "",
           "trade_id": ""
         },
-        "h1_bos_direction": "BULLISH"
+        "h1_bos_direction": "BULLISH",
+        "_opportunity": {}
       },
       "channel_id": "1534254092619219034",
       "message_id": "1534275743423664231",
       "last_updated": "2026-08-04T19:04:02.940784+00:00",
       "timeline": [
         {
-          "time": "16:20",
+          "time": "17:22",
           "text": "New opportunity detected"
         },
         {
-          "time": "16:20",
-          "text": "M5 \u2192 **BULLISH**"
+          "time": "17:22",
+          "text": "Opportunity \u2192 DETECTED"
         },
         {
-          "time": "16:20",
-          "text": "Opportunity \u2192 **WATCHING**"
-        },
-        {
-          "time": "16:55",
-          "text": "Opportunity \u2192 **INVALID**"
+          "time": "17:22",
+          "text": "Rejected: V10 [strategy]: No strategy matched"
         }
       ],
-      "observation_id": "3c2022b3eaa0ea3a"
+      "observation_id": "54d1e7df4ddb0516",
+      "opportunity": {
+        "opportunity_id": "USDJPY_1785961200_BULLISH_ENGULFING",
+        "entity_id": "USDJPY_1785961200",
+        "observation_id": "54d1e7df4ddb0516",
+        "cycle_id": 1,
+        "lifecycle_state": "REJECTED",
+        "pattern": "BULLISH_ENGULFING",
+        "direction": "BUY",
+        "strategy": "",
+        "strategy_confidence": 0.0,
+        "overall_score": 0.4775,
+        "rejection_reason": "V10 [strategy]: No strategy matched",
+        "rejection_stage": "decision_engine",
+        "entry_price": 0.0,
+        "stop_price": 0.0,
+        "target_price": 0.0,
+        "position_size": 0.0,
+        "outcome_trade_id": ""
+      }
     },
     "EURUSD": {
       "market_state": {
@@ -286,184 +286,159 @@
       "last_updated": "2026-08-04T22:40:06.470295+00:00",
       "timeline": [
         {
-          "time": "13:20",
-          "text": "Regime: **TRENDING**"
+          "time": "17:21",
+          "text": "New opportunity detected"
         },
         {
-          "time": "13:20",
-          "text": "H4 Trend: **BULLISH**"
-        },
-        {
-          "time": "13:20",
-          "text": "Location: **OPEN_SPACE**"
-        },
-        {
-          "time": "13:20",
-          "text": "M5: **NEUTRAL**"
-        },
-        {
-          "time": "13:20",
-          "text": "Volatility: **NEUTRAL**"
-        },
-        {
-          "time": "13:20",
-          "text": "Strategy: **NONE**"
-        },
-        {
-          "time": "13:20",
-          "text": "Entry: **INVALID**"
-        },
-        {
-          "time": "13:20",
-          "text": "Opportunity: **INVALID**"
-        },
-        {
-          "time": "13:33",
-          "text": "M5 \u2192 **BULLISH**"
-        },
-        {
-          "time": "13:40",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "13:49",
-          "text": "M5 \u2192 **BEARISH**"
-        },
-        {
-          "time": "14:10",
-          "text": "M5 \u2192 **BULLISH**"
-        },
-        {
-          "time": "14:30",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "15:10",
-          "text": "M5 \u2192 **BEARISH**"
-        },
-        {
-          "time": "15:15",
-          "text": "M5 \u2192 **NEUTRAL**"
+          "time": "17:21",
+          "text": "Rejected: V10 [opportunity]: No opportunity (INVALID)"
         }
       ],
-      "observation_id": "14b177c2b44c9ba4"
+      "observation_id": "cd67d23113eb804e",
+      "opportunity": {
+        "opportunity_id": "EURUSD_1785961200_TWEEZER_TOP",
+        "entity_id": "EURUSD_1785961200",
+        "observation_id": "cd67d23113eb804e",
+        "cycle_id": 1,
+        "lifecycle_state": "REJECTED",
+        "pattern": "TWEEZER_TOP",
+        "direction": "SELL",
+        "strategy": "",
+        "strategy_confidence": 0.0,
+        "overall_score": 0.105,
+        "rejection_reason": "V10 [opportunity]: No opportunity (INVALID)",
+        "rejection_stage": "decision_engine",
+        "entry_price": 0.0,
+        "stop_price": 0.0,
+        "target_price": 0.0,
+        "position_size": 0.0,
+        "outcome_trade_id": ""
+      }
     },
     "GBPUSD": {
       "timeline": [
         {
-          "time": "15:55",
+          "time": "17:21",
           "text": "New opportunity detected"
         },
         {
-          "time": "15:55",
-          "text": "Strategy \u2192 **MEAN_REVERSION**"
-        },
-        {
-          "time": "15:55",
-          "text": "Opportunity \u2192 **WATCHING**"
-        },
-        {
-          "time": "16:00",
-          "text": "Strategy \u2192 **NONE**"
-        },
-        {
-          "time": "16:00",
-          "text": "Opportunity \u2192 **INVALID**"
-        },
-        {
-          "time": "16:35",
-          "text": "M5 \u2192 **BEARISH**"
-        },
-        {
-          "time": "16:50",
-          "text": "M5 \u2192 **NEUTRAL**"
+          "time": "17:21",
+          "text": "Rejected: V10 [opportunity]: No opportunity (INVALID)"
         }
       ],
       "market_state": {
         "regime": "RANGING",
         "h4_trend": "NEUTRAL",
-        "h1_structural_clarity": 0.4418,
+        "h1_structural_clarity": 0.3254,
         "location_type": "OPEN_SPACE",
-        "range_position": 0.1327,
+        "range_position": 0.0779,
         "m5_momentum": "NEUTRAL",
         "volatility_state": "NEUTRAL",
         "opportunity_state": "INVALID",
         "opportunity_type": "ZONE_REACTION",
-        "opportunity_quality": 0.4,
+        "opportunity_quality": 0.37,
         "strategy": "NONE",
-        "strategy_confidence": 0.7999999999999999,
+        "strategy_confidence": 0.65,
         "entry_status": "INVALID",
-        "updated_at": "16:50 UTC",
+        "updated_at": "17:21 UTC",
         "_timeline": [
           {
-            "time": "15:55",
+            "time": "16:57",
             "text": "New opportunity detected"
           },
           {
-            "time": "15:55",
-            "text": "Strategy \u2192 **MEAN_REVERSION**"
-          },
-          {
-            "time": "15:55",
+            "time": "16:57",
             "text": "Opportunity \u2192 **WATCHING**"
           },
           {
-            "time": "16:00",
+            "time": "17:09",
+            "text": "Volatility \u2192 **NORMAL**"
+          },
+          {
+            "time": "17:09",
+            "text": "Strategy \u2192 **MEAN_REVERSION**"
+          },
+          {
+            "time": "17:09",
+            "text": "Entry \u2192 **WAITING**"
+          },
+          {
+            "time": "17:21",
+            "text": "Volatility \u2192 **NEUTRAL**"
+          },
+          {
+            "time": "17:21",
             "text": "Strategy \u2192 **NONE**"
           },
           {
-            "time": "16:00",
+            "time": "17:21",
+            "text": "Entry \u2192 **INVALID**"
+          },
+          {
+            "time": "17:21",
             "text": "Opportunity \u2192 **INVALID**"
-          },
-          {
-            "time": "16:35",
-            "text": "M5 \u2192 **BEARISH**"
-          },
-          {
-            "time": "16:50",
-            "text": "M5 \u2192 **NEUTRAL**"
           }
         ],
-        "last_merged": "2026-08-05T16:50:01.121771+00:00",
+        "last_merged": "2026-08-05T17:21:54.397641+00:00",
         "h1_bos_direction": "BULLISH",
         "_identity": {
-          "entity_id": "GBPUSD_1785959400",
-          "observation_id": "b0e840a20bdb5369",
-          "cycle_id": 4070,
+          "entity_id": "GBPUSD_1785961200",
+          "observation_id": "c0a2b00029d87c28",
+          "cycle_id": 1,
           "correlation_id": "",
           "trade_id": ""
-        }
+        },
+        "_opportunity": {}
       },
       "channel_id": "1534253775219589202",
       "message_id": "1534519387896283177",
       "last_updated": "2026-08-05T11:12:12.222250+00:00",
-      "observation_id": "b0e840a20bdb5369"
+      "observation_id": "c0a2b00029d87c28",
+      "opportunity": {
+        "opportunity_id": "GBPUSD_1785961200_TWEEZER_TOP",
+        "entity_id": "GBPUSD_1785961200",
+        "observation_id": "c0a2b00029d87c28",
+        "cycle_id": 1,
+        "lifecycle_state": "REJECTED",
+        "pattern": "TWEEZER_TOP",
+        "direction": "SELL",
+        "strategy": "",
+        "strategy_confidence": 0.0,
+        "overall_score": 0.37,
+        "rejection_reason": "V10 [opportunity]: No opportunity (INVALID)",
+        "rejection_stage": "decision_engine",
+        "entry_price": 0.0,
+        "stop_price": 0.0,
+        "target_price": 0.0,
+        "position_size": 0.0,
+        "outcome_trade_id": ""
+      }
     },
     "USDCHF": {
       "timeline": [
         {
-          "time": "16:55",
+          "time": "17:22",
           "text": "New opportunity detected"
         },
         {
-          "time": "16:55",
-          "text": "Opportunity \u2192 **WATCHING**"
+          "time": "17:22",
+          "text": "Rejected: V10 [opportunity]: No opportunity (INVALID)"
         }
       ],
       "market_state": {
         "regime": "RANGING",
         "h4_trend": "NEUTRAL",
-        "h1_structural_clarity": 0.1585,
+        "h1_structural_clarity": 0.1642,
         "location_type": "OPEN_SPACE",
-        "range_position": 0.0543,
+        "range_position": 0.5109,
         "m5_momentum": "NEUTRAL",
         "volatility_state": "NEUTRAL",
-        "opportunity_state": "WATCHING",
-        "opportunity_type": "ZONE_REACTION",
-        "opportunity_quality": 0.4625,
+        "opportunity_state": "INVALID",
+        "opportunity_type": "NONE",
+        "opportunity_quality": 0.12,
         "strategy": "NONE",
         "entry_status": "INVALID",
-        "updated_at": "16:55 UTC",
+        "updated_at": "17:22 UTC",
         "_timeline": [
           {
             "time": "16:55",
@@ -472,22 +447,46 @@
           {
             "time": "16:55",
             "text": "Opportunity \u2192 **WATCHING**"
+          },
+          {
+            "time": "17:22",
+            "text": "Opportunity \u2192 **INVALID**"
           }
         ],
-        "last_merged": "2026-08-05T16:55:12.765679+00:00",
+        "last_merged": "2026-08-05T17:22:05.681327+00:00",
         "_identity": {
-          "entity_id": "USDCHF_1785959700",
-          "observation_id": "09dae01aea2e67f4",
-          "cycle_id": 4229,
+          "entity_id": "USDCHF_1785961200",
+          "observation_id": "fcce01bfdfb6c2ec",
+          "cycle_id": 1,
           "correlation_id": "",
           "trade_id": ""
         },
-        "h1_bos_direction": "BEARISH"
+        "h1_bos_direction": "BEARISH",
+        "_opportunity": {}
       },
       "channel_id": "1534253997140217937",
       "message_id": "1534519438932443177",
       "last_updated": "2026-08-05T11:12:24.333184+00:00",
-      "observation_id": "09dae01aea2e67f4"
+      "observation_id": "fcce01bfdfb6c2ec",
+      "opportunity": {
+        "opportunity_id": "USDCHF_1785961200_THREE_BLACK_CROWS",
+        "entity_id": "USDCHF_1785961200",
+        "observation_id": "fcce01bfdfb6c2ec",
+        "cycle_id": 1,
+        "lifecycle_state": "REJECTED",
+        "pattern": "THREE_BLACK_CROWS",
+        "direction": "SELL",
+        "strategy": "",
+        "strategy_confidence": 0.0,
+        "overall_score": 0.12,
+        "rejection_reason": "V10 [opportunity]: No opportunity (INVALID)",
+        "rejection_stage": "decision_engine",
+        "entry_price": 0.0,
+        "stop_price": 0.0,
+        "target_price": 0.0,
+        "position_size": 0.0,
+        "outcome_trade_id": ""
+      }
     },
     "USDCAD": {
       "timeline": [
@@ -600,12 +599,12 @@
     "NZDUSD": {
       "timeline": [
         {
-          "time": "16:40",
+          "time": "17:22",
           "text": "New opportunity detected"
         },
         {
-          "time": "16:40",
-          "text": "Opportunity \u2192 **WATCHING**"
+          "time": "17:22",
+          "text": "Rejected: V10 [opportunity]: No opportunity (INVALID)"
         }
       ],
       "market_state": {
@@ -614,16 +613,16 @@
         "h1_bos_direction": "BULLISH",
         "h1_structural_clarity": 0.3,
         "location_type": "OPEN_SPACE",
-        "range_position": 0.8061,
+        "range_position": 0.5577,
         "m5_momentum": "NEUTRAL",
         "volatility_state": "NEUTRAL",
-        "opportunity_state": "WATCHING",
-        "opportunity_type": "ZONE_REACTION",
-        "opportunity_quality": 0.4925,
+        "opportunity_state": "INVALID",
+        "opportunity_type": "NONE",
+        "opportunity_quality": 0.24,
         "strategy": "NONE",
         "strategy_confidence": 0.7,
         "entry_status": "INVALID",
-        "updated_at": "16:40 UTC",
+        "updated_at": "16:57 UTC",
         "_timeline": [
           {
             "time": "16:40",
@@ -632,13 +631,17 @@
           {
             "time": "16:40",
             "text": "Opportunity \u2192 **WATCHING**"
+          },
+          {
+            "time": "16:57",
+            "text": "Opportunity \u2192 **INVALID**"
           }
         ],
-        "last_merged": "2026-08-05T16:40:18.038891+00:00",
+        "last_merged": "2026-08-05T16:57:49.157728+00:00",
         "_identity": {
-          "entity_id": "NZDUSD_1785958800",
-          "observation_id": "e650d2d448f71b87",
-          "cycle_id": 3754,
+          "entity_id": "NZDUSD_1785959700",
+          "observation_id": "832276818d0b3b75",
+          "cycle_id": 1,
           "correlation_id": "",
           "trade_id": ""
         }
@@ -646,50 +649,53 @@
       "channel_id": "1534253857927073912",
       "message_id": "1534519492162355372",
       "last_updated": "2026-08-05T11:12:37.021993+00:00",
-      "observation_id": "e650d2d448f71b87"
+      "observation_id": "3d2dee06afb8a12b",
+      "opportunity": {
+        "opportunity_id": "NZDUSD_1785961200_TWEEZER_TOP",
+        "entity_id": "NZDUSD_1785961200",
+        "observation_id": "3d2dee06afb8a12b",
+        "cycle_id": 1,
+        "lifecycle_state": "REJECTED",
+        "pattern": "TWEEZER_TOP",
+        "direction": "SELL",
+        "strategy": "",
+        "strategy_confidence": 0.0,
+        "overall_score": 0.135,
+        "rejection_reason": "V10 [opportunity]: No opportunity (INVALID)",
+        "rejection_stage": "decision_engine",
+        "entry_price": 0.0,
+        "stop_price": 0.0,
+        "target_price": 0.0,
+        "position_size": 0.0,
+        "outcome_trade_id": ""
+      }
     },
     "US500": {
       "timeline": [
         {
-          "time": "16:20",
+          "time": "17:22",
           "text": "New opportunity detected"
         },
         {
-          "time": "16:20",
-          "text": "H1 BOS \u2192 **BEARISH**"
-        },
-        {
-          "time": "16:20",
-          "text": "M5 \u2192 **BULLISH**"
-        },
-        {
-          "time": "16:20",
-          "text": "Opportunity \u2192 **WATCHING**"
-        },
-        {
-          "time": "16:30",
-          "text": "Opportunity \u2192 **INVALID**"
-        },
-        {
-          "time": "16:40",
-          "text": "M5 \u2192 **NEUTRAL**"
+          "time": "17:22",
+          "text": "Rejected: V10 [opportunity]: No opportunity (INVALID)"
         }
       ],
       "market_state": {
         "regime": "TRENDING",
         "h4_trend": "BULLISH",
-        "h4_trend_strength": 0.9,
-        "h1_structural_clarity": 0.4704,
+        "h4_trend_strength": 0.85,
+        "h1_structural_clarity": 0.2591,
         "location_type": "OPEN_SPACE",
-        "range_position": 0.3767,
-        "m5_momentum": "NEUTRAL",
+        "range_position": 0.2636,
+        "m5_momentum": "BEARISH",
         "volatility_state": "NEUTRAL",
         "opportunity_state": "INVALID",
         "opportunity_type": "NONE",
-        "opportunity_quality": 0.255,
+        "opportunity_quality": 0.2825,
         "strategy": "NONE",
         "entry_status": "INVALID",
-        "updated_at": "16:40 UTC",
+        "updated_at": "17:22 UTC",
         "_timeline": [
           {
             "time": "16:20",
@@ -714,23 +720,47 @@
           {
             "time": "16:40",
             "text": "M5 \u2192 **NEUTRAL**"
+          },
+          {
+            "time": "17:22",
+            "text": "M5 \u2192 **BEARISH**"
           }
         ],
-        "last_merged": "2026-08-05T16:40:28.745128+00:00",
+        "last_merged": "2026-08-05T17:22:25.520230+00:00",
         "_identity": {
-          "entity_id": "US500_1785958800",
-          "observation_id": "b12581d1d8688a80",
-          "cycle_id": 3754,
+          "entity_id": "US500_1785961200",
+          "observation_id": "9a16d38705503d11",
+          "cycle_id": 1,
           "correlation_id": "",
           "trade_id": ""
         },
         "h1_bos_direction": "BEARISH",
-        "strategy_confidence": 0.7999999999999999
+        "strategy_confidence": 0.7999999999999999,
+        "_opportunity": {}
       },
       "channel_id": "1534254290816995568",
       "message_id": "1534519515419906049",
       "last_updated": "2026-08-05T11:12:42.586635+00:00",
-      "observation_id": "b12581d1d8688a80"
+      "observation_id": "9a16d38705503d11",
+      "opportunity": {
+        "opportunity_id": "US500_1785961200_EVENING_STAR",
+        "entity_id": "US500_1785961200",
+        "observation_id": "9a16d38705503d11",
+        "cycle_id": 1,
+        "lifecycle_state": "REJECTED",
+        "pattern": "EVENING_STAR",
+        "direction": "SELL",
+        "strategy": "",
+        "strategy_confidence": 0.0,
+        "overall_score": 0.2825,
+        "rejection_reason": "V10 [opportunity]: No opportunity (INVALID)",
+        "rejection_stage": "decision_engine",
+        "entry_price": 0.0,
+        "stop_price": 0.0,
+        "target_price": 0.0,
+        "position_size": 0.0,
+        "outcome_trade_id": ""
+      }
     },
     "XAUUSD": {
       "timeline": [
@@ -891,41 +921,29 @@
     "NAS100": {
       "timeline": [
         {
-          "time": "16:40",
+          "time": "17:22",
           "text": "New opportunity detected"
         },
         {
-          "time": "16:40",
-          "text": "Opportunity \u2192 **WATCHING**"
-        },
-        {
-          "time": "16:45",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "16:45",
-          "text": "Opportunity \u2192 **INVALID**"
-        },
-        {
-          "time": "16:55",
-          "text": "M5 \u2192 **BULLISH**"
+          "time": "17:22",
+          "text": "Rejected: V10 [opportunity]: No opportunity (INVALID)"
         }
       ],
       "market_state": {
         "regime": "TRENDING",
         "h4_trend": "BULLISH",
         "h4_trend_strength": 0.8,
-        "h1_structural_clarity": 0.4517,
+        "h1_structural_clarity": 0.4338,
         "location_type": "OPEN_SPACE",
-        "range_position": 0.7224,
-        "m5_momentum": "BULLISH",
+        "range_position": 0.3404,
+        "m5_momentum": "BEARISH",
         "volatility_state": "NEUTRAL",
         "opportunity_state": "INVALID",
         "opportunity_type": "NONE",
-        "opportunity_quality": 0.395,
+        "opportunity_quality": 0.22,
         "strategy": "NONE",
         "entry_status": "INVALID",
-        "updated_at": "16:55 UTC",
+        "updated_at": "17:22 UTC",
         "_timeline": [
           {
             "time": "16:40",
@@ -946,23 +964,47 @@
           {
             "time": "16:55",
             "text": "M5 \u2192 **BULLISH**"
+          },
+          {
+            "time": "17:22",
+            "text": "M5 \u2192 **BEARISH**"
           }
         ],
-        "last_merged": "2026-08-05T16:55:28.035319+00:00",
+        "last_merged": "2026-08-05T17:22:19.958851+00:00",
         "_identity": {
-          "entity_id": "NAS100_1785959700",
-          "observation_id": "9e6a06e0228cf86e",
-          "cycle_id": 4229,
+          "entity_id": "NAS100_1785961200",
+          "observation_id": "3840d8a4b2b9d6bd",
+          "cycle_id": 1,
           "correlation_id": "",
           "trade_id": ""
         },
         "h1_bos_direction": "BEARISH",
-        "strategy_confidence": 0.7999999999999999
+        "strategy_confidence": 0.7999999999999999,
+        "_opportunity": {}
       },
       "channel_id": "1534254217936769054",
       "message_id": "1534522759420313663",
       "last_updated": "2026-08-05T11:25:36.066212+00:00",
-      "observation_id": "9e6a06e0228cf86e"
+      "observation_id": "3840d8a4b2b9d6bd",
+      "opportunity": {
+        "opportunity_id": "NAS100_1785961200_EVENING_STAR",
+        "entity_id": "NAS100_1785961200",
+        "observation_id": "3840d8a4b2b9d6bd",
+        "cycle_id": 1,
+        "lifecycle_state": "REJECTED",
+        "pattern": "EVENING_STAR",
+        "direction": "SELL",
+        "strategy": "",
+        "strategy_confidence": 0.0,
+        "overall_score": 0.22,
+        "rejection_reason": "V10 [opportunity]: No opportunity (INVALID)",
+        "rejection_stage": "decision_engine",
+        "entry_price": 0.0,
+        "stop_price": 0.0,
+        "target_price": 0.0,
+        "position_size": 0.0,
+        "outcome_trade_id": ""
+      }
     }
   },
   "system_health": {

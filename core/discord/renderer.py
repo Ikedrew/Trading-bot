@@ -344,9 +344,20 @@ class DiscordRenderer:
         if timeline_entries:
             self._state.append_timeline(symbol, timeline_entries)
 
-        # Inject timeline + identity into card for rendering
+        # Inject timeline + multi-opportunity data into card for rendering
         rendered_card["fields"]["_timeline"] = self._state.get_timeline(symbol)
-        rendered_card["fields"]["_identity"] = identity
+        rendered_card["fields"]["_active_opportunities"] = self._state.get_active_opportunities(symbol)
+        rendered_card["fields"]["_terminal_opportunities"] = self._state.get_terminal_opportunities(symbol)
+        # Identity: use most recent active opportunity if available
+        latest_opp = self._state.get_opportunity(symbol)
+        if latest_opp.get("opportunity_id"):
+            rendered_card["fields"]["_identity"] = {
+                "opportunity_id": latest_opp.get("opportunity_id", ""),
+                "entity_id": latest_opp.get("entity_id", ""),
+                "observation_id": latest_opp.get("observation_id", ""),
+            }
+        else:
+            rendered_card["fields"]["_identity"] = identity
 
         # Update tracked state for next comparison
         self._state.merge_market_state(symbol, new_fields)
@@ -489,28 +500,9 @@ class DiscordRenderer:
         }
         channel_key = _CATEGORY_TO_CHANNEL.get(category, "")
 
-        # OPPORTUNITY_LIFECYCLE goes to the symbol's live channel (not separate flow channel)
+        # OPPORTUNITY_LIFECYCLE updates the live market card (not a separate message)
         if event_type == "OPPORTUNITY_LIFECYCLE":
-            symbol = card.get("symbol") or ""
-            if symbol:
-                try:
-                    from core import config as _cfg
-                    live_channels = getattr(_cfg, "DISCORD_LIVE_CHANNELS", {})
-                    channel_id = live_channels.get(symbol, "")
-                except Exception:
-                    channel_id = ""
-                # Send as new message (not edit) to the live symbol channel
-                try:
-                    self._client.send_message(channel_id, card)
-                except Exception:
-                    pass
-                return {
-                    "category": category.value,
-                    "event_type": event_type,
-                    "card": card,
-                    "action": "send",
-                    "channel": f"live-{symbol.lower()}",
-                }
+            return self._handle_opportunity_lifecycle(card)
 
         # Look up channel ID from config
         channel_id = ""
@@ -535,6 +527,200 @@ class DiscordRenderer:
             "action": "send",
             "channel": channel_key,
         }
+
+    def _handle_opportunity_lifecycle(self, card: dict[str, Any]) -> dict[str, Any]:
+        """
+        Handle OPPORTUNITY_LIFECYCLE by updating the live market card.
+
+        Multi-opportunity model:
+        1. Finds or creates the opportunity by opportunity_id in the collection
+        2. Updates that specific opportunity's state
+        3. Appends a timeline entry to that opportunity's own timeline
+        4. Re-renders and edits the existing live market card
+        """
+        self._ensure_initialized()
+        from datetime import datetime, timezone
+
+        symbol = card.get("symbol") or ""
+        if not symbol:
+            return {
+                "category": Category.OPPORTUNITY.value,
+                "event_type": "OPPORTUNITY_LIFECYCLE",
+                "card": card,
+                "action": "skip",
+                "reason": "no_symbol",
+            }
+
+        fields = card.get("fields", {})
+        lifecycle_state = fields.get("lifecycle_state") or ""
+        opp_id = fields.get("opportunity_id", "")
+        now_str = datetime.now(timezone.utc).strftime("%H:%M")
+
+        if not opp_id:
+            return {
+                "category": Category.OPPORTUNITY.value,
+                "event_type": "OPPORTUNITY_LIFECYCLE",
+                "card": card,
+                "action": "skip",
+                "reason": "no_opportunity_id",
+            }
+
+        # ─── Update opportunity in collection ─────────────────────────
+        opp_data = {
+            "opportunity_id": opp_id,
+            "entity_id": fields.get("entity_id", ""),
+            "observation_id": fields.get("observation_id", ""),
+            "cycle_id": fields.get("cycle_id", ""),
+            "lifecycle_state": lifecycle_state,
+            "pattern": fields.get("pattern", ""),
+            "direction": fields.get("direction", ""),
+            "strategy": fields.get("strategy", ""),
+            "strategy_confidence": fields.get("strategy_confidence", 0.0),
+            "overall_score": fields.get("score", 0.0),
+            "rejection_reason": fields.get("reason", ""),
+            "rejection_stage": fields.get("stage", ""),
+            "entry_price": fields.get("entry_price", 0.0),
+            "stop_price": fields.get("stop_price", 0.0),
+            "target_price": fields.get("target_price", 0.0),
+            "position_size": fields.get("position_size", 0.0),
+            "outcome_trade_id": fields.get("outcome_trade_id", ""),
+        }
+
+        self._state.update_opportunity(symbol, opp_data)
+
+        # ─── Append timeline entry to THIS opportunity ────────────────
+        _STATE_LABELS = {
+            "DETECTED": "Detected",
+            "WATCHING": "Watching",
+            "VALID": "Valid",
+            "ASSESSED": "Assessed",
+            "REJECTED": "Rejected",
+            "EXECUTED": "Executed",
+            "INVALID": "Invalid",
+            "EXPIRED": "Expired",
+        }
+        timeline_text = _STATE_LABELS.get(lifecycle_state, lifecycle_state)
+
+        # Add context for strategy/entry/rejection
+        if lifecycle_state == "ASSESSED" and opp_data.get("strategy"):
+            timeline_text = f"Strategy \u2192 {opp_data['strategy']}"
+        elif lifecycle_state == "REJECTED" and opp_data.get("rejection_reason"):
+            timeline_text = f"Rejected: {opp_data['rejection_reason'][:50]}"
+        elif lifecycle_state == "EXECUTED":
+            timeline_text = "Executed"
+
+        self._state.append_opportunity_timeline(
+            symbol, opp_id, [{"time": now_str, "text": timeline_text}]
+        )
+
+        # Also update observation_id for traceability
+        if opp_data.get("observation_id"):
+            self._state.set_observation_id(symbol, opp_data["observation_id"])
+
+        self._state.save()
+
+        # ─── Re-render the live card ──────────────────────────────────
+        rendered_card = self._build_live_card_with_opportunities(symbol)
+
+        # ─── DELIVER (edit existing or create new) ────────────────────
+        existing = self._state.get_live_card(symbol)
+
+        if existing and existing.get("message_id"):
+            channel_id = existing.get("channel_id", "")
+            message_id = existing.get("message_id", "")
+            try:
+                self._client.edit_message(channel_id, message_id, rendered_card)
+            except Exception:
+                pass
+            return {
+                "category": Category.OPPORTUNITY.value,
+                "event_type": "OPPORTUNITY_LIFECYCLE",
+                "card": rendered_card,
+                "action": "edit",
+                "message_id": message_id,
+            }
+        else:
+            channel_id = ""
+            try:
+                from core import config as _cfg
+                channels = getattr(_cfg, "DISCORD_LIVE_CHANNELS", {})
+                channel_id = channels.get(symbol, "")
+            except Exception:
+                pass
+
+            new_message_id = None
+            try:
+                new_message_id = self._client.send_message(channel_id, rendered_card)
+            except Exception:
+                pass
+
+            if new_message_id:
+                self._state.set_live_card(symbol, channel_id=channel_id, message_id=new_message_id)
+                self._state.save()
+
+            return {
+                "category": Category.OPPORTUNITY.value,
+                "event_type": "OPPORTUNITY_LIFECYCLE",
+                "card": rendered_card,
+                "action": "create",
+                "message_id": new_message_id or "",
+            }
+
+    def _build_live_card_with_opportunities(self, symbol: str) -> dict[str, Any]:
+        """Build a complete live market card with all opportunities injected."""
+        try:
+            snapshot = read_live_market_state(symbol)
+        except Exception:
+            snapshot = {}
+
+        market = (snapshot or {}).get("market", {})
+        opp_snap = (snapshot or {}).get("opportunity", {})
+        strat = (snapshot or {}).get("strategy", {})
+        entry = (snapshot or {}).get("entry", {})
+        risk = (snapshot or {}).get("risk", {})
+
+        card_data = {
+            "symbol": symbol,
+            "regime": market.get("regime"),
+            "h4_trend": market.get("h4_trend"),
+            "h4_trend_strength": market.get("h4_trend_strength"),
+            "h1_bos": market.get("h1_bos_direction"),
+            "h1_structural_clarity": market.get("h1_structural_clarity"),
+            "location_type": market.get("location_type"),
+            "range_position": market.get("range_position"),
+            "m5_momentum": market.get("m5_momentum"),
+            "volatility_state": market.get("volatility_state"),
+            "opportunity_state": opp_snap.get("state"),
+            "opportunity_type": opp_snap.get("opportunity_type"),
+            "opportunity_quality": opp_snap.get("overall_quality"),
+            "strategy": strat.get("family"),
+            "strategy_confidence": strat.get("confidence"),
+            "entry_status": entry.get("status"),
+            "entry_price": entry.get("price"),
+            "stop_price": entry.get("stop"),
+            "target_price": entry.get("target"),
+            "expected_rr": entry.get("expected_rr"),
+            "risk_approved": risk.get("approved"),
+            "position_size": risk.get("position_size"),
+        }
+        rendered_card = build_market_card("MARKET_CONTEXT", card_data)
+
+        # Inject multi-opportunity data
+        rendered_card["fields"]["_active_opportunities"] = self._state.get_active_opportunities(symbol)
+        rendered_card["fields"]["_terminal_opportunities"] = self._state.get_terminal_opportunities(symbol)
+
+        # Identity: use most recent active opportunity
+        latest_opp = self._state.get_opportunity(symbol)
+        rendered_card["fields"]["_identity"] = {
+            "opportunity_id": latest_opp.get("opportunity_id", ""),
+            "entity_id": latest_opp.get("entity_id", ""),
+            "observation_id": latest_opp.get("observation_id", ""),
+        }
+
+        # Keep symbol-level timeline for market state changes
+        rendered_card["fields"]["_timeline"] = self._state.get_timeline(symbol)
+
+        return rendered_card
 
     def _build_card(self, category: Category, event_type: str, data: dict[str, Any]) -> dict[str, Any]:
         """Route to the appropriate card builder."""

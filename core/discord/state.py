@@ -179,6 +179,114 @@ class DiscordState:
         if symbol in self._live_cards:
             self._live_cards[symbol]["timeline"] = []
 
+    # ─── OPPORTUNITY LIFECYCLE TRACKING (multi-opportunity per symbol) ────────
+
+    _ACTIVE_STATES = frozenset({"DETECTED", "WATCHING", "VALID", "ASSESSED", "ENTRY_READY", "READY"})
+    _TERMINAL_STATES = frozenset({"REJECTED", "INVALID", "EXECUTED", "EXPIRED"})
+    _MAX_TERMINAL = 3
+
+    def get_opportunities(self, symbol: str) -> dict[str, dict[str, Any]]:
+        """Get all tracked opportunities for a symbol (keyed by opportunity_id)."""
+        card = self._live_cards.get(symbol, {})
+        return card.get("opportunities", {})
+
+    def get_opportunity(self, symbol: str, opportunity_id: str = "") -> dict[str, Any]:
+        """
+        Get a single opportunity by ID, or the most recent active one if no ID given.
+
+        Backward-compatible: no-arg returns the latest active opportunity (or latest overall).
+        """
+        opps = self.get_opportunities(symbol)
+        if opportunity_id:
+            return opps.get(opportunity_id, {})
+        # Return most recent active, or most recent overall
+        active = [o for o in opps.values() if o.get("lifecycle_state") in self._ACTIVE_STATES]
+        if active:
+            return active[-1]
+        if opps:
+            return list(opps.values())[-1]
+        return {}
+
+    def update_opportunity(self, symbol: str, opp_data: dict[str, Any]) -> None:
+        """
+        Update or insert an opportunity in the collection for a symbol.
+
+        Keyed by opportunity_id. Merges fields if same ID, inserts if new.
+        Each opportunity stores its own timeline.
+        Enforces max 3 terminal opportunities retained.
+        """
+        if symbol not in self._live_cards:
+            self._live_cards[symbol] = {}
+        card = self._live_cards[symbol]
+
+        opps = card.get("opportunities", {})
+        opp_id = opp_data.get("opportunity_id", "")
+        if not opp_id:
+            return
+
+        existing = opps.get(opp_id, {})
+        if existing:
+            # Merge: update fields with non-empty values
+            for key, value in opp_data.items():
+                if value is not None and value != "" and value != 0 and value != 0.0:
+                    existing[key] = value
+            # Always update lifecycle_state
+            if "lifecycle_state" in opp_data:
+                existing["lifecycle_state"] = opp_data["lifecycle_state"]
+            opps[opp_id] = existing
+        else:
+            # New opportunity — insert with empty timeline
+            new_entry = dict(opp_data)
+            new_entry.setdefault("_timeline", [])
+            opps[opp_id] = new_entry
+
+        # Enforce terminal retention limit (keep last N terminal)
+        terminal = [(k, v) for k, v in opps.items()
+                    if v.get("lifecycle_state") in self._TERMINAL_STATES]
+        if len(terminal) > self._MAX_TERMINAL:
+            # Remove oldest terminal entries
+            to_remove = terminal[:len(terminal) - self._MAX_TERMINAL]
+            for k, _ in to_remove:
+                del opps[k]
+
+        card["opportunities"] = opps
+        self._live_cards[symbol] = card
+
+    def append_opportunity_timeline(
+        self, symbol: str, opportunity_id: str, entries: list[dict[str, str]], max_entries: int = 10
+    ) -> None:
+        """Append timeline entries to a specific opportunity."""
+        opps = self.get_opportunities(symbol)
+        opp = opps.get(opportunity_id)
+        if opp is None:
+            return
+        timeline = opp.get("_timeline", [])
+        timeline.extend(entries)
+        opp["_timeline"] = timeline[-max_entries:]
+        # Write back
+        if symbol in self._live_cards:
+            self._live_cards[symbol].setdefault("opportunities", {})[opportunity_id] = opp
+
+    def get_active_opportunities(self, symbol: str) -> list[dict[str, Any]]:
+        """Get opportunities in active states (ordered by insertion)."""
+        opps = self.get_opportunities(symbol)
+        return [o for o in opps.values() if o.get("lifecycle_state") in self._ACTIVE_STATES]
+
+    def get_terminal_opportunities(self, symbol: str) -> list[dict[str, Any]]:
+        """Get terminal opportunities (most recent last, max 3)."""
+        opps = self.get_opportunities(symbol)
+        return [o for o in opps.values() if o.get("lifecycle_state") in self._TERMINAL_STATES]
+
+    def clear_opportunity(self, symbol: str, opportunity_id: str = "") -> None:
+        """Remove a specific opportunity, or clear all if no ID given."""
+        if symbol not in self._live_cards:
+            return
+        if opportunity_id:
+            opps = self._live_cards[symbol].get("opportunities", {})
+            opps.pop(opportunity_id, None)
+        else:
+            self._live_cards[symbol]["opportunities"] = {}
+
     def get_system_health(self) -> dict[str, str] | None:
         """Get stored system health card info."""
         return self._system_health if self._system_health.get("message_id") else None
