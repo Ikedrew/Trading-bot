@@ -26,6 +26,17 @@
       "channel_id": "1534254092619219034",
       "message_id": "1534275743423664231",
       "last_updated": "2026-08-04T19:04:02.940784+00:00"
+    },
+    "EURUSD": {
+      "market_state": {
+        "h4_trend": "UNKNOWN",
+        "m5_momentum": "NONE",
+        "updated_at": "22:40 UTC",
+        "last_merged": "2026-08-04T22:40:05.576427+00:00"
+      },
+      "channel_id": "1534253692193083506",
+      "message_id": "1534330115457159209",
+      "last_updated": "2026-08-04T22:40:06.470295+00:00"
     }
   },
   "system_health": {

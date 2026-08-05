@@ -28,6 +28,7 @@ from core.discord.cards import (
     build_execution_card,
     build_system_card,
 )
+from core.live_market_state import read_live_market_state
 
 
 class Category(str, Enum):
@@ -52,6 +53,7 @@ _CATEGORY_MAP: dict[str, Category] = {
     # OPPORTUNITY: "What opportunities happened?"
     "TRADE_DECISION": Category.OPPORTUNITY,
     "DECISION_REJECTED": Category.OPPORTUNITY,
+    "OPPORTUNITY_LIFECYCLE": Category.OPPORTUNITY,
 
     # EXECUTION: "What trades happened?"
     "ORDER_ATTEMPT": Category.EXECUTION,
@@ -172,17 +174,34 @@ class DiscordRenderer:
             if not any(s in stage.lower() for s in _deep_stages):
                 return True
 
+        # OPPORTUNITY_LIFECYCLE: only show ASSESSED and EXECUTED (not every REJECTED)
+        if event_type == "OPPORTUNITY_LIFECYCLE":
+            state = data.get("lifecycle_state", "")
+            # Only show opportunities that progressed meaningfully
+            if state == "REJECTED":
+                # Only show rejections that had strategy selected (not pattern_not_selected)
+                reason = data.get("rejection_reason", "")
+                if reason == "pattern_not_selected":
+                    return True
+                # Show decision_engine rejections that had a strategy
+                if not data.get("strategy_classification"):
+                    return True
+
         return False
 
     def _handle_live_market(self, event_type: str, data: dict[str, Any], card: dict[str, Any]) -> dict[str, Any]:
         """
-        Handle live market card with STATE ACCUMULATION.
+        Handle live market card by reading from live_market_state snapshot.
 
-        Merges new event fields into existing per-symbol state.
-        Card always shows the full combined picture.
+        Pure presentation layer: reads the complete latest snapshot for the
+        symbol and renders the card from that snapshot. No incremental
+        event-state accumulation. Compares against previous render to
+        suppress cosmetic edits.
+
+        Currently limited to EURUSD (V2 live market pilot).
         """
         self._ensure_initialized()
-        symbol = card.get("symbol") or ""
+        symbol = card.get("symbol") or data.get("symbol") or ""
 
         if not symbol:
             return {
@@ -193,14 +212,94 @@ class DiscordRenderer:
                 "reason": "no_symbol",
             }
 
-        # Accumulate state: merge new fields into existing
-        card_fields = card.get("fields", {})
-        merged_state = self._state.merge_market_state(symbol, card_fields)
+        # V2 Live Market pilot: only EURUSD for now
+        _LIVE_MARKET_V2_SYMBOLS = {"EURUSD"}
+        if symbol not in _LIVE_MARKET_V2_SYMBOLS:
+            return {
+                "category": Category.LIVE_MARKET.value,
+                "event_type": event_type,
+                "card": card,
+                "action": "skip",
+                "reason": "not_in_v2_pilot",
+            }
 
-        # Rebuild card with full accumulated state
-        card["fields"] = merged_state
+        # ─── READ SNAPSHOT (single source of truth) ───────────────────
+        try:
+            snapshot = read_live_market_state(symbol)
+        except Exception:
+            snapshot = None
 
-        # Check for existing message
+        if not snapshot:
+            return {
+                "category": Category.LIVE_MARKET.value,
+                "event_type": event_type,
+                "card": card,
+                "action": "skip",
+                "reason": "no_snapshot_available",
+            }
+
+        # ─── BUILD CARD FROM SNAPSHOT ─────────────────────────────────
+        market = snapshot.get("market", {})
+        opp = snapshot.get("opportunity", {})
+        strat = snapshot.get("strategy", {})
+        entry = snapshot.get("entry", {})
+        risk = snapshot.get("risk", {})
+
+        card_data = {
+            "symbol": symbol,
+            "regime": market.get("regime"),
+            "h4_trend": market.get("h4_trend"),
+            "h4_trend_strength": market.get("h4_trend_strength"),
+            "h1_bos": market.get("h1_bos_direction"),
+            "h1_structural_clarity": market.get("h1_structural_clarity"),
+            "location_type": market.get("location_type"),
+            "range_position": market.get("range_position"),
+            "m5_momentum": market.get("m5_momentum"),
+            "volatility_state": market.get("volatility_state"),
+            "opportunity_state": opp.get("state"),
+            "opportunity_type": opp.get("opportunity_type"),
+            "opportunity_quality": opp.get("overall_quality"),
+            "strategy": strat.get("family"),
+            "strategy_confidence": strat.get("confidence"),
+            "entry_status": entry.get("status"),
+            "entry_price": entry.get("price"),
+            "stop_price": entry.get("stop"),
+            "target_price": entry.get("target"),
+            "expected_rr": entry.get("expected_rr"),
+            "risk_approved": risk.get("approved"),
+            "position_size": risk.get("position_size"),
+        }
+        rendered_card = build_market_card("MARKET_CONTEXT", card_data)
+
+        # ─── CHANGE DETECTION (compare vs last rendered state) ────────
+        _MEANINGFUL_FIELDS = (
+            "regime", "h4_trend", "h1_bos_direction", "location_type",
+            "range_position", "m5_momentum", "volatility_state",
+            "strategy", "entry_status", "opportunity_state",
+            "h4_trend_strength", "h1_structural_clarity",
+        )
+        previous_state = self._state.get_market_state(symbol)
+        new_fields = rendered_card.get("fields", {})
+
+        has_meaningful_change = any(
+            new_fields.get(f) != previous_state.get(f)
+            for f in _MEANINGFUL_FIELDS
+            if new_fields.get(f)
+        )
+
+        if not has_meaningful_change and previous_state:
+            return {
+                "category": Category.LIVE_MARKET.value,
+                "event_type": event_type,
+                "card": rendered_card,
+                "action": "skip",
+                "reason": "no_meaningful_change",
+            }
+
+        # Update tracked state for next comparison
+        self._state.merge_market_state(symbol, new_fields)
+
+        # ─── DELIVER (edit existing or create new) ────────────────────
         existing = self._state.get_live_card(symbol)
 
         if existing and existing.get("message_id"):
@@ -208,7 +307,7 @@ class DiscordRenderer:
             message_id = existing.get("message_id", "")
 
             try:
-                self._client.edit_message(channel_id, message_id, card)
+                self._client.edit_message(channel_id, message_id, rendered_card)
             except Exception:
                 pass
 
@@ -217,7 +316,7 @@ class DiscordRenderer:
             return {
                 "category": Category.LIVE_MARKET.value,
                 "event_type": event_type,
-                "card": card,
+                "card": rendered_card,
                 "action": "edit",
                 "message_id": message_id,
             }
@@ -231,7 +330,7 @@ class DiscordRenderer:
 
             new_message_id = None
             try:
-                new_message_id = self._client.send_message(channel_id, card)
+                new_message_id = self._client.send_message(channel_id, rendered_card)
             except Exception:
                 pass
 
@@ -242,7 +341,7 @@ class DiscordRenderer:
             return {
                 "category": Category.LIVE_MARKET.value,
                 "event_type": event_type,
-                "card": card,
+                "card": rendered_card,
                 "action": "create",
                 "channel_id": channel_id,
                 "message_id": new_message_id or "",

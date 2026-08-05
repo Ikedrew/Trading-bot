@@ -62,18 +62,25 @@ class TestMarketStateAccumulation:
         assert merged["range_position"] == 0.85  # Preserved
 
     def test_renderer_uses_accumulated_state(self, tmp_path):
+        from unittest.mock import patch
         renderer = DiscordRenderer()
         state = DiscordState(state_file=str(tmp_path / "s.json"))
         state.load()
         renderer._state = state
         renderer._client = DiscordBotClient()
 
-        # First event: regime + h4
-        renderer.render("MARKET_CONTEXT", {"symbol": "NZDUSD", "regime": "RANGING", "h4_trend": "NEUTRAL"})
-        # Second event: strategy + entry
-        result = renderer.render("MARKET_SNAPSHOT", {"symbol": "NZDUSD", "strategy": "MEAN_REVERSION", "entry_status": "READY"})
+        # Renderer now reads from live_market_state snapshot
+        snapshot = {
+            "symbol": "EURUSD",
+            "market": {"regime": "RANGING", "h4_trend": "NEUTRAL"},
+            "opportunity": {},
+            "strategy": {"family": "MEAN_REVERSION"},
+            "entry": {"status": "READY"},
+            "risk": {},
+        }
+        with patch("core.discord.renderer.read_live_market_state", return_value=snapshot):
+            result = renderer.render("MARKET_CONTEXT", {"symbol": "EURUSD"})
 
-        # Card should contain ALL accumulated fields
         fields = result["card"]["fields"]
         assert fields["regime"] == "RANGING"
         assert fields["h4_trend"] == "NEUTRAL"

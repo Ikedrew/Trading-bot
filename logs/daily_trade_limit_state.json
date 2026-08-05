@@ -1,10 +1,8 @@
 {
-  "current_day_key": "2026-08-04",
-  "total_trades_today": 8,
+  "current_day_key": "2026-08-05",
+  "total_trades_today": 1,
   "per_symbol": {
-    "US500": 4,
-    "AUDUSD": 3,
-    "NAS100": 1
+    "US500": 1
   },
-  "last_updated": 1785854753.0423284
+  "last_updated": 1785895252.9813573
 }

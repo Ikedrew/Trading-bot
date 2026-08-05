@@ -50,7 +50,10 @@ class TestCardToEmbed:
         assert "color" in embed
         assert embed["color"] == 0x3498DB  # Blue
         assert "fields" in embed
-        assert any(f["name"] == "Regime" for f in embed["fields"])
+        # V2 layout: market section contains regime
+        market_field = next((f for f in embed["fields"] if f["name"] == "Market"), None)
+        assert market_field is not None
+        assert "RANGING" in market_field["value"]
 
     def test_opportunity_card_embed(self):
         card = build_opportunity_card("TRADE_DECISION", {

@@ -193,22 +193,24 @@ class TestRendererLiveMarketLifecycle:
     """Renderer manages create vs edit for live market cards."""
 
     def test_new_symbol_triggers_create(self, tmp_path):
-        """First market event for a symbol → action=create."""
+        """First market event for EURUSD with snapshot → action=create."""
+        from unittest.mock import patch as _patch
         renderer = DiscordRenderer()
-        # Inject fresh state
         from core.discord.state import DiscordState
         renderer._state = DiscordState(state_file=str(tmp_path / "state.json"))
         renderer._state.load()
         renderer._client = DiscordBotClient()
 
-        result = renderer.render("MARKET_CONTEXT", {"symbol": "NZDUSD", "regime": "TRENDING"})
+        snapshot = {"symbol": "EURUSD", "market": {"regime": "TRENDING"}, "opportunity": {}, "strategy": {}, "entry": {}, "risk": {}}
+        with _patch("core.discord.renderer.read_live_market_state", return_value=snapshot):
+            result = renderer.render("MARKET_CONTEXT", {"symbol": "EURUSD", "regime": "TRENDING"})
         assert result is not None
         assert result["action"] == "create"
         assert result["category"] == "LIVE_MARKET"
-        assert result["card"]["symbol"] == "NZDUSD"
 
     def test_existing_symbol_triggers_edit(self, tmp_path):
         """Subsequent market event for same symbol → action=edit."""
+        from unittest.mock import patch as _patch
         renderer = DiscordRenderer()
         from core.discord.state import DiscordState
         state = DiscordState(state_file=str(tmp_path / "state.json"))
@@ -217,7 +219,9 @@ class TestRendererLiveMarketLifecycle:
         renderer._state = state
         renderer._client = DiscordBotClient()
 
-        result = renderer.render("H4_CONTEXT", {"symbol": "EURUSD", "h4_trend": "BULLISH"})
+        snapshot = {"symbol": "EURUSD", "market": {"h4_trend": "BULLISH"}, "opportunity": {}, "strategy": {}, "entry": {}, "risk": {}}
+        with _patch("core.discord.renderer.read_live_market_state", return_value=snapshot):
+            result = renderer.render("H4_CONTEXT", {"symbol": "EURUSD", "h4_trend": "BULLISH"})
         assert result is not None
         assert result["action"] == "edit"
         assert result["message_id"] == "msg_99"
@@ -252,31 +256,31 @@ class TestRendererLiveMarketLifecycle:
         renderer._client = mock_client
 
         # Should not raise
-        result = renderer.render("MARKET_CONTEXT", {"symbol": "XAUUSD", "regime": "TRENDING"})
+        result = renderer.render("MARKET_CONTEXT", {"symbol": "EURUSD", "regime": "TRENDING"})
         # Renderer should still produce a result (even if delivery failed)
         assert result is not None or True  # Doesn't crash
 
     def test_state_persisted_after_create(self, tmp_path):
         """After creating a new card with a message_id, state is saved."""
+        from unittest.mock import patch as _patch
         renderer = DiscordRenderer()
         from core.discord.state import DiscordState
         state = DiscordState(state_file=str(tmp_path / "state.json"))
         state.load()
         renderer._state = state
 
-        # Mock client that returns a message_id
         mock_client = MagicMock()
         mock_client.send_message.return_value = "new_msg_123"
         renderer._client = mock_client
 
-        with patch("core.config.DISCORD_LIVE_CHANNELS", {"NAS100": "ch_nas"}):
-            renderer.render("MARKET_CONTEXT", {"symbol": "NAS100", "regime": "TRENDING"})
+        snapshot = {"symbol": "EURUSD", "market": {"regime": "TRENDING"}, "opportunity": {}, "strategy": {}, "entry": {}, "risk": {}}
+        with _patch("core.discord.renderer.read_live_market_state", return_value=snapshot):
+            with _patch("core.config.DISCORD_LIVE_CHANNELS", {"EURUSD": "ch_eur"}):
+                renderer.render("MARKET_CONTEXT", {"symbol": "EURUSD", "regime": "TRENDING"})
 
-        # State should have the new card
-        card = state.get_live_card("NAS100")
+        card = state.get_live_card("EURUSD")
         assert card is not None
         assert card["message_id"] == "new_msg_123"
-        # State file should exist
         assert (tmp_path / "state.json").exists()
 
 
