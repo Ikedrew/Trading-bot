@@ -298,6 +298,7 @@ class DiscordRenderer:
 
         # Update tracked state for next comparison
         self._state.merge_market_state(symbol, new_fields)
+        self._state.save()  # Persist so next renderer instance sees latest
 
         # ─── DELIVER (edit existing or create new) ────────────────────
         existing = self._state.get_live_card(symbol)
