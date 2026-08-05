@@ -390,15 +390,21 @@ def _opportunity_embed(symbol: str, event_type: str, f: dict[str, Any], color: i
     _opp_id = f.get("opportunity_id") or ""
     _ent_id = f.get("entity_id") or ""
     _obs_id = f.get("observation_id") or ""
-    identity_parts = []
-    if _opp_id:
-        identity_parts.append(f"opp:`{_opp_id[:8]}`")
-    if _ent_id:
-        identity_parts.append(f"ent:`{_ent_id[:8]}`")
-    if _obs_id:
-        identity_parts.append(f"obs:`{_obs_id[:8]}`")
-    if identity_parts:
-        embed_fields.append({"name": "\U0001f194 Identity", "value": " | ".join(identity_parts), "inline": False})
+
+    # Strip leading symbol prefix (e.g. "XAUUSD_1753574400_BEARISH_ENGULFING" → "1753574400_BEARISH_ENGULFING")
+    _opp_display = _opp_id.split("_", 1)[1] if "_" in _opp_id else _opp_id
+    _ent_display = _ent_id.split("_", 1)[1] if "_" in _ent_id else _ent_id
+    _obs_display = _obs_id  # Full value — already a compact hash
+
+    identity_lines = []
+    if _opp_display:
+        identity_lines.append(f"Opp: `{_opp_display}`")
+    if _ent_display:
+        identity_lines.append(f"Ent: `{_ent_display}`")
+    if _obs_display:
+        identity_lines.append(f"Obs: `{_obs_display}`")
+    if identity_lines:
+        embed_fields.append({"name": "\U0001f194 Identity", "value": "\n".join(identity_lines), "inline": False})
     if f.get("pattern"):
         conf = f.get("pattern_confidence")
         val = f["pattern"] + (f" ({conf:.0%})" if conf else "")
@@ -463,7 +469,7 @@ def _opportunity_embed(symbol: str, event_type: str, f: dict[str, Any], color: i
         "title": f"{icon} {title}",
         "color": embed_color,
         "fields": embed_fields,
-        "footer": {"text": f"{lifecycle} | {f.get('session', '')} | {f.get('timestamp', '')} | opp:{_opp_id[:8] if f.get('opportunity_id') else '?'}"},
+        "footer": {"text": f"{lifecycle} | {f.get('session', '')} | {f.get('timestamp', '')} | {_opp_display or '?'}"},
     }
 
 

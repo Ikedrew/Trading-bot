@@ -1,17 +1,17 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "USDCHF",
-  "cycle_id": 589,
-  "bar_time": 1785952800,
-  "updated_at": "2026-08-05T15:00:07.745Z",
-  "updated_at_unix": 1785942007.745,
+  "cycle_id": 4229,
+  "bar_time": 1785959700,
+  "updated_at": "2026-08-05T16:55:12.742Z",
+  "updated_at_unix": 1785948912.743,
   "action": "NO_TRADE",
-  "score": 0.2975,
-  "reason": "V10 [opportunity]: No opportunity (INVALID)",
+  "score": 0.4625,
+  "reason": "V10 [strategy]: No strategy matched",
   "identity": {
-    "entity_id": "USDCHF_1785952800",
-    "observation_id": "bc0ff71ec574cc2c",
-    "cycle_id": 589,
+    "entity_id": "USDCHF_1785959700",
+    "observation_id": "09dae01aea2e67f4",
+    "cycle_id": 4229,
     "correlation_id": "",
     "trade_id": ""
   },
@@ -21,13 +21,13 @@
     "volatility_state": "NEUTRAL",
     "h4_trend": "NEUTRAL",
     "h4_trend_strength": 0.0,
-    "h4_phase": "REVERSAL",
+    "h4_phase": "CONSOLIDATION",
     "h1_bos_direction": "BEARISH",
-    "h1_structural_clarity": 0.2691,
+    "h1_structural_clarity": 0.1585,
     "h1_dominant_trend": "NEUTRAL",
     "m15_pullback_active": true,
     "m15_displacement": false,
-    "m15_range_position": 0.2609,
+    "m15_range_position": 0.0543,
     "m5_momentum": "NEUTRAL",
     "m5_momentum_strength": 0.0,
     "m5_rejection": false,
@@ -36,21 +36,21 @@
     "location_type": "OPEN_SPACE",
     "inside_zone": false,
     "zone_quality": 0.0,
-    "range_position": 0.2609,
+    "range_position": 0.0543,
     "premium_discount": "DISCOUNT",
     "htf_macro_bias": "NEUTRAL",
-    "htf_structure_alignment": 0.6
+    "htf_structure_alignment": 0.3
   },
   "opportunity": {
-    "state": "INVALID",
+    "state": "WATCHING",
     "directional_bias": "BEARISH",
-    "opportunity_type": "NONE",
-    "overall_quality": 0.2975,
-    "location_score": 0.25,
+    "opportunity_type": "ZONE_REACTION",
+    "overall_quality": 0.4625,
+    "location_score": 0.55,
     "structure_score": 0.30000000000000004,
     "behaviour_score": 0.7999999999999999,
-    "formation_score": 0.0,
-    "observation_id": "bc0ff71ec574cc2c"
+    "formation_score": 0.3,
+    "observation_id": "09dae01aea2e67f4"
   },
   "strategy": {
     "family": "NONE",
@@ -87,6 +87,6 @@
     "order_type": "",
     "volume": 0.0
   },
-  "rejection_stage": "opportunity",
+  "rejection_stage": "strategy",
   "approved": false
 }
