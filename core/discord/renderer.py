@@ -489,9 +489,28 @@ class DiscordRenderer:
         }
         channel_key = _CATEGORY_TO_CHANNEL.get(category, "")
 
-        # OPPORTUNITY_LIFECYCLE goes to dedicated flow channel
+        # OPPORTUNITY_LIFECYCLE goes to the symbol's live channel (not separate flow channel)
         if event_type == "OPPORTUNITY_LIFECYCLE":
-            channel_key = "opportunity_flow"
+            symbol = card.get("symbol") or ""
+            if symbol:
+                try:
+                    from core import config as _cfg
+                    live_channels = getattr(_cfg, "DISCORD_LIVE_CHANNELS", {})
+                    channel_id = live_channels.get(symbol, "")
+                except Exception:
+                    channel_id = ""
+                # Send as new message (not edit) to the live symbol channel
+                try:
+                    self._client.send_message(channel_id, card)
+                except Exception:
+                    pass
+                return {
+                    "category": category.value,
+                    "event_type": event_type,
+                    "card": card,
+                    "action": "send",
+                    "channel": f"live-{symbol.lower()}",
+                }
 
         # Look up channel ID from config
         channel_id = ""

@@ -1,9 +1,10 @@
 {
   "current_day_key": "2026-08-05",
-  "total_trades_today": 4,
+  "total_trades_today": 5,
   "per_symbol": {
     "US500": 2,
-    "NZDUSD": 2
+    "NZDUSD": 2,
+    "AUDUSD": 1
   },
-  "last_updated": 1785920432.5951705
+  "last_updated": 1785938432.940541
 }

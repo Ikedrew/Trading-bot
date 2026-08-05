@@ -271,8 +271,7 @@ DISCORD_LIVE_CHANNELS: dict = {
 # Channel IDs for human-question based channels.
 # Leave empty until Discord bot is connected.
 DISCORD_V2_CHANNELS: dict = {
-    "opportunities": "1534256381606232114",      # "What opportunities happened?"
-    "opportunity_flow": "1534558081508442153",   # Opportunity lifecycle funnel (prototype)
+    "opportunities": "1534256381606232114",      # "What opportunities happened?" (TRADE_DECISION events)
     "executions": "1534256459121168525",         # "What trades happened?"
     "system": "1534256711664271440",             # "Is the machine alive?"
 }
