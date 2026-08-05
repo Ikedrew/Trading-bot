@@ -212,15 +212,20 @@ class DiscordRenderer:
                 "reason": "no_symbol",
             }
 
-        # V2 Live Market pilot: only EURUSD for now
-        _LIVE_MARKET_V2_SYMBOLS = {"EURUSD"}
-        if symbol not in _LIVE_MARKET_V2_SYMBOLS:
+        # Check symbol is configured for live market
+        try:
+            from core import config as _cfg
+            _configured_symbols = set(getattr(_cfg, "DISCORD_LIVE_CHANNELS", {}).keys())
+        except Exception:
+            _configured_symbols = set()
+
+        if _configured_symbols and symbol not in _configured_symbols:
             return {
                 "category": Category.LIVE_MARKET.value,
                 "event_type": event_type,
                 "card": card,
                 "action": "skip",
-                "reason": "not_in_v2_pilot",
+                "reason": "not_configured",
             }
 
         # ─── READ SNAPSHOT (single source of truth) ───────────────────
@@ -271,21 +276,43 @@ class DiscordRenderer:
         }
         rendered_card = build_market_card("MARKET_CONTEXT", card_data)
 
-        # ─── CHANGE DETECTION (compare vs last rendered state) ────────
-        _MEANINGFUL_FIELDS = (
-            "regime", "h4_trend", "h1_bos_direction", "location_type",
-            "range_position", "m5_momentum", "volatility_state",
-            "strategy", "entry_status", "opportunity_state",
-            "h4_trend_strength", "h1_structural_clarity",
-        )
+        # ─── CHANGE DETECTION + TIMELINE ─────────────────────────────
+        _TRACKED_FIELDS = {
+            "regime": "Regime",
+            "h4_trend": "H4 Trend",
+            "h1_bos_direction": "H1 BOS",
+            "location_type": "Location",
+            "m5_momentum": "M5",
+            "volatility_state": "Volatility",
+            "strategy": "Strategy",
+            "entry_status": "Entry",
+            "opportunity_state": "Opportunity",
+            "risk_approved": "Risk",
+        }
+
         previous_state = self._state.get_market_state(symbol)
         new_fields = rendered_card.get("fields", {})
 
-        has_meaningful_change = any(
-            new_fields.get(f) != previous_state.get(f)
-            for f in _MEANINGFUL_FIELDS
-            if new_fields.get(f)
-        )
+        # Detect which fields changed
+        from datetime import datetime, timezone
+        now_str = datetime.now(timezone.utc).strftime("%H:%M")
+        timeline_entries = []
+
+        has_meaningful_change = False
+        for field_key, label in _TRACKED_FIELDS.items():
+            new_val = new_fields.get(field_key)
+            old_val = previous_state.get(field_key)
+            if new_val and new_val != old_val:
+                has_meaningful_change = True
+                if old_val:
+                    timeline_entries.append({"time": now_str, "text": f"{label} \u2192 **{new_val}**"})
+                else:
+                    timeline_entries.append({"time": now_str, "text": f"{label}: **{new_val}**"})
+
+        # Special: observation created (first time we see data for this symbol)
+        if not previous_state and new_fields.get("regime"):
+            timeline_entries.insert(0, {"time": now_str, "text": "Observation created"})
+            has_meaningful_change = True
 
         if not has_meaningful_change and previous_state:
             return {
@@ -295,6 +322,13 @@ class DiscordRenderer:
                 "action": "skip",
                 "reason": "no_meaningful_change",
             }
+
+        # Append timeline entries and persist
+        if timeline_entries:
+            self._state.append_timeline(symbol, timeline_entries)
+
+        # Inject timeline into card for rendering
+        rendered_card["fields"]["_timeline"] = self._state.get_timeline(symbol)
 
         # Update tracked state for next comparison
         self._state.merge_market_state(symbol, new_fields)

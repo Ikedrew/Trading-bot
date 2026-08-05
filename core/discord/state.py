@@ -143,6 +143,26 @@ class DiscordState:
         self._live_cards[symbol] = card
         return current
 
+    def get_timeline(self, symbol: str) -> list[dict[str, str]]:
+        """Get the rolling timeline entries for a symbol."""
+        card = self._live_cards.get(symbol, {})
+        return card.get("timeline", [])
+
+    def append_timeline(self, symbol: str, entries: list[dict[str, str]], max_entries: int = 15) -> None:
+        """
+        Append new timeline entries for a symbol. Keeps only the most recent max_entries.
+
+        Each entry: {"time": "HH:MM", "text": "description"}
+        """
+        if symbol not in self._live_cards:
+            self._live_cards[symbol] = {}
+        card = self._live_cards[symbol]
+        timeline = card.get("timeline", [])
+        timeline.extend(entries)
+        # Keep only most recent
+        card["timeline"] = timeline[-max_entries:]
+        self._live_cards[symbol] = card
+
     def get_system_health(self) -> dict[str, str] | None:
         """Get stored system health card info."""
         return self._system_health if self._system_health.get("message_id") else None

@@ -20,6 +20,7 @@ def send_discord(channel: str, message: str) -> None:
 
     Behaviour:
         - If ALERTING_ENABLED is False: silently returns.
+        - If LEGACY_DISCORD_ENABLED is False: silently returns (V2 active).
         - If channel key is missing or URL is empty: silently returns.
         - If HTTP request fails: silently returns (prints error to console).
         - Never raises. Never blocks trading logic beyond the timeout.
@@ -27,6 +28,8 @@ def send_discord(channel: str, message: str) -> None:
     try:
         from core import config as _cfg
         if not getattr(_cfg, "ALERTING_ENABLED", True):
+            return
+        if not getattr(_cfg, "LEGACY_DISCORD_ENABLED", True):
             return
     except ImportError:
         pass

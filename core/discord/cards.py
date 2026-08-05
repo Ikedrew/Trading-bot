@@ -263,13 +263,14 @@ def card_to_embed(card: dict[str, Any]) -> dict[str, Any]:
 
 
 def _market_embed(symbol: str, f: dict[str, Any], color: int) -> dict[str, Any]:
-    """Build Discord embed for live market card — full V2 layout."""
+    """Build Discord embed for live market dashboard — current state + timeline."""
     status = "LIVE" if f.get("regime") else "WAITING"
     title = f"{symbol} — {status}"
 
     embed_fields = []
 
-    # ─── MARKET SECTION ───────────────────────────────────────────
+    # ─── SECTION 1: CURRENT STATE ─────────────────────────────────
+    # Market
     market_lines = []
     if f.get("regime"):
         market_lines.append(f"Regime: **{f['regime']}**")
@@ -293,7 +294,7 @@ def _market_embed(symbol: str, f: dict[str, Any], color: int) -> dict[str, Any]:
     if market_lines:
         embed_fields.append({"name": "Market", "value": "\n".join(market_lines), "inline": False})
 
-    # ─── OPPORTUNITY SECTION ──────────────────────────────────────
+    # Opportunity
     opp_lines = []
     if f.get("opportunity_state"):
         opp_lines.append(f"State: **{f['opportunity_state']}**")
@@ -305,41 +306,33 @@ def _market_embed(symbol: str, f: dict[str, Any], color: int) -> dict[str, Any]:
     if opp_lines:
         embed_fields.append({"name": "Opportunity", "value": "\n".join(opp_lines), "inline": True})
 
-    # ─── STRATEGY SECTION ─────────────────────────────────────────
+    # Strategy
     strat_lines = []
-    if f.get("strategy"):
+    if f.get("strategy") and f["strategy"] != "NONE":
         strat_lines.append(f"Family: **{f['strategy']}**")
-    if f.get("strategy_confidence"):
-        strat_lines.append(f"Confidence: {f['strategy_confidence']:.2f}")
+        if f.get("strategy_confidence"):
+            strat_lines.append(f"Confidence: {f['strategy_confidence']:.2f}")
 
     if strat_lines:
         embed_fields.append({"name": "Strategy", "value": "\n".join(strat_lines), "inline": True})
 
-    # ─── ENTRY SECTION ────────────────────────────────────────────
-    entry_lines = []
-    if f.get("entry_status"):
-        entry_lines.append(f"Status: **{f['entry_status']}**")
-    if f.get("entry_price"):
-        entry_lines.append(f"Entry: {f['entry_price']}")
-    if f.get("stop_price"):
-        entry_lines.append(f"Stop: {f['stop_price']}")
-    if f.get("target_price"):
-        entry_lines.append(f"Target: {f['target_price']}")
+    # Entry + Risk (compact)
+    entry_risk_lines = []
+    if f.get("entry_status") and f["entry_status"] != "INVALID":
+        entry_risk_lines.append(f"Entry: **{f['entry_status']}**")
     if f.get("expected_rr"):
-        entry_lines.append(f"R:R: {f['expected_rr']:.2f}")
-
-    if entry_lines:
-        embed_fields.append({"name": "Entry", "value": "\n".join(entry_lines), "inline": True})
-
-    # ─── RISK SECTION ─────────────────────────────────────────────
-    risk_lines = []
+        entry_risk_lines.append(f"R:R: {f['expected_rr']:.2f}")
     if f.get("risk_approved") is not None:
-        risk_lines.append(f"Approved: **{'Yes' if f['risk_approved'] else 'No'}**")
-    if f.get("position_size"):
-        risk_lines.append(f"Size: {f['position_size']} lots")
+        entry_risk_lines.append(f"Risk: **{'Approved' if f['risk_approved'] else 'Rejected'}**")
 
-    if risk_lines:
-        embed_fields.append({"name": "Risk", "value": "\n".join(risk_lines), "inline": True})
+    if entry_risk_lines:
+        embed_fields.append({"name": "Entry / Risk", "value": "\n".join(entry_risk_lines), "inline": True})
+
+    # ─── SECTION 2: TIMELINE ──────────────────────────────────────
+    timeline = f.get("_timeline", [])
+    if timeline:
+        timeline_text = "\n".join(f"`{e['time']}` {e['text']}" for e in timeline[-12:])
+        embed_fields.append({"name": "Timeline", "value": timeline_text, "inline": False})
 
     # Footer
     footer_parts = []

@@ -1,17 +1,17 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "GBPUSD",
-  "cycle_id": 739,
-  "bar_time": 1785910500,
-  "updated_at": "2026-08-05T03:15:01.768Z",
-  "updated_at_unix": 1785899701.769,
+  "cycle_id": 13872,
+  "bar_time": 1785938700,
+  "updated_at": "2026-08-05T11:05:03.323Z",
+  "updated_at_unix": 1785927903.324,
   "action": "NO_TRADE",
-  "score": 0.355,
-  "reason": "V10 [opportunity]: No opportunity (INVALID)",
+  "score": 0.46,
+  "reason": "V10 [risk]: Risk: R:R 1.31 below minimum 1.5",
   "identity": {
-    "entity_id": "GBPUSD_1785910500",
-    "observation_id": "c89eaf0988b0e102",
-    "cycle_id": 739,
+    "entity_id": "GBPUSD_1785938700",
+    "observation_id": "3e3866a1eae6efde",
+    "cycle_id": 13872,
     "correlation_id": "",
     "trade_id": ""
   },
@@ -21,41 +21,41 @@
     "volatility_state": "NEUTRAL",
     "h4_trend": "NEUTRAL",
     "h4_trend_strength": 0.0,
-    "h4_phase": "CONSOLIDATION",
+    "h4_phase": "PULLBACK",
     "h1_bos_direction": "",
-    "h1_structural_clarity": 0.1734,
-    "h1_dominant_trend": "NEUTRAL",
+    "h1_structural_clarity": 0.7008,
+    "h1_dominant_trend": "BULLISH",
     "m15_pullback_active": true,
     "m15_displacement": false,
-    "m15_range_position": 0.1486,
+    "m15_range_position": 1.0,
     "m5_momentum": "NEUTRAL",
     "m5_momentum_strength": 0.0,
     "m5_rejection": false,
     "m5_confirmation": false,
-    "m5_local_bos": true,
+    "m5_local_bos": false,
     "location_type": "OPEN_SPACE",
     "inside_zone": false,
     "zone_quality": 0.0,
-    "range_position": 0.1486,
-    "premium_discount": "DISCOUNT",
-    "htf_macro_bias": "NEUTRAL",
-    "htf_structure_alignment": 0.0
+    "range_position": 1.0,
+    "premium_discount": "PREMIUM",
+    "htf_macro_bias": "BULLISH",
+    "htf_structure_alignment": 0.5
   },
   "opportunity": {
-    "state": "INVALID",
-    "directional_bias": "NEUTRAL",
+    "state": "WATCHING",
+    "directional_bias": "BULLISH",
     "opportunity_type": "ZONE_REACTION",
-    "overall_quality": 0.355,
+    "overall_quality": 0.46,
     "location_score": 0.5,
-    "structure_score": 0.0,
+    "structure_score": 0.35,
     "behaviour_score": 0.7999999999999999,
     "formation_score": 0.3,
-    "observation_id": "c89eaf0988b0e102"
+    "observation_id": "3e3866a1eae6efde"
   },
   "strategy": {
-    "family": "NONE",
-    "confidence": 0.0,
-    "direction": "NEUTRAL"
+    "family": "MEAN_REVERSION",
+    "confidence": 0.7999999999999999,
+    "direction": "BULLISH"
   },
   "horizon": {
     "type": "SCALP",
@@ -64,29 +64,29 @@
     "duration_minutes": 30
   },
   "entry": {
-    "status": "INVALID",
+    "status": "WAITING",
     "method": "CONFIRMATION_ENTRY",
-    "direction": "NONE",
-    "price": 0.0,
-    "stop": 0.0,
-    "target": 0.0,
-    "risk_distance": 0.0,
-    "reward_distance": 0.0,
-    "expected_rr": 0.0
+    "direction": "BUY",
+    "price": 1.346215,
+    "stop": 1.3456625,
+    "target": 1.34694,
+    "risk_distance": 0.0005524999999999558,
+    "reward_distance": 0.0007250000000000867,
+    "expected_rr": 1.31
   },
   "risk": {
     "approved": false,
-    "rejection_reason": "Entry is INVALID \u2014 cannot assess risk",
+    "rejection_reason": "R:R 1.31 below minimum 1.5",
     "risk_percentage": 0.0,
     "position_size": 0.0,
     "max_loss": 0.0
   },
   "execution": {
     "approved": false,
-    "rejection_reason": "Risk rejected: Entry is INVALID \u2014 cannot assess risk",
+    "rejection_reason": "Risk rejected: R:R 1.31 below minimum 1.5",
     "order_type": "",
     "volume": 0.0
   },
-  "rejection_stage": "opportunity",
+  "rejection_stage": "risk",
   "approved": false
 }

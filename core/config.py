@@ -244,6 +244,9 @@ NO_TRADE_ALERT_REPEAT_INTERVAL = 25     # Repeat alert every N cycles while stil
 # --- Discord V2 rendering layer (Phase 1 — foundation) ---
 ENABLE_DISCORD_V2 = True                    # Discord V2 active — legacy webhooks disabled
 
+# --- Legacy Discord webhook control ---
+LEGACY_DISCORD_ENABLED = False              # When False, all send_discord() calls become no-ops (V2 replaces them)
+
 # --- Discord V2 Bot Token (Phase 4 — API delivery) ---
 # Load from environment variable for security. Never hardcode.
 DISCORD_BOT_TOKEN = _os.getenv("DISCORD_BOT_TOKEN", "")
