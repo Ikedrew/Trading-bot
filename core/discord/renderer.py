@@ -276,7 +276,17 @@ class DiscordRenderer:
         }
         rendered_card = build_market_card("MARKET_CONTEXT", card_data)
 
-        # ─── CHANGE DETECTION + TIMELINE ─────────────────────────────
+        # ─── OBSERVATION IDENTITY TRACKING ────────────────────────────
+        from datetime import datetime, timezone
+        now_str = datetime.now(timezone.utc).strftime("%H:%M")
+
+        identity = snapshot.get("identity", {})
+        current_obs_id = identity.get("observation_id", "")
+        trade_id = identity.get("trade_id", "")
+
+        # Update observation_id for traceability (but don't reset timeline for it)
+        self._state.set_observation_id(symbol, current_obs_id)
+
         _TRACKED_FIELDS = {
             "regime": "Regime",
             "h4_trend": "H4 Trend",
@@ -292,28 +302,9 @@ class DiscordRenderer:
 
         previous_state = self._state.get_market_state(symbol)
         new_fields = rendered_card.get("fields", {})
-
-        # ─── OBSERVATION IDENTITY TRACKING ────────────────────────────
-        from datetime import datetime, timezone
-        now_str = datetime.now(timezone.utc).strftime("%H:%M")
-
-        identity = snapshot.get("identity", {})
-        current_obs_id = identity.get("observation_id", "")
-        previous_obs_id = self._state.get_observation_id(symbol)
-        trade_id = identity.get("trade_id", "")
-
         timeline_entries = []
-        is_new_observation = current_obs_id and current_obs_id != previous_obs_id
 
-        if is_new_observation:
-            # New observation — reset timeline
-            self._state.reset_timeline(symbol)
-            self._state.set_observation_id(symbol, current_obs_id)
-            timeline_entries.append({"time": now_str, "text": "New observation"})
-            # Clear previous state so all current fields register as "new"
-            previous_state = {}
-
-        # Detect which fields changed
+        # Detect which fields changed (these are MEANINGFUL — gate already filtered noise)
         has_meaningful_change = False
         for field_key, label in _TRACKED_FIELDS.items():
             new_val = new_fields.get(field_key)
@@ -322,11 +313,17 @@ class DiscordRenderer:
                 has_meaningful_change = True
                 if old_val:
                     timeline_entries.append({"time": now_str, "text": f"{label} \u2192 **{new_val}**"})
-                elif is_new_observation:
-                    # On new observation, show initial values compactly
-                    timeline_entries.append({"time": now_str, "text": f"{label}: **{new_val}**"})
                 else:
                     timeline_entries.append({"time": now_str, "text": f"{label}: **{new_val}**"})
+
+        # Reset timeline on major lifecycle transitions (not observation_id change)
+        opp_state = new_fields.get("opportunity_state", "")
+        prev_opp = previous_state.get("opportunity_state", "")
+        if opp_state in ("WATCHING", "VALID") and prev_opp in ("INVALID", "", None):
+            # Opportunity went from nothing/invalid to active — new meaningful observation
+            self._state.reset_timeline(symbol)
+            timeline_entries.insert(0, {"time": now_str, "text": "New opportunity detected"})
+            has_meaningful_change = True
 
         # Trade ID tracking
         prev_trade = self._state._live_cards.get(symbol, {}).get("trade_id", "")
@@ -336,11 +333,13 @@ class DiscordRenderer:
             if symbol in self._state._live_cards:
                 self._state._live_cards[symbol]["trade_id"] = trade_id
 
-        # Force update on new observation even if fields haven't changed yet
-        if is_new_observation:
+        # First render for this symbol
+        if not previous_state:
             has_meaningful_change = True
+            if not timeline_entries:
+                timeline_entries.append({"time": now_str, "text": "Monitoring started"})
 
-        if not has_meaningful_change and previous_state:
+        if not has_meaningful_change:
             return {
                 "category": Category.LIVE_MARKET.value,
                 "event_type": event_type,
@@ -359,7 +358,7 @@ class DiscordRenderer:
 
         # Update tracked state for next comparison
         self._state.merge_market_state(symbol, new_fields)
-        self._state.save()  # Persist so next renderer instance sees latest
+        self._state.save()
 
         # ─── DELIVER (edit existing or create new) ────────────────────
         existing = self._state.get_live_card(symbol)

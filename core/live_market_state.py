@@ -308,3 +308,46 @@ def _write_state(symbol: str, state: dict[str, Any]) -> None:
         json.dumps(state, indent=2, default=str),
         encoding="utf-8",
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DISCORD NOTIFICATION GATE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_MEANINGFUL_FIELDS: list[tuple[str, str]] = [
+    ("market", "regime"),
+    ("market", "h4_trend"),
+    ("market", "h1_bos_direction"),
+    ("market", "location_type"),
+    ("market", "m5_momentum"),
+    ("market", "volatility_state"),
+    ("opportunity", "state"),
+    ("strategy", "family"),
+    ("entry", "status"),
+    ("risk", "approved"),
+    ("execution", "approved"),
+]
+
+
+def should_notify_discord(previous: dict[str, Any] | None, current: dict[str, Any] | None) -> bool:
+    """
+    Determine whether a live_market_state change warrants a Discord update.
+
+    Returns True ONLY when human-visible decision state changed.
+    Returns False for: same state repeating, observation_id-only changes,
+    small score fluctuations, normal scan cycles.
+
+    This is the SOLE gate between persistence and Discord presentation.
+    """
+    if not current:
+        return False
+    if not previous:
+        return True  # First snapshot — always notify
+
+    for section, field in _MEANINGFUL_FIELDS:
+        old_val = (previous.get(section) or {}).get(field)
+        new_val = (current.get(section) or {}).get(field)
+        if old_val != new_val and new_val is not None:
+            return True
+
+    return False

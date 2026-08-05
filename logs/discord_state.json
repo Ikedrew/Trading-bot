@@ -9,181 +9,171 @@
         "regime": "TRENDING",
         "h4_trend": "BULLISH",
         "h1_bos_direction": "BULLISH",
-        "range_position": 0.8191,
+        "range_position": 0.4643,
         "strategy": "NONE",
-        "updated_at": "12:00 UTC",
-        "last_merged": "2026-08-05T12:00:17.282162+00:00",
+        "updated_at": "13:20 UTC",
+        "last_merged": "2026-08-05T13:20:17.841979+00:00",
         "volatility_state": "NEUTRAL",
-        "h4_trend_strength": 0.555,
-        "h1_structural_clarity": 0.4582,
+        "h4_trend_strength": 0.552,
+        "h1_structural_clarity": 0.41,
         "location_type": "OPEN_SPACE",
-        "m5_momentum": "NEUTRAL",
+        "m5_momentum": "BEARISH",
         "opportunity_state": "INVALID",
-        "opportunity_type": "ZONE_REACTION",
-        "opportunity_quality": 0.35,
+        "opportunity_type": "NONE",
+        "opportunity_quality": 0.15,
         "entry_status": "INVALID",
         "_timeline": [
           {
-            "time": "11:12",
-            "text": "Location: **OPEN_SPACE**"
-          },
-          {
-            "time": "11:12",
-            "text": "M5: **NEUTRAL**"
-          },
-          {
-            "time": "11:12",
-            "text": "Volatility \u2192 **NEUTRAL**"
-          },
-          {
-            "time": "11:12",
-            "text": "Strategy \u2192 **NONE**"
-          },
-          {
-            "time": "11:12",
-            "text": "Entry: **INVALID**"
-          },
-          {
-            "time": "11:12",
-            "text": "Opportunity: **INVALID**"
-          },
-          {
-            "time": "11:21",
-            "text": "M5 \u2192 **BULLISH**"
-          },
-          {
-            "time": "11:25",
-            "text": "M5 \u2192 **NEUTRAL**"
-          },
-          {
-            "time": "11:35",
-            "text": "M5 \u2192 **BULLISH**"
-          },
-          {
-            "time": "12:00",
-            "text": "M5 \u2192 **NEUTRAL**"
-          }
-        ]
-      },
-      "timeline": [
-        {
-          "time": "11:12",
-          "text": "Location: **OPEN_SPACE**"
-        },
-        {
-          "time": "11:12",
-          "text": "M5: **NEUTRAL**"
-        },
-        {
-          "time": "11:12",
-          "text": "Volatility \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "11:12",
-          "text": "Strategy \u2192 **NONE**"
-        },
-        {
-          "time": "11:12",
-          "text": "Entry: **INVALID**"
-        },
-        {
-          "time": "11:12",
-          "text": "Opportunity: **INVALID**"
-        },
-        {
-          "time": "11:21",
-          "text": "M5 \u2192 **BULLISH**"
-        },
-        {
-          "time": "11:25",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "11:35",
-          "text": "M5 \u2192 **BULLISH**"
-        },
-        {
-          "time": "12:00",
-          "text": "M5 \u2192 **NEUTRAL**"
-        }
-      ]
-    },
-    "USDJPY": {
-      "market_state": {
-        "regime": "VOLATILE",
-        "h4_trend": "NEUTRAL",
-        "updated_at": "12:05 UTC",
-        "last_merged": "2026-08-05T12:05:23.287452+00:00",
-        "h4_trend_strength": 0.2,
-        "h1_structural_clarity": 0.4209,
-        "location_type": "OPEN_SPACE",
-        "range_position": 0.9,
-        "m5_momentum": "NEUTRAL",
-        "volatility_state": "EXPANSION",
-        "opportunity_state": "WATCHING",
-        "opportunity_type": "ZONE_REACTION",
-        "opportunity_quality": 0.5225,
-        "strategy": "NONE",
-        "entry_status": "INVALID",
-        "_timeline": [
-          {
-            "time": "11:19",
+            "time": "13:20",
             "text": "New observation"
           },
           {
-            "time": "11:19",
-            "text": "Regime: **VOLATILE**"
+            "time": "13:20",
+            "text": "Regime: **TRENDING**"
           },
           {
-            "time": "11:19",
-            "text": "H4 Trend: **NEUTRAL**"
+            "time": "13:20",
+            "text": "H4 Trend: **BULLISH**"
           },
           {
-            "time": "11:19",
+            "time": "13:20",
             "text": "Location: **OPEN_SPACE**"
           },
           {
-            "time": "11:19",
+            "time": "13:20",
             "text": "M5: **BEARISH**"
           },
           {
-            "time": "11:19",
-            "text": "Volatility: **EXPANSION**"
+            "time": "13:20",
+            "text": "Volatility: **NEUTRAL**"
           },
           {
-            "time": "11:19",
+            "time": "13:20",
             "text": "Strategy: **NONE**"
           },
           {
-            "time": "11:19",
+            "time": "13:20",
             "text": "Entry: **INVALID**"
           },
           {
-            "time": "11:19",
+            "time": "13:20",
             "text": "Opportunity: **INVALID**"
+          }
+        ],
+        "_identity": {
+          "entity_id": "AUDUSD_1785946800",
+          "observation_id": "2388e3ecd96a00b9",
+          "cycle_id": 2654,
+          "correlation_id": "",
+          "trade_id": ""
+        }
+      },
+      "timeline": [
+        {
+          "time": "13:20",
+          "text": "New observation"
+        },
+        {
+          "time": "13:20",
+          "text": "Regime: **TRENDING**"
+        },
+        {
+          "time": "13:20",
+          "text": "H4 Trend: **BULLISH**"
+        },
+        {
+          "time": "13:20",
+          "text": "Location: **OPEN_SPACE**"
+        },
+        {
+          "time": "13:20",
+          "text": "M5: **BEARISH**"
+        },
+        {
+          "time": "13:20",
+          "text": "Volatility: **NEUTRAL**"
+        },
+        {
+          "time": "13:20",
+          "text": "Strategy: **NONE**"
+        },
+        {
+          "time": "13:20",
+          "text": "Entry: **INVALID**"
+        },
+        {
+          "time": "13:20",
+          "text": "Opportunity: **INVALID**"
+        }
+      ],
+      "observation_id": "2388e3ecd96a00b9"
+    },
+    "USDJPY": {
+      "market_state": {
+        "regime": "TRENDING",
+        "h4_trend": "BEARISH",
+        "updated_at": "13:20 UTC",
+        "last_merged": "2026-08-05T13:20:01.795422+00:00",
+        "h4_trend_strength": 0.472,
+        "h1_structural_clarity": 0.4141,
+        "location_type": "OPEN_SPACE",
+        "range_position": 0.675,
+        "m5_momentum": "BEARISH",
+        "volatility_state": "NEUTRAL",
+        "opportunity_state": "INVALID",
+        "opportunity_type": "NONE",
+        "opportunity_quality": 0.365,
+        "strategy": "NONE",
+        "entry_status": "INVALID",
+        "_timeline": [
+          {
+            "time": "13:20",
+            "text": "New observation"
           },
           {
-            "time": "11:22",
-            "text": "Regime \u2192 **TRENDING**"
+            "time": "13:20",
+            "text": "Regime: **TRENDING**"
           },
           {
-            "time": "11:30",
-            "text": "Regime \u2192 **VOLATILE**"
+            "time": "13:20",
+            "text": "H4 Trend: **BEARISH**"
           },
           {
-            "time": "11:30",
-            "text": "M5 \u2192 **NEUTRAL**"
-          },
-          {
-            "time": "12:05",
+            "time": "13:20",
             "text": "H1 BOS: **BEARISH**"
           },
           {
-            "time": "12:05",
-            "text": "Opportunity \u2192 **WATCHING**"
+            "time": "13:20",
+            "text": "Location: **OPEN_SPACE**"
+          },
+          {
+            "time": "13:20",
+            "text": "M5: **BEARISH**"
+          },
+          {
+            "time": "13:20",
+            "text": "Volatility: **NEUTRAL**"
+          },
+          {
+            "time": "13:20",
+            "text": "Strategy: **NONE**"
+          },
+          {
+            "time": "13:20",
+            "text": "Entry: **INVALID**"
+          },
+          {
+            "time": "13:20",
+            "text": "Opportunity: **INVALID**"
           }
         ],
-        "_identity": {},
+        "_identity": {
+          "entity_id": "USDJPY_1785946800",
+          "observation_id": "2318f3e7ddfad535",
+          "cycle_id": 2654,
+          "correlation_id": "",
+          "trade_id": ""
+        },
         "h1_bos_direction": "BEARISH"
       },
       "channel_id": "1534254092619219034",
@@ -191,755 +181,627 @@
       "last_updated": "2026-08-04T19:04:02.940784+00:00",
       "timeline": [
         {
-          "time": "11:19",
+          "time": "13:20",
           "text": "New observation"
         },
         {
-          "time": "11:19",
-          "text": "Regime: **VOLATILE**"
+          "time": "13:20",
+          "text": "Regime: **TRENDING**"
         },
         {
-          "time": "11:19",
-          "text": "H4 Trend: **NEUTRAL**"
+          "time": "13:20",
+          "text": "H4 Trend: **BEARISH**"
         },
         {
-          "time": "11:19",
-          "text": "Location: **OPEN_SPACE**"
-        },
-        {
-          "time": "11:19",
-          "text": "M5: **BEARISH**"
-        },
-        {
-          "time": "11:19",
-          "text": "Volatility: **EXPANSION**"
-        },
-        {
-          "time": "11:19",
-          "text": "Strategy: **NONE**"
-        },
-        {
-          "time": "11:19",
-          "text": "Entry: **INVALID**"
-        },
-        {
-          "time": "11:19",
-          "text": "Opportunity: **INVALID**"
-        },
-        {
-          "time": "11:22",
-          "text": "Regime \u2192 **TRENDING**"
-        },
-        {
-          "time": "11:30",
-          "text": "Regime \u2192 **VOLATILE**"
-        },
-        {
-          "time": "11:30",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "12:05",
+          "time": "13:20",
           "text": "H1 BOS: **BEARISH**"
         },
         {
-          "time": "12:05",
-          "text": "Opportunity \u2192 **WATCHING**"
+          "time": "13:20",
+          "text": "Location: **OPEN_SPACE**"
+        },
+        {
+          "time": "13:20",
+          "text": "M5: **BEARISH**"
+        },
+        {
+          "time": "13:20",
+          "text": "Volatility: **NEUTRAL**"
+        },
+        {
+          "time": "13:20",
+          "text": "Strategy: **NONE**"
+        },
+        {
+          "time": "13:20",
+          "text": "Entry: **INVALID**"
+        },
+        {
+          "time": "13:20",
+          "text": "Opportunity: **INVALID**"
         }
       ],
-      "observation_id": "d110b8d13a82b30d"
+      "observation_id": "2318f3e7ddfad535"
     },
     "EURUSD": {
       "market_state": {
         "h4_trend": "BULLISH",
         "m5_momentum": "NEUTRAL",
-        "updated_at": "12:05 UTC",
-        "last_merged": "2026-08-05T12:05:17.673825+00:00",
+        "updated_at": "13:20 UTC",
+        "last_merged": "2026-08-05T13:20:33.097049+00:00",
         "regime": "TRENDING",
-        "h1_structural_clarity": 0.6552,
+        "h1_structural_clarity": 0.5178,
         "location_type": "OPEN_SPACE",
-        "range_position": 1.0,
+        "range_position": 0.9658,
         "volatility_state": "NEUTRAL",
-        "opportunity_state": "WATCHING",
+        "opportunity_state": "INVALID",
         "opportunity_type": "ZONE_REACTION",
-        "opportunity_quality": 0.5075,
-        "strategy": "TREND_CONTINUATION",
-        "entry_status": "WAITING",
-        "h4_trend_strength": 0.6,
+        "opportunity_quality": 0.385,
+        "strategy": "NONE",
+        "entry_status": "INVALID",
+        "h4_trend_strength": 0.62,
         "_timeline": [
           {
-            "time": "11:12",
-            "text": "M5 \u2192 **BULLISH**"
+            "time": "13:20",
+            "text": "New observation"
           },
           {
-            "time": "11:50",
-            "text": "M5 \u2192 **NEUTRAL**"
+            "time": "13:20",
+            "text": "Regime: **TRENDING**"
           },
           {
-            "time": "12:05",
-            "text": "H1 BOS: **BULLISH**"
+            "time": "13:20",
+            "text": "H4 Trend: **BULLISH**"
           },
           {
-            "time": "12:05",
-            "text": "Strategy \u2192 **TREND_CONTINUATION**"
+            "time": "13:20",
+            "text": "Location: **OPEN_SPACE**"
           },
           {
-            "time": "12:05",
-            "text": "Entry \u2192 **WAITING**"
+            "time": "13:20",
+            "text": "M5: **NEUTRAL**"
           },
           {
-            "time": "12:05",
-            "text": "Opportunity \u2192 **WATCHING**"
+            "time": "13:20",
+            "text": "Volatility: **NEUTRAL**"
+          },
+          {
+            "time": "13:20",
+            "text": "Strategy: **NONE**"
+          },
+          {
+            "time": "13:20",
+            "text": "Entry: **INVALID**"
+          },
+          {
+            "time": "13:20",
+            "text": "Opportunity: **INVALID**"
           }
         ],
         "h1_bos_direction": "BULLISH",
-        "strategy_confidence": 0.7999999999999999
+        "strategy_confidence": 0.7999999999999999,
+        "_identity": {
+          "entity_id": "EURUSD_1785946800",
+          "observation_id": "7ba89e9aa93350a2",
+          "cycle_id": 2655,
+          "correlation_id": "",
+          "trade_id": ""
+        }
       },
       "channel_id": "1534253692193083506",
       "message_id": "1534330115457159209",
       "last_updated": "2026-08-04T22:40:06.470295+00:00",
       "timeline": [
         {
-          "time": "11:12",
-          "text": "M5 \u2192 **BULLISH**"
+          "time": "13:20",
+          "text": "New observation"
         },
         {
-          "time": "11:50",
-          "text": "M5 \u2192 **NEUTRAL**"
+          "time": "13:20",
+          "text": "Regime: **TRENDING**"
         },
         {
-          "time": "12:05",
-          "text": "H1 BOS: **BULLISH**"
+          "time": "13:20",
+          "text": "H4 Trend: **BULLISH**"
         },
         {
-          "time": "12:05",
-          "text": "Strategy \u2192 **TREND_CONTINUATION**"
+          "time": "13:20",
+          "text": "Location: **OPEN_SPACE**"
         },
         {
-          "time": "12:05",
-          "text": "Entry \u2192 **WAITING**"
+          "time": "13:20",
+          "text": "M5: **NEUTRAL**"
         },
         {
-          "time": "12:05",
-          "text": "Opportunity \u2192 **WATCHING**"
+          "time": "13:20",
+          "text": "Volatility: **NEUTRAL**"
+        },
+        {
+          "time": "13:20",
+          "text": "Strategy: **NONE**"
+        },
+        {
+          "time": "13:20",
+          "text": "Entry: **INVALID**"
+        },
+        {
+          "time": "13:20",
+          "text": "Opportunity: **INVALID**"
         }
-      ]
+      ],
+      "observation_id": "7ba89e9aa93350a2"
     },
     "GBPUSD": {
       "timeline": [
         {
-          "time": "11:12",
+          "time": "13:25",
+          "text": "New observation"
+        },
+        {
+          "time": "13:25",
+          "text": "Regime: **RANGING**"
+        },
+        {
+          "time": "13:25",
           "text": "H4 Trend: **NEUTRAL**"
         },
         {
-          "time": "11:12",
+          "time": "13:25",
           "text": "Location: **OPEN_SPACE**"
         },
         {
-          "time": "11:12",
-          "text": "M5: **BULLISH**"
+          "time": "13:25",
+          "text": "M5: **BEARISH**"
         },
         {
-          "time": "11:12",
+          "time": "13:25",
           "text": "Volatility: **NEUTRAL**"
         },
         {
-          "time": "11:12",
-          "text": "Strategy: **MEAN_REVERSION**"
+          "time": "13:25",
+          "text": "Strategy: **NONE**"
         },
         {
-          "time": "11:12",
-          "text": "Entry: **READY**"
+          "time": "13:25",
+          "text": "Entry: **INVALID**"
         },
         {
-          "time": "11:12",
-          "text": "Opportunity: **WATCHING**"
-        },
-        {
-          "time": "11:20",
-          "text": "Strategy \u2192 **NONE**"
-        },
-        {
-          "time": "11:20",
-          "text": "Entry \u2192 **INVALID**"
-        },
-        {
-          "time": "11:20",
-          "text": "Opportunity \u2192 **INVALID**"
-        },
-        {
-          "time": "11:30",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "11:45",
-          "text": "Strategy \u2192 **MEAN_REVERSION**"
-        },
-        {
-          "time": "11:45",
-          "text": "Entry \u2192 **WAITING**"
-        },
-        {
-          "time": "11:45",
-          "text": "Opportunity \u2192 **WATCHING**"
-        },
-        {
-          "time": "12:00",
-          "text": "H1 BOS: **BULLISH**"
+          "time": "13:25",
+          "text": "Opportunity: **INVALID**"
         }
       ],
       "market_state": {
         "regime": "RANGING",
         "h4_trend": "NEUTRAL",
-        "h1_structural_clarity": 0.8576,
+        "h1_structural_clarity": 0.6752,
         "location_type": "OPEN_SPACE",
-        "range_position": 1.0,
-        "m5_momentum": "NEUTRAL",
+        "range_position": 0.9213,
+        "m5_momentum": "BEARISH",
         "volatility_state": "NEUTRAL",
-        "opportunity_state": "WATCHING",
+        "opportunity_state": "INVALID",
         "opportunity_type": "ZONE_REACTION",
-        "opportunity_quality": 0.5825,
-        "strategy": "MEAN_REVERSION",
+        "opportunity_quality": 0.4,
+        "strategy": "NONE",
         "strategy_confidence": 0.7999999999999999,
-        "entry_status": "WAITING",
-        "updated_at": "12:00 UTC",
+        "entry_status": "INVALID",
+        "updated_at": "13:25 UTC",
         "_timeline": [
           {
-            "time": "11:12",
+            "time": "13:25",
+            "text": "New observation"
+          },
+          {
+            "time": "13:25",
+            "text": "Regime: **RANGING**"
+          },
+          {
+            "time": "13:25",
             "text": "H4 Trend: **NEUTRAL**"
           },
           {
-            "time": "11:12",
+            "time": "13:25",
             "text": "Location: **OPEN_SPACE**"
           },
           {
-            "time": "11:12",
-            "text": "M5: **BULLISH**"
+            "time": "13:25",
+            "text": "M5: **BEARISH**"
           },
           {
-            "time": "11:12",
+            "time": "13:25",
             "text": "Volatility: **NEUTRAL**"
           },
           {
-            "time": "11:12",
-            "text": "Strategy: **MEAN_REVERSION**"
+            "time": "13:25",
+            "text": "Strategy: **NONE**"
           },
           {
-            "time": "11:12",
-            "text": "Entry: **READY**"
+            "time": "13:25",
+            "text": "Entry: **INVALID**"
           },
           {
-            "time": "11:12",
-            "text": "Opportunity: **WATCHING**"
-          },
-          {
-            "time": "11:20",
-            "text": "Strategy \u2192 **NONE**"
-          },
-          {
-            "time": "11:20",
-            "text": "Entry \u2192 **INVALID**"
-          },
-          {
-            "time": "11:20",
-            "text": "Opportunity \u2192 **INVALID**"
-          },
-          {
-            "time": "11:30",
-            "text": "M5 \u2192 **NEUTRAL**"
-          },
-          {
-            "time": "11:45",
-            "text": "Strategy \u2192 **MEAN_REVERSION**"
-          },
-          {
-            "time": "11:45",
-            "text": "Entry \u2192 **WAITING**"
-          },
-          {
-            "time": "11:45",
-            "text": "Opportunity \u2192 **WATCHING**"
-          },
-          {
-            "time": "12:00",
-            "text": "H1 BOS: **BULLISH**"
+            "time": "13:25",
+            "text": "Opportunity: **INVALID**"
           }
         ],
-        "last_merged": "2026-08-05T12:00:02.009977+00:00",
-        "h1_bos_direction": "BULLISH"
+        "last_merged": "2026-08-05T13:25:12.192349+00:00",
+        "h1_bos_direction": "BULLISH",
+        "_identity": {
+          "entity_id": "GBPUSD_1785947100",
+          "observation_id": "f64e8a14961945e4",
+          "cycle_id": 2827,
+          "correlation_id": "",
+          "trade_id": ""
+        }
       },
       "channel_id": "1534253775219589202",
       "message_id": "1534519387896283177",
-      "last_updated": "2026-08-05T11:12:12.222250+00:00"
+      "last_updated": "2026-08-05T11:12:12.222250+00:00",
+      "observation_id": "f64e8a14961945e4"
     },
     "USDCHF": {
       "timeline": [
         {
-          "time": "11:12",
-          "text": "Observation created"
+          "time": "13:20",
+          "text": "New observation"
         },
         {
-          "time": "11:12",
+          "time": "13:20",
           "text": "Regime: **RANGING**"
         },
         {
-          "time": "11:12",
+          "time": "13:20",
           "text": "H4 Trend: **NEUTRAL**"
         },
         {
-          "time": "11:12",
+          "time": "13:20",
           "text": "Location: **OPEN_SPACE**"
         },
         {
-          "time": "11:12",
-          "text": "M5: **BEARISH**"
+          "time": "13:20",
+          "text": "M5: **NEUTRAL**"
         },
         {
-          "time": "11:12",
+          "time": "13:20",
           "text": "Volatility: **NEUTRAL**"
         },
         {
-          "time": "11:12",
+          "time": "13:20",
           "text": "Strategy: **NONE**"
         },
         {
-          "time": "11:12",
+          "time": "13:20",
           "text": "Entry: **INVALID**"
         },
         {
-          "time": "11:12",
+          "time": "13:20",
           "text": "Opportunity: **INVALID**"
-        },
-        {
-          "time": "11:30",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "11:35",
-          "text": "M5 \u2192 **BEARISH**"
-        },
-        {
-          "time": "11:55",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "12:00",
-          "text": "M5 \u2192 **BULLISH**"
-        },
-        {
-          "time": "12:05",
-          "text": "M5 \u2192 **NEUTRAL**"
         }
       ],
       "market_state": {
         "regime": "RANGING",
         "h4_trend": "NEUTRAL",
-        "h1_structural_clarity": 0.2796,
+        "h1_structural_clarity": 0.3203,
         "location_type": "OPEN_SPACE",
-        "range_position": 0.5794,
+        "range_position": 0.47,
         "m5_momentum": "NEUTRAL",
         "volatility_state": "NEUTRAL",
         "opportunity_state": "INVALID",
         "opportunity_type": "NONE",
-        "opportunity_quality": 0.12,
+        "opportunity_quality": 0.135,
         "strategy": "NONE",
         "entry_status": "INVALID",
-        "updated_at": "12:05 UTC",
+        "updated_at": "13:20 UTC",
         "_timeline": [
           {
-            "time": "11:12",
-            "text": "Observation created"
+            "time": "13:20",
+            "text": "New observation"
           },
           {
-            "time": "11:12",
+            "time": "13:20",
             "text": "Regime: **RANGING**"
           },
           {
-            "time": "11:12",
+            "time": "13:20",
             "text": "H4 Trend: **NEUTRAL**"
           },
           {
-            "time": "11:12",
+            "time": "13:20",
             "text": "Location: **OPEN_SPACE**"
           },
           {
-            "time": "11:12",
-            "text": "M5: **BEARISH**"
+            "time": "13:20",
+            "text": "M5: **NEUTRAL**"
           },
           {
-            "time": "11:12",
+            "time": "13:20",
             "text": "Volatility: **NEUTRAL**"
           },
           {
-            "time": "11:12",
+            "time": "13:20",
             "text": "Strategy: **NONE**"
           },
           {
-            "time": "11:12",
+            "time": "13:20",
             "text": "Entry: **INVALID**"
           },
           {
-            "time": "11:12",
+            "time": "13:20",
             "text": "Opportunity: **INVALID**"
-          },
-          {
-            "time": "11:30",
-            "text": "M5 \u2192 **NEUTRAL**"
-          },
-          {
-            "time": "11:35",
-            "text": "M5 \u2192 **BEARISH**"
-          },
-          {
-            "time": "11:55",
-            "text": "M5 \u2192 **NEUTRAL**"
-          },
-          {
-            "time": "12:00",
-            "text": "M5 \u2192 **BULLISH**"
-          },
-          {
-            "time": "12:05",
-            "text": "M5 \u2192 **NEUTRAL**"
           }
         ],
-        "last_merged": "2026-08-05T12:05:01.533581+00:00"
+        "last_merged": "2026-08-05T13:20:07.181392+00:00",
+        "_identity": {
+          "entity_id": "USDCHF_1785946800",
+          "observation_id": "25f8e3f3aefe5ba5",
+          "cycle_id": 2654,
+          "correlation_id": "",
+          "trade_id": ""
+        }
       },
       "channel_id": "1534253997140217937",
       "message_id": "1534519438932443177",
-      "last_updated": "2026-08-05T11:12:24.333184+00:00"
+      "last_updated": "2026-08-05T11:12:24.333184+00:00",
+      "observation_id": "25f8e3f3aefe5ba5"
     },
     "USDCAD": {
       "timeline": [
         {
-          "time": "11:12",
-          "text": "Observation created"
+          "time": "13:20",
+          "text": "New observation"
         },
         {
-          "time": "11:12",
+          "time": "13:20",
           "text": "Regime: **RANGING**"
         },
         {
-          "time": "11:12",
+          "time": "13:20",
           "text": "H4 Trend: **NEUTRAL**"
         },
         {
-          "time": "11:12",
-          "text": "Location: **OPEN_SPACE**"
-        },
-        {
-          "time": "11:12",
-          "text": "M5: **BEARISH**"
-        },
-        {
-          "time": "11:12",
-          "text": "Volatility: **NEUTRAL**"
-        },
-        {
-          "time": "11:12",
-          "text": "Strategy: **NONE**"
-        },
-        {
-          "time": "11:12",
-          "text": "Entry: **INVALID**"
-        },
-        {
-          "time": "11:12",
-          "text": "Opportunity: **INVALID**"
-        },
-        {
-          "time": "11:55",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "12:00",
+          "time": "13:20",
           "text": "H1 BOS: **BEARISH**"
         },
         {
-          "time": "12:00",
-          "text": "M5 \u2192 **BEARISH**"
+          "time": "13:20",
+          "text": "Location: **OPEN_SPACE**"
         },
         {
-          "time": "12:00",
-          "text": "Opportunity \u2192 **WATCHING**"
+          "time": "13:20",
+          "text": "M5: **BULLISH**"
+        },
+        {
+          "time": "13:20",
+          "text": "Volatility: **NEUTRAL**"
+        },
+        {
+          "time": "13:20",
+          "text": "Strategy: **NONE**"
+        },
+        {
+          "time": "13:20",
+          "text": "Entry: **INVALID**"
+        },
+        {
+          "time": "13:20",
+          "text": "Opportunity: **WATCHING**"
         }
       ],
       "market_state": {
         "regime": "RANGING",
         "h4_trend": "NEUTRAL",
         "h4_trend_strength": 0.2,
-        "h1_structural_clarity": 0.2995,
+        "h1_structural_clarity": 0.2951,
         "location_type": "OPEN_SPACE",
-        "range_position": 0.7672,
-        "m5_momentum": "BEARISH",
+        "range_position": 0.1478,
+        "m5_momentum": "BULLISH",
         "volatility_state": "NEUTRAL",
         "opportunity_state": "WATCHING",
         "opportunity_type": "ZONE_REACTION",
-        "opportunity_quality": 0.43,
+        "opportunity_quality": 0.4275,
         "strategy": "NONE",
         "entry_status": "INVALID",
-        "updated_at": "12:00 UTC",
+        "updated_at": "13:20 UTC",
         "_timeline": [
           {
-            "time": "11:12",
-            "text": "Observation created"
+            "time": "13:20",
+            "text": "New observation"
           },
           {
-            "time": "11:12",
+            "time": "13:20",
             "text": "Regime: **RANGING**"
           },
           {
-            "time": "11:12",
+            "time": "13:20",
             "text": "H4 Trend: **NEUTRAL**"
           },
           {
-            "time": "11:12",
-            "text": "Location: **OPEN_SPACE**"
-          },
-          {
-            "time": "11:12",
-            "text": "M5: **BEARISH**"
-          },
-          {
-            "time": "11:12",
-            "text": "Volatility: **NEUTRAL**"
-          },
-          {
-            "time": "11:12",
-            "text": "Strategy: **NONE**"
-          },
-          {
-            "time": "11:12",
-            "text": "Entry: **INVALID**"
-          },
-          {
-            "time": "11:12",
-            "text": "Opportunity: **INVALID**"
-          },
-          {
-            "time": "11:55",
-            "text": "M5 \u2192 **NEUTRAL**"
-          },
-          {
-            "time": "12:00",
+            "time": "13:20",
             "text": "H1 BOS: **BEARISH**"
           },
           {
-            "time": "12:00",
-            "text": "M5 \u2192 **BEARISH**"
+            "time": "13:20",
+            "text": "Location: **OPEN_SPACE**"
           },
           {
-            "time": "12:00",
-            "text": "Opportunity \u2192 **WATCHING**"
+            "time": "13:20",
+            "text": "M5: **BULLISH**"
+          },
+          {
+            "time": "13:20",
+            "text": "Volatility: **NEUTRAL**"
+          },
+          {
+            "time": "13:20",
+            "text": "Strategy: **NONE**"
+          },
+          {
+            "time": "13:20",
+            "text": "Entry: **INVALID**"
+          },
+          {
+            "time": "13:20",
+            "text": "Opportunity: **WATCHING**"
           }
         ],
-        "last_merged": "2026-08-05T12:00:12.384064+00:00",
-        "h1_bos_direction": "BEARISH"
+        "last_merged": "2026-08-05T13:20:11.800390+00:00",
+        "h1_bos_direction": "BEARISH",
+        "_identity": {
+          "entity_id": "USDCAD_1785946800",
+          "observation_id": "35d3d78d1b577ca7",
+          "cycle_id": 2654,
+          "correlation_id": "",
+          "trade_id": ""
+        }
       },
       "channel_id": "1534253951371968532",
       "message_id": "1534519456775012373",
-      "last_updated": "2026-08-05T11:12:28.621192+00:00"
+      "last_updated": "2026-08-05T11:12:28.621192+00:00",
+      "observation_id": "35d3d78d1b577ca7"
     },
     "NZDUSD": {
       "timeline": [
         {
-          "time": "11:12",
+          "time": "13:25",
+          "text": "New observation"
+        },
+        {
+          "time": "13:25",
+          "text": "Regime: **RANGING**"
+        },
+        {
+          "time": "13:25",
+          "text": "H4 Trend: **NEUTRAL**"
+        },
+        {
+          "time": "13:25",
+          "text": "Location: **OPEN_SPACE**"
+        },
+        {
+          "time": "13:25",
           "text": "M5: **BULLISH**"
         },
         {
-          "time": "11:12",
+          "time": "13:25",
           "text": "Volatility: **NEUTRAL**"
         },
         {
-          "time": "11:12",
-          "text": "Strategy: **MEAN_REVERSION**"
+          "time": "13:25",
+          "text": "Strategy: **NONE**"
         },
         {
-          "time": "11:12",
+          "time": "13:25",
           "text": "Entry: **INVALID**"
         },
         {
-          "time": "11:12",
-          "text": "Opportunity: **WATCHING**"
-        },
-        {
-          "time": "11:21",
-          "text": "Strategy \u2192 **NONE**"
-        },
-        {
-          "time": "11:21",
-          "text": "Opportunity \u2192 **INVALID**"
-        },
-        {
-          "time": "11:25",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "11:25",
-          "text": "Opportunity \u2192 **WATCHING**"
-        },
-        {
-          "time": "11:30",
-          "text": "Strategy \u2192 **MEAN_REVERSION**"
-        },
-        {
-          "time": "11:45",
-          "text": "M5 \u2192 **BULLISH**"
-        },
-        {
-          "time": "11:45",
-          "text": "Strategy \u2192 **NONE**"
-        },
-        {
-          "time": "11:45",
-          "text": "Opportunity \u2192 **INVALID**"
-        },
-        {
-          "time": "11:55",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "11:55",
-          "text": "Opportunity \u2192 **WATCHING**"
+          "time": "13:25",
+          "text": "Opportunity: **INVALID**"
         }
       ],
       "market_state": {
         "regime": "RANGING",
         "h4_trend": "NEUTRAL",
         "h1_bos_direction": "BEARISH",
-        "h1_structural_clarity": 0.5771,
+        "h1_structural_clarity": 0.5323,
         "location_type": "OPEN_SPACE",
-        "range_position": 0.3571,
-        "m5_momentum": "NEUTRAL",
+        "range_position": 0.75,
+        "m5_momentum": "BULLISH",
         "volatility_state": "NEUTRAL",
-        "opportunity_state": "WATCHING",
+        "opportunity_state": "INVALID",
         "opportunity_type": "ZONE_REACTION",
-        "opportunity_quality": 0.5225,
+        "opportunity_quality": 0.4,
         "strategy": "NONE",
-        "strategy_confidence": 0.7999999999999999,
+        "strategy_confidence": 0.7,
         "entry_status": "INVALID",
-        "updated_at": "11:55 UTC",
+        "updated_at": "13:25 UTC",
         "_timeline": [
           {
-            "time": "11:12",
+            "time": "13:25",
+            "text": "New observation"
+          },
+          {
+            "time": "13:25",
+            "text": "Regime: **RANGING**"
+          },
+          {
+            "time": "13:25",
+            "text": "H4 Trend: **NEUTRAL**"
+          },
+          {
+            "time": "13:25",
+            "text": "Location: **OPEN_SPACE**"
+          },
+          {
+            "time": "13:25",
             "text": "M5: **BULLISH**"
           },
           {
-            "time": "11:12",
+            "time": "13:25",
             "text": "Volatility: **NEUTRAL**"
           },
           {
-            "time": "11:12",
-            "text": "Strategy: **MEAN_REVERSION**"
+            "time": "13:25",
+            "text": "Strategy: **NONE**"
           },
           {
-            "time": "11:12",
+            "time": "13:25",
             "text": "Entry: **INVALID**"
           },
           {
-            "time": "11:12",
-            "text": "Opportunity: **WATCHING**"
-          },
-          {
-            "time": "11:21",
-            "text": "Strategy \u2192 **NONE**"
-          },
-          {
-            "time": "11:21",
-            "text": "Opportunity \u2192 **INVALID**"
-          },
-          {
-            "time": "11:25",
-            "text": "M5 \u2192 **NEUTRAL**"
-          },
-          {
-            "time": "11:25",
-            "text": "Opportunity \u2192 **WATCHING**"
-          },
-          {
-            "time": "11:30",
-            "text": "Strategy \u2192 **MEAN_REVERSION**"
-          },
-          {
-            "time": "11:45",
-            "text": "M5 \u2192 **BULLISH**"
-          },
-          {
-            "time": "11:45",
-            "text": "Strategy \u2192 **NONE**"
-          },
-          {
-            "time": "11:45",
-            "text": "Opportunity \u2192 **INVALID**"
-          },
-          {
-            "time": "11:55",
-            "text": "M5 \u2192 **NEUTRAL**"
-          },
-          {
-            "time": "11:55",
-            "text": "Opportunity \u2192 **WATCHING**"
+            "time": "13:25",
+            "text": "Opportunity: **INVALID**"
           }
         ],
-        "last_merged": "2026-08-05T11:55:11.409838+00:00"
+        "last_merged": "2026-08-05T13:25:02.180646+00:00",
+        "_identity": {
+          "entity_id": "NZDUSD_1785947100",
+          "observation_id": "d3bd742c108b20ea",
+          "cycle_id": 2826,
+          "correlation_id": "",
+          "trade_id": ""
+        }
       },
       "channel_id": "1534253857927073912",
       "message_id": "1534519492162355372",
-      "last_updated": "2026-08-05T11:12:37.021993+00:00"
+      "last_updated": "2026-08-05T11:12:37.021993+00:00",
+      "observation_id": "d3bd742c108b20ea"
     },
     "US500": {
       "timeline": [
         {
-          "time": "11:12",
-          "text": "Observation created"
+          "time": "13:10",
+          "text": "New observation"
         },
         {
-          "time": "11:12",
+          "time": "13:10",
           "text": "Regime: **TRENDING**"
         },
         {
-          "time": "11:12",
+          "time": "13:10",
           "text": "H4 Trend: **BULLISH**"
         },
         {
-          "time": "11:12",
+          "time": "13:10",
           "text": "Location: **OPEN_SPACE**"
         },
         {
-          "time": "11:12",
+          "time": "13:10",
           "text": "M5: **NEUTRAL**"
         },
         {
-          "time": "11:12",
+          "time": "13:10",
           "text": "Volatility: **NEUTRAL**"
         },
         {
-          "time": "11:12",
+          "time": "13:10",
           "text": "Strategy: **NONE**"
         },
         {
-          "time": "11:12",
+          "time": "13:10",
           "text": "Entry: **INVALID**"
         },
         {
-          "time": "11:12",
+          "time": "13:10",
           "text": "Opportunity: **WATCHING**"
-        },
-        {
-          "time": "11:40",
-          "text": "Opportunity \u2192 **INVALID**"
-        },
-        {
-          "time": "11:45",
-          "text": "M5 \u2192 **BEARISH**"
-        },
-        {
-          "time": "12:00",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "12:00",
-          "text": "Opportunity \u2192 **WATCHING**"
         }
       ],
       "market_state": {
@@ -948,7 +810,7 @@
         "h4_trend_strength": 0.9,
         "h1_structural_clarity": 0.85,
         "location_type": "OPEN_SPACE",
-        "range_position": 0.8961,
+        "range_position": 1.0,
         "m5_momentum": "NEUTRAL",
         "volatility_state": "NEUTRAL",
         "opportunity_state": "WATCHING",
@@ -956,336 +818,280 @@
         "opportunity_quality": 0.445,
         "strategy": "NONE",
         "entry_status": "INVALID",
-        "updated_at": "12:00 UTC",
+        "updated_at": "13:10 UTC",
         "_timeline": [
           {
-            "time": "11:12",
-            "text": "Observation created"
+            "time": "13:10",
+            "text": "New observation"
           },
           {
-            "time": "11:12",
+            "time": "13:10",
             "text": "Regime: **TRENDING**"
           },
           {
-            "time": "11:12",
+            "time": "13:10",
             "text": "H4 Trend: **BULLISH**"
           },
           {
-            "time": "11:12",
+            "time": "13:10",
             "text": "Location: **OPEN_SPACE**"
           },
           {
-            "time": "11:12",
+            "time": "13:10",
             "text": "M5: **NEUTRAL**"
           },
           {
-            "time": "11:12",
+            "time": "13:10",
             "text": "Volatility: **NEUTRAL**"
           },
           {
-            "time": "11:12",
+            "time": "13:10",
             "text": "Strategy: **NONE**"
           },
           {
-            "time": "11:12",
+            "time": "13:10",
             "text": "Entry: **INVALID**"
           },
           {
-            "time": "11:12",
+            "time": "13:10",
             "text": "Opportunity: **WATCHING**"
-          },
-          {
-            "time": "11:40",
-            "text": "Opportunity \u2192 **INVALID**"
-          },
-          {
-            "time": "11:45",
-            "text": "M5 \u2192 **BEARISH**"
-          },
-          {
-            "time": "12:00",
-            "text": "M5 \u2192 **NEUTRAL**"
-          },
-          {
-            "time": "12:00",
-            "text": "Opportunity \u2192 **WATCHING**"
           }
         ],
-        "last_merged": "2026-08-05T12:00:26.110247+00:00"
+        "last_merged": "2026-08-05T13:10:24.522330+00:00",
+        "_identity": {
+          "entity_id": "US500_1785946200",
+          "observation_id": "eeee8f6e0d11d307",
+          "cycle_id": 2386,
+          "correlation_id": "",
+          "trade_id": ""
+        }
       },
       "channel_id": "1534254290816995568",
       "message_id": "1534519515419906049",
-      "last_updated": "2026-08-05T11:12:42.586635+00:00"
+      "last_updated": "2026-08-05T11:12:42.586635+00:00",
+      "observation_id": "eeee8f6e0d11d307"
     },
     "XAUUSD": {
       "timeline": [
         {
-          "time": "11:12",
+          "time": "13:00",
+          "text": "New observation"
+        },
+        {
+          "time": "13:00",
           "text": "Regime: **TRENDING**"
         },
         {
-          "time": "11:12",
+          "time": "13:00",
           "text": "H4 Trend: **BULLISH**"
         },
         {
-          "time": "11:12",
-          "text": "Location: **OPEN_SPACE**"
-        },
-        {
-          "time": "11:12",
-          "text": "M5: **BULLISH**"
-        },
-        {
-          "time": "11:12",
-          "text": "Volatility: **NEUTRAL**"
-        },
-        {
-          "time": "11:12",
-          "text": "Strategy: **NONE**"
-        },
-        {
-          "time": "11:12",
-          "text": "Entry: **INVALID**"
-        },
-        {
-          "time": "11:12",
-          "text": "Opportunity: **INVALID**"
-        },
-        {
-          "time": "11:45",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "11:55",
-          "text": "M5 \u2192 **BULLISH**"
-        },
-        {
-          "time": "12:00",
+          "time": "13:00",
           "text": "H1 BOS: **BULLISH**"
         },
         {
-          "time": "12:00",
-          "text": "M5 \u2192 **NEUTRAL**"
+          "time": "13:00",
+          "text": "Location: **OPEN_SPACE**"
         },
         {
-          "time": "12:00",
-          "text": "Strategy \u2192 **TREND_CONTINUATION**"
+          "time": "13:00",
+          "text": "M5: **BEARISH**"
         },
         {
-          "time": "12:00",
-          "text": "Entry \u2192 **WAITING**"
+          "time": "13:00",
+          "text": "Volatility: **NEUTRAL**"
         },
         {
-          "time": "12:00",
-          "text": "Opportunity \u2192 **WATCHING**"
+          "time": "13:00",
+          "text": "Strategy: **NONE**"
+        },
+        {
+          "time": "13:00",
+          "text": "Entry: **INVALID**"
+        },
+        {
+          "time": "13:00",
+          "text": "Opportunity: **INVALID**"
         }
       ],
       "market_state": {
         "regime": "TRENDING",
         "h4_trend": "BULLISH",
-        "h4_trend_strength": 0.529,
-        "h1_structural_clarity": 0.4321,
+        "h4_trend_strength": 0.578,
+        "h1_structural_clarity": 0.4173,
+        "location_type": "OPEN_SPACE",
+        "range_position": 0.55,
+        "m5_momentum": "BEARISH",
+        "volatility_state": "NEUTRAL",
+        "opportunity_state": "INVALID",
+        "opportunity_type": "NONE",
+        "opportunity_quality": 0.245,
+        "strategy": "NONE",
+        "entry_status": "INVALID",
+        "updated_at": "13:00 UTC",
+        "_timeline": [
+          {
+            "time": "13:00",
+            "text": "New observation"
+          },
+          {
+            "time": "13:00",
+            "text": "Regime: **TRENDING**"
+          },
+          {
+            "time": "13:00",
+            "text": "H4 Trend: **BULLISH**"
+          },
+          {
+            "time": "13:00",
+            "text": "H1 BOS: **BULLISH**"
+          },
+          {
+            "time": "13:00",
+            "text": "Location: **OPEN_SPACE**"
+          },
+          {
+            "time": "13:00",
+            "text": "M5: **BEARISH**"
+          },
+          {
+            "time": "13:00",
+            "text": "Volatility: **NEUTRAL**"
+          },
+          {
+            "time": "13:00",
+            "text": "Strategy: **NONE**"
+          },
+          {
+            "time": "13:00",
+            "text": "Entry: **INVALID**"
+          },
+          {
+            "time": "13:00",
+            "text": "Opportunity: **INVALID**"
+          }
+        ],
+        "last_merged": "2026-08-05T13:00:28.604337+00:00",
+        "h1_bos_direction": "BULLISH",
+        "strategy_confidence": 0.7999999999999999,
+        "_identity": {
+          "entity_id": "XAUUSD_1785945600",
+          "observation_id": "d6fb0df1028ec8a2",
+          "cycle_id": 1961,
+          "correlation_id": "",
+          "trade_id": ""
+        }
+      },
+      "channel_id": "1534254416432201898",
+      "message_id": "1534519535883780308",
+      "last_updated": "2026-08-05T11:12:47.444529+00:00",
+      "observation_id": "d6fb0df1028ec8a2"
+    },
+    "NAS100": {
+      "timeline": [
+        {
+          "time": "13:10",
+          "text": "New observation"
+        },
+        {
+          "time": "13:10",
+          "text": "Regime: **TRENDING**"
+        },
+        {
+          "time": "13:10",
+          "text": "H4 Trend: **BULLISH**"
+        },
+        {
+          "time": "13:10",
+          "text": "Location: **OPEN_SPACE**"
+        },
+        {
+          "time": "13:10",
+          "text": "M5: **NEUTRAL**"
+        },
+        {
+          "time": "13:10",
+          "text": "Volatility: **NEUTRAL**"
+        },
+        {
+          "time": "13:10",
+          "text": "Strategy: **NONE**"
+        },
+        {
+          "time": "13:10",
+          "text": "Entry: **INVALID**"
+        },
+        {
+          "time": "13:10",
+          "text": "Opportunity: **WATCHING**"
+        }
+      ],
+      "market_state": {
+        "regime": "TRENDING",
+        "h4_trend": "BULLISH",
+        "h4_trend_strength": 0.8,
+        "h1_structural_clarity": 0.7742,
         "location_type": "OPEN_SPACE",
         "range_position": 1.0,
         "m5_momentum": "NEUTRAL",
         "volatility_state": "NEUTRAL",
         "opportunity_state": "WATCHING",
         "opportunity_type": "ZONE_REACTION",
-        "opportunity_quality": 0.4775,
-        "strategy": "TREND_CONTINUATION",
-        "entry_status": "WAITING",
-        "updated_at": "12:00 UTC",
-        "_timeline": [
-          {
-            "time": "11:12",
-            "text": "Regime: **TRENDING**"
-          },
-          {
-            "time": "11:12",
-            "text": "H4 Trend: **BULLISH**"
-          },
-          {
-            "time": "11:12",
-            "text": "Location: **OPEN_SPACE**"
-          },
-          {
-            "time": "11:12",
-            "text": "M5: **BULLISH**"
-          },
-          {
-            "time": "11:12",
-            "text": "Volatility: **NEUTRAL**"
-          },
-          {
-            "time": "11:12",
-            "text": "Strategy: **NONE**"
-          },
-          {
-            "time": "11:12",
-            "text": "Entry: **INVALID**"
-          },
-          {
-            "time": "11:12",
-            "text": "Opportunity: **INVALID**"
-          },
-          {
-            "time": "11:45",
-            "text": "M5 \u2192 **NEUTRAL**"
-          },
-          {
-            "time": "11:55",
-            "text": "M5 \u2192 **BULLISH**"
-          },
-          {
-            "time": "12:00",
-            "text": "H1 BOS: **BULLISH**"
-          },
-          {
-            "time": "12:00",
-            "text": "M5 \u2192 **NEUTRAL**"
-          },
-          {
-            "time": "12:00",
-            "text": "Strategy \u2192 **TREND_CONTINUATION**"
-          },
-          {
-            "time": "12:00",
-            "text": "Entry \u2192 **WAITING**"
-          },
-          {
-            "time": "12:00",
-            "text": "Opportunity \u2192 **WATCHING**"
-          }
-        ],
-        "last_merged": "2026-08-05T12:00:31.529559+00:00",
-        "h1_bos_direction": "BULLISH",
-        "strategy_confidence": 0.7999999999999999
-      },
-      "channel_id": "1534254416432201898",
-      "message_id": "1534519535883780308",
-      "last_updated": "2026-08-05T11:12:47.444529+00:00"
-    },
-    "NAS100": {
-      "timeline": [
-        {
-          "time": "11:25",
-          "text": "Observation created"
-        },
-        {
-          "time": "11:25",
-          "text": "Regime: **TRENDING**"
-        },
-        {
-          "time": "11:25",
-          "text": "H4 Trend: **BULLISH**"
-        },
-        {
-          "time": "11:25",
-          "text": "Location: **OPEN_SPACE**"
-        },
-        {
-          "time": "11:25",
-          "text": "M5: **BULLISH**"
-        },
-        {
-          "time": "11:25",
-          "text": "Volatility: **NEUTRAL**"
-        },
-        {
-          "time": "11:25",
-          "text": "Strategy: **NONE**"
-        },
-        {
-          "time": "11:25",
-          "text": "Entry: **INVALID**"
-        },
-        {
-          "time": "11:25",
-          "text": "Opportunity: **WATCHING**"
-        },
-        {
-          "time": "11:40",
-          "text": "M5 \u2192 **NEUTRAL**"
-        },
-        {
-          "time": "11:45",
-          "text": "M5 \u2192 **BEARISH**"
-        },
-        {
-          "time": "12:00",
-          "text": "M5 \u2192 **NEUTRAL**"
-        }
-      ],
-      "market_state": {
-        "regime": "TRENDING",
-        "h4_trend": "BULLISH",
-        "h4_trend_strength": 0.85,
-        "h1_structural_clarity": 0.7986,
-        "location_type": "OPEN_SPACE",
-        "range_position": 0.936,
-        "m5_momentum": "NEUTRAL",
-        "volatility_state": "NEUTRAL",
-        "opportunity_state": "WATCHING",
-        "opportunity_type": "ZONE_REACTION",
         "opportunity_quality": 0.445,
         "strategy": "NONE",
         "entry_status": "INVALID",
-        "updated_at": "12:00 UTC",
+        "updated_at": "13:10 UTC",
         "_timeline": [
           {
-            "time": "11:25",
-            "text": "Observation created"
+            "time": "13:10",
+            "text": "New observation"
           },
           {
-            "time": "11:25",
+            "time": "13:10",
             "text": "Regime: **TRENDING**"
           },
           {
-            "time": "11:25",
+            "time": "13:10",
             "text": "H4 Trend: **BULLISH**"
           },
           {
-            "time": "11:25",
+            "time": "13:10",
             "text": "Location: **OPEN_SPACE**"
           },
           {
-            "time": "11:25",
-            "text": "M5: **BULLISH**"
+            "time": "13:10",
+            "text": "M5: **NEUTRAL**"
           },
           {
-            "time": "11:25",
+            "time": "13:10",
             "text": "Volatility: **NEUTRAL**"
           },
           {
-            "time": "11:25",
+            "time": "13:10",
             "text": "Strategy: **NONE**"
           },
           {
-            "time": "11:25",
+            "time": "13:10",
             "text": "Entry: **INVALID**"
           },
           {
-            "time": "11:25",
+            "time": "13:10",
             "text": "Opportunity: **WATCHING**"
-          },
-          {
-            "time": "11:40",
-            "text": "M5 \u2192 **NEUTRAL**"
-          },
-          {
-            "time": "11:45",
-            "text": "M5 \u2192 **BEARISH**"
-          },
-          {
-            "time": "12:00",
-            "text": "M5 \u2192 **NEUTRAL**"
           }
         ],
-        "last_merged": "2026-08-05T12:00:21.827311+00:00"
+        "last_merged": "2026-08-05T13:10:20.367362+00:00",
+        "_identity": {
+          "entity_id": "NAS100_1785946200",
+          "observation_id": "a8a0e6d1ca802ada",
+          "cycle_id": 2386,
+          "correlation_id": "",
+          "trade_id": ""
+        }
       },
       "channel_id": "1534254217936769054",
       "message_id": "1534522759420313663",
-      "last_updated": "2026-08-05T11:25:36.066212+00:00"
+      "last_updated": "2026-08-05T11:25:36.066212+00:00",
+      "observation_id": "a8a0e6d1ca802ada"
     }
   },
   "system_health": {
