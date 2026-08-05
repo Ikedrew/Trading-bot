@@ -113,16 +113,42 @@ def _compute_pnl(
     exit_price: float,
     volume: float,
     pip_value_per_lot: float = 100_000.0,
+    *,
+    tick_size: float = 0.0,
+    tick_value: float = 0.0,
+    symbol: str = "",
 ) -> float:
     """
-    Compute realised P&L in price-move terms (not account currency).
-    For FX standard lots: pnl = (exit - entry) * volume * contract_size.
-    Positive = profit, negative = loss.
+    Compute realised P&L.
+
+    Priority:
+        1. If tick_size and tick_value are provided → instrument-aware calculation
+        2. Otherwise → legacy FX formula (volume × contract_size × price_move)
+
+    Instrument-aware formula:
+        ticks_moved = abs(exit - entry) / tick_size
+        pnl = ticks_moved × tick_value × volume
+        Apply direction sign.
+
+    Legacy FX formula (fallback):
+        pnl = (exit - entry) × volume × pip_value_per_lot
     """
+    price_move = exit_price - entry_price
+
+    # Instrument-aware path (when broker metadata available)
+    if tick_size > 0 and tick_value > 0:
+        ticks_moved = abs(price_move) / tick_size
+        unsigned_pnl = ticks_moved * tick_value * volume
+        if side is Side.BUY:
+            return unsigned_pnl if price_move > 0 else -unsigned_pnl
+        else:
+            return unsigned_pnl if price_move < 0 else -unsigned_pnl
+
+    # Legacy FX fallback (only correct for FX standard lots)
     if side is Side.BUY:
-        return (exit_price - entry_price) * volume * pip_value_per_lot
+        return price_move * volume * pip_value_per_lot
     else:
-        return (entry_price - exit_price) * volume * pip_value_per_lot
+        return -price_move * volume * pip_value_per_lot
 
 
 def build_trade_record(
@@ -153,6 +179,7 @@ def build_trade_record(
 
     if realised_pnl_override is not None:
         realised_pnl = realised_pnl_override
+        _pnl_source = "BROKER"
     else:
         realised_pnl = _compute_pnl(
             side=position.side,
@@ -160,8 +187,28 @@ def build_trade_record(
             exit_price=exit_price,
             volume=position.volume,
         )
+        _pnl_source = "CALCULATED"
 
     net_pnl = realised_pnl + swap - commission
+
+    # ─── PNL SOURCE LOGGING ───────────────────────────────────────
+    _calc_pnl = _compute_pnl(
+        side=position.side,
+        entry_price=position.entry_price,
+        exit_price=exit_price,
+        volume=position.volume,
+    )
+    logger.info(
+        "[PNL_AUDIT] symbol=%s trade_id=%s pnl_source=%s "
+        "broker_profit=%s calculated_profit=%.4f final_profit=%.4f",
+        position.symbol,
+        position.position_id,
+        _pnl_source,
+        f"{realised_pnl_override:.4f}" if realised_pnl_override is not None else "N/A",
+        _calc_pnl,
+        realised_pnl,
+    )
+    # ─── END PNL SOURCE LOGGING ───────────────────────────────────
 
     # Extract correlation_id from Position's owned trade_identity (authoritative source).
     # Never falls back to thread-local context — identity is owned by the Position.
@@ -379,7 +426,12 @@ def persist_trade(record: TradeRecord) -> bool:
                 "time_exit": "system_close",
                 "management_exit": "system_close",
                 "manual_close": "manual_close",
-                "broker_close": "margin_call",
+                "broker_close": "system_close",
+                "stop_out": "margin_call",
+                "expert_close": "system_close",
+                "client_close": "manual_close",
+                "mobile_close": "manual_close",
+                "web_close": "manual_close",
             }
             _exit_reason = _exit_map.get(record.close_reason, "system_close")
 

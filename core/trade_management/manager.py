@@ -508,6 +508,11 @@ class TradeStateManager:
                         detail=detail,
                     )
                     return
+            else:
+                # Successful broker close — query history for authoritative profit
+                _broker_detail = self._query_broker_close_history(pos)
+                if _broker_detail:
+                    detail = {**detail, **_broker_detail}
         # ─── END BROKER CLOSE ─────────────────────────────────────────
 
         # Broker confirmed (or position_not_found or no execution layer / no ticket)
@@ -517,14 +522,33 @@ class TradeStateManager:
 
         # Enrich detail with close_reason for ON_TRADE_CLOSE event (used by journal persistence)
         _close_detail = dict(detail)
-        if "reason" not in _close_detail:
-            # Map lifecycle event kind to close reason
-            _reason_map = {
-                TradeLifecycleEvent.ON_STOP_LOSS_HIT: "stop_loss",
-                TradeLifecycleEvent.ON_TAKE_PROFIT_HIT: "take_profit",
-                TradeLifecycleEvent.ON_MANAGEMENT_EXIT: "management_exit",
-            }
-            _close_detail["reason"] = _reason_map.get(kind, "unknown")
+
+        # Map lifecycle event kind to close reason (authoritative — bot knows why it closed)
+        _lifecycle_reason_map = {
+            TradeLifecycleEvent.ON_STOP_LOSS_HIT: "stop_loss",
+            TradeLifecycleEvent.ON_TAKE_PROFIT_HIT: "take_profit",
+            TradeLifecycleEvent.ON_MANAGEMENT_EXIT: "management_exit",
+        }
+        _lifecycle_reason = _lifecycle_reason_map.get(kind, "")
+
+        # Lifecycle reason ALWAYS wins over generic broker reasons.
+        # Broker reason only used if lifecycle doesn't know (kind not in map)
+        # OR if broker provides a MORE specific reason (stop_loss, take_profit, stop_out).
+        _SPECIFIC_BROKER_REASONS = frozenset({"stop_loss", "take_profit", "stop_out"})
+        _broker_reason = _close_detail.get("reason", "")
+
+        if _lifecycle_reason:
+            # Bot already knows the reason — use it
+            _close_detail["reason"] = _lifecycle_reason
+        elif _broker_reason in _SPECIFIC_BROKER_REASONS:
+            # Broker provided a specific, trustworthy reason — keep it
+            pass  # already in _close_detail
+        elif _broker_reason:
+            # Generic broker reason (broker_close, expert_close, etc.) — keep as-is
+            pass
+        else:
+            _close_detail["reason"] = "unknown"
+
         self._emit(TradeLifecycleEvent.ON_TRADE_CLOSE, pos, prices, ts, _close_detail)
 
     def _query_broker_close_history(self, pos: Position) -> dict[str, Any] | None:
@@ -554,14 +578,34 @@ class TradeStateManager:
             # Find the EXIT deal (entry=1 means exit in MT5 deal history)
             for deal in deals:
                 if int(deal.entry) == 1:  # 1 = DEAL_ENTRY_OUT
-                    # Determine close reason from comment
-                    comment = str(deal.comment) if deal.comment else ""
-                    if "[sl" in comment.lower():
-                        reason = "stop_loss"
-                    elif "[tp" in comment.lower():
-                        reason = "take_profit"
+                    # ─── Use MT5 deal.reason (authoritative enum) ─────
+                    # MT5 DEAL_REASON constants:
+                    #   0 = CLIENT, 1 = MOBILE, 2 = WEB, 3 = EXPERT,
+                    #   4 = SL, 5 = TP, 6 = SO (stop out)
+                    _DEAL_REASON_MAP = {
+                        4: "stop_loss",       # DEAL_REASON_SL
+                        5: "take_profit",     # DEAL_REASON_TP
+                        6: "stop_out",        # DEAL_REASON_SO (genuine margin call)
+                        3: "expert_close",    # DEAL_REASON_EXPERT
+                        0: "client_close",    # DEAL_REASON_CLIENT
+                        1: "mobile_close",    # DEAL_REASON_MOBILE
+                        2: "web_close",       # DEAL_REASON_WEB
+                    }
+
+                    deal_reason_int = int(deal.reason) if hasattr(deal, "reason") else -1
+                    reason = _DEAL_REASON_MAP.get(deal_reason_int, "")
+
+                    # Fallback: parse comment if deal.reason unavailable or unknown
+                    if not reason:
+                        comment = str(deal.comment) if deal.comment else ""
+                        if "[sl" in comment.lower():
+                            reason = "stop_loss"
+                        elif "[tp" in comment.lower():
+                            reason = "take_profit"
+                        else:
+                            reason = "broker_close"
                     else:
-                        reason = "broker_close"
+                        comment = str(deal.comment) if deal.comment else ""
 
                     # Normalize broker timestamp to UTC
                     exit_time_utc = normalize_mt5_timestamp(float(deal.time))
@@ -573,6 +617,7 @@ class TradeStateManager:
                         "broker_profit": float(deal.profit),
                         "broker_deal_id": int(deal.ticket),
                         "broker_comment": comment,
+                        "broker_deal_reason": deal_reason_int,
                     }
             return None
         except Exception:

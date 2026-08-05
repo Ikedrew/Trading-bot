@@ -436,6 +436,7 @@ class TradeLifecycleLogger:
                 exit_price=exit_price,
                 exit_time=ts,
                 close_reason=close_reason,
+                realised_pnl_override=detail.get("broker_profit"),
             )
             persist_trade_once(record)
         except Exception:

@@ -163,7 +163,7 @@ def verify_protection(
 
     try:
         # ─── QUERY BROKER FOR POSITION STATE ──────────────────────────
-        broker_sl, broker_tp, found, attempts = _query_broker_position(
+        broker_sl, broker_tp, found, attempts, match_method = _query_broker_position(
             position_ticket=position_ticket,
             symbol=symbol,
         )
@@ -238,7 +238,7 @@ def verify_protection(
 
         if correction_ok:
             # Re-verify after correction
-            broker_sl2, broker_tp2, found2, _ = _query_broker_position(
+            broker_sl2, broker_tp2, found2, _, _ = _query_broker_position(
                 position_ticket=position_ticket,
                 symbol=symbol,
             )
@@ -310,33 +310,85 @@ def _query_broker_position(
     *,
     position_ticket: int,
     symbol: str,
-) -> tuple[float, float, bool, int]:
+    volume: float = 0.0,
+    magic: int = 0,
+) -> tuple[float, float, bool, int, str]:
     """
-    Query MT5 for position SL/TP state.
+    Query MT5 for position SL/TP state with multi-method matching.
 
-    Retries up to _MAX_VERIFY_ATTEMPTS with delay (broker may take
-    a moment to propagate the position after fill).
+    Matching strategy:
+        1. Exact ticket match (mt5.positions_get(ticket=))
+        2. Symbol scan + ticket match
+        3. Symbol + volume + magic fallback (for ticket mismatch scenarios)
 
-    Returns: (broker_sl, broker_tp, found, attempts)
+    Retry timing: 0ms, 500ms, 1500ms, 3000ms (progressive backoff).
+
+    Returns: (broker_sl, broker_tp, found, attempts, match_method)
+        match_method: "ticket_match" | "symbol_ticket_match" | "symbol_volume_match" | "not_found"
     """
-    for attempt in range(1, _MAX_VERIFY_ATTEMPTS + 1):
+    _RETRY_DELAYS = [0.0, 0.5, 1.5, 3.0]  # Progressive backoff
+    max_attempts = len(_RETRY_DELAYS)
+
+    for attempt in range(max_attempts):
+        if attempt > 0:
+            time.sleep(_RETRY_DELAYS[attempt])
+
+        # Method 1: Exact ticket lookup
         positions = mt5_call(mt5.positions_get, ticket=position_ticket)
         if positions is not None and len(positions) > 0:
             pos = positions[0]
-            return float(pos.sl), float(pos.tp), True, attempt
+            logger.info(
+                "[PROTECTION_VERIFY] symbol=%s expected_ticket=%d "
+                "found_ticket=%d method=ticket_match attempt=%d "
+                "broker_sl=%.5f broker_tp=%.5f volume=%.2f",
+                symbol, position_ticket, int(pos.ticket),
+                attempt + 1, float(pos.sl), float(pos.tp), float(pos.volume),
+            )
+            return float(pos.sl), float(pos.tp), True, attempt + 1, "ticket_match"
 
-        # Position not yet visible — wait and retry
-        if attempt < _MAX_VERIFY_ATTEMPTS:
-            time.sleep(_VERIFY_RETRY_DELAY_S)
+        # Method 2: Symbol scan (handles ticket numbering differences)
+        positions = mt5_call(mt5.positions_get, symbol=symbol)
+        if positions is not None and len(positions) > 0:
+            # Try exact ticket match within symbol results
+            for pos in positions:
+                if int(pos.ticket) == position_ticket:
+                    logger.info(
+                        "[PROTECTION_VERIFY] symbol=%s expected_ticket=%d "
+                        "found_ticket=%d method=symbol_ticket_match attempt=%d",
+                        symbol, position_ticket, int(pos.ticket), attempt + 1,
+                    )
+                    return float(pos.sl), float(pos.tp), True, attempt + 1, "symbol_ticket_match"
 
-    # Also try by symbol as fallback (some brokers use different ticket refs)
-    positions = mt5_call(mt5.positions_get, symbol=symbol)
-    if positions is not None:
-        for pos in positions:
-            if int(pos.ticket) == position_ticket:
-                return float(pos.sl), float(pos.tp), True, _MAX_VERIFY_ATTEMPTS
+            # Method 3: Volume + magic fallback (ticket mismatch scenario)
+            if volume > 0:
+                for pos in positions:
+                    vol_match = abs(float(pos.volume) - volume) < 0.001
+                    magic_match = (magic == 0 or int(pos.magic) == magic)
+                    if vol_match and magic_match:
+                        logger.warning(
+                            "[PROTECTION_VERIFY] symbol=%s expected_ticket=%d "
+                            "actual_ticket=%d method=symbol_volume_match attempt=%d "
+                            "matched_by=volume(%.2f)+magic(%d)",
+                            symbol, position_ticket, int(pos.ticket),
+                            attempt + 1, float(pos.volume), int(pos.magic),
+                        )
+                        return float(pos.sl), float(pos.tp), True, attempt + 1, "symbol_volume_match"
 
-    return 0.0, 0.0, False, _MAX_VERIFY_ATTEMPTS
+            # Log what WAS found for diagnostics
+            _found_tickets = [int(p.ticket) for p in positions]
+            logger.info(
+                "[PROTECTION_VERIFY] symbol=%s expected_ticket=%d "
+                "broker_positions_found=%s attempt=%d match=false",
+                symbol, position_ticket, _found_tickets, attempt + 1,
+            )
+
+    # All attempts exhausted
+    logger.warning(
+        "[PROTECTION_VERIFY] symbol=%s expected_ticket=%d "
+        "NOT_FOUND after %d attempts",
+        symbol, position_ticket, max_attempts,
+    )
+    return 0.0, 0.0, False, max_attempts, "not_found"
 
 
 def _values_match(actual: float, expected: float, tolerance: float) -> bool:
