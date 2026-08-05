@@ -242,7 +242,7 @@ NO_TRADE_ALERT_THRESHOLD = 100          # First alert after N consecutive no-tra
 NO_TRADE_ALERT_REPEAT_INTERVAL = 25     # Repeat alert every N cycles while still no-trade
 
 # --- Discord V2 rendering layer (Phase 1 — foundation) ---
-ENABLE_DISCORD_V2 = True                    # Discord V2 active — legacy webhooks disabled
+ENABLE_DISCORD_V2 = False                    # Discord V2 active — legacy webhooks disabled
 
 # --- Legacy Discord webhook control ---
 LEGACY_DISCORD_ENABLED = False              # When False, all send_discord() calls become no-ops (V2 replaces them)
