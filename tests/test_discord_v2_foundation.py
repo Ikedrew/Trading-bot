@@ -138,10 +138,13 @@ class TestRenderer:
         assert card["fields"]["error_type"] == "TimeoutError"
 
     def test_render_market_event(self):
+        from unittest.mock import patch
         renderer = DiscordRenderer()
-        result = renderer.render("MARKET_CONTEXT", {
-            "symbol": "USDJPY", "regime": "TRENDING", "h4_bias": "BULLISH",
-        })
+        snapshot = {"symbol": "USDJPY", "market": {"regime": "TRENDING"}, "opportunity": {}, "strategy": {}, "entry": {}, "risk": {}, "identity": {}}
+        with patch("core.discord.renderer.read_live_market_state", return_value=snapshot):
+            result = renderer.render("MARKET_CONTEXT", {
+                "symbol": "USDJPY", "regime": "TRENDING", "h4_bias": "BULLISH",
+            })
         assert result["category"] == "LIVE_MARKET"
         card = result["card"]
         assert card["type"] == "market"

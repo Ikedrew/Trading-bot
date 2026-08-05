@@ -334,6 +334,16 @@ def _market_embed(symbol: str, f: dict[str, Any], color: int) -> dict[str, Any]:
         timeline_text = "\n".join(f"`{e['time']}` {e['text']}" for e in timeline[-12:])
         embed_fields.append({"name": "Timeline", "value": timeline_text, "inline": False})
 
+    # ─── IDENTITY (compact) ───────────────────────────────────────
+    identity = f.get("_identity", {})
+    if identity.get("observation_id"):
+        id_lines = [f"Obs: `{identity['observation_id'][:12]}`"]
+        if identity.get("cycle_id"):
+            id_lines.append(f"Cycle: {identity['cycle_id']}")
+        trade_id = identity.get("trade_id")
+        id_lines.append(f"Trade: {'`' + trade_id + '`' if trade_id else 'Pending'}")
+        embed_fields.append({"name": "\U0001f194 Identity", "value": " | ".join(id_lines), "inline": False})
+
     # Footer
     footer_parts = []
     if f.get("session"):

@@ -293,11 +293,27 @@ class DiscordRenderer:
         previous_state = self._state.get_market_state(symbol)
         new_fields = rendered_card.get("fields", {})
 
-        # Detect which fields changed
+        # ─── OBSERVATION IDENTITY TRACKING ────────────────────────────
         from datetime import datetime, timezone
         now_str = datetime.now(timezone.utc).strftime("%H:%M")
-        timeline_entries = []
 
+        identity = snapshot.get("identity", {})
+        current_obs_id = identity.get("observation_id", "")
+        previous_obs_id = self._state.get_observation_id(symbol)
+        trade_id = identity.get("trade_id", "")
+
+        timeline_entries = []
+        is_new_observation = current_obs_id and current_obs_id != previous_obs_id
+
+        if is_new_observation:
+            # New observation — reset timeline
+            self._state.reset_timeline(symbol)
+            self._state.set_observation_id(symbol, current_obs_id)
+            timeline_entries.append({"time": now_str, "text": "New observation"})
+            # Clear previous state so all current fields register as "new"
+            previous_state = {}
+
+        # Detect which fields changed
         has_meaningful_change = False
         for field_key, label in _TRACKED_FIELDS.items():
             new_val = new_fields.get(field_key)
@@ -306,12 +322,22 @@ class DiscordRenderer:
                 has_meaningful_change = True
                 if old_val:
                     timeline_entries.append({"time": now_str, "text": f"{label} \u2192 **{new_val}**"})
+                elif is_new_observation:
+                    # On new observation, show initial values compactly
+                    timeline_entries.append({"time": now_str, "text": f"{label}: **{new_val}**"})
                 else:
                     timeline_entries.append({"time": now_str, "text": f"{label}: **{new_val}**"})
 
-        # Special: observation created (first time we see data for this symbol)
-        if not previous_state and new_fields.get("regime"):
-            timeline_entries.insert(0, {"time": now_str, "text": "Observation created"})
+        # Trade ID tracking
+        prev_trade = self._state._live_cards.get(symbol, {}).get("trade_id", "")
+        if trade_id and trade_id != prev_trade:
+            has_meaningful_change = True
+            timeline_entries.append({"time": now_str, "text": f"Trade opened \u2192 **{trade_id}**"})
+            if symbol in self._state._live_cards:
+                self._state._live_cards[symbol]["trade_id"] = trade_id
+
+        # Force update on new observation even if fields haven't changed yet
+        if is_new_observation:
             has_meaningful_change = True
 
         if not has_meaningful_change and previous_state:
@@ -327,8 +353,9 @@ class DiscordRenderer:
         if timeline_entries:
             self._state.append_timeline(symbol, timeline_entries)
 
-        # Inject timeline into card for rendering
+        # Inject timeline + identity into card for rendering
         rendered_card["fields"]["_timeline"] = self._state.get_timeline(symbol)
+        rendered_card["fields"]["_identity"] = identity
 
         # Update tracked state for next comparison
         self._state.merge_market_state(symbol, new_fields)

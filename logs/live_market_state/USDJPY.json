@@ -1,17 +1,17 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "USDJPY",
-  "cycle_id": 13742,
-  "bar_time": 1785938400,
-  "updated_at": "2026-08-05T11:00:09.663Z",
-  "updated_at_unix": 1785927609.663,
+  "cycle_id": 1961,
+  "bar_time": 1785942300,
+  "updated_at": "2026-08-05T12:05:23.267Z",
+  "updated_at_unix": 1785931523.267,
   "action": "NO_TRADE",
-  "score": 0.3475,
-  "reason": "V10 [opportunity]: No opportunity (INVALID)",
+  "score": 0.5225,
+  "reason": "V10 [strategy]: No strategy matched",
   "identity": {
-    "entity_id": "USDJPY_1785938400",
-    "observation_id": "20a60e3be084c570",
-    "cycle_id": 13742,
+    "entity_id": "USDJPY_1785942300",
+    "observation_id": "6aaf37d1aa9575a0",
+    "cycle_id": 1961,
     "correlation_id": "",
     "trade_id": ""
   },
@@ -21,41 +21,41 @@
     "volatility_state": "EXPANSION",
     "h4_trend": "NEUTRAL",
     "h4_trend_strength": 0.2,
-    "h4_phase": "PULLBACK",
-    "h1_bos_direction": "",
-    "h1_structural_clarity": 0.4271,
+    "h4_phase": "REVERSAL",
+    "h1_bos_direction": "BEARISH",
+    "h1_structural_clarity": 0.4209,
     "h1_dominant_trend": "BULLISH",
     "m15_pullback_active": true,
     "m15_displacement": false,
-    "m15_range_position": 0.8333,
-    "m5_momentum": "BEARISH",
-    "m5_momentum_strength": 0.8,
+    "m15_range_position": 0.9,
+    "m5_momentum": "NEUTRAL",
+    "m5_momentum_strength": 0.0,
     "m5_rejection": false,
     "m5_confirmation": false,
-    "m5_local_bos": true,
+    "m5_local_bos": false,
     "location_type": "OPEN_SPACE",
     "inside_zone": false,
     "zone_quality": 0.0,
-    "range_position": 0.8333,
+    "range_position": 0.9,
     "premium_discount": "PREMIUM",
     "htf_macro_bias": "BULLISH",
-    "htf_structure_alignment": 0.5
+    "htf_structure_alignment": 0.8
   },
   "opportunity": {
-    "state": "INVALID",
-    "directional_bias": "BULLISH",
+    "state": "WATCHING",
+    "directional_bias": "BEARISH",
     "opportunity_type": "ZONE_REACTION",
-    "overall_quality": 0.3475,
-    "location_score": 0.5,
-    "structure_score": 0.15,
+    "overall_quality": 0.5225,
+    "location_score": 0.7000000000000001,
+    "structure_score": 0.5,
     "behaviour_score": 0.44999999999999996,
     "formation_score": 0.3,
-    "observation_id": "20a60e3be084c570"
+    "observation_id": "6aaf37d1aa9575a0"
   },
   "strategy": {
     "family": "NONE",
     "confidence": 0.0,
-    "direction": "BULLISH"
+    "direction": "BEARISH"
   },
   "horizon": {
     "type": "INTRADAY",
@@ -87,6 +87,6 @@
     "order_type": "",
     "volume": 0.0
   },
-  "rejection_stage": "opportunity",
+  "rejection_stage": "strategy",
   "approved": false
 }

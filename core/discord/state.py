@@ -163,6 +163,22 @@ class DiscordState:
         card["timeline"] = timeline[-max_entries:]
         self._live_cards[symbol] = card
 
+    def get_observation_id(self, symbol: str) -> str:
+        """Get the last rendered observation_id for a symbol."""
+        card = self._live_cards.get(symbol, {})
+        return card.get("observation_id", "")
+
+    def set_observation_id(self, symbol: str, observation_id: str) -> None:
+        """Store the current observation_id for a symbol."""
+        if symbol not in self._live_cards:
+            self._live_cards[symbol] = {}
+        self._live_cards[symbol]["observation_id"] = observation_id
+
+    def reset_timeline(self, symbol: str) -> None:
+        """Clear timeline for a symbol (new observation started)."""
+        if symbol in self._live_cards:
+            self._live_cards[symbol]["timeline"] = []
+
     def get_system_health(self) -> dict[str, str] | None:
         """Get stored system health card info."""
         return self._system_health if self._system_health.get("message_id") else None
