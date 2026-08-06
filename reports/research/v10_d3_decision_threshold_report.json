@@ -1,0 +1,318 @@
+{
+  "research_id": "V10-D3",
+  "title": "Decision Threshold Effectiveness",
+  "generated_utc": "2026-08-06T00:00:47.940863+00:00",
+  "sample_size": 84,
+  "conclusion": "SCORE_OUTPERFORMS_EV",
+  "conclusion_reason": "Score-based filtering produces better results than EV-based filtering",
+  "baseline": {
+    "count": 84,
+    "retained_pct": 1.0,
+    "removed": 0,
+    "win_rate": 0.381,
+    "average_r": -0.138,
+    "median_r": -1.0,
+    "expectancy_r": -0.138,
+    "profit_factor": 17.16,
+    "total_pnl": 1637.94,
+    "confidence": "HIGH"
+  },
+  "score_threshold_analysis": {
+    ">=0.30": {
+      "count": 83,
+      "retained_pct": 0.9881,
+      "removed": 1,
+      "win_rate": 0.3855,
+      "average_r": -0.1276,
+      "median_r": -1.0,
+      "expectancy_r": -0.1276,
+      "profit_factor": 17.19,
+      "total_pnl": 1638.12,
+      "confidence": "HIGH"
+    },
+    ">=0.40": {
+      "count": 83,
+      "retained_pct": 0.9881,
+      "removed": 1,
+      "win_rate": 0.3855,
+      "average_r": -0.1276,
+      "median_r": -1.0,
+      "expectancy_r": -0.1276,
+      "profit_factor": 17.19,
+      "total_pnl": 1638.12,
+      "confidence": "HIGH"
+    },
+    ">=0.50": {
+      "count": 71,
+      "retained_pct": 0.8452,
+      "removed": 13,
+      "win_rate": 0.3944,
+      "average_r": -0.0548,
+      "median_r": -1.0,
+      "expectancy_r": -0.0548,
+      "profit_factor": 0.17,
+      "total_pnl": -80.69,
+      "confidence": "HIGH"
+    },
+    ">=0.55": {
+      "count": 56,
+      "retained_pct": 0.6667,
+      "removed": 28,
+      "win_rate": 0.3929,
+      "average_r": -0.0602,
+      "median_r": -1.0,
+      "expectancy_r": -0.0602,
+      "profit_factor": 0.15,
+      "total_pnl": -80.45,
+      "confidence": "HIGH"
+    },
+    ">=0.60": {
+      "count": 40,
+      "retained_pct": 0.4762,
+      "removed": 44,
+      "win_rate": 0.4,
+      "average_r": -0.1054,
+      "median_r": -1.0,
+      "expectancy_r": -0.1054,
+      "profit_factor": 0.32,
+      "total_pnl": -23.28,
+      "confidence": "HIGH"
+    },
+    ">=0.65": {
+      "count": 23,
+      "retained_pct": 0.2738,
+      "removed": 61,
+      "win_rate": 0.4348,
+      "average_r": -0.0203,
+      "median_r": -1.0,
+      "expectancy_r": -0.0203,
+      "profit_factor": 0.18,
+      "total_pnl": -23.71,
+      "confidence": "MEDIUM"
+    },
+    ">=0.70": {
+      "count": 8,
+      "retained_pct": 0.0952,
+      "removed": 76,
+      "win_rate": 0.375,
+      "average_r": -0.4274,
+      "median_r": -1.0454,
+      "expectancy_r": -0.4274,
+      "profit_factor": 0.62,
+      "total_pnl": -0.66,
+      "confidence": "LOW"
+    },
+    "all (no filter)": {
+      "count": 84,
+      "retained_pct": 1.0,
+      "removed": 0,
+      "win_rate": 0.381,
+      "average_r": -0.138,
+      "median_r": -1.0,
+      "expectancy_r": -0.138,
+      "profit_factor": 17.16,
+      "total_pnl": 1637.94,
+      "confidence": "HIGH"
+    }
+  },
+  "confidence_threshold_analysis": {
+    ">=0.3": {
+      "count": 75,
+      "retained_pct": 0.8929,
+      "removed": 9,
+      "win_rate": 0.3733,
+      "average_r": -0.1099,
+      "median_r": -1.0,
+      "expectancy_r": -0.1099,
+      "profit_factor": 0.22,
+      "total_pnl": -58.53,
+      "confidence": "HIGH"
+    },
+    ">=0.5": {
+      "count": 71,
+      "retained_pct": 0.8452,
+      "removed": 13,
+      "win_rate": 0.3803,
+      "average_r": -0.0469,
+      "median_r": -1.0,
+      "expectancy_r": -0.0469,
+      "profit_factor": 0.22,
+      "total_pnl": -57.4,
+      "confidence": "HIGH"
+    },
+    ">=0.6": {
+      "count": 65,
+      "retained_pct": 0.7738,
+      "removed": 19,
+      "win_rate": 0.4,
+      "average_r": -0.0547,
+      "median_r": -1.0,
+      "expectancy_r": -0.0547,
+      "profit_factor": 0.94,
+      "total_pnl": -0.8,
+      "confidence": "HIGH"
+    },
+    ">=0.7": {
+      "count": 56,
+      "retained_pct": 0.6667,
+      "removed": 28,
+      "win_rate": 0.3929,
+      "average_r": -0.1325,
+      "median_r": -1.0,
+      "expectancy_r": -0.1325,
+      "profit_factor": 0.78,
+      "total_pnl": -2.84,
+      "confidence": "HIGH"
+    },
+    ">=0.8": {
+      "count": 5,
+      "retained_pct": 0.0595,
+      "removed": 79,
+      "win_rate": 0.6,
+      "average_r": 0.1722,
+      "median_r": 0.0545,
+      "expectancy_r": 0.1722,
+      "profit_factor": 1.48,
+      "total_pnl": 0.34,
+      "confidence": "LOW"
+    }
+  },
+  "ev_threshold_analysis": {
+    "all": {
+      "count": 84,
+      "retained_pct": 1.0,
+      "removed": 0,
+      "win_rate": 0.381,
+      "average_r": -0.138,
+      "median_r": -1.0,
+      "expectancy_r": -0.138,
+      "profit_factor": 17.16,
+      "total_pnl": 1637.94,
+      "confidence": "HIGH"
+    },
+    "ev > 0": {
+      "count": 2,
+      "retained_pct": 0.0238,
+      "removed": 82,
+      "win_rate": 0.5,
+      "average_r": -0.5098,
+      "median_r": -0.5098,
+      "expectancy_r": -0.5098,
+      "profit_factor": 0.07,
+      "total_pnl": -0.39,
+      "confidence": "LOW"
+    },
+    "ev > 0.001": {
+      "count": 0,
+      "retained_pct": 0
+    },
+    "ev > 0.005": {
+      "count": 0,
+      "retained_pct": 0
+    }
+  },
+  "combined_filter_analysis": {
+    "score>=0.5 + conf>=0.5": {
+      "count": 64,
+      "retained_pct": 0.7619,
+      "removed": 20,
+      "win_rate": 0.4219,
+      "average_r": 0.0534,
+      "median_r": -1.0,
+      "expectancy_r": 0.0534,
+      "profit_factor": 0.23,
+      "total_pnl": -55.28,
+      "confidence": "HIGH"
+    },
+    "score>=0.6 + conf>=0.5": {
+      "count": 35,
+      "retained_pct": 0.4167,
+      "removed": 49,
+      "win_rate": 0.4286,
+      "average_r": 0.0562,
+      "median_r": -1.0,
+      "expectancy_r": 0.0562,
+      "profit_factor": 1.23,
+      "total_pnl": 1.92,
+      "confidence": "HIGH"
+    },
+    "score>=0.5 + regime!=TRANSITIONAL": {
+      "count": 44,
+      "retained_pct": 0.5238,
+      "removed": 40,
+      "win_rate": 0.4318,
+      "average_r": 0.0862,
+      "median_r": -1.0,
+      "expectancy_r": 0.0862,
+      "profit_factor": 0.35,
+      "total_pnl": -20.96,
+      "confidence": "HIGH"
+    },
+    "score>=0.6 + regime!=TRANSITIONAL": {
+      "count": 22,
+      "retained_pct": 0.2619,
+      "removed": 62,
+      "win_rate": 0.4545,
+      "average_r": 0.1446,
+      "median_r": -1.0,
+      "expectancy_r": 0.1446,
+      "profit_factor": 0.24,
+      "total_pnl": -21.19,
+      "confidence": "MEDIUM"
+    },
+    "score>=0.55 + regime=RANGE": {
+      "count": 28,
+      "retained_pct": 0.3333,
+      "removed": 56,
+      "win_rate": 0.5,
+      "average_r": 0.3262,
+      "median_r": -0.4583,
+      "expectancy_r": 0.3262,
+      "profit_factor": 1.82,
+      "total_pnl": 4.31,
+      "confidence": "MEDIUM"
+    },
+    "score>=0.6 + conf>=0.7": {
+      "count": 32,
+      "retained_pct": 0.381,
+      "removed": 52,
+      "win_rate": 0.4062,
+      "average_r": -0.1434,
+      "median_r": -1.0,
+      "expectancy_r": -0.1434,
+      "profit_factor": 0.76,
+      "total_pnl": -1.88,
+      "confidence": "HIGH"
+    }
+  },
+  "best_score_threshold": {
+    "filter": ">=0.65",
+    "stats": {
+      "count": 23,
+      "retained_pct": 0.2738,
+      "removed": 61,
+      "win_rate": 0.4348,
+      "average_r": -0.0203,
+      "median_r": -1.0,
+      "expectancy_r": -0.0203,
+      "profit_factor": 0.18,
+      "total_pnl": -23.71,
+      "confidence": "MEDIUM"
+    }
+  },
+  "best_combined_filter": {
+    "filter": "score>=0.55 + regime=RANGE",
+    "stats": {
+      "count": 28,
+      "retained_pct": 0.3333,
+      "removed": 56,
+      "win_rate": 0.5,
+      "average_r": 0.3262,
+      "median_r": -0.4583,
+      "expectancy_r": 0.3262,
+      "profit_factor": 1.82,
+      "total_pnl": 4.31,
+      "confidence": "MEDIUM"
+    }
+  }
+}

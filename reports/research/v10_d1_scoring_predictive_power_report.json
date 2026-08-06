@@ -1,0 +1,303 @@
+{
+  "research_id": "V10-D1",
+  "title": "Scoring Components Predict R",
+  "generated_utc": "2026-08-05T23:27:02.223060+00:00",
+  "sample_size": 84,
+  "enriched_with_decision_trace": 83,
+  "components_available": [
+    "location_score",
+    "bias_alignment",
+    "confirmation_pre",
+    "volatility_quality",
+    "bias_stability",
+    "pattern_quality",
+    "market_quality",
+    "behaviour_score",
+    "formation_score",
+    "h4_alignment",
+    "htf_alignment",
+    "trend_alignment",
+    "structure_score",
+    "chop_clarity"
+  ],
+  "conclusion": "SCORE_IS_PREDICTIVE",
+  "conclusion_reason": "Higher scores consistently predict better R (gap=0.89R, monotonic pattern)",
+  "overall_score_analysis": {
+    "0.0-0.2": {
+      "count": 1,
+      "win_rate": 0.0,
+      "average_r": -1.0,
+      "median_r": -1.0,
+      "expectancy_r": -1.0,
+      "std_r": 0
+    },
+    "0.2-0.4": {
+      "count": 0
+    },
+    "0.4-0.6": {
+      "count": 43,
+      "win_rate": 0.3721,
+      "average_r": -0.1483,
+      "median_r": -1.0,
+      "expectancy_r": -0.1483,
+      "std_r": 1.4397
+    },
+    "0.6-0.8": {
+      "count": 40,
+      "win_rate": 0.4,
+      "average_r": -0.1054,
+      "median_r": -1.0,
+      "expectancy_r": -0.1054,
+      "std_r": 1.746
+    },
+    "0.8-1.0": {
+      "count": 0
+    }
+  },
+  "score_monotonic_increasing": true,
+  "calibration": {
+    "high_score_avg_r": -0.1054,
+    "high_score_count": 40,
+    "low_score_avg_r": -1.0,
+    "low_score_count": 1,
+    "calibration_gap": 0.8946,
+    "calibration_status": "CALIBRATED"
+  },
+  "component_analysis": {
+    "behaviour_score": {
+      "sample_size": 5,
+      "correlation_with_r": -0.2842,
+      "low_avg_r": null,
+      "low_count": 0,
+      "medium_avg_r": -0.125,
+      "medium_count": 1,
+      "high_avg_r": -1.3705,
+      "high_count": 4
+    },
+    "bias_alignment": {
+      "sample_size": 76,
+      "correlation_with_r": 0.1059,
+      "low_avg_r": -0.2347,
+      "low_count": 28,
+      "medium_avg_r": -0.1358,
+      "medium_count": 43,
+      "high_avg_r": 0.6149,
+      "high_count": 5
+    },
+    "bias_stability": {
+      "sample_size": 76,
+      "correlation_with_r": 0.0867,
+      "low_avg_r": -0.3268,
+      "low_count": 25,
+      "medium_avg_r": -0.0837,
+      "medium_count": 37,
+      "high_avg_r": 0.1377,
+      "high_count": 14
+    },
+    "chop_clarity": {
+      "sample_size": 76,
+      "correlation_with_r": -0.1601,
+      "low_avg_r": null,
+      "low_count": 0,
+      "medium_avg_r": -1.0,
+      "medium_count": 2,
+      "high_avg_r": -0.0991,
+      "high_count": 74
+    },
+    "confirmation_pre": {
+      "sample_size": 76,
+      "correlation_with_r": 0.1654,
+      "low_avg_r": -2.6452,
+      "low_count": 2,
+      "medium_avg_r": -0.171,
+      "medium_count": 10,
+      "high_avg_r": -0.0365,
+      "high_count": 64
+    },
+    "formation_score": {
+      "sample_size": 5,
+      "correlation_with_r": -0.3462,
+      "low_avg_r": 0.0927,
+      "low_count": 1,
+      "medium_avg_r": -1.425,
+      "medium_count": 4,
+      "high_avg_r": null,
+      "high_count": 0
+    },
+    "h4_alignment": {
+      "sample_size": 76,
+      "correlation_with_r": -0.1295,
+      "low_avg_r": 0.0432,
+      "low_count": 45,
+      "medium_avg_r": -0.3427,
+      "medium_count": 30,
+      "high_avg_r": -1.0,
+      "high_count": 1
+    },
+    "htf_alignment": {
+      "sample_size": 76,
+      "correlation_with_r": -0.0465,
+      "low_avg_r": -0.2696,
+      "low_count": 19,
+      "medium_avg_r": 0.2134,
+      "medium_count": 29,
+      "high_avg_r": -0.3715,
+      "high_count": 28
+    },
+    "location_score": {
+      "sample_size": 5,
+      "correlation_with_r": 0.0582,
+      "low_avg_r": null,
+      "low_count": 0,
+      "medium_avg_r": -1.1214,
+      "medium_count": 5,
+      "high_avg_r": null,
+      "high_count": 0
+    },
+    "market_quality": {
+      "sample_size": 76,
+      "correlation_with_r": -0.2183,
+      "low_avg_r": null,
+      "low_count": 0,
+      "medium_avg_r": 0.5347,
+      "medium_count": 8,
+      "high_avg_r": -0.2002,
+      "high_count": 68
+    },
+    "pattern_quality": {
+      "sample_size": 76,
+      "correlation_with_r": 0.0072,
+      "low_avg_r": -1.276,
+      "low_count": 3,
+      "medium_avg_r": -0.0453,
+      "medium_count": 58,
+      "high_avg_r": -0.1921,
+      "high_count": 15
+    },
+    "structure_score": {
+      "sample_size": 5,
+      "correlation_with_r": 0.1088,
+      "low_avg_r": -1.4365,
+      "low_count": 3,
+      "medium_avg_r": -0.6489,
+      "medium_count": 2,
+      "high_avg_r": null,
+      "high_count": 0
+    },
+    "trend_alignment": {
+      "sample_size": 76,
+      "correlation_with_r": -0.0107,
+      "low_avg_r": -0.2696,
+      "low_count": 19,
+      "medium_avg_r": 0.0264,
+      "medium_count": 28,
+      "high_avg_r": -0.1708,
+      "high_count": 29
+    },
+    "volatility_quality": {
+      "sample_size": 76,
+      "correlation_with_r": 0.0675,
+      "low_avg_r": -0.5555,
+      "low_count": 27,
+      "medium_avg_r": 0.8223,
+      "medium_count": 17,
+      "high_avg_r": -0.26,
+      "high_count": 32
+    }
+  },
+  "ranked_components": [
+    [
+      "formation_score",
+      -0.3462
+    ],
+    [
+      "behaviour_score",
+      -0.2842
+    ],
+    [
+      "market_quality",
+      -0.2183
+    ],
+    [
+      "confirmation_pre",
+      0.1654
+    ],
+    [
+      "chop_clarity",
+      -0.1601
+    ],
+    [
+      "h4_alignment",
+      -0.1295
+    ],
+    [
+      "structure_score",
+      0.1088
+    ],
+    [
+      "bias_alignment",
+      0.1059
+    ],
+    [
+      "bias_stability",
+      0.0867
+    ],
+    [
+      "volatility_quality",
+      0.0675
+    ],
+    [
+      "location_score",
+      0.0582
+    ],
+    [
+      "htf_alignment",
+      -0.0465
+    ],
+    [
+      "trend_alignment",
+      -0.0107
+    ],
+    [
+      "pattern_quality",
+      0.0072
+    ]
+  ],
+  "score_x_regime": [
+    {
+      "score_bucket": "medium",
+      "regime": "RANGE",
+      "count": 22,
+      "avg_r": -0.2582,
+      "win_rate": 0.3182
+    },
+    {
+      "score_bucket": "high",
+      "regime": "RANGE",
+      "count": 20,
+      "avg_r": 0.2677,
+      "win_rate": 0.5
+    },
+    {
+      "score_bucket": "high",
+      "regime": "TRANSITIONAL",
+      "count": 18,
+      "avg_r": -0.4109,
+      "win_rate": 0.3333
+    },
+    {
+      "score_bucket": "medium",
+      "regime": "TRANSITIONAL",
+      "count": 12,
+      "avg_r": -0.2405,
+      "win_rate": 0.25
+    },
+    {
+      "score_bucket": "medium",
+      "regime": "TRENDING",
+      "count": 3,
+      "avg_r": 0.7569,
+      "win_rate": 0.6667
+    }
+  ]
+}

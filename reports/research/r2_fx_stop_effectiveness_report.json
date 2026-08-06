@@ -1,0 +1,141 @@
+{
+  "research_id": "V10-R2-FX",
+  "title": "FX Stop Effectiveness Analysis",
+  "generated_utc": "2026-08-06T01:12:09.566829+00:00",
+  "dataset": "FX_ONLY",
+  "sample_size": 82,
+  "winners": 30,
+  "losers": 52,
+  "sl_exits": 68,
+  "tp_exits": 14,
+  "conclusion_code": "B",
+  "conclusion_text": "FX stops are too tight. Recommend wider structural stops.",
+  "conclusion_reason": "32% of SL exits are stop hunts/noise. Wider stops would save ~25 trades.",
+  "loss_classification": {
+    "normal_invalidation": {
+      "count": 42,
+      "pct": 0.6176
+    },
+    "stop_hunt_noise": {
+      "count": 22,
+      "pct": 0.3235
+    },
+    "wrong_direction": {
+      "count": 4,
+      "pct": 0.0588
+    }
+  },
+  "stop_distance": {
+    "mean_pips": 3.5,
+    "median_pips": 3.3,
+    "min_pips": 1.1,
+    "max_pips": 9.0
+  },
+  "counterfactual_simulation": {
+    "1.5x_wider": {
+      "stop_multiplier": 1.5,
+      "estimated_trades_saved": 25,
+      "new_win_rate": 0.6707,
+      "estimated_new_avg_r": 0.4153,
+      "improvement_r": 0.6098
+    },
+    "2.0x_wider": {
+      "stop_multiplier": 2.0,
+      "estimated_trades_saved": 25,
+      "new_win_rate": 0.6707,
+      "estimated_new_avg_r": 0.4153,
+      "improvement_r": 0.6098
+    }
+  },
+  "tp_scenarios": {
+    "1.0R": {
+      "tp_target_r": 1.0,
+      "would_hit_count": 22,
+      "hit_rate": 0.2683,
+      "sim_win_rate": 0.2683,
+      "sim_avg_r": -0.4302,
+      "sim_expectancy": -0.4302
+    },
+    "1.5R": {
+      "tp_target_r": 1.5,
+      "would_hit_count": 18,
+      "hit_rate": 0.2195,
+      "sim_win_rate": 0.2195,
+      "sim_avg_r": -0.418,
+      "sim_expectancy": -0.418
+    },
+    "2.0R": {
+      "tp_target_r": 2.0,
+      "would_hit_count": 10,
+      "hit_rate": 0.122,
+      "sim_win_rate": 0.122,
+      "sim_avg_r": -0.6009,
+      "sim_expectancy": -0.6009
+    },
+    "2.5R": {
+      "tp_target_r": 2.5,
+      "would_hit_count": 2,
+      "hit_rate": 0.0244,
+      "sim_win_rate": 0.0244,
+      "sim_avg_r": -0.8814,
+      "sim_expectancy": -0.8814
+    },
+    "3.0R": {
+      "tp_target_r": 3.0,
+      "would_hit_count": 1,
+      "hit_rate": 0.0122,
+      "sim_win_rate": 0.0122,
+      "sim_avg_r": -0.918,
+      "sim_expectancy": -0.918
+    }
+  },
+  "best_tp_scenario": {
+    "target": "1.5R",
+    "expectancy": -0.418
+  },
+  "by_symbol": {
+    "NZDUSD": {
+      "count": 21,
+      "mean_stop_pips": 3.0,
+      "win_rate": 0.4762,
+      "avg_r": 0.118,
+      "sl_rate": 0.6667
+    },
+    "USDCAD": {
+      "count": 17,
+      "mean_stop_pips": 4.1,
+      "win_rate": 0.4118,
+      "avg_r": 0.1521,
+      "sl_rate": 0.8824
+    },
+    "USDCHF": {
+      "count": 15,
+      "mean_stop_pips": 3.2,
+      "win_rate": 0.3333,
+      "avg_r": -0.497,
+      "sl_rate": 0.8667
+    },
+    "AUDUSD": {
+      "count": 13,
+      "mean_stop_pips": 3.1,
+      "win_rate": 0.2308,
+      "avg_r": -0.3266,
+      "sl_rate": 0.8462
+    },
+    "GBPUSD": {
+      "count": 8,
+      "mean_stop_pips": 4.5,
+      "win_rate": 0.375,
+      "avg_r": -0.7337,
+      "sl_rate": 0.875
+    },
+    "EURUSD": {
+      "count": 7,
+      "mean_stop_pips": 3.4,
+      "win_rate": 0.2857,
+      "avg_r": -0.3432,
+      "sl_rate": 1.0
+    }
+  },
+  "confidence": "HIGH"
+}

@@ -1,0 +1,141 @@
+{
+  "research_id": "V10-D2",
+  "title": "EV Calibration",
+  "generated_utc": "2026-08-05T23:42:17.873380+00:00",
+  "sample_size": 84,
+  "enriched": 83,
+  "field_coverage": {
+    "ev": 76,
+    "p_success": 76,
+    "confirmation_score": 76
+  },
+  "conclusion": "UNDERCONFIDENT",
+  "conclusion_reason": "System is underconfident \u2014 actual outcomes better than predicted",
+  "confidence_analysis": {
+    "0.0-0.2": {
+      "count": 1,
+      "win_rate": 0.0,
+      "average_r": -1.0,
+      "median_r": -1.0,
+      "expectancy_r": -1.0,
+      "profit_factor": 0.0
+    },
+    "0.2-0.4": {
+      "count": 0
+    },
+    "0.4-0.6": {
+      "count": 43,
+      "win_rate": 0.3721,
+      "average_r": -0.1483,
+      "median_r": -1.0,
+      "expectancy_r": -0.1483,
+      "profit_factor": 25.77
+    },
+    "0.6-0.8": {
+      "count": 40,
+      "win_rate": 0.4,
+      "average_r": -0.1054,
+      "median_r": -1.0,
+      "expectancy_r": -0.1054,
+      "profit_factor": 0.32
+    },
+    "0.8-1.0": {
+      "count": 0
+    }
+  },
+  "probability_calibration": {
+    "0.0-0.2": {
+      "count": 11,
+      "avg_predicted_p": 0.0536,
+      "actual_win_rate": 0.4545,
+      "calibration_error": 0.401,
+      "direction": "underconfident"
+    },
+    "0.2-0.4": {
+      "count": 73,
+      "avg_predicted_p": 0.2875,
+      "actual_win_rate": 0.3699,
+      "calibration_error": 0.0824,
+      "direction": "underconfident"
+    }
+  },
+  "ev_analysis": {
+    "negative": {
+      "count": 74,
+      "win_rate": 0.3649,
+      "average_r": -0.1124,
+      "median_r": -1.0,
+      "expectancy_r": -0.1124,
+      "profit_factor": 0.22
+    },
+    "zero_low": {
+      "count": 10,
+      "win_rate": 0.5,
+      "average_r": -0.3273,
+      "median_r": -0.0197,
+      "expectancy_r": -0.3273,
+      "profit_factor": 66.04
+    },
+    "medium": {
+      "count": 0
+    },
+    "high": {
+      "count": 0
+    }
+  },
+  "ev_gap": {
+    "positive_ev_avg_r": -0.5098,
+    "positive_ev_count": 2,
+    "negative_ev_avg_r": -0.1124,
+    "negative_ev_count": 74,
+    "zero_ev_count": 8,
+    "ev_gap_r": -0.3974
+  },
+  "predictor_comparison": {
+    "score": 0.0682,
+    "ev": 0.0793,
+    "p_success": 0.0768,
+    "confirmation_score": 0.088
+  },
+  "best_predictor": {
+    "name": "confirmation_score",
+    "correlation": 0.088
+  },
+  "confidence_x_regime": [
+    {
+      "confidence": "medium",
+      "regime": "RANGE",
+      "count": 22,
+      "avg_r": -0.2582,
+      "win_rate": 0.3182
+    },
+    {
+      "confidence": "high",
+      "regime": "RANGE",
+      "count": 20,
+      "avg_r": 0.2677,
+      "win_rate": 0.5
+    },
+    {
+      "confidence": "high",
+      "regime": "TRANSITIONAL",
+      "count": 18,
+      "avg_r": -0.4109,
+      "win_rate": 0.3333
+    },
+    {
+      "confidence": "medium",
+      "regime": "TRANSITIONAL",
+      "count": 12,
+      "avg_r": -0.2405,
+      "win_rate": 0.25
+    },
+    {
+      "confidence": "medium",
+      "regime": "TRENDING",
+      "count": 3,
+      "avg_r": 0.7569,
+      "win_rate": 0.6667
+    }
+  ]
+}

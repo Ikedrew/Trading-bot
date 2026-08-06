@@ -1,8 +1,8 @@
 {
   "_meta": {
     "symbol": "EURUSD",
-    "saved_at_utc": "2026-08-05T23:01:51.615260+00:00",
-    "saved_at_unix": 1785970911.6152606
+    "saved_at_utc": "2026-08-06T01:33:41.673075+00:00",
+    "saved_at_unix": 1785980021.6730757
   },
   "current_bias": null,
   "bias_phase": "EXPIRED",
@@ -14,7 +14,7 @@
   "last_strong_impulse_direction": null,
   "regime_state": "RANGING",
   "volatility_filter": 0.0,
-  "last_successful_open_mono": null,
+  "last_successful_open_mono": 1785986700.0,
   "structure_score": 0.0,
   "structure_regime": "WEAK",
   "last_failed_setups": []

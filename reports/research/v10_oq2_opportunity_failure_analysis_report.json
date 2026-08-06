@@ -1,0 +1,224 @@
+{
+  "research_id": "V10-OQ2",
+  "title": "Opportunity vs Outcome Failure Analysis",
+  "generated_utc": "2026-08-06T00:35:34.013447+00:00",
+  "sample_size": 84,
+  "winners": 32,
+  "losers": 52,
+  "win_rate": 0.381,
+  "conclusion": "OPPORTUNITY_MODEL_HAS_EDGE_BUT_FAILURE_MODES_EXIST",
+  "conclusion_reason": "Higher quality trades DO win more (43% vs 36%), but delayed failures (42/52) indicate entry timing issues. Regime is a clear differentiator.",
+  "success_vs_failure_comparison": {
+    "score": {
+      "winner_mean": 0.6008,
+      "loser_mean": 0.5829,
+      "difference": 0.0179
+    },
+    "confirmation": {
+      "winner_mean": 0.6372,
+      "loser_mean": 0.6314,
+      "difference": 0.0057
+    },
+    "rr_planned": {
+      "winner_mean": 2.2453,
+      "loser_mean": 2.1312,
+      "difference": 0.1142
+    },
+    "duration_seconds": {
+      "winner_mean": 6905.3438,
+      "loser_mean": 1821.4692,
+      "difference": 5083.8745
+    }
+  },
+  "component_comparison": {
+    "behaviour_score": {
+      "winner_mean": 0.8,
+      "loser_mean": 0.7667,
+      "difference": 0.0333,
+      "direction": "winners_higher"
+    },
+    "bias_alignment": {
+      "winner_mean": 0.5821,
+      "loser_mean": 0.4958,
+      "difference": 0.0863,
+      "direction": "winners_higher"
+    },
+    "bias_stability": {
+      "winner_mean": 0.5537,
+      "loser_mean": 0.4937,
+      "difference": 0.06,
+      "direction": "winners_higher"
+    },
+    "chop_clarity": {
+      "winner_mean": 0.9245,
+      "loser_mean": 0.9486,
+      "difference": -0.024,
+      "direction": "losers_higher"
+    },
+    "confirmation_pre": {
+      "winner_mean": 0.9494,
+      "loser_mean": 0.8773,
+      "difference": 0.0721,
+      "direction": "winners_higher"
+    },
+    "formation_score": {
+      "winner_mean": 0.35,
+      "loser_mean": 0.4,
+      "difference": -0.05,
+      "direction": "losers_higher"
+    },
+    "h4_alignment": {
+      "winner_mean": 0.2886,
+      "loser_mean": 0.3267,
+      "difference": -0.0381,
+      "direction": "losers_higher"
+    },
+    "htf_alignment": {
+      "winner_mean": 0.5766,
+      "loser_mean": 0.5711,
+      "difference": 0.0055,
+      "direction": "winners_higher"
+    },
+    "location_score": {
+      "winner_mean": 0.5,
+      "loser_mean": 0.5833,
+      "difference": -0.0833,
+      "direction": "losers_higher"
+    },
+    "market_quality": {
+      "winner_mean": 0.8377,
+      "loser_mean": 0.872,
+      "difference": -0.0342,
+      "direction": "losers_higher"
+    },
+    "pattern_quality": {
+      "winner_mean": 0.5821,
+      "loser_mean": 0.5958,
+      "difference": -0.0137,
+      "direction": "losers_higher"
+    },
+    "structure_score": {
+      "winner_mean": 0.35,
+      "loser_mean": 0.5167,
+      "difference": -0.1667,
+      "direction": "losers_higher"
+    },
+    "trend_alignment": {
+      "winner_mean": 0.5599,
+      "loser_mean": 0.5428,
+      "difference": 0.0171,
+      "direction": "winners_higher"
+    },
+    "volatility_quality": {
+      "winner_mean": 0.6429,
+      "loser_mean": 0.6208,
+      "difference": 0.022,
+      "direction": "winners_higher"
+    }
+  },
+  "regime_split": {
+    "winners": {
+      "TRANSITIONAL": 9,
+      "RANGE": 17,
+      "TRENDING": 2,
+      "UNKNOWN": 4
+    },
+    "losers": {
+      "UNKNOWN": 4,
+      "TRANSITIONAL": 21,
+      "RANGE": 25,
+      "TRENDING": 2
+    }
+  },
+  "pattern_split": {
+    "winners": {
+      "TWEEZER_TOP": 13,
+      "TWEEZER_BOTTOM": 8,
+      "THREE_INSIDE_DOWN": 1,
+      "EVENING_STAR": 2,
+      "MORNING_STAR": 3,
+      "HAMMER": 1,
+      "MEAN_REVERSION": 2,
+      "TREND_CONTINUATION": 2
+    },
+    "losers": {
+      "RECOVERED": 1,
+      "EVENING_STAR": 8,
+      "HANGING_MAN": 1,
+      "TWEEZER_TOP": 16,
+      "THREE_INSIDE_DOWN": 1,
+      "MEAN_REVERSION": 2,
+      "TWEEZER_BOTTOM": 15,
+      "MORNING_STAR": 1,
+      "TREND_CONTINUATION": 1,
+      "HAMMER": 3,
+      "THREE_BLACK_CROWS": 1,
+      "BULLISH_ENGULFING": 1,
+      "THREE_INSIDE_UP": 1
+    }
+  },
+  "high_quality_analysis": {
+    "threshold": 0.6612,
+    "total": 21,
+    "winners": 9,
+    "losers": 12,
+    "win_rate": 0.4286,
+    "avg_r": -0.0169
+  },
+  "high_quality_failure_profile": {
+    "regime_distribution": {
+      "TRANSITIONAL": 9,
+      "RANGE": 3
+    },
+    "avg_confirmation": 0.7018,
+    "avg_duration_min": 44.0,
+    "avg_planned_rr": 1.9
+  },
+  "low_quality_analysis": {
+    "threshold": 0.5348,
+    "total": 22,
+    "winners": 8,
+    "losers": 14,
+    "win_rate": 0.3636,
+    "avg_r": -0.2704
+  },
+  "failure_modes": {
+    "immediate": 3,
+    "delayed": 42,
+    "near_miss": 3,
+    "wrong_direction": 4,
+    "risk_failure": 0
+  },
+  "failure_by_regime": {
+    "RANGE": {
+      "total": 42,
+      "win_rate": 0.4048,
+      "avg_r": -0.0078,
+      "failure_rate": 0.5952
+    },
+    "TRANSITIONAL": {
+      "total": 30,
+      "win_rate": 0.3,
+      "avg_r": -0.3427,
+      "failure_rate": 0.7
+    },
+    "TRENDING": {
+      "total": 4,
+      "win_rate": 0.5,
+      "avg_r": 0.3177,
+      "failure_rate": 0.5
+    }
+  },
+  "confirmation_analysis": {
+    "high_confirmation": {
+      "count": 56,
+      "win_rate": 0.3929,
+      "avg_r": -0.1325
+    },
+    "low_confirmation": {
+      "count": 13,
+      "win_rate": 0.3846,
+      "avg_r": -0.6356
+    }
+  }
+}
