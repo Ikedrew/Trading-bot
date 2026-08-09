@@ -1,0 +1,32 @@
+{
+  "question_id": "D-002",
+  "title": "EV Calibration",
+  "research_intent": "Is the expected value estimate calibrated? Does predicted win probability match actual outcomes across confidence buckets?",
+  "angles": {
+    "execution": false,
+    "decision": true,
+    "market": false,
+    "strategy": false
+  },
+  "required_universes": [
+    "DECISION"
+  ],
+  "required_populations": [
+    "execute_decisions"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "calibration",
+  "minimum_sample_size": 15,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "D2",
+    "D3",
+    "V10-D2",
+    "Lambda-D2"
+  ],
+  "decision_enabled": "Should EV gate be enabled/disabled? Is predicted probability trustworthy?"
+}

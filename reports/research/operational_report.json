@@ -1,0 +1,26 @@
+{
+  "generated_utc": "2026-08-09T00:15:36.401345+00:00",
+  "dataset": {
+    "status": "AVAILABLE",
+    "trades": 94,
+    "path": "data\\research\\research_universe.jsonl"
+  },
+  "campaigns": {
+    "registered": 4,
+    "ids": [
+      "FX_OPT_V1",
+      "RISK_INVESTIGATION_V1",
+      "DECISION_QUALITY_V1",
+      "STRATEGY_REVIEW_V1"
+    ]
+  },
+  "candidates": {
+    "total": 0,
+    "active": 0,
+    "active_ids": []
+  },
+  "shadow": {
+    "active_shadows": 0,
+    "shadow_ids": []
+  }
+}

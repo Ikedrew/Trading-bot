@@ -1,0 +1,31 @@
+{
+  "question_id": "E-009",
+  "title": "Trade Duration vs Outcome",
+  "research_intent": "Does trade duration affect expectancy? Are trades that last longer systematically better or worse than quick trades?",
+  "angles": {
+    "execution": true,
+    "decision": false,
+    "market": false,
+    "strategy": false
+  },
+  "required_universes": [
+    "EXECUTION"
+  ],
+  "required_populations": [
+    "all_trades"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "correlation",
+  "minimum_sample_size": 20,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "EX_A",
+    "EX5",
+    "V10-EX3"
+  ],
+  "decision_enabled": "Should time-based exits be adjusted?"
+}

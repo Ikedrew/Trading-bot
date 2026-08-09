@@ -1,0 +1,30 @@
+{
+  "question_id": "E-003",
+  "title": "Exit Reason Distribution",
+  "research_intent": "What percentage of trades exit via stop loss vs take profit vs time exit vs manual close? Is the SL/TP ratio healthy?",
+  "angles": {
+    "execution": true,
+    "decision": false,
+    "market": false,
+    "strategy": false
+  },
+  "required_universes": [
+    "EXECUTION"
+  ],
+  "required_populations": [
+    "all_trades"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "distribution",
+  "minimum_sample_size": 20,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "V10-EX1",
+    "EX1"
+  ],
+  "decision_enabled": "Are we exiting too early/late? Is SL/TP ratio healthy?"
+}

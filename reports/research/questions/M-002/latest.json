@@ -1,0 +1,62 @@
+{
+  "question_id": "M-002",
+  "title": "HTF Alignment Value",
+  "run_id": "run_20260809_033621_3c7f7b",
+  "run_timestamp": "2026-08-09T03:36:49Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "9dbe5570ee92c3ee",
+    "MARKET": "6cdeba4f6aeefd32",
+    "STRATEGY": "932ffa1cfeee23e4"
+  },
+  "data_snapshot_timestamp": "2026-08-09T03:36:49Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_market_states"
+  ],
+  "universes_used": [
+    "MARKET"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "total": 6028
+  },
+  "evidence": {
+    "primitives_executed": [
+      "predictive_power"
+    ],
+    "primary_analysis": "predictive_power"
+  },
+  "angle_evidence": {
+    "MARKET": {
+      "included": true
+    }
+  },
+  "primary_metrics": {},
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 6028
+  },
+  "anomaly_view": {},
+  "exceptional_view": {},
+  "conditioned_views": {},
+  "outcome": "COMPLETED",
+  "conclusion": "No conclusion",
+  "confidence": "HIGH",
+  "recommendation": "",
+  "limitations": [
+    "Insufficient data (0 records)"
+  ],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "",
+  "previous_outcome": "",
+  "changes_from_previous": {},
+  "research_gaps": []
+}

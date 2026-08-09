@@ -1,0 +1,34 @@
+{
+  "question_id": "D-003",
+  "title": "Decision Threshold Effectiveness",
+  "research_intent": "Are score thresholds set optimally? Would raising/lowering the threshold improve overall expectancy?",
+  "angles": {
+    "execution": false,
+    "decision": true,
+    "market": false,
+    "strategy": false
+  },
+  "required_universes": [
+    "DECISION"
+  ],
+  "required_populations": [
+    "all_decisions",
+    "execute_decisions",
+    "high_score_decisions",
+    "low_score_decisions"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "segmentation",
+  "minimum_sample_size": 20,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "D4",
+    "V10-D3",
+    "Lambda-D3"
+  ],
+  "decision_enabled": "Should score thresholds be adjusted?"
+}

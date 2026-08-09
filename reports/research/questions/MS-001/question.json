@@ -1,0 +1,43 @@
+{
+  "question_id": "MS-001",
+  "title": "Strategy \u00d7 Regime Interaction",
+  "research_intent": "Do strategy families perform differently across market regimes? Should strategy selection be regime-gated?",
+  "angles": {
+    "execution": false,
+    "decision": false,
+    "market": true,
+    "strategy": true
+  },
+  "required_universes": [
+    "MARKET",
+    "STRATEGY"
+  ],
+  "required_populations": [
+    "all_market_states",
+    "all_strategies",
+    "trending_regime",
+    "ranging_regime"
+  ],
+  "required_joins": [
+    {
+      "from": "STRATEGY",
+      "to": "MARKET",
+      "type": "entity_id",
+      "field": "entity_id"
+    }
+  ],
+  "views": [
+    "NORMAL",
+    "ANOMALOUS"
+  ],
+  "analysis_type": "segmentation",
+  "minimum_sample_size": 10,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "M2",
+    "S3",
+    "V10-SC2"
+  ],
+  "decision_enabled": "Should strategy selection be regime-gated?"
+}

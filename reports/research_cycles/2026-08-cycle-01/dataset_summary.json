@@ -1,0 +1,24 @@
+{
+  "total_trades": 94,
+  "date_range": {
+    "oldest": "2026-07-22 17:40",
+    "newest": "2026-08-06 04:45"
+  },
+  "symbols": [
+    "AUDUSD",
+    "EURUSD",
+    "GBPUSD",
+    "NZDUSD",
+    "US500",
+    "USDCAD",
+    "USDCHF",
+    "USDJPY",
+    "XAUUSD"
+  ],
+  "asset_classes": {
+    "FULL": 94,
+    "FX": 87,
+    "INDEX": 4,
+    "COMMODITY": 3
+  }
+}

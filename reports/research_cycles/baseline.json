@@ -1,0 +1,21 @@
+{
+  "cycle_id": "2026-08-cycle-02",
+  "timestamp": "2026-08-07T15:08:58.896943+00:00",
+  "trade_count": 94,
+  "expectancy_r": -0.1758,
+  "win_rate": 0.3617,
+  "profit_factor": 1.71,
+  "total_pnl": 714.27,
+  "experiments": {
+    "E1": "INCONCLUSIVE",
+    "E2": "SOME_PATTERNS_SHOW_PROMISE",
+    "M1": "REGIMES_SHOW_DIFFERENT_EXPECTANCY",
+    "D1": "SCORE_IS_PREDICTIVE",
+    "D2": "EV_UNDERCONFIDENT",
+    "D3": "INCONCLUSIVE",
+    "OQ1": "OPPORTUNITY_LAYER_PREDICTIVE",
+    "R1": "STOPS_NEED_REVIEW",
+    "OQ2": "DECISION_LAYER_FAILURE",
+    "R2": "STOP_TOO_TIGHT"
+  }
+}

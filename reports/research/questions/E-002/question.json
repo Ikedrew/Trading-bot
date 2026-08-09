@@ -1,0 +1,33 @@
+{
+  "question_id": "E-002",
+  "title": "Win/Loss Distribution Shape",
+  "research_intent": "What is the shape of the win/loss distribution? Are wins larger than losses? Is variance acceptable for the measured edge?",
+  "angles": {
+    "execution": true,
+    "decision": false,
+    "market": false,
+    "strategy": false
+  },
+  "required_universes": [
+    "EXECUTION"
+  ],
+  "required_populations": [
+    "all_trades",
+    "winning_trades",
+    "losing_trades"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "distribution",
+  "minimum_sample_size": 30,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "E1",
+    "V10-E1",
+    "V10-R2"
+  ],
+  "decision_enabled": "Is variance acceptable? Do we need position sizing adjustment?"
+}

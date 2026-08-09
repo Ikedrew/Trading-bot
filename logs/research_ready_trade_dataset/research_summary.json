@@ -1,50 +1,33 @@
 {
-  "schema_version": "research_ready_v1",
-  "generated_utc": "2026-08-05T22:21:14.262614+00:00",
-  "dataset_counts": {
-    "raw_trades": 100,
-    "research_ready": 84,
-    "excluded": 16,
-    "inclusion_rate": 84.0
+  "schema_version": "research_ready_v2",
+  "generated_utc": "2026-08-07T14:22:53.038227+00:00",
+  "source": "MT5 broker reconciliation rebuild",
+  "total_trades": 94,
+  "excluded": 12,
+  "by_asset_class": {
+    "FX_MAJOR": 85,
+    "FX_JPY": 2,
+    "COMMODITY": 3,
+    "INDEX": 4
   },
-  "exclusion_breakdown": {
-    "Risk geometry: INVALID_RR": 7,
-    "PnL uncorrectable (non-FX without broker data)": 6,
-    "Non-FX instrument with uncorrectable PnL (100K multiplier bug)": 6,
-    "Risk geometry: STOP_TOO_CLOSE": 4,
-    "Risk geometry: INVALID_STOP_SIDE": 2
+  "by_symbol": {
+    "AUDUSD": 14,
+    "USDJPY": 2,
+    "NZDUSD": 21,
+    "USDCHF": 15,
+    "GBPUSD": 8,
+    "USDCAD": 19,
+    "EURUSD": 8,
+    "XAUUSD": 3,
+    "US500": 4
   },
-  "pnl_reconciliation": {
-    "broker_confirmed": 2,
-    "calculated_fx_acceptable": 82,
-    "uncorrectable_excluded": 6
+  "pnl_source": {
+    "BROKER": 94
   },
-  "exit_reason_coverage": {
-    "stop_loss": 68,
-    "take_profit": 16,
-    "other": 0,
-    "unknown": 0
+  "validation_status": {
+    "PARTIAL": 4,
+    "VALID": 90
   },
-  "risk_geometry": {
-    "valid": 84,
-    "excluded_stop_side": 2,
-    "excluded_too_close": 4,
-    "excluded_rr": 7
-  },
-  "data_trust_score": {
-    "overall": 93,
-    "lifecycle_completeness": 93,
-    "broker_reconciliation": 94,
-    "risk_validity": 87,
-    "instrument_correctness": 94,
-    "exit_reason_confidence": 100
-  },
-  "phase1_checklist": {
-    "lifecycle_trace_complete": true,
-    "broker_pnl_confirmed": true,
-    "exit_reasons_captured": true,
-    "risk_geometry_validated": false,
-    "instrument_calculations_validated": true,
-    "research_ready_dataset_created": true
-  }
+  "broker_pnl_total": 714.27,
+  "realised_r_available": 94
 }

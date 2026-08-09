@@ -1,0 +1,78 @@
+{
+  "executive_summary": "Lambda E1 returns n=0 because the ResearchSegmenter loads data from a LOCAL filesystem path (data/research/research_universe.jsonl) which does not exist in Lambda's ephemeral filesystem. The S3 storage adapter (RESEARCH_UNIVERSE_KEY env var) is configured but NEVER consumed by the ExperimentRunner/Segmenter code path.",
+
+  "lambda_entry_point": {
+    "file": "research_engine/v10/lambda_handler.py",
+    "function": "handler(event, context)",
+    "creates": "ResearchRouter() with universe_file=None"
+  },
+
+  "e1_execution_trace": [
+    {"step": 1, "module": "lambda_handler.py", "function": "handler", "passes": "event to ResearchRouter()"},
+    {"step": 2, "module": "operations/router.py", "function": "ResearchRouter.__init__", "sets": "self._universe_file = None"},
+    {"step": 3, "module": "operations/router.py", "function": "_run_question", "creates": "ExperimentRunner(universe_file=None)"},
+    {"step": 4, "module": "research_intelligence/experiment_runner.py", "function": "__init__", "resolves": "universe_file=None -> Path('data/research/research_universe.jsonl')"},
+    {"step": 5, "module": "research_intelligence/experiment_runner.py", "function": "run", "calls": "self.segmenter.filter(**{})"},
+    {"step": 6, "module": "segmentation_engine.py", "function": "ResearchSegmenter.__init__", "sets": "self._universe_file = Path('data/research/research_universe.jsonl')"},
+    {"step": 7, "module": "segmentation_engine.py", "function": "events (property)", "calls": "_load_jsonl(path)"},
+    {"step": 8, "module": "segmentation_engine.py", "function": "_load_jsonl", "checks": "path.exists() -> FALSE in Lambda -> returns []"},
+    {"step": 9, "module": "segmentation_engine.py", "function": "filter(**{})", "returns": "[] (empty list)"},
+    {"step": 10, "module": "experiment_runner.py", "function": "run", "detects": "not population -> returns INCONCLUSIVE with 'No trades match'"}
+  ],
+
+  "actual_data_source": {
+    "e1_reads": "data/research/research_universe.jsonl (relative path, local filesystem)",
+    "loader": "segmentation_engine._load_jsonl(Path)",
+    "uses_s3_adapter": false,
+    "uses_RESEARCH_UNIVERSE_KEY": false
+  },
+
+  "lambda_configuration": {
+    "RESEARCH_STORAGE": "s3",
+    "RESEARCH_BUCKET": "v10-engine",
+    "RESEARCH_UNIVERSE_KEY": "data/research/research_universe.jsonl",
+    "consumed_by_e1": false,
+    "consumed_by": "operations/storage.py ResearchStorage class (NOT called by ExperimentRunner)"
+  },
+
+  "datasets": {
+    "research_universe": {
+      "purpose": "Canonical joined dataset for all Phase 4+ research experiments",
+      "local_path": "data/research/research_universe.jsonl",
+      "expected_consumer": "ExperimentRunner via ResearchSegmenter",
+      "trade_count_local": 94,
+      "location": "local filesystem only — NOT loaded from S3 by experiment path"
+    },
+    "research_ready_trades": {
+      "purpose": "Validated research dataset (pre-enrichment, pre-universe)",
+      "local_path": "logs/research_ready_trade_dataset/research_ready_trades.jsonl",
+      "expected_consumer": "Legacy segmentation.py, research_cycle.py",
+      "trade_count_local": 94,
+      "location": "local filesystem"
+    }
+  },
+
+  "s3_expected_key": "data/research/research_universe.jsonl",
+  "s3_bucket": "v10-engine",
+
+  "local_vs_lambda": {
+    "local": {
+      "working_directory": "C:\\Users\\Administrator\\Desktop\\Trading bot build",
+      "file_exists": true,
+      "records": 94,
+      "result": "E1 returns sample_size=94"
+    },
+    "lambda": {
+      "working_directory": "/var/task (Lambda ephemeral filesystem)",
+      "file_exists": false,
+      "records": 0,
+      "result": "E1 returns sample_size=0, INCONCLUSIVE"
+    }
+  },
+
+  "root_cause": "DATASET WIRING PROBLEM: The ExperimentRunner -> ResearchSegmenter -> _load_jsonl path reads from LOCAL filesystem using a relative path. The S3 storage adapter (operations/storage.py) exists but is never called by this code path. Lambda configures RESEARCH_UNIVERSE_KEY but the experiment execution chain never uses it.",
+
+  "intended_architecture": "Architecture A: research_universe.jsonl -> ResearchSegmenter -> E1. The file must be available at the path the segmenter expects.",
+
+  "recommended_next_action": "Wire the ExperimentRunner to use the ResearchStorage adapter when RESEARCH_STORAGE=s3, so it fetches the universe from S3 instead of expecting a local file. The smallest change: make ResearchRouter pass the S3-loaded universe content as a temp file, OR modify ResearchSegmenter to accept a storage backend."
+}

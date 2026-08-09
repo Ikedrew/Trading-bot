@@ -1,0 +1,41 @@
+{
+  "question_id": "EM-001",
+  "title": "Regime-Conditioned Expectancy",
+  "research_intent": "Does trade expectancy differ significantly across market regimes when measured on realised execution outcomes?",
+  "angles": {
+    "execution": true,
+    "decision": false,
+    "market": true,
+    "strategy": false
+  },
+  "required_universes": [
+    "EXECUTION",
+    "MARKET"
+  ],
+  "required_populations": [
+    "all_trades",
+    "trending_regime",
+    "ranging_regime"
+  ],
+  "required_joins": [
+    {
+      "from": "EXECUTION",
+      "to": "MARKET",
+      "type": "entity_id",
+      "field": "entity_id"
+    }
+  ],
+  "views": [
+    "NORMAL",
+    "ANOMALOUS"
+  ],
+  "analysis_type": "segmentation",
+  "minimum_sample_size": 10,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "M1",
+    "V10-M1"
+  ],
+  "decision_enabled": "Should regime gate execution?"
+}

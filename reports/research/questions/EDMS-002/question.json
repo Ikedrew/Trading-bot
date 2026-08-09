@@ -1,0 +1,58 @@
+{
+  "question_id": "EDMS-002",
+  "title": "Promotion Impact Analysis",
+  "research_intent": "If a specific research finding is promoted to production (e.g. disable a pattern, adjust threshold, gate by regime), what is the expected impact on EV, win rate, drawdown, and trade frequency?",
+  "angles": {
+    "execution": true,
+    "decision": true,
+    "market": true,
+    "strategy": true
+  },
+  "required_universes": [
+    "EXECUTION",
+    "DECISION",
+    "MARKET",
+    "STRATEGY"
+  ],
+  "required_populations": [
+    "all_trades",
+    "execute_decisions",
+    "all_market_states",
+    "all_strategies"
+  ],
+  "required_joins": [
+    {
+      "from": "DECISION",
+      "to": "EXECUTION",
+      "type": "entity_id",
+      "field": "entity_id"
+    },
+    {
+      "from": "DECISION",
+      "to": "MARKET",
+      "type": "entity_id",
+      "field": "entity_id"
+    },
+    {
+      "from": "DECISION",
+      "to": "STRATEGY",
+      "type": "entity_id",
+      "field": "entity_id"
+    }
+  ],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "simulation",
+  "minimum_sample_size": 50,
+  "dependencies": [
+    "E-001",
+    "EDMS-001"
+  ],
+  "status": "PARTIAL",
+  "source_intent": [
+    "P1",
+    "L7"
+  ],
+  "decision_enabled": "Should this finding be promoted to production?"
+}

@@ -1,0 +1,40 @@
+{
+  "question_id": "DS-001",
+  "title": "Strategy Confidence Calibration",
+  "research_intent": "Is strategy confidence calibrated to outcomes? Does high strategy confidence actually predict better R-multiples?",
+  "angles": {
+    "execution": false,
+    "decision": true,
+    "market": false,
+    "strategy": true
+  },
+  "required_universes": [
+    "DECISION",
+    "STRATEGY"
+  ],
+  "required_populations": [
+    "execute_decisions",
+    "strategy_selected"
+  ],
+  "required_joins": [
+    {
+      "from": "DECISION",
+      "to": "STRATEGY",
+      "type": "entity_id",
+      "field": "entity_id"
+    }
+  ],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "calibration",
+  "minimum_sample_size": 15,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "S1",
+    "S5",
+    "V10-SC1"
+  ],
+  "decision_enabled": "Should strategy confidence gate execution?"
+}

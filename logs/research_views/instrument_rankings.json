@@ -1,0 +1,280 @@
+{
+  "generated_utc": "2026-08-07T16:40:00.927171+00:00",
+  "total_instruments": 9,
+  "by_expectancy": [
+    {
+      "symbol": "XAUUSD",
+      "count": 3,
+      "win_rate": 0.6667,
+      "expectancy_r": 0.8608,
+      "profit_factor": 0.05,
+      "average_r": 0.8608,
+      "total_pnl": -372.15,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "NZDUSD",
+      "count": 20,
+      "win_rate": 0.5,
+      "expectancy_r": 0.1739,
+      "profit_factor": 0.11,
+      "average_r": 0.1739,
+      "total_pnl": -33.51,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "USDCAD",
+      "count": 18,
+      "win_rate": 0.3333,
+      "expectancy_r": -0.2731,
+      "profit_factor": 0.03,
+      "average_r": -0.2731,
+      "total_pnl": -44.83,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "AUDUSD",
+      "count": 14,
+      "win_rate": 0.2143,
+      "expectancy_r": -0.3747,
+      "profit_factor": 0.05,
+      "average_r": -0.3747,
+      "total_pnl": -23.78,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "EURUSD",
+      "count": 8,
+      "win_rate": 0.25,
+      "expectancy_r": -0.4647,
+      "profit_factor": 0.01,
+      "average_r": -0.4647,
+      "total_pnl": -94.29,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "USDCHF",
+      "count": 15,
+      "win_rate": 0.3333,
+      "expectancy_r": -0.497,
+      "profit_factor": 0.47,
+      "average_r": -0.497,
+      "total_pnl": -2.25,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "GBPUSD",
+      "count": 8,
+      "win_rate": 0.375,
+      "expectancy_r": -0.7337,
+      "profit_factor": 0.05,
+      "average_r": -0.7337,
+      "total_pnl": -36.47,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "US500",
+      "count": 2,
+      "win_rate": 0.0,
+      "expectancy_r": -1.0236,
+      "profit_factor": 0.0,
+      "average_r": -1.0236,
+      "total_pnl": -369.81,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "USDJPY",
+      "count": 2,
+      "win_rate": 0.0,
+      "expectancy_r": -1.0678,
+      "profit_factor": 0.0,
+      "average_r": -1.0678,
+      "total_pnl": -0.38,
+      "confidence": "LOW"
+    }
+  ],
+  "by_win_rate": [
+    {
+      "symbol": "XAUUSD",
+      "count": 3,
+      "win_rate": 0.6667,
+      "expectancy_r": 0.8608,
+      "profit_factor": 0.05,
+      "average_r": 0.8608,
+      "total_pnl": -372.15,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "NZDUSD",
+      "count": 20,
+      "win_rate": 0.5,
+      "expectancy_r": 0.1739,
+      "profit_factor": 0.11,
+      "average_r": 0.1739,
+      "total_pnl": -33.51,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "GBPUSD",
+      "count": 8,
+      "win_rate": 0.375,
+      "expectancy_r": -0.7337,
+      "profit_factor": 0.05,
+      "average_r": -0.7337,
+      "total_pnl": -36.47,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "USDCAD",
+      "count": 18,
+      "win_rate": 0.3333,
+      "expectancy_r": -0.2731,
+      "profit_factor": 0.03,
+      "average_r": -0.2731,
+      "total_pnl": -44.83,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "USDCHF",
+      "count": 15,
+      "win_rate": 0.3333,
+      "expectancy_r": -0.497,
+      "profit_factor": 0.47,
+      "average_r": -0.497,
+      "total_pnl": -2.25,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "EURUSD",
+      "count": 8,
+      "win_rate": 0.25,
+      "expectancy_r": -0.4647,
+      "profit_factor": 0.01,
+      "average_r": -0.4647,
+      "total_pnl": -94.29,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "AUDUSD",
+      "count": 14,
+      "win_rate": 0.2143,
+      "expectancy_r": -0.3747,
+      "profit_factor": 0.05,
+      "average_r": -0.3747,
+      "total_pnl": -23.78,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "US500",
+      "count": 2,
+      "win_rate": 0.0,
+      "expectancy_r": -1.0236,
+      "profit_factor": 0.0,
+      "average_r": -1.0236,
+      "total_pnl": -369.81,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "USDJPY",
+      "count": 2,
+      "win_rate": 0.0,
+      "expectancy_r": -1.0678,
+      "profit_factor": 0.0,
+      "average_r": -1.0678,
+      "total_pnl": -0.38,
+      "confidence": "LOW"
+    }
+  ],
+  "by_profit_factor": [
+    {
+      "symbol": "USDCHF",
+      "count": 15,
+      "win_rate": 0.3333,
+      "expectancy_r": -0.497,
+      "profit_factor": 0.47,
+      "average_r": -0.497,
+      "total_pnl": -2.25,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "NZDUSD",
+      "count": 20,
+      "win_rate": 0.5,
+      "expectancy_r": 0.1739,
+      "profit_factor": 0.11,
+      "average_r": 0.1739,
+      "total_pnl": -33.51,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "AUDUSD",
+      "count": 14,
+      "win_rate": 0.2143,
+      "expectancy_r": -0.3747,
+      "profit_factor": 0.05,
+      "average_r": -0.3747,
+      "total_pnl": -23.78,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "GBPUSD",
+      "count": 8,
+      "win_rate": 0.375,
+      "expectancy_r": -0.7337,
+      "profit_factor": 0.05,
+      "average_r": -0.7337,
+      "total_pnl": -36.47,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "XAUUSD",
+      "count": 3,
+      "win_rate": 0.6667,
+      "expectancy_r": 0.8608,
+      "profit_factor": 0.05,
+      "average_r": 0.8608,
+      "total_pnl": -372.15,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "USDCAD",
+      "count": 18,
+      "win_rate": 0.3333,
+      "expectancy_r": -0.2731,
+      "profit_factor": 0.03,
+      "average_r": -0.2731,
+      "total_pnl": -44.83,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "EURUSD",
+      "count": 8,
+      "win_rate": 0.25,
+      "expectancy_r": -0.4647,
+      "profit_factor": 0.01,
+      "average_r": -0.4647,
+      "total_pnl": -94.29,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "US500",
+      "count": 2,
+      "win_rate": 0.0,
+      "expectancy_r": -1.0236,
+      "profit_factor": 0.0,
+      "average_r": -1.0236,
+      "total_pnl": -369.81,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "USDJPY",
+      "count": 2,
+      "win_rate": 0.0,
+      "expectancy_r": -1.0678,
+      "profit_factor": 0.0,
+      "average_r": -1.0678,
+      "total_pnl": -0.38,
+      "confidence": "LOW"
+    }
+  ]
+}

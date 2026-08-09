@@ -1,0 +1,30 @@
+{
+  "question_id": "M-002",
+  "title": "HTF Alignment Value",
+  "research_intent": "Does higher-timeframe alignment (macro bias strength, structure alignment) predict trade success better than individual timeframe data?",
+  "angles": {
+    "execution": false,
+    "decision": false,
+    "market": true,
+    "strategy": false
+  },
+  "required_universes": [
+    "MARKET"
+  ],
+  "required_populations": [
+    "all_market_states"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "correlation",
+  "minimum_sample_size": 15,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "V10-M2",
+    "M2"
+  ],
+  "decision_enabled": "Should HTF alignment gate trading? What minimum produces edge?"
+}

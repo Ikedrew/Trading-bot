@@ -1,0 +1,3 @@
+# Lambda requirements for V10 Research Engine
+# boto3 is provided by the Lambda runtime — do NOT bundle it
+# The research engine runs on stdlib only (no additional packages required)

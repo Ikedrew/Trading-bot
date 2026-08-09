@@ -1,0 +1,34 @@
+{
+  "question_id": "M-003",
+  "title": "Volatility State Impact",
+  "research_intent": "Does volatility state (HIGH/NEUTRAL/LOW) affect expectancy? Does combining regime + volatility improve prediction beyond regime alone?",
+  "angles": {
+    "execution": false,
+    "decision": false,
+    "market": true,
+    "strategy": false
+  },
+  "required_universes": [
+    "MARKET"
+  ],
+  "required_populations": [
+    "all_market_states",
+    "high_volatility",
+    "low_volatility"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL",
+    "ANOMALOUS"
+  ],
+  "analysis_type": "segmentation",
+  "minimum_sample_size": 10,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "V10-M3",
+    "M3",
+    "M4"
+  ],
+  "decision_enabled": "Should we add volatility to opportunity quality assessment?"
+}

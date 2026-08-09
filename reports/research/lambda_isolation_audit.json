@@ -1,0 +1,11 @@
+{
+  "isolation_status": "PASS",
+  "banned_imports": [],
+  "external_packages": [
+    "__future__",
+    "boto3",
+    "core",
+    "math"
+  ],
+  "note": "Lambda research path: S3 data -> Lambda -> Research Engine -> Reports -> S3"
+}

@@ -1,0 +1,33 @@
+{
+  "question_id": "M-006",
+  "title": "Session Edge Variation",
+  "research_intent": "Does expectancy vary significantly across trading sessions (London, New York, Asia)? Are there sessions that should be avoided?",
+  "angles": {
+    "execution": false,
+    "decision": false,
+    "market": true,
+    "strategy": false
+  },
+  "required_universes": [
+    "MARKET"
+  ],
+  "required_populations": [
+    "all_market_states",
+    "session_london",
+    "session_ny",
+    "session_asia"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "segmentation",
+  "minimum_sample_size": 10,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "X3",
+    "Lambda-C1"
+  ],
+  "decision_enabled": "Should we restrict trading to specific sessions?"
+}

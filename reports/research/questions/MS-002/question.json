@@ -1,0 +1,40 @@
+{
+  "question_id": "MS-002",
+  "title": "Pattern \u00d7 Market Context Interaction",
+  "research_intent": "Are specific patterns only profitable in certain market conditions? Is context more predictive than pattern identity alone?",
+  "angles": {
+    "execution": false,
+    "decision": false,
+    "market": true,
+    "strategy": true
+  },
+  "required_universes": [
+    "MARKET",
+    "STRATEGY"
+  ],
+  "required_populations": [
+    "all_market_states",
+    "all_strategies"
+  ],
+  "required_joins": [
+    {
+      "from": "STRATEGY",
+      "to": "MARKET",
+      "type": "entity_id",
+      "field": "entity_id"
+    }
+  ],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "segmentation",
+  "minimum_sample_size": 10,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "M9",
+    "M11",
+    "E2"
+  ],
+  "decision_enabled": "Should patterns be context-gated?"
+}

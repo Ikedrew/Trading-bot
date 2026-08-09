@@ -1,0 +1,35 @@
+{
+  "question_id": "E-004",
+  "title": "Execution Quality by Session",
+  "research_intent": "Which trading sessions produce the best execution quality \u2014 lowest slippage, fastest fills, fewest broker rejections?",
+  "angles": {
+    "execution": true,
+    "decision": false,
+    "market": false,
+    "strategy": false
+  },
+  "required_universes": [
+    "EXECUTION"
+  ],
+  "required_populations": [
+    "all_trades",
+    "session_london",
+    "session_ny",
+    "session_asia"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL",
+    "ANOMALOUS"
+  ],
+  "analysis_type": "segmentation",
+  "minimum_sample_size": 10,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "X1",
+    "X3",
+    "V10-X1"
+  ],
+  "decision_enabled": "Should we restrict trading to specific sessions?"
+}

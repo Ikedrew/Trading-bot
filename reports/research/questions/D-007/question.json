@@ -1,0 +1,34 @@
+{
+  "question_id": "D-007",
+  "title": "Risk Gate Value",
+  "research_intent": "Does the risk management layer (R:R minimum, daily loss limit, exposure guards) improve overall survival and expectancy, or does it filter out profitable opportunities?",
+  "angles": {
+    "execution": false,
+    "decision": true,
+    "market": false,
+    "strategy": false
+  },
+  "required_universes": [
+    "DECISION"
+  ],
+  "required_populations": [
+    "all_decisions",
+    "rejected_at_risk",
+    "execute_decisions"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL",
+    "EXCEPTIONAL"
+  ],
+  "analysis_type": "counterfactual",
+  "minimum_sample_size": 20,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "R1",
+    "R2",
+    "V10-R1"
+  ],
+  "decision_enabled": "Should risk gates be tightened or relaxed?"
+}

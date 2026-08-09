@@ -1,0 +1,8 @@
+# V10 Research Lambda — Environment Variables
+# Copy to your Lambda function configuration
+
+RESEARCH_STORAGE=s3
+RESEARCH_BUCKET=v10-engine
+RESEARCH_UNIVERSE_KEY=data/research/research_universe.jsonl
+RESEARCH_REPORT_PREFIX=reports/research/
+RESEARCH_STATE_KEY=research/operations/state.json

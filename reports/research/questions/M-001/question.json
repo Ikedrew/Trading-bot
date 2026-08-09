@@ -1,0 +1,35 @@
+{
+  "question_id": "M-001",
+  "title": "Regime Predicts Outcomes",
+  "research_intent": "Does H4 regime classification (TRENDING/RANGING/TRANSITIONAL) predict trade R-multiple? Should regime gate trading?",
+  "angles": {
+    "execution": false,
+    "decision": false,
+    "market": true,
+    "strategy": false
+  },
+  "required_universes": [
+    "MARKET"
+  ],
+  "required_populations": [
+    "all_market_states",
+    "trending_regime",
+    "ranging_regime",
+    "transitional_regime"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL",
+    "ANOMALOUS"
+  ],
+  "analysis_type": "segmentation",
+  "minimum_sample_size": 10,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "M1",
+    "V10-M1",
+    "Lambda-M1"
+  ],
+  "decision_enabled": "Should we filter trades by regime?"
+}

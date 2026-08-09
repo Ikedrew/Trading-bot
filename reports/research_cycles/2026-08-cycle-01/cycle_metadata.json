@@ -1,0 +1,211 @@
+{
+  "cycle_id": "2026-08-cycle-01",
+  "generated_utc": "2026-08-07T14:56:30.267404+00:00",
+  "duration_seconds": 43.1,
+  "dataset": {
+    "total_trades": 94,
+    "date_range": {
+      "oldest": "2026-07-22 17:40",
+      "newest": "2026-08-06 04:45"
+    },
+    "symbols": [
+      "AUDUSD",
+      "EURUSD",
+      "GBPUSD",
+      "NZDUSD",
+      "US500",
+      "USDCAD",
+      "USDCHF",
+      "USDJPY",
+      "XAUUSD"
+    ],
+    "asset_classes": {
+      "FULL": 94,
+      "FX": 87,
+      "INDEX": 4,
+      "COMMODITY": 3
+    }
+  },
+  "performance": {
+    "FULL": {
+      "count": 94,
+      "win_rate": 0.3617,
+      "loss_rate": 0.6383,
+      "winners": 34,
+      "losers": 60,
+      "average_r": -0.1758,
+      "median_r": -1.0,
+      "std_r": 1.5628,
+      "average_win_r": 1.5395,
+      "average_loss_r": -1.1478,
+      "expectancy_r": -0.1758,
+      "total_pnl": 714.27,
+      "average_pnl": 7.5986,
+      "largest_winner": 860.04,
+      "largest_loser": -391.76,
+      "profit_factor": 1.71,
+      "confidence": "HIGH"
+    },
+    "FX": {
+      "count": 87,
+      "win_rate": 0.3448,
+      "loss_rate": 0.6552,
+      "winners": 30,
+      "losers": 57,
+      "average_r": -0.2461,
+      "median_r": -1.0,
+      "std_r": 1.5235,
+      "average_win_r": 1.4788,
+      "average_loss_r": -1.154,
+      "expectancy_r": -0.2461,
+      "total_pnl": -235.36,
+      "average_pnl": -2.7053,
+      "largest_winner": 1.12,
+      "largest_loser": -93.65,
+      "profit_factor": 0.05,
+      "confidence": "HIGH"
+    },
+    "INDEX": {
+      "count": 4,
+      "win_rate": 0.5,
+      "loss_rate": 0.5,
+      "winners": 2,
+      "losers": 2,
+      "average_r": 0.5766,
+      "median_r": 0.5425,
+      "std_r": 1.8487,
+      "average_win_r": 2.1769,
+      "average_loss_r": -1.0236,
+      "expectancy_r": 0.5766,
+      "total_pnl": 1321.78,
+      "average_pnl": 330.445,
+      "largest_winner": 860.04,
+      "largest_loser": -298.57,
+      "profit_factor": 4.57,
+      "confidence": "LOW"
+    },
+    "COMMODITY": {
+      "count": 3,
+      "win_rate": 0.6667,
+      "loss_rate": 0.3333,
+      "winners": 2,
+      "losers": 1,
+      "average_r": 0.8608,
+      "median_r": 0.0959,
+      "std_r": 2.3815,
+      "average_win_r": 1.8133,
+      "average_loss_r": -1.0443,
+      "expectancy_r": 0.8608,
+      "total_pnl": -372.15,
+      "average_pnl": -124.05,
+      "largest_winner": 11.03,
+      "largest_loser": -391.76,
+      "profit_factor": 0.05,
+      "confidence": "LOW"
+    }
+  },
+  "experiments": {
+    "E1": {
+      "FULL": "INCONCLUSIVE",
+      "FX_ONLY": "INCONCLUSIVE",
+      "INDEX_ONLY": "INCONCLUSIVE"
+    },
+    "E2": {
+      "FULL": "SOME_PATTERNS_SHOW_PROMISE",
+      "FX_ONLY": "SOME_PATTERNS_SHOW_PROMISE",
+      "INDEX_ONLY": "SOME_PATTERNS_SHOW_PROMISE"
+    },
+    "M1": {
+      "FULL": "REGIMES_SHOW_DIFFERENT_EXPECTANCY",
+      "FX_ONLY": "REGIMES_SHOW_DIFFERENT_EXPECTANCY",
+      "INDEX_ONLY": "INCONCLUSIVE"
+    },
+    "D1": {
+      "FULL": "SCORE_IS_PREDICTIVE",
+      "FX_ONLY": "SCORE_IS_PREDICTIVE",
+      "INDEX_ONLY": "SCORE_HAS_NO_PREDICTIVE_POWER"
+    },
+    "D2": {
+      "FULL": "EV_UNDERCONFIDENT",
+      "FX_ONLY": "EV_UNDERCONFIDENT",
+      "INDEX_ONLY": "EV_NOT_PREDICTIVE"
+    },
+    "D3": {
+      "FULL": "INCONCLUSIVE",
+      "FX_ONLY": "INCONCLUSIVE",
+      "INDEX_ONLY": "INCONCLUSIVE"
+    },
+    "OQ1": {
+      "FULL": "OPPORTUNITY_LAYER_PREDICTIVE",
+      "FX_ONLY": "OPPORTUNITY_LAYER_PREDICTIVE",
+      "INDEX_ONLY": "OPPORTUNITIES_LOW_QUALITY"
+    },
+    "R1": {
+      "FULL": "STOPS_NEED_REVIEW",
+      "FX_ONLY": "STOPS_NEED_REVIEW",
+      "INDEX_ONLY": "RISK_MODEL_EFFECTIVE"
+    },
+    "OQ2": {
+      "FULL": "DECISION_LAYER_FAILURE",
+      "FX_ONLY": "DECISION_LAYER_FAILURE",
+      "INDEX_ONLY": "DECISION_LAYER_FAILURE"
+    },
+    "R2": {
+      "FULL": "STOP_TOO_TIGHT",
+      "FX_ONLY": "STOP_TOO_TIGHT",
+      "INDEX_ONLY": "STOP_MODEL_EFFECTIVE"
+    }
+  },
+  "rankings": [
+    {
+      "symbol": "XAUUSD",
+      "count": 3,
+      "win_rate": 0.6667,
+      "expectancy_r": 0.8608,
+      "profit_factor": 0.05,
+      "average_r": 0.8608,
+      "total_pnl": -372.15,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "US500",
+      "count": 4,
+      "win_rate": 0.5,
+      "expectancy_r": 0.5766,
+      "profit_factor": 4.57,
+      "average_r": 0.5766,
+      "total_pnl": 1321.78,
+      "confidence": "LOW"
+    },
+    {
+      "symbol": "NZDUSD",
+      "count": 21,
+      "win_rate": 0.4762,
+      "expectancy_r": 0.118,
+      "profit_factor": 0.11,
+      "average_r": 0.118,
+      "total_pnl": -33.68,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "USDCAD",
+      "count": 19,
+      "win_rate": 0.3684,
+      "expectancy_r": 0.0281,
+      "profit_factor": 0.04,
+      "average_r": 0.0281,
+      "total_pnl": -44.51,
+      "confidence": "MEDIUM"
+    },
+    {
+      "symbol": "AUDUSD",
+      "count": 14,
+      "win_rate": 0.2143,
+      "expectancy_r": -0.3747,
+      "profit_factor": 0.05,
+      "average_r": -0.3747,
+      "total_pnl": -23.78,
+      "confidence": "MEDIUM"
+    }
+  ]
+}

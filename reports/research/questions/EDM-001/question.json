@@ -1,0 +1,50 @@
+{
+  "question_id": "EDM-001",
+  "title": "Complete Trade Lifecycle Analysis",
+  "research_intent": "For executed trades, what is the full pathway from market state \u2192 decision \u2192 execution outcome? Where does the pipeline add or lose value?",
+  "angles": {
+    "execution": true,
+    "decision": true,
+    "market": true,
+    "strategy": false
+  },
+  "required_universes": [
+    "EXECUTION",
+    "DECISION",
+    "MARKET"
+  ],
+  "required_populations": [
+    "all_trades",
+    "execute_decisions",
+    "all_market_states"
+  ],
+  "required_joins": [
+    {
+      "from": "DECISION",
+      "to": "EXECUTION",
+      "type": "entity_id",
+      "field": "entity_id"
+    },
+    {
+      "from": "DECISION",
+      "to": "MARKET",
+      "type": "entity_id",
+      "field": "entity_id"
+    }
+  ],
+  "views": [
+    "NORMAL",
+    "ANOMALOUS",
+    "EXCEPTIONAL"
+  ],
+  "analysis_type": "comparison",
+  "minimum_sample_size": 20,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "E1",
+    "D1",
+    "M1"
+  ],
+  "decision_enabled": "Where in the pipeline should improvements focus?"
+}

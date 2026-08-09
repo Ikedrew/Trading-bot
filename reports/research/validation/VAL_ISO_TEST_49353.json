@@ -1,0 +1,96 @@
+{
+  "validation_id": "VAL_ISO_TEST_49353",
+  "candidate_id": "ISO_TEST",
+  "baseline_id": "B",
+  "created_at": "2026-08-08T00:35:53.470621+00:00",
+  "status": "COMPLETED",
+  "dataset_filters": {},
+  "baseline_metrics": {
+    "count": 94,
+    "win_rate": 0.3617,
+    "loss_rate": 0.6383,
+    "winners": 34,
+    "losers": 60,
+    "average_r": -0.1758,
+    "median_r": -1.0,
+    "std_r": 1.5628,
+    "average_win_r": 1.5395,
+    "average_loss_r": -1.1478,
+    "expectancy_r": -0.1758,
+    "total_pnl": 714.27,
+    "average_pnl": 7.5986,
+    "largest_winner": 860.04,
+    "largest_loser": -391.76,
+    "profit_factor": 1.71,
+    "confidence": "HIGH",
+    "sample_size": 94
+  },
+  "candidate_metrics": {
+    "count": 94,
+    "win_rate": 0.3617,
+    "loss_rate": 0.6383,
+    "winners": 34,
+    "losers": 60,
+    "average_r": -0.0879,
+    "median_r": -0.5,
+    "std_r": 0.7814,
+    "average_win_r": 0.7698,
+    "average_loss_r": -0.5739,
+    "expectancy_r": -0.0879,
+    "total_pnl": 714.27,
+    "average_pnl": 7.5986,
+    "largest_winner": 860.04,
+    "largest_loser": -391.76,
+    "profit_factor": 1.71,
+    "confidence": "HIGH",
+    "sample_size": 94
+  },
+  "comparison": {
+    "changes": {
+      "expectancy_r": {
+        "before": -0.1758,
+        "after": -0.0879,
+        "delta": 0.0879
+      },
+      "profit_factor": {
+        "before": 1.71,
+        "after": 1.71,
+        "delta": 0.0
+      },
+      "win_rate": {
+        "before": 0.3617,
+        "after": 0.3617,
+        "delta": 0.0
+      },
+      "average_r": {
+        "before": -0.1758,
+        "after": -0.0879,
+        "delta": 0.0879
+      },
+      "total_pnl": {
+        "before": 714.27,
+        "after": 714.27,
+        "delta": 0.0
+      },
+      "count": {
+        "before": 94,
+        "after": 94,
+        "delta": 0
+      }
+    },
+    "improved_metrics": [
+      "expectancy_r",
+      "average_r"
+    ],
+    "degraded_metrics": [],
+    "summary": "Candidate improved 2 metrics: expectancy_r, average_r"
+  },
+  "regressions": [],
+  "decision": "IMPROVED",
+  "confidence": "HIGH",
+  "evidence_maturity": "LONG_RUN",
+  "recommendation": "Candidate shows improvement. Continue testing with forward data.",
+  "limitations": [],
+  "sample_size": 94,
+  "population_description": "FULL (94 events)"
+}

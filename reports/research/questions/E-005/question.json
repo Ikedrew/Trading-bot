@@ -1,0 +1,32 @@
+{
+  "question_id": "E-005",
+  "title": "Probability of Ruin",
+  "research_intent": "Given measured edge, win rate, and variance, what is the probability the system reaches catastrophic drawdown under current position sizing?",
+  "angles": {
+    "execution": true,
+    "decision": false,
+    "market": false,
+    "strategy": false
+  },
+  "required_universes": [
+    "EXECUTION"
+  ],
+  "required_populations": [
+    "all_trades"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "simulation",
+  "minimum_sample_size": 50,
+  "dependencies": [
+    "E-001"
+  ],
+  "status": "PARTIAL",
+  "source_intent": [
+    "R3",
+    "V10-R2"
+  ],
+  "decision_enabled": "Is the system safe at current sizing? Need to reduce risk?"
+}

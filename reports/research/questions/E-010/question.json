@@ -1,0 +1,31 @@
+{
+  "question_id": "E-010",
+  "title": "Risk:Reward Ratio Effectiveness",
+  "research_intent": "What R:R ratios are actually achieved vs intended? Does target R:R at entry predict outcome quality?",
+  "angles": {
+    "execution": true,
+    "decision": false,
+    "market": false,
+    "strategy": false
+  },
+  "required_universes": [
+    "EXECUTION"
+  ],
+  "required_populations": [
+    "all_trades"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "comparison",
+  "minimum_sample_size": 20,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "EX3",
+    "EX_C",
+    "R5"
+  ],
+  "decision_enabled": "Should minimum R:R requirements change?"
+}

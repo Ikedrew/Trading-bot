@@ -1,0 +1,30 @@
+{
+  "question_id": "E1",
+  "question_name": "True System Expectancy",
+  "sample_size": 94,
+  "result": {
+    "count": 94,
+    "win_rate": 0.3617,
+    "loss_rate": 0.6383,
+    "winners": 34,
+    "losers": 60,
+    "average_r": -0.1758,
+    "median_r": -1.0,
+    "std_r": 1.5628,
+    "average_win_r": 1.5395,
+    "average_loss_r": -1.1478,
+    "expectancy_r": -0.1758,
+    "total_pnl": 714.27,
+    "average_pnl": 7.5986,
+    "largest_winner": 860.04,
+    "largest_loser": -391.76,
+    "profit_factor": 1.71,
+    "confidence": "HIGH"
+  },
+  "confidence": "HIGH",
+  "recommendation": "INCONCLUSIVE",
+  "limitations": [],
+  "filters_applied": {},
+  "segment_population": "FULL (94 events)",
+  "error": ""
+}

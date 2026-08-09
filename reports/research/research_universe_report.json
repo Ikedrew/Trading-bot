@@ -1,0 +1,18 @@
+{
+  "generated_utc": "2026-08-09T00:15:41.874148+00:00",
+  "source_used": "enriched",
+  "governance_status": "SKIPPED",
+  "total_trades": 94,
+  "coverage": {
+    "decision_matched": 94,
+    "decision_pct": 100.0,
+    "market_matched": 94,
+    "market_pct": 100.0,
+    "strategy_matched": 94,
+    "strategy_pct": 100.0,
+    "complete_events": 94,
+    "complete_pct": 100.0,
+    "incomplete_events": 0
+  },
+  "output_file": "data\\research\\research_universe.jsonl"
+}

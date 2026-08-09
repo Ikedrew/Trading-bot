@@ -1,0 +1,32 @@
+{
+  "question_id": "E-007",
+  "title": "Stop Placement Effectiveness",
+  "research_intent": "Is stop loss placement reducing expectancy by being too tight or too wide? What SL distance maximises expectancy?",
+  "angles": {
+    "execution": true,
+    "decision": false,
+    "market": false,
+    "strategy": false
+  },
+  "required_universes": [
+    "EXECUTION"
+  ],
+  "required_populations": [
+    "all_trades",
+    "losing_trades"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "simulation",
+  "minimum_sample_size": 20,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "Lambda-R2",
+    "EX_B",
+    "EX4"
+  ],
+  "decision_enabled": "Should stop distance be adjusted?"
+}

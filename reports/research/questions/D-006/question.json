@@ -1,0 +1,32 @@
+{
+  "question_id": "D-006",
+  "title": "Opportunity Failure Characterisation",
+  "research_intent": "What characterises opportunities that look good but fail? Are there identifiable patterns in false positives?",
+  "angles": {
+    "execution": false,
+    "decision": true,
+    "market": false,
+    "strategy": false
+  },
+  "required_universes": [
+    "DECISION"
+  ],
+  "required_populations": [
+    "execute_decisions"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL",
+    "ANOMALOUS",
+    "EXCEPTIONAL"
+  ],
+  "analysis_type": "segmentation",
+  "minimum_sample_size": 15,
+  "dependencies": [],
+  "status": "READY",
+  "source_intent": [
+    "V10-OQ2",
+    "Lambda-OQ2"
+  ],
+  "decision_enabled": "Can we filter false positives before execution?"
+}

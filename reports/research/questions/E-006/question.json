@@ -1,0 +1,32 @@
+{
+  "question_id": "E-006",
+  "title": "Out-of-Sample Edge Validation",
+  "research_intent": "Does the measured edge survive walk-forward testing on unseen data? Is the system overfitted to historical conditions?",
+  "angles": {
+    "execution": true,
+    "decision": false,
+    "market": false,
+    "strategy": false
+  },
+  "required_universes": [
+    "EXECUTION"
+  ],
+  "required_populations": [
+    "all_trades"
+  ],
+  "required_joins": [],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "temporal",
+  "minimum_sample_size": 100,
+  "dependencies": [
+    "E-001"
+  ],
+  "status": "BLOCKED",
+  "source_intent": [
+    "E5",
+    "V10-E4"
+  ],
+  "decision_enabled": "Can we trust the measured edge is not overfitted?"
+}

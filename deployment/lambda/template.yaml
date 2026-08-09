@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: V10 Research Engine Lambda
+
+Parameters:
+  ResearchBucket:
+    Type: String
+    Default: v10-engine
+    Description: S3 bucket for research data and reports
+
+Resources:
+  ResearchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: v10-research-engine
+      Handler: lambda_handler.handler
+      Runtime: python3.11
+      CodeUri: ../../build/v10-research-lambda.zip
+      Timeout: 300
+      MemorySize: 512
+      Environment:
+        Variables:
+          RESEARCH_STORAGE: s3
+          RESEARCH_BUCKET: !Ref ResearchBucket
+          RESEARCH_UNIVERSE_KEY: data/research/research_universe.jsonl
+          RESEARCH_REPORT_PREFIX: reports/research/
+          RESEARCH_STATE_KEY: research/operations/state.json
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref ResearchBucket
+        - S3CrudPolicy:
+            BucketName: !Ref ResearchBucket
+
+  ResearchBucketResource:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref ResearchBucket
+      VersioningConfiguration:
+        Status: Enabled
+
+Outputs:
+  FunctionArn:
+    Description: Research Lambda ARN
+    Value: !GetAtt ResearchFunction.Arn
+  BucketName:
+    Description: Research S3 Bucket
+    Value: !Ref ResearchBucketResource

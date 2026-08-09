@@ -1,0 +1,52 @@
+{
+  "question_id": "DMS-001",
+  "title": "Decision Quality Across Strategy \u00d7 Market",
+  "research_intent": "Does decision quality (score accuracy, EV calibration) vary when segmented by both strategy family AND market regime simultaneously?",
+  "angles": {
+    "execution": false,
+    "decision": true,
+    "market": true,
+    "strategy": true
+  },
+  "required_universes": [
+    "DECISION",
+    "MARKET",
+    "STRATEGY"
+  ],
+  "required_populations": [
+    "execute_decisions",
+    "all_market_states",
+    "all_strategies"
+  ],
+  "required_joins": [
+    {
+      "from": "DECISION",
+      "to": "MARKET",
+      "type": "entity_id",
+      "field": "entity_id"
+    },
+    {
+      "from": "DECISION",
+      "to": "STRATEGY",
+      "type": "entity_id",
+      "field": "entity_id"
+    }
+  ],
+  "views": [
+    "NORMAL"
+  ],
+  "analysis_type": "segmentation",
+  "minimum_sample_size": 10,
+  "dependencies": [
+    "DM-001",
+    "DS-001",
+    "MS-001"
+  ],
+  "status": "READY",
+  "source_intent": [
+    "M4",
+    "S3",
+    "V10-SC2"
+  ],
+  "decision_enabled": "Should scoring be adapted per strategy\u00d7regime combination?"
+}

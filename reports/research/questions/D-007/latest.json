@@ -1,0 +1,80 @@
+{
+  "question_id": "D-007",
+  "title": "Risk Gate Value",
+  "run_id": "run_20260809_033621_3c7f7b",
+  "run_timestamp": "2026-08-09T03:36:49Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "9dbe5570ee92c3ee",
+    "MARKET": "6cdeba4f6aeefd32",
+    "STRATEGY": "932ffa1cfeee23e4"
+  },
+  "data_snapshot_timestamp": "2026-08-09T03:36:49Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_decisions",
+    "rejected_at_risk",
+    "execute_decisions"
+  ],
+  "universes_used": [
+    "DECISION"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "total": 7841
+  },
+  "evidence": {
+    "primitives_executed": [
+      "comparison",
+      "expectancy",
+      "exceptional_analysis"
+    ],
+    "primary_analysis": "comparison"
+  },
+  "angle_evidence": {
+    "DECISION": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "count": 0,
+    "total": 0,
+    "normal_count": 0,
+    "exceptional_high_count": 0,
+    "exceptional_low_count": 0,
+    "exceptional_rate": 0
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 7841
+  },
+  "anomaly_view": {},
+  "exceptional_view": {
+    "total": 0,
+    "normal_count": 0,
+    "exceptional_high_count": 0,
+    "exceptional_low_count": 0,
+    "exceptional_rate": 0
+  },
+  "conditioned_views": {},
+  "outcome": "COMPLETED",
+  "conclusion": "0 records above 2.0R; 0 records below -2.0R",
+  "confidence": "HIGH",
+  "recommendation": "",
+  "limitations": [
+    "No groups found for field 'regime'",
+    "No records with R-multiple data"
+  ],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "",
+  "previous_outcome": "",
+  "changes_from_previous": {},
+  "research_gaps": []
+}
