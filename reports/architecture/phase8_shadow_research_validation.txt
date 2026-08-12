@@ -1,0 +1,66 @@
+======================================================================
+PHASE 8: SHADOW RESEARCH VALIDATION
+======================================================================
+
+Shadow Outcome Universe: 4153 records
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SD-001: COUNTERFACTUAL SYSTEM EXPECTANCY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Population: ALL_SHADOW_OUTCOMES
+  Sample size: 4153
+  Evidence source: COUNTERFACTUAL
+  ───────────────────────────────
+  Mean R: +0.0737
+  Median R: -0.0278
+  Win rate: 42.4%
+  Avg win R: +0.7690
+  Avg loss R: -0.4372
+  Total R: +306.06
+  ───────────────────────────────
+  FINDING: Positive counterfactual expectancy (+0.0737R)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SD-004: REJECTION STAGE COUNTERFACTUAL EXPECTANCY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Population: SHADOW joined to NO_TRADE decisions
+  Joined records: 2764
+  Evidence source: COUNTERFACTUAL
+  ───────────────────────────────
+  Stage            Count   Mean R   Win%   Total R
+  ─────────────── ────── ──────── ────── ─────────
+  risk              2755  -0.0670   42%   -184.52
+  other                7  -0.0675   29%     -0.47
+  ───────────────────────────────
+  FINDING: Rejection stage with highest counterfactual R
+           indicates most opportunity cost from that gate.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SD-005: HORIZON COMPARISON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SCALP           n= 1824  mean_R=-0.0814  win_rate=40%
+  INTRADAY        n= 1359  mean_R=-0.0572  win_rate=42%
+  EXTENDED        n=   18  mean_R=-0.2295  win_rate=50%
+  V10_PRIMARY     n=  952  mean_R=+0.5635  win_rate=47%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RESEARCH INVARIANT CHECKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  All records evidence_source=COUNTERFACTUAL: True
+  No record labelled REALISED: True
+  Shadow population size: 4153
+  Live Outcome size (for reference): 94 trades
+  These are SEPARATE evidence pools: CONFIRMED
+
+======================================================================
+PHASE 8: SHADOW RESEARCH VALIDATION — COMPLETE
+
+The Shadow Research pipeline is operational:
+  ✓ Shadow Outcome Universe builds correctly
+  ✓ Populations produce correct subsets
+  ✓ Expectancy primitive produces valid findings
+  ✓ Segmentation by rejection stage works via entity_id join
+  ✓ Horizon comparison produces per-horizon metrics
+  ✓ All evidence correctly labelled COUNTERFACTUAL
+  ✓ Shadow and Live evidence remain distinguishable
+======================================================================

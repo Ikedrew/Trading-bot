@@ -13,6 +13,8 @@ A failed question produces an error finding rather than crashing the run.
 
 from __future__ import annotations
 
+import hashlib
+import json as _json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -134,6 +136,12 @@ class QuestionRunner:
 
         # 2. Execute each primitive (isolated — one failure doesn't crash others)
         results: list[AnalysisResult] = []
+        # Resolve question-specific parameters from mapping if not explicitly provided
+        resolved_params = parameters
+        if resolved_params is None:
+            from research_engine.v10.runner.primitive_mapping import QUESTION_PARAMETERS
+            resolved_params = QUESTION_PARAMETERS.get(qid)
+
         for pname in primitive_names:
             primitive = self._registry.get(pname)
             if primitive is None:
@@ -142,7 +150,7 @@ class QuestionRunner:
                     error=f"Primitive '{pname}' not found in registry",
                 ))
                 continue
-            result = primitive.safe_analyse(population, parameters)
+            result = primitive.safe_analyse(population, resolved_params)
             results.append(result)
 
         # 3. Compose evidence into a ResearchFinding
@@ -308,14 +316,25 @@ def compose_evidence(
         # Reproducibility
         engine_version=context.engine_version,
         question_version=context.question_bank_version,
-        population_versions=context.population_versions,
+        population_versions=_compute_population_versions(question, population),
         universe_versions=context.universe_versions,
         data_snapshot_timestamp=context.timestamp,
         analysis_version=primary_result.primitive_version if primary_result else "N/A",
+        # Evidence source classification
+        evidence_source=_classify_evidence_source(question),
         # Population context
         populations_used=[p.value for p in question.required_populations],
         universes_used=[u.value for u in question.required_universes],
-        sample_sizes={"total": len(population)},
+        sample_sizes={
+            "population": len(population),
+            "analytical_sample": primary_result.sample_size if primary_result else 0,
+            "minimum_required": question.minimum_sample_size,
+            "sample_reduction_reason": _sample_reduction_reason(
+                len(population),
+                primary_result.sample_size if primary_result else 0,
+                primary_result,
+            ),
+        },
         # Evidence
         evidence={
             "primitives_executed": [r.analysis_type for r in results],
@@ -460,12 +479,39 @@ def _build_exceptional_view(
     }
 
 
+def _classify_evidence_source(question: NewEngineQuestion) -> str:
+    """Determine evidence source classification from question's required universes."""
+    uses_shadow = Universe.SHADOW_OUTCOME in question.required_universes
+    uses_live = any(
+        u in question.required_universes
+        for u in (Universe.EXECUTION, Universe.OUTCOME)
+    )
+    if uses_shadow and uses_live:
+        return "CROSS_SIDE"
+    elif uses_shadow:
+        return "COUNTERFACTUAL"
+    return "REALISED"
+
+
 def _determine_outcome(
     primary: AnalysisResult | None, metrics: dict[str, Any]
 ) -> str:
     """Determine finding outcome from primary analysis metrics."""
     if primary is None or not primary.success:
         return "ANALYSIS_FAILED"
+
+    # If the primary analysis had zero usable records, it's inconclusive
+    # regardless of raw population size
+    if primary.sample_size == 0:
+        return "INCONCLUSIVE"
+
+    # If the primary produced no metrics at all, it's inconclusive
+    if not metrics or not any(
+        v is not None and v != 0
+        for v in metrics.values()
+        if isinstance(v, (int, float))
+    ):
+        return "INCONCLUSIVE"
 
     # Use expectancy-based heuristic if available
     mean_r = metrics.get("mean_r") or metrics.get("expectancy")
@@ -498,14 +544,76 @@ def _determine_outcome(
 def _determine_confidence(
     primary: AnalysisResult | None, sample_size: int
 ) -> str:
-    """Determine confidence level from sample size and result quality."""
+    """
+    Determine confidence level from the analytical sample size.
+
+    Uses the primary primitive's actual analytical sample (records with usable
+    outcome data), NOT the raw population size. A population of 7,900 with
+    0 analytically usable records must produce INSUFFICIENT, not HIGH.
+    """
     if primary is None:
         return "NONE"
-    if sample_size >= 200:
+
+    # Use the primitive's analytical sample size, not raw population
+    analytical_sample = primary.sample_size
+
+    if analytical_sample == 0:
+        return "INSUFFICIENT"
+    elif analytical_sample >= 200:
         return "HIGH"
-    elif sample_size >= 50:
+    elif analytical_sample >= 50:
         return "MEDIUM"
-    elif sample_size >= 20:
+    elif analytical_sample >= 20:
         return "LOW"
     else:
         return "INSUFFICIENT"
+
+
+def _sample_reduction_reason(
+    population_size: int,
+    analytical_sample: int,
+    primary: "AnalysisResult | None",
+) -> str:
+    """Explain why the analytical sample is smaller than the population."""
+    if primary is None:
+        return "No primary analysis executed"
+    if analytical_sample == population_size:
+        return "No reduction — all records usable"
+    if analytical_sample == 0:
+        if primary.warnings:
+            # Use the primitive's own warning
+            return primary.warnings[0]
+        return "No records contain both required feature and outcome fields"
+    diff = population_size - analytical_sample
+    pct = (diff / population_size * 100) if population_size > 0 else 0
+    if pct > 90:
+        return f"{diff} records lack required outcome field (r_multiple unavailable)"
+    elif pct > 50:
+        return f"{diff} records missing required feature or outcome field"
+    else:
+        return f"{diff} records filtered (missing feature/outcome data)"
+
+
+def _compute_population_versions(
+    question: "NewEngineQuestion",
+    population: list[dict[str, Any]],
+) -> dict[str, str]:
+    """
+    Compute a content hash for the resolved population.
+
+    Produces a reproducibility fingerprint: if the population changes
+    (different records or different field values), the hash changes.
+
+    Returns:
+        Dict mapping population name to its content hash.
+    """
+    if not population:
+        pop_name = question.required_populations[0].value if question.required_populations else "unknown"
+        return {pop_name: "empty"}
+
+    # Use the same hashing approach as UniverseBuilder._compute_hash
+    content = _json.dumps(population, sort_keys=True, default=str)
+    content_hash = hashlib.sha256(content.encode()).hexdigest()[:16]
+
+    pop_name = question.required_populations[0].value if question.required_populations else "resolved"
+    return {pop_name: content_hash}

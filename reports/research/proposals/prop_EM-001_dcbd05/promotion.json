@@ -1,0 +1,19 @@
+{
+  "candidate_id": "cand_prop_EM-001_dcbd05_6d49bb",
+  "proposal_id": "prop_EM-001_dcbd05",
+  "validation_id": "val_prop_EM-001_dcbd05_0cf8",
+  "status": "PROMOTION_ELIGIBLE",
+  "eligible": true,
+  "blockers": [],
+  "satisfied_gates": [
+    "PROPOSAL_GOVERNED",
+    "CANDIDATE_REPRODUCIBLE",
+    "VALIDATION_COMPLETED",
+    "IMPROVEMENT_DETECTED",
+    "NO_CRITICAL_REGRESSION",
+    "SAMPLE_SUFFICIENT",
+    "PROVENANCE_VALID"
+  ],
+  "decision_timestamp": "2026-08-12T00:27:09Z",
+  "governance_note": "Promotion eligibility is a research recommendation only. It does not deploy, activate, or modify the trading system."
+}

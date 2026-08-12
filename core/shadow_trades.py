@@ -147,6 +147,17 @@ class ShadowTrade:
     h1_bias: str = ""                 # BULLISH | BEARISH | NEUTRAL | ""
     trade_horizon: str = ""           # SCALP | INTRADAY | EXTENDED | "" (independent of strategy)
 
+    # ─── SHADOW LINEAGE CONTRACT (approved specification) ────────────
+    # These fields preserve the relationship between this shadow observation
+    # and the authoritative Live V10 decision, per the approved Shadow Design.
+    shadow_type: str = ""             # "V10_PRIMARY" | "HORIZON_ALTERNATIVE" | "" (legacy)
+    v10_selected_horizon: str = ""    # What V10 HorizonEngine chose for this opportunity
+    horizon_selection_status: str = ""  # "SELECTED" | "ALTERNATIVE" | "UNKNOWN" (legacy)
+    evaluated_horizon: str = ""       # Which horizon THIS shadow observation evaluates
+    horizon_geometry_source: str = "" # "V10_ENTRY_ENGINE" | "STRUCTURE_BASED" | "" (legacy)
+    v10_rejection_stage: str = ""     # Where Live V10 stopped: "" | "opportunity" | "strategy" | "entry" | "risk" | "execution"
+    v10_action: str = ""              # "EXECUTE" | "NO_TRADE" | "" (legacy)
+
     # ─── EXECUTION COST CONTEXT (captured at entry for research) ──────
     spread_at_entry: float = 0.0      # ask - bid at decision time (price units)
     bid_at_entry: float = 0.0         # Bid price at decision time
@@ -234,6 +245,14 @@ class ShadowTradeEngine:
         spread_at_entry: float = 0.0,
         bid_at_entry: float = 0.0,
         ask_at_entry: float = 0.0,
+        # ─── Shadow lineage contract fields ───────────────────────────
+        shadow_type: str = "",
+        v10_selected_horizon: str = "",
+        horizon_selection_status: str = "",
+        evaluated_horizon: str = "",
+        horizon_geometry_source: str = "",
+        v10_rejection_stage: str = "",
+        v10_action: str = "",
     ) -> ShadowTrade:
         """
         Open a new shadow trade from a live signal.
@@ -267,6 +286,14 @@ class ShadowTradeEngine:
             spread_at_entry=spread_at_entry,
             bid_at_entry=bid_at_entry,
             ask_at_entry=ask_at_entry,
+            # Shadow lineage contract
+            shadow_type=shadow_type,
+            v10_selected_horizon=v10_selected_horizon,
+            horizon_selection_status=horizon_selection_status,
+            evaluated_horizon=evaluated_horizon or trade_horizon,
+            horizon_geometry_source=horizon_geometry_source,
+            v10_rejection_stage=v10_rejection_stage,
+            v10_action=v10_action,
         )
         self._active[trade_id] = trade
         return trade
@@ -436,6 +463,14 @@ class ShadowTradeEngine:
                 "strategy_id": trade.strategy,
                 "cycle_id": str(trade.cycle_id),
                 "entity_id": trade.entity_id or None,
+                # Shadow lineage contract (approved specification)
+                "shadow_type": trade.shadow_type or None,
+                "v10_selected_horizon": trade.v10_selected_horizon or None,
+                "horizon_selection_status": trade.horizon_selection_status or None,
+                "evaluated_horizon": trade.evaluated_horizon or None,
+                "horizon_geometry_source": trade.horizon_geometry_source or None,
+                "v10_rejection_stage": trade.v10_rejection_stage or None,
+                "v10_action": trade.v10_action or None,
             },
 
             # ─── DOMAIN 2: DECISION SNAPSHOT (pre-trade state) ────────

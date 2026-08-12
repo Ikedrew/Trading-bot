@@ -1,0 +1,38 @@
+{
+  "knowledge_id": "k_E-005",
+  "subject": "Probability of Ruin",
+  "system_area": "EXECUTION",
+  "statement": "Negative expectancy: -0.1758R per trade",
+  "status": "CONTRADICTED",
+  "confidence": "INSUFFICIENT",
+  "supporting_evidence": [],
+  "contradicting_evidence": [
+    {
+      "question_id": "E-005",
+      "run_id": "run_20260811_230428_56927a",
+      "outcome": "NEGATIVE",
+      "confidence": "MEDIUM",
+      "feedback_type": "",
+      "timestamp": "2026-08-11T23:06:02Z"
+    }
+  ],
+  "evidence_count": 1,
+  "knowledge_version": 1,
+  "first_observed_at": "2026-08-11T23:06:02Z",
+  "last_updated_at": "2026-08-11T23:07:25Z",
+  "source_universes": [
+    "EXECUTION"
+  ],
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "a413d1d2e48467dc",
+    "MARKET": "1954e3a4bab5be0e",
+    "STRATEGY": "bdc3d80a3cf03c4b",
+    "RISK": "4b831a4bd58842ad",
+    "OUTCOME": "17fcb30c52e98a83"
+  },
+  "population_versions": {
+    "all_trades": "17fcb30c52e98a83"
+  },
+  "governance_note": "This is accumulated research knowledge. It cannot directly modify trading behaviour."
+}

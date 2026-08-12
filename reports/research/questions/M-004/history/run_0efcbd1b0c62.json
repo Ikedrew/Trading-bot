@@ -1,0 +1,89 @@
+{
+  "question_id": "M-004",
+  "title": "Market Structure Clarity",
+  "run_id": "run_0efcbd1b0c62",
+  "run_timestamp": "2026-08-10T14:08:30Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {},
+  "data_snapshot_timestamp": "2026-08-10T14:08:30Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_market_states"
+  ],
+  "universes_used": [
+    "MARKET"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 7072,
+    "analytical_sample": 4,
+    "minimum_required": 15,
+    "sample_reduction_reason": "7068 records lack required outcome field (r_multiple unavailable)"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "predictive_power"
+    ],
+    "primary_analysis": "predictive_power"
+  },
+  "angle_evidence": {
+    "MARKET": {
+      "included": true
+    }
+  },
+  "primary_metrics": {},
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 7072
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {},
+  "outcome": "INCONCLUSIVE",
+  "conclusion": "No conclusion",
+  "confidence": "INSUFFICIENT",
+  "recommendation": "",
+  "limitations": [
+    "Insufficient data (4 records)"
+  ],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_0235a8ba4c26",
+  "previous_outcome": "INCONCLUSIVE",
+  "changes_from_previous": {
+    "sample_size_changes": {
+      "population": {
+        "from": 0,
+        "to": 7072
+      },
+      "total": {
+        "from": 6944,
+        "to": 0
+      },
+      "analytical_sample": {
+        "from": 0,
+        "to": 4
+      },
+      "minimum_required": {
+        "from": 0,
+        "to": 15
+      },
+      "sample_reduction_reason": {
+        "from": 0,
+        "to": "7068 records lack required outcome field (r_multiple unavailable)"
+      }
+    }
+  },
+  "research_gaps": []
+}

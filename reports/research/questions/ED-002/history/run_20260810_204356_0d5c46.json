@@ -1,0 +1,94 @@
+{
+  "question_id": "ED-002",
+  "title": "Missed Opportunity Cost",
+  "run_id": "run_20260810_204356_0d5c46",
+  "run_timestamp": "2026-08-10T20:44:13Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "55e2b406db8990bf",
+    "MARKET": "28c6da12155700e5",
+    "STRATEGY": "c4c54ccc0373f660"
+  },
+  "data_snapshot_timestamp": "2026-08-10T20:44:13Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "no_trade_decisions",
+    "all_trades"
+  ],
+  "universes_used": [
+    "EXECUTION",
+    "DECISION"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 0,
+    "analytical_sample": 0,
+    "minimum_required": 20,
+    "sample_reduction_reason": "No reduction \u2014 all records usable"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "comparison",
+      "expectancy",
+      "exceptional_analysis"
+    ],
+    "primary_analysis": "comparison"
+  },
+  "angle_evidence": {
+    "EXECUTION": {
+      "included": true
+    },
+    "DECISION": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "population_size": 0,
+    "analytical_sample": 0,
+    "records_missing_group": 0,
+    "records_missing_metric": 0,
+    "count": 0
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 0
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "INCONCLUSIVE",
+    "reason": "No exceptional records found (thresholds: >2.0R, <-2.0R)",
+    "criteria": {
+      "threshold_high": 2.0,
+      "threshold_low": -2.0
+    },
+    "normal_count": 0,
+    "exceptional_count": 0
+  },
+  "conditioned_views": {},
+  "outcome": "INCONCLUSIVE",
+  "conclusion": "No conclusion",
+  "confidence": "INSUFFICIENT",
+  "recommendation": "",
+  "limitations": [
+    "No records contain both 'regime' and 'r_multiple'",
+    "Population: 0, missing group: 0, missing metric: 0",
+    "No records with R-multiple data"
+  ],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_190615_a30f2d",
+  "previous_outcome": "INCONCLUSIVE",
+  "changes_from_previous": {
+    "status": "no_material_change"
+  },
+  "research_gaps": []
+}

@@ -1,0 +1,59 @@
+======================================================================
+PHASE 6: HISTORICAL DATA CLASSIFICATION REPORT
+======================================================================
+
+Source records loaded: 5786
+Records after exclusion: 4153
+Exclusions: {'total': 1633, 'reasons': {'bad_schema': 0, 'test_data': 1633, 'no_r_multiple': 0, 'normalise_fail': 0}, 'source_records': 5786, 'included_records': 4153}
+
+--- SHADOW TYPE CLASSIFICATION ---
+  HORIZON_ALTERNATIVE: 3201
+  V10_PRIMARY: 952
+
+--- HORIZON SELECTION STATUS ---
+  UNKNOWN: 4153
+
+--- DATA QUALITY CLASSIFICATION ---
+  CONDITIONAL: 4153
+
+--- V10 ACTION ---
+  LEGACY_UNKNOWN: 4153
+
+--- LINEAGE CONTRACT PRESENCE ---
+  Has lineage contract (new format): 0
+  Legacy (no lineage contract): 4153
+
+--- POPULATION SIZES ---
+  all_shadow_outcomes: 4153
+  shadow_wins: 1759
+  shadow_losses: 2394
+  primary_v10_shadow: 952
+  horizon_scalp: 1824
+  horizon_intraday: 1359
+  horizon_extended: 18
+  shadow_from_execute: 952
+  shadow_from_no_trade: 3201
+  shadow_tp_hit: 425
+  shadow_sl_hit: 674
+  shadow_timeout: 3054
+
+--- ENTITY_ID COVERAGE ---
+  With entity_id: 3266 (78%)
+  Without entity_id: 887
+
+--- SHADOW_TYPE x DATA_QUALITY ---
+  HORIZON_ALTERNATIVE | CONDITIONAL: 3201
+  V10_PRIMARY | CONDITIONAL: 952
+
+--- QUARANTINE CLASSIFICATION ---
+  VALID (has lineage contract): 0
+  CONDITIONAL (legacy, usable with limitation): 4153
+  INVALID (test contamination, excluded by builder): 1633
+  DELETED: 0 (no data deleted)
+
+--- INVARIANT CHECK ---
+  All records have r_multiple: True
+  All records have shadow_trade_id: True
+  All records labelled COUNTERFACTUAL: True
+
+PHASE 6 COMPLETE — No data modified or deleted.

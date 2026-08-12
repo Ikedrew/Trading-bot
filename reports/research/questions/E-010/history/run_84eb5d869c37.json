@@ -1,0 +1,72 @@
+{
+  "question_id": "E-010",
+  "title": "Risk:Reward Ratio Effectiveness",
+  "run_id": "run_84eb5d869c37",
+  "run_timestamp": "2026-08-10T12:22:13Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {},
+  "data_snapshot_timestamp": "2026-08-10T12:22:13Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_trades"
+  ],
+  "universes_used": [
+    "EXECUTION"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "total": 94
+  },
+  "evidence": {
+    "primitives_executed": [
+      "comparison"
+    ],
+    "primary_analysis": "comparison"
+  },
+  "angle_evidence": {
+    "EXECUTION": {
+      "included": true
+    }
+  },
+  "primary_metrics": {},
+  "statistical_results": {},
+  "effect_sizes": {
+    "comparison": {
+      "groups": [
+        "RANGE",
+        "TRANSITIONAL"
+      ],
+      "mean_difference": 0.282,
+      "cohens_d": 0.1802
+    }
+  },
+  "normal_view": {
+    "sample_size": 94
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {},
+  "outcome": "INCONCLUSIVE",
+  "conclusion": "No conclusion",
+  "confidence": "MEDIUM",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_015034_9622d9",
+  "previous_outcome": "INCONCLUSIVE",
+  "changes_from_previous": {
+    "status": "no_material_change"
+  },
+  "research_gaps": []
+}

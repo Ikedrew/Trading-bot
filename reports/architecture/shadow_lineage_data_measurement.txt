@@ -1,0 +1,68 @@
+======================================================================
+SHADOW LINEAGE AUDIT — DATA MEASUREMENT
+======================================================================
+Total shadow records: 5786
+Schema versions: {'shadow_trades_v2': 5786}
+
+--- ENTITY_ID STATUS ---
+Valid entity_id: 3661 (63%)
+Empty entity_id: 2125
+'None' string: 0
+Total missing: 2125 (36%)
+Unique valid entities: 1738
+Entities with >1 shadow: 1452
+Max shadows per entity: 158
+Avg shadows per entity: 3.33
+Distribution (shadows per entity): {1: 286, 2: 1367, 3: 78, 4: 3, 10: 4}
+
+--- SHADOW TYPES ---
+Horizon (hshadow_*): 3201
+Primary (shadow_*): 952
+Other/legacy: 1633
+Horizons: {'SCALP': 1824, 'INTRADAY': 1359, 'EXTENDED': 18}
+
+--- EXIT REASONS ---
+Exit reasons: {'stop_loss': 2000, 'max_bars_timeout': 3054, 'take_profit': 731, 'tp': 1}
+
+--- SYMBOLS ---
+Symbols: {'AUDUSD': 703, 'EURUSD': 1307, 'GBPUSD': 832, 'NAS100': 169, 'NZDUSD': 862, 'USDCHF': 698, 'US500': 171, 'USDCAD': 430, 'USDJPY': 441, 'XAUUSD': 173}
+
+--- SAMPLES ---
+Empty entity_id samples:
+  {'tid': 'sep_3a', 'schema': 'shadow_trades_v2', 'type': 'empty'}
+  {'tid': 'sep_3b', 'schema': 'shadow_trades_v2', 'type': 'empty'}
+  {'tid': 'sep_3a', 'schema': 'shadow_trades_v2', 'type': 'empty'}
+  {'tid': 'sep_3b', 'schema': 'shadow_trades_v2', 'type': 'empty'}
+  {'tid': 'sep_3a', 'schema': 'shadow_trades_v2', 'type': 'empty'}
+  {'tid': 'sep_3b', 'schema': 'shadow_trades_v2', 'type': 'empty'}
+Other-type samples:
+  {'tid': 'ctx_test_1', 'eid': 'AUDUSD_4000', 'schema': 'shadow_trades_v2'}
+  {'tid': 'ctx_test_1', 'eid': 'AUDUSD_4000', 'schema': 'shadow_trades_v2'}
+  {'tid': 'ctx_test_1', 'eid': 'AUDUSD_4000', 'schema': 'shadow_trades_v2'}
+  {'tid': 'ctx_test_1', 'eid': 'AUDUSD_4000', 'schema': 'shadow_trades_v2'}
+  {'tid': 'sep_3a', 'eid': '', 'schema': 'shadow_trades_v2'}
+
+======================================================================
+JOIN COVERAGE
+======================================================================
+Decision trace records: 15951
+Decision unique entities: 11829
+Decision EXECUTE: 433
+Decision NO_TRADE: 15518
+Shadow unique entities: 1738
+JOINED (both): 1734
+Shadow orphans: 4
+Decision-only (no shadow): 10095
+Join rate (shadow->decision): 99%
+Coverage (decision->shadow): 14%
+Shadow orphan entity_id samples: ['EURUSD_1000', 'AUDUSD_4000', 'EURUSD_1300', 'GBPUSD_2000']
+
+======================================================================
+ENTITY_ID LOSS ANALYSIS
+======================================================================
+Entity_ID presence by shadow type:
+  Horizon: 3072/3201 have eid (95%)
+  Primary: 194/952 have eid (20%)
+  Other:   395/1633 have eid (24%)
+
+DONE

@@ -1,0 +1,92 @@
+{
+  "question_id": "E-008",
+  "title": "Pattern Degradation Over Time",
+  "run_id": "run_20260809_223921_d247f4",
+  "run_timestamp": "2026-08-09T22:39:41Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "9b77178ec4c20195",
+    "MARKET": "a698b1e250afb2ce",
+    "STRATEGY": "f6dafc5c7d57344f"
+  },
+  "data_snapshot_timestamp": "2026-08-09T22:39:41Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_trades"
+  ],
+  "universes_used": [
+    "EXECUTION"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "total": 94
+  },
+  "evidence": {
+    "primitives_executed": [
+      "degradation"
+    ],
+    "primary_analysis": "degradation"
+  },
+  "angle_evidence": {
+    "EXECUTION": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "trend": "STABLE",
+    "periods": 3
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 94
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {
+    "degradation": {
+      "period_1": {
+        "count": 31,
+        "mean": -0.2551,
+        "start_time": 1784742038.9891756,
+        "end_time": 1784888420.6289907
+      },
+      "period_2": {
+        "count": 31,
+        "mean": -0.4714,
+        "start_time": 1785135641.6698086,
+        "end_time": 1785301226.626436
+      },
+      "period_3": {
+        "count": 32,
+        "mean": 0.1874,
+        "start_time": 1785301546.436048,
+        "end_time": 1785991507.2149785
+      }
+    }
+  },
+  "outcome": "STABLE",
+  "conclusion": "Performance trend: STABLE across 3 periods",
+  "confidence": "MEDIUM",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260809_033621_3c7f7b",
+  "previous_outcome": "STABLE",
+  "changes_from_previous": {
+    "new_anomaly_view": true
+  },
+  "research_gaps": []
+}

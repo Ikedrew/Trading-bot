@@ -49,6 +49,13 @@ class ResearchFinding:
     data_snapshot_timestamp: str = ""
     analysis_version: str = "1.0.0"
 
+    # ─── EVIDENCE SOURCE ──────────────────────────────────────────────────────
+    # Distinguishes realised trading evidence from counterfactual shadow evidence.
+    # "REALISED"       — from live broker-confirmed execution outcomes
+    # "COUNTERFACTUAL" — from shadow simulation (not realised performance)
+    # "CROSS_SIDE"     — comparison between realised and counterfactual
+    evidence_source: str = "REALISED"
+
     # ─── POPULATION CONTEXT ───────────────────────────────────────────────────
     populations_used: list[str] = field(default_factory=list)
     universes_used: list[str] = field(default_factory=list)
@@ -111,6 +118,7 @@ class ResearchFinding:
             "universe_versions": self.universe_versions,
             "data_snapshot_timestamp": self.data_snapshot_timestamp,
             "analysis_version": self.analysis_version,
+            "evidence_source": self.evidence_source,
             # Population context
             "populations_used": self.populations_used,
             "universes_used": self.universes_used,

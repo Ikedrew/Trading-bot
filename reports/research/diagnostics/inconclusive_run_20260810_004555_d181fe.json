@@ -1,0 +1,594 @@
+{
+  "run_id": "run_20260810_004555_d181fe",
+  "total_inconclusive": 11,
+  "classifications": {
+    "OTHER": 5,
+    "LEGITIMATE_INSUFFICIENT_DATA": 2,
+    "WRONG_PRIMITIVE_PARAMETERS": 3,
+    "MISSING_INPUT_FIELD": 1
+  },
+  "shared_root_causes": [
+    {
+      "cause": "r_multiple unavailable in resolved population",
+      "affected_questions": [
+        "S-004",
+        "ED-002"
+      ],
+      "count": 2,
+      "explanation": "These questions resolve populations where outcome enrichment produced 0 matches, or the primary population doesn't contain EXECUTE decisions with entity_id matches."
+    },
+    {
+      "cause": "Primitive 'comparison' producing empty results",
+      "affected_questions": [
+        "E-010",
+        "ED-001",
+        "ED-002",
+        "DM-002",
+        "EDM-001"
+      ],
+      "count": 5
+    },
+    {
+      "cause": "Primitive 'distribution' producing empty results",
+      "affected_questions": [
+        "D-004",
+        "S-004",
+        "MS-003"
+      ],
+      "count": 3
+    },
+    {
+      "cause": "Primitive 'predictive_power' producing empty results",
+      "affected_questions": [
+        "M-002",
+        "M-004"
+      ],
+      "count": 2
+    },
+    {
+      "cause": "Population 'all_trades' lacking outcome data",
+      "affected_questions": [
+        "E-010",
+        "ED-001",
+        "EDM-001"
+      ],
+      "count": 3
+    },
+    {
+      "cause": "Population 'all_market_states' lacking outcome data",
+      "affected_questions": [
+        "M-002",
+        "M-004",
+        "MS-003"
+      ],
+      "count": 3
+    },
+    {
+      "cause": "Population 'no_trade_decisions' lacking outcome data",
+      "affected_questions": [
+        "D-004",
+        "ED-002"
+      ],
+      "count": 2
+    }
+  ],
+  "questions": [
+    {
+      "question_id": "E-010",
+      "title": "Risk:Reward Ratio Effectiveness",
+      "declared_angles": [
+        "EXECUTION"
+      ],
+      "required_universes": [
+        "EXECUTION"
+      ],
+      "required_populations": [
+        "all_trades"
+      ],
+      "resolved_population": "all_trades",
+      "raw_population_size": 94,
+      "outcome_r_multiple_available": 94,
+      "field_coverage": {
+        "stop_loss": 94,
+        "take_profit": 94,
+        "entry_price": 94,
+        "exit_price": 94,
+        "r_multiple": 94
+      },
+      "missing_fields": [],
+      "primary_primitive": "comparison",
+      "all_primitives": [
+        "comparison"
+      ],
+      "analytical_sample_size": 94,
+      "metrics_produced": [],
+      "metrics_empty": true,
+      "evidence_produced": [],
+      "warnings": [],
+      "primitive_error": "",
+      "finding_outcome": "INCONCLUSIVE",
+      "finding_confidence": "MEDIUM",
+      "finding_limitations": [],
+      "root_cause_classification": "OTHER",
+      "root_cause_explanation": "Analytical sample: 94, r_multiple available: 94",
+      "likely_fix_location": "Investigate individually."
+    },
+    {
+      "question_id": "D-004",
+      "title": "Rejection Stage Analysis",
+      "declared_angles": [
+        "DECISION"
+      ],
+      "required_universes": [
+        "DECISION"
+      ],
+      "required_populations": [
+        "no_trade_decisions",
+        "rejected_at_opportunity",
+        "rejected_at_strategy",
+        "rejected_at_entry",
+        "rejected_at_risk",
+        "rejected_at_execution"
+      ],
+      "resolved_population": "no_trade_decisions",
+      "raw_population_size": 7690,
+      "outcome_r_multiple_available": 1,
+      "field_coverage": {
+        "terminal_stage": 7690,
+        "terminal_reason": 7690
+      },
+      "missing_fields": [],
+      "primary_primitive": "distribution",
+      "all_primitives": [
+        "distribution",
+        "expectancy",
+        "exceptional_analysis"
+      ],
+      "analytical_sample_size": 1,
+      "metrics_produced": [
+        "count",
+        "mean",
+        "median",
+        "std",
+        "min",
+        "max"
+      ],
+      "metrics_empty": false,
+      "evidence_produced": [],
+      "warnings": [],
+      "primitive_error": "",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "INSUFFICIENT",
+      "finding_limitations": [
+        "Small sample (1 trades) \u2014 low statistical confidence"
+      ],
+      "root_cause_classification": "LEGITIMATE_INSUFFICIENT_DATA",
+      "root_cause_explanation": "Analytical sample 1 is below minimum threshold. r_multiple available in 1 records.",
+      "likely_fix_location": "Wait for more data to accumulate. No code fix required."
+    },
+    {
+      "question_id": "M-002",
+      "title": "HTF Alignment Value",
+      "declared_angles": [
+        "MARKET"
+      ],
+      "required_universes": [
+        "MARKET"
+      ],
+      "required_populations": [
+        "all_market_states"
+      ],
+      "resolved_population": "all_market_states",
+      "raw_population_size": 6230,
+      "outcome_r_multiple_available": 4,
+      "field_coverage": {
+        "htf_alignment_macro_bias": 6230,
+        "htf_alignment_strength": 6136,
+        "structure_alignment": 4422
+      },
+      "missing_fields": [],
+      "primary_primitive": "predictive_power",
+      "all_primitives": [
+        "predictive_power"
+      ],
+      "analytical_sample_size": 0,
+      "metrics_produced": [],
+      "metrics_empty": true,
+      "evidence_produced": [],
+      "warnings": [
+        "Insufficient data (0 records)"
+      ],
+      "primitive_error": "",
+      "finding_outcome": "INCONCLUSIVE",
+      "finding_confidence": "INSUFFICIENT",
+      "finding_limitations": [
+        "Insufficient data (0 records)"
+      ],
+      "root_cause_classification": "WRONG_PRIMITIVE_PARAMETERS",
+      "root_cause_explanation": "r_multiple available in 4 records but primitive 'predictive_power' used default parameters that look for different fields. Analytical sample was 0.",
+      "likely_fix_location": "The primitive 'predictive_power' default parameters may not match the actual field names in this universe. Pass explicit parameters mapping question fields to primitive expectations."
+    },
+    {
+      "question_id": "M-004",
+      "title": "Market Structure Clarity",
+      "declared_angles": [
+        "MARKET"
+      ],
+      "required_universes": [
+        "MARKET"
+      ],
+      "required_populations": [
+        "all_market_states"
+      ],
+      "resolved_population": "all_market_states",
+      "raw_population_size": 6230,
+      "outcome_r_multiple_available": 4,
+      "field_coverage": {
+        "h1_structural_clarity": 4422,
+        "h1_bos_confirmed": 6230,
+        "h1_dominant_trend": 6230
+      },
+      "missing_fields": [],
+      "primary_primitive": "predictive_power",
+      "all_primitives": [
+        "predictive_power"
+      ],
+      "analytical_sample_size": 0,
+      "metrics_produced": [],
+      "metrics_empty": true,
+      "evidence_produced": [],
+      "warnings": [
+        "Insufficient data (0 records)"
+      ],
+      "primitive_error": "",
+      "finding_outcome": "INCONCLUSIVE",
+      "finding_confidence": "INSUFFICIENT",
+      "finding_limitations": [
+        "Insufficient data (0 records)"
+      ],
+      "root_cause_classification": "WRONG_PRIMITIVE_PARAMETERS",
+      "root_cause_explanation": "r_multiple available in 4 records but primitive 'predictive_power' used default parameters that look for different fields. Analytical sample was 0.",
+      "likely_fix_location": "The primitive 'predictive_power' default parameters may not match the actual field names in this universe. Pass explicit parameters mapping question fields to primitive expectations."
+    },
+    {
+      "question_id": "S-003",
+      "title": "Strategy Selection Accuracy",
+      "declared_angles": [
+        "STRATEGY"
+      ],
+      "required_universes": [
+        "STRATEGY"
+      ],
+      "required_populations": [
+        "strategy_selected",
+        "strategy_eligible"
+      ],
+      "resolved_population": "strategy_selected",
+      "raw_population_size": 391,
+      "outcome_r_multiple_available": 80,
+      "field_coverage": {
+        "family": 391,
+        "confidence": 196,
+        "conditions_met": 196
+      },
+      "missing_fields": [],
+      "primary_primitive": "calibration",
+      "all_primitives": [
+        "calibration"
+      ],
+      "analytical_sample_size": 0,
+      "metrics_produced": [],
+      "metrics_empty": true,
+      "evidence_produced": [],
+      "warnings": [
+        "Insufficient calibration data (0 records)"
+      ],
+      "primitive_error": "",
+      "finding_outcome": "INCONCLUSIVE",
+      "finding_confidence": "INSUFFICIENT",
+      "finding_limitations": [
+        "Insufficient calibration data (0 records)"
+      ],
+      "root_cause_classification": "WRONG_PRIMITIVE_PARAMETERS",
+      "root_cause_explanation": "r_multiple available in 80 records but primitive 'calibration' used default parameters that look for different fields. Analytical sample was 0.",
+      "likely_fix_location": "The primitive 'calibration' default parameters may not match the actual field names in this universe. Pass explicit parameters mapping question fields to primitive expectations."
+    },
+    {
+      "question_id": "S-004",
+      "title": "Strategy Rejection Patterns",
+      "declared_angles": [
+        "STRATEGY"
+      ],
+      "required_universes": [
+        "STRATEGY"
+      ],
+      "required_populations": [
+        "strategy_rejected",
+        "all_strategies"
+      ],
+      "resolved_population": "strategy_rejected",
+      "raw_population_size": 1946,
+      "outcome_r_multiple_available": 0,
+      "field_coverage": {
+        "family": 1946,
+        "conditions_met": 30,
+        "reasoning": 1946
+      },
+      "missing_fields": [],
+      "primary_primitive": "distribution",
+      "all_primitives": [
+        "distribution",
+        "expectancy",
+        "exceptional_analysis"
+      ],
+      "analytical_sample_size": 0,
+      "metrics_produced": [],
+      "metrics_empty": true,
+      "evidence_produced": [],
+      "warnings": [
+        "No records with field 'r_multiple'"
+      ],
+      "primitive_error": "",
+      "finding_outcome": "INCONCLUSIVE",
+      "finding_confidence": "INSUFFICIENT",
+      "finding_limitations": [
+        "No records with field 'r_multiple'",
+        "No records with R-multiple data"
+      ],
+      "root_cause_classification": "MISSING_INPUT_FIELD",
+      "root_cause_explanation": "Population has 1946 records but r_multiple is available in only 0. The primitive 'distribution' requires outcome data (r_multiple) which is only populated for records with execution matches. Missing fields: ['r_multiple (implicit)']",
+      "likely_fix_location": "Outcome enrichment produced 0 matches for this population. Either the population contains no EXECUTE decisions, or the enrichment join didn't match. Check if population filter is too broad."
+    },
+    {
+      "question_id": "ED-001",
+      "title": "Decision-to-Execution Edge Leakage",
+      "declared_angles": [
+        "EXECUTION",
+        "DECISION"
+      ],
+      "required_universes": [
+        "EXECUTION",
+        "DECISION"
+      ],
+      "required_populations": [
+        "all_trades",
+        "execute_decisions"
+      ],
+      "resolved_population": "all_trades",
+      "raw_population_size": 94,
+      "outcome_r_multiple_available": 94,
+      "field_coverage": {
+        "r_multiple": 94,
+        "net_realised_pnl": 94,
+        "ev": 80,
+        "score": 94,
+        "p_success": 80
+      },
+      "missing_fields": [],
+      "primary_primitive": "comparison",
+      "all_primitives": [
+        "comparison",
+        "anomaly_analysis"
+      ],
+      "analytical_sample_size": 94,
+      "metrics_produced": [],
+      "metrics_empty": true,
+      "evidence_produced": [],
+      "warnings": [],
+      "primitive_error": "",
+      "finding_outcome": "INCONCLUSIVE",
+      "finding_confidence": "MEDIUM",
+      "finding_limitations": [],
+      "root_cause_classification": "OTHER",
+      "root_cause_explanation": "Analytical sample: 94, r_multiple available: 94",
+      "likely_fix_location": "Investigate individually."
+    },
+    {
+      "question_id": "ED-002",
+      "title": "Missed Opportunity Cost",
+      "declared_angles": [
+        "EXECUTION",
+        "DECISION"
+      ],
+      "required_universes": [
+        "EXECUTION",
+        "DECISION"
+      ],
+      "required_populations": [
+        "no_trade_decisions",
+        "all_trades"
+      ],
+      "resolved_population": "no_trade_decisions",
+      "raw_population_size": 0,
+      "outcome_r_multiple_available": 0,
+      "field_coverage": {
+        "terminal_stage": 0,
+        "terminal_reason": 0,
+        "score": 0,
+        "ev": 0,
+        "r_multiple": 0
+      },
+      "missing_fields": [
+        "terminal_stage",
+        "terminal_reason",
+        "score",
+        "ev",
+        "r_multiple"
+      ],
+      "primary_primitive": "comparison",
+      "all_primitives": [
+        "comparison",
+        "expectancy",
+        "exceptional_analysis"
+      ],
+      "analytical_sample_size": 0,
+      "metrics_produced": [],
+      "metrics_empty": true,
+      "evidence_produced": [],
+      "warnings": [
+        "No groups found for field 'regime'"
+      ],
+      "primitive_error": "",
+      "finding_outcome": "INCONCLUSIVE",
+      "finding_confidence": "INSUFFICIENT",
+      "finding_limitations": [
+        "No groups found for field 'regime'",
+        "No records with R-multiple data"
+      ],
+      "root_cause_classification": "OTHER",
+      "root_cause_explanation": "Analytical sample: 0, r_multiple available: 0",
+      "likely_fix_location": "Investigate individually."
+    },
+    {
+      "question_id": "DM-002",
+      "title": "Opportunity Detection vs Market State",
+      "declared_angles": [
+        "DECISION",
+        "MARKET"
+      ],
+      "required_universes": [
+        "DECISION",
+        "MARKET"
+      ],
+      "required_populations": [
+        "all_decisions",
+        "all_market_states"
+      ],
+      "resolved_population": "all_decisions",
+      "raw_population_size": 8042,
+      "outcome_r_multiple_available": 81,
+      "field_coverage": {
+        "opportunity_quality": 4422,
+        "location_score": 4422,
+        "regime": 8042,
+        "volatility_state": 8042
+      },
+      "missing_fields": [],
+      "primary_primitive": "comparison",
+      "all_primitives": [
+        "comparison",
+        "exceptional_analysis"
+      ],
+      "analytical_sample_size": 8042,
+      "metrics_produced": [],
+      "metrics_empty": true,
+      "evidence_produced": [],
+      "warnings": [],
+      "primitive_error": "",
+      "finding_outcome": "INCONCLUSIVE",
+      "finding_confidence": "HIGH",
+      "finding_limitations": [],
+      "root_cause_classification": "OTHER",
+      "root_cause_explanation": "Analytical sample: 8042, r_multiple available: 81",
+      "likely_fix_location": "Investigate individually."
+    },
+    {
+      "question_id": "MS-003",
+      "title": "Strategy Availability by Market State",
+      "declared_angles": [
+        "MARKET",
+        "STRATEGY"
+      ],
+      "required_universes": [
+        "MARKET",
+        "STRATEGY"
+      ],
+      "required_populations": [
+        "all_market_states",
+        "strategy_eligible",
+        "strategy_rejected"
+      ],
+      "resolved_population": "all_market_states",
+      "raw_population_size": 6230,
+      "outcome_r_multiple_available": 4,
+      "field_coverage": {
+        "regime": 6230,
+        "h4_phase": 0,
+        "family": 0,
+        "conditions_met": 0
+      },
+      "missing_fields": [
+        "h4_phase",
+        "family",
+        "conditions_met"
+      ],
+      "primary_primitive": "distribution",
+      "all_primitives": [
+        "distribution",
+        "expectancy",
+        "exceptional_analysis"
+      ],
+      "analytical_sample_size": 4,
+      "metrics_produced": [
+        "count",
+        "mean",
+        "median",
+        "std",
+        "min",
+        "max"
+      ],
+      "metrics_empty": false,
+      "evidence_produced": [],
+      "warnings": [],
+      "primitive_error": "",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "INSUFFICIENT",
+      "finding_limitations": [
+        "Small sample (4 trades) \u2014 low statistical confidence"
+      ],
+      "root_cause_classification": "LEGITIMATE_INSUFFICIENT_DATA",
+      "root_cause_explanation": "Analytical sample 4 is below minimum threshold. r_multiple available in 4 records.",
+      "likely_fix_location": "Wait for more data to accumulate. No code fix required."
+    },
+    {
+      "question_id": "EDM-001",
+      "title": "Complete Trade Lifecycle Analysis",
+      "declared_angles": [
+        "EXECUTION",
+        "DECISION",
+        "MARKET"
+      ],
+      "required_universes": [
+        "EXECUTION",
+        "DECISION",
+        "MARKET"
+      ],
+      "required_populations": [
+        "all_trades",
+        "execute_decisions",
+        "all_market_states"
+      ],
+      "resolved_population": "all_trades",
+      "raw_population_size": 94,
+      "outcome_r_multiple_available": 94,
+      "field_coverage": {
+        "r_multiple": 94,
+        "score": 94,
+        "ev": 80,
+        "regime": 94,
+        "volatility_state": 0
+      },
+      "missing_fields": [
+        "volatility_state"
+      ],
+      "primary_primitive": "comparison",
+      "all_primitives": [
+        "comparison",
+        "anomaly_analysis",
+        "exceptional_analysis"
+      ],
+      "analytical_sample_size": 94,
+      "metrics_produced": [],
+      "metrics_empty": true,
+      "evidence_produced": [],
+      "warnings": [],
+      "primitive_error": "",
+      "finding_outcome": "INCONCLUSIVE",
+      "finding_confidence": "MEDIUM",
+      "finding_limitations": [],
+      "root_cause_classification": "OTHER",
+      "root_cause_explanation": "Analytical sample: 94, r_multiple available: 94",
+      "likely_fix_location": "Investigate individually."
+    }
+  ]
+}

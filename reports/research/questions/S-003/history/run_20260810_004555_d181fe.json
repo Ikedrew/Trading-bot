@@ -1,0 +1,84 @@
+{
+  "question_id": "S-003",
+  "title": "Strategy Selection Accuracy",
+  "run_id": "run_20260810_004555_d181fe",
+  "run_timestamp": "2026-08-10T00:46:25Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "ae73f66c733a43cd",
+    "MARKET": "6da6470873c58916",
+    "STRATEGY": "2149b9c97685686d"
+  },
+  "data_snapshot_timestamp": "2026-08-10T00:46:25Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "strategy_selected",
+    "strategy_eligible"
+  ],
+  "universes_used": [
+    "STRATEGY"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "total": 391
+  },
+  "evidence": {
+    "primitives_executed": [
+      "calibration"
+    ],
+    "primary_analysis": "calibration"
+  },
+  "angle_evidence": {
+    "STRATEGY": {
+      "included": true
+    }
+  },
+  "primary_metrics": {},
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 391
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {},
+  "outcome": "INCONCLUSIVE",
+  "conclusion": "No conclusion",
+  "confidence": "INSUFFICIENT",
+  "recommendation": "",
+  "limitations": [
+    "Insufficient calibration data (0 records)"
+  ],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260809_223921_d247f4",
+  "previous_outcome": "COMPLETED",
+  "changes_from_previous": {
+    "outcome_changed": {
+      "from": "COMPLETED",
+      "to": "INCONCLUSIVE"
+    },
+    "confidence_changed": {
+      "from": "HIGH",
+      "to": "INSUFFICIENT"
+    },
+    "sample_size_changes": {
+      "total": {
+        "from": 390,
+        "to": 391
+      }
+    }
+  },
+  "research_gaps": []
+}

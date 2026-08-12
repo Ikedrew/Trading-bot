@@ -1,0 +1,158 @@
+{
+  "question_id": "D-003",
+  "title": "Decision Threshold Effectiveness",
+  "run_id": "run_20260810_204356_0d5c46",
+  "run_timestamp": "2026-08-10T20:44:13Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "55e2b406db8990bf",
+    "MARKET": "28c6da12155700e5",
+    "STRATEGY": "c4c54ccc0373f660"
+  },
+  "data_snapshot_timestamp": "2026-08-10T20:44:13Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_decisions",
+    "execute_decisions",
+    "high_score_decisions",
+    "low_score_decisions"
+  ],
+  "universes_used": [
+    "DECISION"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 9323,
+    "analytical_sample": 9323,
+    "minimum_required": 20,
+    "sample_reduction_reason": "No reduction \u2014 all records usable"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "segmentation",
+      "expectancy"
+    ],
+    "primary_analysis": "segmentation"
+  },
+  "angle_evidence": {
+    "DECISION": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "dimensions": [
+      "symbol"
+    ],
+    "segment_count": 9,
+    "count": 81,
+    "wins": 30,
+    "losses": 51,
+    "win_rate": 0.3704,
+    "mean_r": -0.1538,
+    "median_r": -1.0,
+    "total_r": -12.4588,
+    "avg_win_r": 1.5932,
+    "avg_loss_r": -1.1815,
+    "profit_factor": 0.7932,
+    "std_r": 1.6185,
+    "expectancy": -0.1538
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 9323
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {
+    "segmentation": {
+      "AUDUSD": {
+        "count": 11,
+        "mean": -0.2634,
+        "total": -2.8978,
+        "win_rate": 0.2727
+      },
+      "EURUSD": {
+        "count": 7,
+        "mean": -0.3749,
+        "total": -2.6241,
+        "win_rate": 0.2857
+      },
+      "GBPUSD": {
+        "count": 7,
+        "mean": -0.8525,
+        "total": -5.9673,
+        "win_rate": 0.2857
+      },
+      "NZDUSD": {
+        "count": 20,
+        "mean": 0.1785,
+        "total": 3.5691,
+        "win_rate": 0.5
+      },
+      "US500": {
+        "count": 1,
+        "mean": -1.0231,
+        "total": -1.0231,
+        "win_rate": 0.0
+      },
+      "USDCAD": {
+        "count": 18,
+        "mean": 0.0858,
+        "total": 1.5446,
+        "win_rate": 0.3889
+      },
+      "USDCHF": {
+        "count": 14,
+        "mean": -0.4611,
+        "total": -6.4552,
+        "win_rate": 0.3571
+      },
+      "USDJPY": {
+        "count": 2,
+        "mean": -1.0678,
+        "total": -2.1357,
+        "win_rate": 0.0
+      },
+      "XAUUSD": {
+        "count": 1,
+        "mean": 3.5307,
+        "total": 3.5307,
+        "win_rate": 1.0
+      }
+    }
+  },
+  "outcome": "NEGATIVE",
+  "conclusion": "Negative expectancy: -0.1538R per trade",
+  "confidence": "HIGH",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_190615_a30f2d",
+  "previous_outcome": "NEGATIVE",
+  "changes_from_previous": {
+    "sample_size_changes": {
+      "analytical_sample": {
+        "from": 9225,
+        "to": 9323
+      },
+      "population": {
+        "from": 9225,
+        "to": 9323
+      }
+    }
+  },
+  "research_gaps": []
+}

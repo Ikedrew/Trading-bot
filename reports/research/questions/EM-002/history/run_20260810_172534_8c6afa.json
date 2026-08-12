@@ -1,0 +1,128 @@
+{
+  "question_id": "EM-002",
+  "title": "Market Drift Detection",
+  "run_id": "run_20260810_172534_8c6afa",
+  "run_timestamp": "2026-08-10T17:25:51Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "78e8ef62586966bb",
+    "MARKET": "246081ab82230367",
+    "STRATEGY": "a15e587da03409c3"
+  },
+  "data_snapshot_timestamp": "2026-08-10T17:25:51Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_trades",
+    "all_market_states"
+  ],
+  "universes_used": [
+    "EXECUTION",
+    "MARKET"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 94,
+    "analytical_sample": 94,
+    "minimum_required": 30,
+    "sample_reduction_reason": "No reduction \u2014 all records usable"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "degradation",
+      "anomaly_analysis"
+    ],
+    "primary_analysis": "degradation"
+  },
+  "angle_evidence": {
+    "EXECUTION": {
+      "included": true
+    },
+    "MARKET": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "trend": "STABLE",
+    "periods": 3
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 94
+  },
+  "anomaly_view": {
+    "status": "INCONCLUSIVE",
+    "reason": "No anomalous records found in population",
+    "criteria": {
+      "anomaly_field": "anomaly",
+      "threshold": "anomaly == True"
+    },
+    "normal_count": 94,
+    "anomaly_count": 0
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {
+    "degradation": {
+      "period_1": {
+        "count": 31,
+        "mean": -0.2551,
+        "start_time": 1784742038.9891756,
+        "end_time": 1784888420.6289907
+      },
+      "period_2": {
+        "count": 31,
+        "mean": -0.4714,
+        "start_time": 1785135641.6698086,
+        "end_time": 1785301226.626436
+      },
+      "period_3": {
+        "count": 32,
+        "mean": 0.1874,
+        "start_time": 1785301546.436048,
+        "end_time": 1785991507.2149785
+      }
+    }
+  },
+  "outcome": "STABLE",
+  "conclusion": "Performance trend: STABLE across 3 periods",
+  "confidence": "MEDIUM",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_015034_9622d9",
+  "previous_outcome": "STABLE",
+  "changes_from_previous": {
+    "sample_size_changes": {
+      "sample_reduction_reason": {
+        "from": 0,
+        "to": "No reduction \u2014 all records usable"
+      },
+      "analytical_sample": {
+        "from": 0,
+        "to": 94
+      },
+      "minimum_required": {
+        "from": 0,
+        "to": 30
+      },
+      "population": {
+        "from": 0,
+        "to": 94
+      },
+      "total": {
+        "from": 94,
+        "to": 0
+      }
+    }
+  },
+  "research_gaps": []
+}

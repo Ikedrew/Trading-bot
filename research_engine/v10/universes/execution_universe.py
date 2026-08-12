@@ -67,10 +67,36 @@ class ExecutionUniverseBuilder(UniverseBuilder):
             self.load()
 
         records = []
+        excluded_missing_trade_id = 0
+        excluded_missing_r_multiple = 0
+
         for raw in self._raw:
+            # Pre-check exclusion reasons for tracking
+            trade_id = raw.get("trade_id", "")
+            exe = raw.get("execution", {})
+            r_multiple = exe.get("r_multiple") if exe else None
+
+            if not trade_id:
+                excluded_missing_trade_id += 1
+                continue
+            if r_multiple is None:
+                excluded_missing_r_multiple += 1
+                continue
+
             record = self._normalise(raw)
             if record:
                 records.append(record)
+
+        total_excluded = excluded_missing_trade_id + excluded_missing_r_multiple
+        exclusions = {
+            "total": total_excluded,
+            "reasons": {
+                "missing_trade_id": excluded_missing_trade_id,
+                "missing_r_multiple": excluded_missing_r_multiple,
+            },
+            "source_records": len(self._raw),
+            "included_records": len(records),
+        }
 
         self._records = records
         self._built = True
@@ -83,9 +109,12 @@ class ExecutionUniverseBuilder(UniverseBuilder):
                 Population.LOSING_TRADES.value,
                 Population.ANOMALOUS_TRADES.value,
             ),
+            exclusions=exclusions,
         )
         logger.info(
-            f"[EXECUTION] Built {len(records)} normalised records"
+            f"[EXECUTION] Built {len(records)} normalised records "
+            f"(excluded {total_excluded}: {excluded_missing_trade_id} missing trade_id, "
+            f"{excluded_missing_r_multiple} missing r_multiple)"
         )
         return records
 

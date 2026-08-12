@@ -1,8 +1,10 @@
 {
-  "current_day_key": "2026-08-07",
-  "total_trades_today": 2,
+  "current_day_key": "2026-08-12",
+  "total_trades_today": 7,
   "per_symbol": {
-    "XAUUSD": 2
+    "NZDUSD": 3,
+    "XAUUSD": 2,
+    "US500": 2
   },
-  "last_updated": 1786101620.7332757
+  "last_updated": 1786540882.4691386
 }

@@ -1,0 +1,103 @@
+{
+  "question_id": "E-009",
+  "title": "Trade Duration vs Outcome",
+  "run_id": "run_20260810_190615_a30f2d",
+  "run_timestamp": "2026-08-10T19:06:26Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "555aca36133851d7",
+    "MARKET": "5e70e6b4cfb6cc80",
+    "STRATEGY": "e303776138d6fd70"
+  },
+  "data_snapshot_timestamp": "2026-08-10T19:06:26Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_trades"
+  ],
+  "universes_used": [
+    "EXECUTION"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 94,
+    "analytical_sample": 94,
+    "minimum_required": 20,
+    "sample_reduction_reason": "No reduction \u2014 all records usable"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "predictive_power"
+    ],
+    "primary_analysis": "predictive_power"
+  },
+  "angle_evidence": {
+    "EXECUTION": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "monotonic": false,
+    "top_bottom_spread": 2.6489,
+    "bucket_count": 5
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 94
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {
+    "predictive_power": {
+      "q1": {
+        "feature_mean": -108.613,
+        "outcome_mean": -0.472,
+        "count": 23
+      },
+      "q2": {
+        "feature_mean": 931.6652,
+        "outcome_mean": -0.0334,
+        "count": 23
+      },
+      "q3": {
+        "feature_mean": 1984.6739,
+        "outcome_mean": 0.0847,
+        "count": 23
+      },
+      "q4": {
+        "feature_mean": 8104.6217,
+        "outcome_mean": -0.487,
+        "count": 23
+      },
+      "q5": {
+        "feature_mean": 81784.5,
+        "outcome_mean": 2.1769,
+        "count": 2
+      }
+    }
+  },
+  "outcome": "NOT_PREDICTIVE",
+  "conclusion": "Feature 'duration_seconds' is NOT monotonically predictive; Top-bottom spread: +2.6489R",
+  "confidence": "MEDIUM",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_172534_8c6afa",
+  "previous_outcome": "NOT_PREDICTIVE",
+  "changes_from_previous": {
+    "status": "no_material_change"
+  },
+  "research_gaps": []
+}

@@ -289,19 +289,24 @@ class ResearchExecutionOrchestrator:
         return builder.records
 
     def _build_universes(self) -> dict[Universe, Any]:
-        """Build all four universes from default paths."""
+        """Build all six universes from default paths, then enrich with outcomes."""
         from research_engine.v10.universes import (
             ExecutionUniverseBuilder,
             DecisionUniverseBuilder,
             MarketUniverseBuilder,
             StrategyUniverseBuilder,
+            RiskUniverseBuilder,
+            OutcomeUniverseBuilder,
         )
+        from research_engine.v10.universes.outcome_enrichment import OutcomeEnrichment
+
         builders: dict[Universe, Any] = {}
         for UClass, utype in [
             (ExecutionUniverseBuilder, Universe.EXECUTION),
             (DecisionUniverseBuilder, Universe.DECISION),
             (MarketUniverseBuilder, Universe.MARKET),
             (StrategyUniverseBuilder, Universe.STRATEGY),
+            (RiskUniverseBuilder, Universe.RISK),
         ]:
             try:
                 b = UClass()
@@ -309,6 +314,21 @@ class ResearchExecutionOrchestrator:
                 builders[utype] = b
             except Exception as e:
                 logger.warning(f"[ORCHESTRATOR] Failed to build {utype.value}: {e}")
+
+        # Outcome enrichment: join r_multiple from Execution into other universes
+        exe_builder = builders.get(Universe.EXECUTION)
+        if exe_builder and exe_builder.is_built:
+            enrichment = OutcomeEnrichment(exe_builder)
+            enrichment.enrich_all(builders)
+
+            # Build Outcome universe from completed executions
+            try:
+                outcome_builder = OutcomeUniverseBuilder(execution_builder=exe_builder)
+                outcome_builder.build()
+                builders[Universe.OUTCOME] = outcome_builder
+            except Exception as e:
+                logger.warning(f"[ORCHESTRATOR] Failed to build OUTCOME: {e}")
+
         return builders
 
     def _get_question_bank(self) -> tuple[NewEngineQuestion, ...]:

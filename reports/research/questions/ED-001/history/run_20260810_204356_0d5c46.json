@@ -1,0 +1,101 @@
+{
+  "question_id": "ED-001",
+  "title": "Decision-to-Execution Edge Leakage",
+  "run_id": "run_20260810_204356_0d5c46",
+  "run_timestamp": "2026-08-10T20:44:13Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "55e2b406db8990bf",
+    "MARKET": "28c6da12155700e5",
+    "STRATEGY": "c4c54ccc0373f660"
+  },
+  "data_snapshot_timestamp": "2026-08-10T20:44:13Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_trades",
+    "execute_decisions"
+  ],
+  "universes_used": [
+    "EXECUTION",
+    "DECISION"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 94,
+    "analytical_sample": 94,
+    "minimum_required": 20,
+    "sample_reduction_reason": "No reduction \u2014 all records usable"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "comparison",
+      "anomaly_analysis"
+    ],
+    "primary_analysis": "comparison"
+  },
+  "angle_evidence": {
+    "EXECUTION": {
+      "included": true
+    },
+    "DECISION": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "population_size": 94,
+    "analytical_sample": 94,
+    "groups_discovered": 4,
+    "groups_sufficient": 4,
+    "groups_insufficient": 0,
+    "overall_mean": -0.1758,
+    "group_spread": 1.3213,
+    "mean_r": -0.1758
+  },
+  "statistical_results": {},
+  "effect_sizes": {
+    "comparison": {
+      "groups": [
+        "RANGE",
+        "TRANSITIONAL"
+      ],
+      "mean_difference": 0.282,
+      "cohens_d": 0.1802
+    }
+  },
+  "normal_view": {
+    "sample_size": 94
+  },
+  "anomaly_view": {
+    "status": "INCONCLUSIVE",
+    "reason": "No anomalous records found in population",
+    "criteria": {
+      "anomaly_field": "anomaly",
+      "threshold": "anomaly == True"
+    },
+    "normal_count": 94,
+    "anomaly_count": 0
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {},
+  "outcome": "NEGATIVE",
+  "conclusion": "Groups differ by 1.3213R (spread between best and worst group)",
+  "confidence": "MEDIUM",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_190615_a30f2d",
+  "previous_outcome": "NEGATIVE",
+  "changes_from_previous": {
+    "status": "no_material_change"
+  },
+  "research_gaps": []
+}

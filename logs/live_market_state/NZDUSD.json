@@ -1,17 +1,17 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "NZDUSD",
-  "cycle_id": 56989,
-  "bar_time": 1786146600,
-  "updated_at": "2026-08-07T20:50:14.853Z",
-  "updated_at_unix": 1786135814.853,
+  "cycle_id": 62457,
+  "bar_time": 1786583100,
+  "updated_at": "2026-08-12T22:05:17.974Z",
+  "updated_at_unix": 1786572317.975,
   "action": "NO_TRADE",
-  "score": 0.225,
-  "reason": "V10 [opportunity]: No opportunity (INVALID)",
+  "score": 0.5225,
+  "reason": "V10 [strategy]: No strategy matched",
   "identity": {
-    "entity_id": "NZDUSD_1786146600",
-    "observation_id": "ad632f3f903d8197",
-    "cycle_id": 56989,
+    "entity_id": "NZDUSD_1786583100",
+    "observation_id": "e744f1de01883273",
+    "cycle_id": 62457,
     "correlation_id": "",
     "trade_id": ""
   },
@@ -21,13 +21,13 @@
     "volatility_state": "NEUTRAL",
     "h4_trend": "NEUTRAL",
     "h4_trend_strength": 0.0,
-    "h4_phase": "PULLBACK",
-    "h1_bos_direction": "",
-    "h1_structural_clarity": 0.7591,
-    "h1_dominant_trend": "BULLISH",
+    "h4_phase": "IMPULSE",
+    "h1_bos_direction": "BEARISH",
+    "h1_structural_clarity": 0.5101,
+    "h1_dominant_trend": "BEARISH",
     "m15_pullback_active": true,
     "m15_displacement": false,
-    "m15_range_position": 0.5357,
+    "m15_range_position": 0.0,
     "m5_momentum": "NEUTRAL",
     "m5_momentum_strength": 0.0,
     "m5_rejection": false,
@@ -36,26 +36,26 @@
     "location_type": "OPEN_SPACE",
     "inside_zone": false,
     "zone_quality": 0.0,
-    "range_position": 0.5357,
-    "premium_discount": "EQUILIBRIUM",
-    "htf_macro_bias": "BULLISH",
-    "htf_structure_alignment": 0.5
+    "range_position": 0.0,
+    "premium_discount": "",
+    "htf_macro_bias": "BEARISH",
+    "htf_structure_alignment": 1.0
   },
   "opportunity": {
-    "state": "INVALID",
-    "directional_bias": "BULLISH",
-    "opportunity_type": "NONE",
-    "overall_quality": 0.225,
-    "location_score": 0.0,
-    "structure_score": 0.35,
+    "state": "WATCHING",
+    "directional_bias": "BEARISH",
+    "opportunity_type": "ZONE_REACTION",
+    "overall_quality": 0.5225,
+    "location_score": 0.55,
+    "structure_score": 0.5,
     "behaviour_score": 0.7999999999999999,
-    "formation_score": 0.0,
-    "observation_id": "ad632f3f903d8197"
+    "formation_score": 0.3,
+    "observation_id": "e744f1de01883273"
   },
   "strategy": {
     "family": "NONE",
     "confidence": 0.0,
-    "direction": "BULLISH"
+    "direction": "BEARISH"
   },
   "horizon": {
     "type": "SCALP",
@@ -87,6 +87,6 @@
     "order_type": "",
     "volume": 0.0
   },
-  "rejection_stage": "opportunity",
+  "rejection_stage": "strategy",
   "approved": false
 }

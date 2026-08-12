@@ -1,0 +1,115 @@
+{
+  "question_id": "D-005",
+  "title": "Opportunity Quality Predictive Value",
+  "run_id": "run_20260810_004555_d181fe",
+  "run_timestamp": "2026-08-10T00:46:25Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "ae73f66c733a43cd",
+    "MARKET": "6da6470873c58916",
+    "STRATEGY": "2149b9c97685686d"
+  },
+  "data_snapshot_timestamp": "2026-08-10T00:46:25Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "execute_decisions"
+  ],
+  "universes_used": [
+    "DECISION"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "total": 352
+  },
+  "evidence": {
+    "primitives_executed": [
+      "predictive_power",
+      "anomaly_analysis"
+    ],
+    "primary_analysis": "predictive_power"
+  },
+  "angle_evidence": {
+    "DECISION": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "monotonic": false,
+    "top_bottom_spread": 0.1367,
+    "bucket_count": 4
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 352
+  },
+  "anomaly_view": {
+    "status": "INCONCLUSIVE",
+    "reason": "No anomalous records found in population",
+    "criteria": {
+      "anomaly_field": "anomaly",
+      "threshold": "anomaly == True"
+    },
+    "normal_count": 352,
+    "anomaly_count": 0
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {
+    "predictive_power": {
+      "q1": {
+        "feature_mean": 0.5069,
+        "outcome_mean": -0.2594,
+        "count": 20
+      },
+      "q2": {
+        "feature_mean": 0.5736,
+        "outcome_mean": -0.1166,
+        "count": 20
+      },
+      "q3": {
+        "feature_mean": 0.6305,
+        "outcome_mean": -0.0743,
+        "count": 20
+      },
+      "q4": {
+        "feature_mean": 0.701,
+        "outcome_mean": -0.1227,
+        "count": 20
+      }
+    }
+  },
+  "outcome": "NOT_PREDICTIVE",
+  "conclusion": "Feature 'score' is NOT monotonically predictive; Top-bottom spread: +0.1367R",
+  "confidence": "MEDIUM",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260809_223921_d247f4",
+  "previous_outcome": "COMPLETED",
+  "changes_from_previous": {
+    "outcome_changed": {
+      "from": "COMPLETED",
+      "to": "NOT_PREDICTIVE"
+    },
+    "confidence_changed": {
+      "from": "HIGH",
+      "to": "MEDIUM"
+    },
+    "sample_size_changes": {
+      "total": {
+        "from": 351,
+        "to": 352
+      }
+    }
+  },
+  "research_gaps": []
+}

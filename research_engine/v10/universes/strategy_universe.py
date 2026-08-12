@@ -70,21 +70,28 @@ class StrategyUniverseBuilder(UniverseBuilder):
             self.load()
 
         records = []
+        excluded_dt_normalise = 0
+        excluded_so_normalise = 0
 
         # Primary: extract from decision traces
         for raw in self._raw_dt:
             record = self._normalise_from_decision_trace(raw)
             if record:
                 records.append(record)
+            else:
+                excluded_dt_normalise += 1
 
         # Secondary: strategy observations (more detailed)
         for raw in self._raw_so:
             record = self._normalise_from_strategy_obs(raw)
             if record:
                 records.append(record)
+            else:
+                excluded_so_normalise += 1
 
         # Deduplicate: prefer strategy_observations (richer data)
         # Use entity_id as dedup key
+        pre_dedup = len(records)
         so_entities = {
             r.get("entity_id") for r in records
             if r.get("source") == "strategy_observations" and r.get("entity_id")
@@ -94,6 +101,20 @@ class StrategyUniverseBuilder(UniverseBuilder):
             if r.get("source") == "strategy_observations"
             or r.get("entity_id") not in so_entities
         ]
+        deduplicated = pre_dedup - len(records)
+
+        total_excluded = excluded_dt_normalise + excluded_so_normalise
+        exclusions = {
+            "total": total_excluded,
+            "reasons": {
+                "dt_normalise_failed": excluded_dt_normalise,
+                "so_normalise_failed": excluded_so_normalise,
+            },
+            "source_records_dt": len(self._raw_dt),
+            "source_records_so": len(self._raw_so),
+            "deduplicated": deduplicated,
+            "included_records": len(records),
+        }
 
         self._records = records
         self._built = True
@@ -112,8 +133,12 @@ class StrategyUniverseBuilder(UniverseBuilder):
                 Population.STRATEGY_SELECTED.value,
                 Population.STRATEGY_REJECTED.value,
             ),
+            exclusions=exclusions,
         )
-        logger.info(f"[STRATEGY] Built {len(records)} normalised records")
+        logger.info(
+            f"[STRATEGY] Built {len(records)} normalised records "
+            f"(excluded {total_excluded}, deduplicated {deduplicated})"
+        )
         return records
 
     def get_population(self, population: Population) -> list[dict[str, Any]]:

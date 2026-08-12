@@ -1,0 +1,41 @@
+{
+  "candidate_id": "cand_prop_EM-001_dcbd05_6d49bb",
+  "proposal_id": "prop_EM-001_dcbd05",
+  "candidate_version": "1",
+  "description": "Exclude TRANSITIONAL-regime trades from the evaluated population.",
+  "hypothesis": "Removing trades taken during regime transitions will improve overall system expectancy.",
+  "change_type": "POPULATION_FILTER",
+  "configuration": {
+    "field": "regime",
+    "operator": "!=",
+    "value": "TRANSITIONAL"
+  },
+  "target_metric": "mean_r",
+  "expected_effect": "increase",
+  "minimum_improvement": 0.0,
+  "critical_metrics": [
+    "win_rate"
+  ],
+  "design_status": "EXPERIMENTABLE",
+  "source_proposal_id": "prop_EM-001_dcbd05",
+  "source_finding_ids": [
+    "EM-001_run_20260811_230428_56927a"
+  ],
+  "source_feedback_ids": [
+    "fb_EM-001_run_20260811_230428_56927a"
+  ],
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "a413d1d2e48467dc",
+    "MARKET": "1954e3a4bab5be0e",
+    "STRATEGY": "bdc3d80a3cf03c4b",
+    "RISK": "4b831a4bd58842ad",
+    "OUTCOME": "17fcb30c52e98a83"
+  },
+  "population_versions": {
+    "all_trades": "17fcb30c52e98a83"
+  },
+  "governance_status": "CANDIDATE",
+  "governance_note": "This is a research candidate. It does not modify or authorize modification of the trading system.",
+  "created_at": "2026-08-12T00:27:09Z"
+}

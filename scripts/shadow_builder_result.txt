@@ -1,0 +1,24 @@
+Loaded: 5786 raw records
+Built: 4153 normalised records
+Metadata: 4153 records, hash=589efceeb502
+Exclusions: {'total': 1633, 'reasons': {'bad_schema': 0, 'test_data': 1633, 'no_r_multiple': 0, 'normalise_fail': 0}, 'source_records': 5786, 'included_records': 4153}
+  all_shadow_outcomes: 4153
+  shadow_wins: 1759
+  shadow_losses: 2394
+  primary_v10_shadow: 952
+  horizon_scalp: 1824
+  horizon_intraday: 1359
+  horizon_extended: 18
+  shadow_tp_hit: 425
+  shadow_sl_hit: 674
+  shadow_timeout: 3054
+
+Sample record fields: ['shadow_trade_id', 'entity_id', 'correlation_id', 'symbol', 'cycle_id', 'strategy_id', 'shadow_type', 'trade_horizon', 'evidence_source', 'direction', 'entry_price', 'stop_loss', 'take_profit', 'position_size', 'pattern', 'score', 'regime', 'h4_regime', 'h1_bias', 'market_phase', 'spread_at_entry', 'timestamp_decision_utc', 'risk_distance', 'risk_pips', 'reward_risk_ratio', 'r_multiple', 'mfe_r', 'mae_r', 'exit_reason', 'bars_held', 'exit_price', 'exit_timestamp', 'has_entity_id', 'has_correlation_id']
+  shadow_type=PRIMARY
+  entity_id=
+  r_multiple=-1.0
+  evidence_source=COUNTERFACTUAL
+
+Lineage: 3266/4153 have entity_id (78%)
+
+DONE — ShadowOutcomeUniverseBuilder operational

@@ -1,0 +1,82 @@
+{
+  "question_id": "M-004",
+  "title": "Market Structure Clarity",
+  "run_id": "run_20260810_212326_77abb8",
+  "run_timestamp": "2026-08-10T21:23:42Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "d2d99e33311ea4e0",
+    "MARKET": "464337023a99bba0",
+    "STRATEGY": "b222d2738b11bc83"
+  },
+  "data_snapshot_timestamp": "2026-08-10T21:23:42Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_market_states"
+  ],
+  "universes_used": [
+    "MARKET"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 7536,
+    "analytical_sample": 4,
+    "minimum_required": 15,
+    "sample_reduction_reason": "7532 records lack required outcome field (r_multiple unavailable)"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "predictive_power"
+    ],
+    "primary_analysis": "predictive_power"
+  },
+  "angle_evidence": {
+    "MARKET": {
+      "included": true
+    }
+  },
+  "primary_metrics": {},
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 7536
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {},
+  "outcome": "INCONCLUSIVE",
+  "conclusion": "No conclusion",
+  "confidence": "INSUFFICIENT",
+  "recommendation": "",
+  "limitations": [
+    "Insufficient data (4 records)"
+  ],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_204356_0d5c46",
+  "previous_outcome": "INCONCLUSIVE",
+  "changes_from_previous": {
+    "sample_size_changes": {
+      "sample_reduction_reason": {
+        "from": "7503 records lack required outcome field (r_multiple unavailable)",
+        "to": "7532 records lack required outcome field (r_multiple unavailable)"
+      },
+      "population": {
+        "from": 7507,
+        "to": 7536
+      }
+    }
+  },
+  "research_gaps": []
+}

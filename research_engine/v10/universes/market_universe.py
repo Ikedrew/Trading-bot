@@ -71,24 +71,31 @@ class MarketUniverseBuilder(UniverseBuilder):
             self.load()
 
         records = []
+        excluded_no_market_state = 0
+        excluded_no_entity_id = 0
 
         # Primary: extract from decision traces (has entity_id for joins)
         for raw in self._raw_dt:
             mkt_state = raw.get("v10_market_state")
             if not mkt_state:
+                excluded_no_market_state += 1
                 continue
             record = self._normalise_from_decision_trace(raw, mkt_state)
             if record:
                 records.append(record)
+            else:
+                excluded_no_entity_id += 1
 
         # Secondary: standalone market context (linked by symbol+cycle_id)
+        included_mc = 0
         for raw in self._raw_mc:
             record = self._normalise_from_market_context(raw)
             if record:
                 records.append(record)
+                included_mc += 1
 
         # Deduplicate: prefer decision-trace records (they have entity_id)
-        # If a market_context record has same symbol+cycle_id as a DT record, skip it
+        pre_dedup = len(records)
         dt_keys = {
             (r.get("symbol", ""), r.get("cycle_id"))
             for r in records
@@ -99,6 +106,20 @@ class MarketUniverseBuilder(UniverseBuilder):
             if r.get("source") == "decision_trace"
             or (r.get("symbol", ""), r.get("cycle_id")) not in dt_keys
         ]
+        deduplicated = pre_dedup - len(records)
+
+        total_excluded = excluded_no_market_state + excluded_no_entity_id
+        exclusions = {
+            "total": total_excluded,
+            "reasons": {
+                "missing_v10_market_state": excluded_no_market_state,
+                "missing_entity_id": excluded_no_entity_id,
+            },
+            "source_records_dt": len(self._raw_dt),
+            "source_records_mc": len(self._raw_mc),
+            "deduplicated": deduplicated,
+            "included_records": len(records),
+        }
 
         self._records = records
         self._built = True
@@ -118,8 +139,12 @@ class MarketUniverseBuilder(UniverseBuilder):
                 Population.SESSION_NY.value,
                 Population.SESSION_ASIA.value,
             ),
+            exclusions=exclusions,
         )
-        logger.info(f"[MARKET] Built {len(records)} normalised records")
+        logger.info(
+            f"[MARKET] Built {len(records)} normalised records "
+            f"(excluded {total_excluded}, deduplicated {deduplicated})"
+        )
         return records
 
     def get_population(self, population: Population) -> list[dict[str, Any]]:

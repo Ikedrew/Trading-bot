@@ -1,0 +1,115 @@
+{
+  "question_id": "ES-001",
+  "title": "Execution Quality by Strategy",
+  "run_id": "run_20260810_212326_77abb8",
+  "run_timestamp": "2026-08-10T21:23:42Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "d2d99e33311ea4e0",
+    "MARKET": "464337023a99bba0",
+    "STRATEGY": "b222d2738b11bc83"
+  },
+  "data_snapshot_timestamp": "2026-08-10T21:23:42Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_trades",
+    "all_strategies"
+  ],
+  "universes_used": [
+    "EXECUTION",
+    "STRATEGY"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 94,
+    "analytical_sample": 94,
+    "minimum_required": 10,
+    "sample_reduction_reason": "No reduction \u2014 all records usable"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "segmentation",
+      "expectancy"
+    ],
+    "primary_analysis": "segmentation"
+  },
+  "angle_evidence": {
+    "EXECUTION": {
+      "included": true
+    },
+    "STRATEGY": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "dimensions": [
+      "family"
+    ],
+    "segment_count": 3,
+    "count": 94,
+    "wins": 34,
+    "losses": 60,
+    "win_rate": 0.3617,
+    "mean_r": -0.1758,
+    "median_r": -1.0,
+    "total_r": -16.5231,
+    "avg_win_r": 1.5395,
+    "avg_loss_r": -1.1478,
+    "profit_factor": 0.7601,
+    "std_r": 1.5628,
+    "expectancy": -0.1758
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 94
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {
+    "segmentation": {
+      "MEAN_REVERSION": {
+        "count": 5,
+        "mean": -1.3068,
+        "total": -6.5342,
+        "win_rate": 0.4
+      },
+      "REVERSAL": {
+        "count": 5,
+        "mean": 0.6711,
+        "total": 3.3556,
+        "win_rate": 0.6
+      },
+      "TREND_CONTINUATION": {
+        "count": 9,
+        "mean": -0.1203,
+        "total": -1.0825,
+        "win_rate": 0.3333
+      }
+    }
+  },
+  "outcome": "NEGATIVE",
+  "conclusion": "Negative expectancy: -0.1758R per trade",
+  "confidence": "MEDIUM",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_204356_0d5c46",
+  "previous_outcome": "NEGATIVE",
+  "changes_from_previous": {
+    "status": "no_material_change"
+  },
+  "research_gaps": []
+}

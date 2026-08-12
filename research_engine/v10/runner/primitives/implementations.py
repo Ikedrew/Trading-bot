@@ -154,51 +154,130 @@ class ComparisonPrimitive(AnalysisPrimitive):
         params = parameters or {}
         group_field = params.get("group_field", "regime")
         metric_field = params.get("metric_field", "r_multiple")
+        min_per_group = params.get("min_per_group", 3)
 
+        # Stage 1: Filter to records with BOTH fields present
         groups: dict[str, list[float]] = defaultdict(list)
-        for r in population:
-            group = r.get(group_field, "")
-            val = r.get(metric_field)
-            if group and val is not None:
-                groups[group].append(val)
+        records_with_both = 0
+        records_missing_group = 0
+        records_missing_metric = 0
 
-        if not groups:
+        for r in population:
+            group = r.get(group_field)
+            val = r.get(metric_field)
+
+            # Coerce group to string for grouping (handles bool, None, etc.)
+            if group is None or group == "":
+                records_missing_group += 1
+                continue
+            if val is None:
+                records_missing_metric += 1
+                continue
+
+            groups[str(group)].append(val)
+            records_with_both += 1
+
+        # Stage 2: Analytical sample is records actually used
+        analytical_sample = records_with_both
+
+        if analytical_sample == 0:
             return AnalysisResult(
-                analysis_type=self.name, success=True, sample_size=len(population),
-                warnings=[f"No groups found for field '{group_field}'"],
+                analysis_type=self.name, success=True,
+                sample_size=0,
+                warnings=[
+                    f"No records contain both '{group_field}' and '{metric_field}'",
+                    f"Population: {len(population)}, missing group: {records_missing_group}, missing metric: {records_missing_metric}",
+                ],
+                metrics={
+                    "population_size": len(population),
+                    "analytical_sample": 0,
+                    "records_missing_group": records_missing_group,
+                    "records_missing_metric": records_missing_metric,
+                },
             )
 
+        # Stage 3: Classify groups
+        groups_discovered = len(groups)
+        sufficient_groups = {k: v for k, v in groups.items() if len(v) >= min_per_group}
+        insufficient_groups = {k: v for k, v in groups.items() if len(v) < min_per_group}
+
+        if not sufficient_groups:
+            return AnalysisResult(
+                analysis_type=self.name, success=True,
+                sample_size=analytical_sample,
+                warnings=[
+                    f"All {groups_discovered} groups have fewer than {min_per_group} observations each",
+                ],
+                metrics={
+                    "population_size": len(population),
+                    "analytical_sample": analytical_sample,
+                    "groups_discovered": groups_discovered,
+                    "groups_sufficient": 0,
+                    "groups_insufficient": groups_discovered,
+                },
+                sub_sample_sizes={k: len(v) for k, v in groups.items()},
+            )
+
+        # Stage 4: Compute comparison for sufficient groups
         comparisons = {}
-        for grp, vals in sorted(groups.items()):
+        for grp, vals in sorted(sufficient_groups.items()):
             comparisons[grp] = {
                 "count": len(vals),
-                "mean": round(statistics.mean(vals), 4) if vals else 0,
-                "median": round(statistics.median(vals), 4) if vals else 0,
+                "mean": round(statistics.mean(vals), 4),
+                "median": round(statistics.median(vals), 4),
                 "total": round(sum(vals), 4),
+                "win_rate": round(len([v for v in vals if v > 0]) / len(vals), 4),
             }
 
-        # Effect size between largest groups
-        sorted_groups = sorted(groups.items(), key=lambda x: -len(x[1]))
+        # Stage 5: Effect size between two largest sufficient groups
+        sorted_groups = sorted(sufficient_groups.items(), key=lambda x: -len(x[1]))
         effect = {}
         if len(sorted_groups) >= 2:
             g1_name, g1_vals = sorted_groups[0]
             g2_name, g2_vals = sorted_groups[1]
-            if g1_vals and g2_vals:
-                diff = statistics.mean(g1_vals) - statistics.mean(g2_vals)
-                pooled_std = _pooled_std(g1_vals, g2_vals)
-                cohens_d = diff / pooled_std if pooled_std > 0 else 0
-                effect = {
-                    "groups": [g1_name, g2_name],
-                    "mean_difference": round(diff, 4),
-                    "cohens_d": round(cohens_d, 4),
-                }
+            diff = statistics.mean(g1_vals) - statistics.mean(g2_vals)
+            pooled_std = _pooled_std(g1_vals, g2_vals)
+            cohens_d = diff / pooled_std if pooled_std > 0 else 0
+            effect = {
+                "groups": [g1_name, g2_name],
+                "mean_difference": round(diff, 4),
+                "cohens_d": round(cohens_d, 4),
+            }
+
+        # Stage 6: Top-level metrics for outcome determination
+        all_means = [statistics.mean(v) for v in sufficient_groups.values()]
+        overall_mean = statistics.mean([v for vals in sufficient_groups.values() for v in vals])
+        spread = max(all_means) - min(all_means) if len(all_means) >= 2 else 0
+
+        metrics = {
+            "population_size": len(population),
+            "analytical_sample": analytical_sample,
+            "groups_discovered": groups_discovered,
+            "groups_sufficient": len(sufficient_groups),
+            "groups_insufficient": len(insufficient_groups),
+            "overall_mean": round(overall_mean, 4),
+            "group_spread": round(spread, 4),
+            "mean_r": round(overall_mean, 4),  # For outcome determination
+        }
+
+        evidence = []
+        if spread > 0.1:
+            evidence.append(f"Groups differ by {spread:.4f}R (spread between best and worst group)")
+        else:
+            evidence.append(f"Groups are similar (spread: {spread:.4f}R)")
+
+        if insufficient_groups:
+            evidence.append(f"{len(insufficient_groups)} groups excluded (< {min_per_group} observations)")
 
         return AnalysisResult(
             analysis_type=self.name, success=True,
-            sample_size=len(population),
+            sample_size=analytical_sample,
+            metrics=metrics,
             comparisons=comparisons,
             effect_sizes=effect,
             sub_sample_sizes={k: len(v) for k, v in groups.items()},
+            evidence=evidence,
+            warnings=[f"Insufficient groups excluded: {list(insufficient_groups.keys())}"] if insufficient_groups else [],
         )
 
 

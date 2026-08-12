@@ -1,0 +1,878 @@
+{
+  "ranking_version": "rank_71ea98b16093",
+  "ranked_at": "2026-08-12T01:28:09Z",
+  "methodology_version": "1.0.0",
+  "total_proposals": 31,
+  "priorities": [
+    {
+      "proposal_id": "prop_EM-001_dcbd05",
+      "rank": 1,
+      "priority_score": 80.5,
+      "priority_band": "CRITICAL",
+      "next_action": "RUN_EXPERIMENT",
+      "evidence_score": 90.0,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 100.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 5.0,
+      "system_area": "CROSS_UNIVERSE",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": true,
+      "has_validation": true,
+      "ranking_reason": "Clear negative evidence; medium confidence; substantial metric sample (94); candidate already designed; already validated",
+      "blockers": [],
+      "source_finding_ids": [
+        "EM-001_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_EM-001_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_D-003_be0489",
+      "rank": 2,
+      "priority_score": 80.0,
+      "priority_band": "CRITICAL",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 100,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 5.0,
+      "system_area": "DECISION",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 81,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; substantial metric sample (81)",
+      "blockers": [],
+      "source_finding_ids": [
+        "D-003_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_D-003_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_D-006_410c64",
+      "rank": 3,
+      "priority_score": 80.0,
+      "priority_band": "CRITICAL",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 100,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 5.0,
+      "system_area": "DECISION",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 80,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; substantial metric sample (80)",
+      "blockers": [],
+      "source_finding_ids": [
+        "D-006_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_D-006_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_S-001_5638fd",
+      "rank": 4,
+      "priority_score": 80.0,
+      "priority_band": "CRITICAL",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 100,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 5.0,
+      "system_area": "STRATEGY",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 81,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; substantial metric sample (81)",
+      "blockers": [],
+      "source_finding_ids": [
+        "S-001_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_S-001_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_S-002_b89c26",
+      "rank": 5,
+      "priority_score": 80.0,
+      "priority_band": "CRITICAL",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 100,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 5.0,
+      "system_area": "STRATEGY",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 81,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; substantial metric sample (81)",
+      "blockers": [],
+      "source_finding_ids": [
+        "S-002_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_S-002_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_DM-001_3444e8",
+      "rank": 6,
+      "priority_score": 76.0,
+      "priority_band": "CRITICAL",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 100,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 50.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 5.0,
+      "system_area": "CROSS_UNIVERSE",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 80,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; substantial metric sample (80)",
+      "blockers": [],
+      "source_finding_ids": [
+        "DM-001_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_DM-001_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_DM-003_2d0a46",
+      "rank": 7,
+      "priority_score": 76.0,
+      "priority_band": "CRITICAL",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 100,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 50.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 5.0,
+      "system_area": "CROSS_UNIVERSE",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 81,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; substantial metric sample (81)",
+      "blockers": [],
+      "source_finding_ids": [
+        "DM-003_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_DM-003_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_E-001_4834e2",
+      "rank": 8,
+      "priority_score": 74.5,
+      "priority_band": "HIGH",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 5.0,
+      "system_area": "EXECUTION",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "E-001_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_E-001_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_E-002_78ed66",
+      "rank": 9,
+      "priority_score": 74.5,
+      "priority_band": "HIGH",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 5.0,
+      "system_area": "EXECUTION",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "E-002_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_E-002_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_E-003_bbe940",
+      "rank": 10,
+      "priority_score": 74.5,
+      "priority_band": "HIGH",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 5.0,
+      "system_area": "EXECUTION",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "E-003_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_E-003_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_DMS-001_ee13ae",
+      "rank": 11,
+      "priority_score": 73.0,
+      "priority_band": "HIGH",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 100,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 50.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 3.0,
+      "system_area": "CROSS_UNIVERSE",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 80,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; substantial metric sample (80)",
+      "blockers": [],
+      "source_finding_ids": [
+        "DMS-001_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_DMS-001_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_E-004_0387b3",
+      "rank": 12,
+      "priority_score": 71.5,
+      "priority_band": "HIGH",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 3.0,
+      "system_area": "EXECUTION",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "E-004_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_E-004_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_E-005_a600e4",
+      "rank": 13,
+      "priority_score": 68.5,
+      "priority_band": "HIGH",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 6.0,
+      "system_area": "EXECUTION",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "E-005_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_E-005_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_E-007_807e22",
+      "rank": 14,
+      "priority_score": 65.5,
+      "priority_band": "HIGH",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 9.0,
+      "system_area": "EXECUTION",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "E-007_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_E-007_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_E-010_18bd46",
+      "rank": 15,
+      "priority_score": 64.5,
+      "priority_band": "HIGH",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 10.0,
+      "system_area": "EXECUTION",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "E-010_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_E-010_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_ED-001_26acfd",
+      "rank": 16,
+      "priority_score": 64.5,
+      "priority_band": "HIGH",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 50.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 6.0,
+      "system_area": "CROSS_UNIVERSE",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "ED-001_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_ED-001_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_ED-003_af41bf",
+      "rank": 17,
+      "priority_score": 61.5,
+      "priority_band": "HIGH",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 50.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 9.0,
+      "system_area": "CROSS_UNIVERSE",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "ED-003_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_ED-003_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_EDM-001_c7cc78",
+      "rank": 18,
+      "priority_score": 60.5,
+      "priority_band": "HIGH",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 50.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 10.0,
+      "system_area": "CROSS_UNIVERSE",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "EDM-001_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_EDM-001_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_EDMS-002_2b491a",
+      "rank": 19,
+      "priority_score": 60.5,
+      "priority_band": "HIGH",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 50.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 10.0,
+      "system_area": "CROSS_UNIVERSE",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "EDMS-002_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_EDMS-002_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_ES-001_4bd08d",
+      "rank": 20,
+      "priority_score": 60.5,
+      "priority_band": "HIGH",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 70.0,
+      "population_score": 100,
+      "experimentability_score": 50.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 10.0,
+      "system_area": "CROSS_UNIVERSE",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "ES-001_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_ES-001_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_E-009_65ecbd",
+      "rank": 21,
+      "priority_score": 52.5,
+      "priority_band": "MEDIUM",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 30.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 10.0,
+      "system_area": "EXECUTION",
+      "finding_outcome": "NOT_PREDICTIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear not_predictive evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "E-009_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_E-009_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_D-002_fd5f78",
+      "rank": 22,
+      "priority_score": 50.52,
+      "priority_band": "MEDIUM",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 30.0,
+      "population_score": 20.11,
+      "experimentability_score": 70.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 5.0,
+      "system_area": "DECISION",
+      "finding_outcome": "POORLY_CALIBRATED",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 76,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear poorly_calibrated evidence; medium confidence; substantial metric sample (76)",
+      "blockers": [],
+      "source_finding_ids": [
+        "D-002_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_D-002_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_EDMS-001_4b11fb",
+      "rank": 23,
+      "priority_score": 48.5,
+      "priority_band": "MEDIUM",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 30.0,
+      "population_score": 100,
+      "experimentability_score": 50.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 10.0,
+      "system_area": "CROSS_UNIVERSE",
+      "finding_outcome": "NOT_PREDICTIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 94,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear not_predictive evidence; medium confidence; substantial metric sample (94)",
+      "blockers": [],
+      "source_finding_ids": [
+        "EDMS-001_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_EDMS-001_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_D-001_7101dc",
+      "rank": 24,
+      "priority_score": 44.61,
+      "priority_band": "LOW",
+      "next_action": "DESIGN_CANDIDATE",
+      "evidence_score": 90.0,
+      "impact_score": 30.0,
+      "population_score": 0.75,
+      "experimentability_score": 70.0,
+      "confidence_score": 70.0,
+      "redundancy_penalty": 3.0,
+      "system_area": "DECISION",
+      "finding_outcome": "NOT_PREDICTIVE",
+      "finding_confidence": "MEDIUM",
+      "sample_size": 81,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear not_predictive evidence; medium confidence; substantial metric sample (81)",
+      "blockers": [],
+      "source_finding_ids": [
+        "D-001_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_D-001_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_M-001_274f76",
+      "rank": 25,
+      "priority_score": 41.0,
+      "priority_band": "LOW",
+      "next_action": "GATHER_MORE_DATA",
+      "evidence_score": 100,
+      "impact_score": 90.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 50.0,
+      "system_area": "MARKET",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 4,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; WARNING: metric based on only 4 observation(s) despite population 9015; EVIDENCE INSUFFICIENT for candidate design",
+      "blockers": [],
+      "source_finding_ids": [
+        "M-001_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_M-001_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_M-003_c1cf82",
+      "rank": 26,
+      "priority_score": 41.0,
+      "priority_band": "LOW",
+      "next_action": "GATHER_MORE_DATA",
+      "evidence_score": 100,
+      "impact_score": 90.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 50.0,
+      "system_area": "MARKET",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 4,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; WARNING: metric based on only 4 observation(s) despite population 9015; EVIDENCE INSUFFICIENT for candidate design",
+      "blockers": [],
+      "source_finding_ids": [
+        "M-003_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_M-003_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_M-005_5112fe",
+      "rank": 27,
+      "priority_score": 41.0,
+      "priority_band": "LOW",
+      "next_action": "GATHER_MORE_DATA",
+      "evidence_score": 100,
+      "impact_score": 90.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 50.0,
+      "system_area": "MARKET",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 4,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; WARNING: metric based on only 4 observation(s) despite population 9015; EVIDENCE INSUFFICIENT for candidate design",
+      "blockers": [],
+      "source_finding_ids": [
+        "M-005_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_M-005_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_M-006_53918f",
+      "rank": 28,
+      "priority_score": 38.0,
+      "priority_band": "LOW",
+      "next_action": "GATHER_MORE_DATA",
+      "evidence_score": 100,
+      "impact_score": 90.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 3.0,
+      "system_area": "MARKET",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 4,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; WARNING: metric based on only 4 observation(s) despite population 9015; EVIDENCE INSUFFICIENT for candidate design",
+      "blockers": [],
+      "source_finding_ids": [
+        "M-006_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_M-006_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_D-004_ad99ff",
+      "rank": 29,
+      "priority_score": 35.0,
+      "priority_band": "LOW",
+      "next_action": "GATHER_MORE_DATA",
+      "evidence_score": 100,
+      "impact_score": 90.0,
+      "population_score": 100,
+      "experimentability_score": 70.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 6.0,
+      "system_area": "DECISION",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 1,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; WARNING: metric based on only 1 observation(s) despite population 10453; EVIDENCE INSUFFICIENT for candidate design",
+      "blockers": [],
+      "source_finding_ids": [
+        "D-004_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_D-004_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_MS-001_a51109",
+      "rank": 30,
+      "priority_score": 27.0,
+      "priority_band": "DEFERRED",
+      "next_action": "GATHER_MORE_DATA",
+      "evidence_score": 100,
+      "impact_score": 90.0,
+      "population_score": 100,
+      "experimentability_score": 50.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 10.0,
+      "system_area": "CROSS_UNIVERSE",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 4,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; WARNING: metric based on only 4 observation(s) despite population 9015; EVIDENCE INSUFFICIENT for candidate design",
+      "blockers": [],
+      "source_finding_ids": [
+        "MS-001_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_MS-001_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    },
+    {
+      "proposal_id": "prop_MS-002_99aec8",
+      "rank": 31,
+      "priority_score": 27.0,
+      "priority_band": "DEFERRED",
+      "next_action": "GATHER_MORE_DATA",
+      "evidence_score": 100,
+      "impact_score": 90.0,
+      "population_score": 100,
+      "experimentability_score": 50.0,
+      "confidence_score": 100.0,
+      "redundancy_penalty": 10.0,
+      "system_area": "CROSS_UNIVERSE",
+      "finding_outcome": "NEGATIVE",
+      "finding_confidence": "HIGH",
+      "sample_size": 4,
+      "has_candidate": false,
+      "has_validation": false,
+      "ranking_reason": "Clear negative evidence; high confidence; WARNING: metric based on only 4 observation(s) despite population 9015; EVIDENCE INSUFFICIENT for candidate design",
+      "blockers": [],
+      "source_finding_ids": [
+        "MS-002_run_20260811_230428_56927a"
+      ],
+      "source_feedback_ids": [
+        "fb_MS-002_run_20260811_230428_56927a"
+      ],
+      "governance_note": "This is a research investigation priority. It does not authorize modification of the trading system."
+    }
+  ],
+  "universe_versions": {},
+  "population_versions": {}
+}

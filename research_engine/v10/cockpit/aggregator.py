@@ -112,14 +112,17 @@ class CockpitDataAggregator:
         """Aggregate all research state into CockpitData."""
         data = CockpitData()
 
-        # Load control plane state
+        # Load run history FIRST — establishes canonical latest run
+        self._load_runs(data)
+
+        # Load control plane state (non-run metadata only)
         self._load_control_plane(data)
+
+        # Override header metadata from canonical latest run manifest
+        self._apply_canonical_run_metadata(data)
 
         # Load question products
         self._load_questions(data)
-
-        # Load run history
-        self._load_runs(data)
 
         # Load universe health
         self._load_universe_health(data)
@@ -131,6 +134,22 @@ class CockpitDataAggregator:
         self._compute_changes(data)
 
         return data
+
+    def _apply_canonical_run_metadata(self, data: CockpitData) -> None:
+        """
+        Derive header metadata from the latest run manifest.
+
+        The run manifests in reports/research/runs/ are the canonical source
+        of truth for run identity, timestamp, and duration. This ensures the
+        cockpit header always reflects the actual latest run regardless of
+        whether control_plane_state.json is up to date.
+        """
+        if not data.run_history:
+            return
+        latest = data.run_history[0]  # Already sorted newest-first by _load_runs
+        data.last_run_id = latest.get("run_id", data.last_run_id)
+        data.last_run_timestamp = latest.get("timestamp", data.last_run_timestamp)
+        data.last_run_duration = latest.get("duration_seconds", data.last_run_duration)
 
     def _load_control_plane(self, data: CockpitData) -> None:
         path = self._reports / "control_plane_state.json"

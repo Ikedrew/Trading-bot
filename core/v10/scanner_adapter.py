@@ -52,12 +52,19 @@ def run_v10_cycle(
       - side: "BUY" | "SELL" (if EXECUTE)
       - entry_price, stop_loss, take_profit, volume (if EXECUTE)
     """
+    # Compute entity_id BEFORE pipeline call — always available regardless of exceptions
+    _bar_time = int(candles[closed_i].time) if candles and closed_i >= 0 else 0
+    _fallback_entity_id = f"{symbol}_{_bar_time}"
+
     try:
         result = _do_v10_cycle(
             symbol=symbol, candles=candles, closed_i=closed_i,
             bid=bid, ask=ask, htf_context=htf_context,
             market_context=market_context, engine_state=engine_state,
         )
+        # Ensure entity_id is always present (defensive)
+        if "entity_id" not in result or not result["entity_id"]:
+            result["entity_id"] = _fallback_entity_id
         # Persist decision and print report
         try:
             from core.v10.persistence_adapter import persist_v10_full
@@ -76,6 +83,7 @@ def run_v10_cycle(
             "reason": f"V10 pipeline error: {exc}",
             "score": 0.0,
             "v10_pipeline_result": None,
+            "entity_id": _fallback_entity_id,
         }
 
 

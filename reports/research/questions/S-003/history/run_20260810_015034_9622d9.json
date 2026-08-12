@@ -1,0 +1,112 @@
+{
+  "question_id": "S-003",
+  "title": "Strategy Selection Accuracy",
+  "run_id": "run_20260810_015034_9622d9",
+  "run_timestamp": "2026-08-10T01:50:45Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "405b385cb34fdf20",
+    "MARKET": "bcc4f3d670cddc59",
+    "STRATEGY": "0b7f7975a3f18c4b"
+  },
+  "data_snapshot_timestamp": "2026-08-10T01:50:45Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "strategy_selected",
+    "strategy_eligible"
+  ],
+  "universes_used": [
+    "STRATEGY"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "total": 391
+  },
+  "evidence": {
+    "primitives_executed": [
+      "calibration"
+    ],
+    "primary_analysis": "calibration"
+  },
+  "angle_evidence": {
+    "STRATEGY": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "mean_calibration_error": 0.494,
+    "buckets": 5
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 391
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {
+    "calibration": {
+      "bucket_1": {
+        "predicted_mean": 0.0,
+        "actual_win_rate": 0.2857,
+        "count": 7,
+        "calibration_error": 0.2857
+      },
+      "bucket_2": {
+        "predicted_mean": 0.3215,
+        "actual_win_rate": 0.4286,
+        "count": 7,
+        "calibration_error": 0.1071
+      },
+      "bucket_3": {
+        "predicted_mean": 0.9345,
+        "actual_win_rate": 0.2857,
+        "count": 7,
+        "calibration_error": 0.6488
+      },
+      "bucket_4": {
+        "predicted_mean": 1.0,
+        "actual_win_rate": 0.2857,
+        "count": 7,
+        "calibration_error": 0.7143
+      },
+      "bucket_5": {
+        "predicted_mean": 1.0,
+        "actual_win_rate": 0.2857,
+        "count": 7,
+        "calibration_error": 0.7143
+      }
+    }
+  },
+  "outcome": "POORLY_CALIBRATED",
+  "conclusion": "Mean calibration error: 0.4940; Poorly calibrated",
+  "confidence": "LOW",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_004555_d181fe",
+  "previous_outcome": "INCONCLUSIVE",
+  "changes_from_previous": {
+    "outcome_changed": {
+      "from": "INCONCLUSIVE",
+      "to": "POORLY_CALIBRATED"
+    },
+    "confidence_changed": {
+      "from": "INSUFFICIENT",
+      "to": "LOW"
+    }
+  },
+  "research_gaps": []
+}

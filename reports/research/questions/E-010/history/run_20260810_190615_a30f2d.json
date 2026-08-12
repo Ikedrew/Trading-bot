@@ -1,0 +1,89 @@
+{
+  "question_id": "E-010",
+  "title": "Risk:Reward Ratio Effectiveness",
+  "run_id": "run_20260810_190615_a30f2d",
+  "run_timestamp": "2026-08-10T19:06:26Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "555aca36133851d7",
+    "MARKET": "5e70e6b4cfb6cc80",
+    "STRATEGY": "e303776138d6fd70"
+  },
+  "data_snapshot_timestamp": "2026-08-10T19:06:26Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_trades"
+  ],
+  "universes_used": [
+    "EXECUTION"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 94,
+    "analytical_sample": 94,
+    "minimum_required": 20,
+    "sample_reduction_reason": "No reduction \u2014 all records usable"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "comparison"
+    ],
+    "primary_analysis": "comparison"
+  },
+  "angle_evidence": {
+    "EXECUTION": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "population_size": 94,
+    "analytical_sample": 94,
+    "groups_discovered": 2,
+    "groups_sufficient": 2,
+    "groups_insufficient": 0,
+    "overall_mean": -0.1758,
+    "group_spread": 3.0121,
+    "mean_r": -0.1758
+  },
+  "statistical_results": {},
+  "effect_sizes": {
+    "comparison": {
+      "groups": [
+        "STOP_LOSS",
+        "TAKE_PROFIT"
+      ],
+      "mean_difference": -3.0121,
+      "cohens_d": -2.8778
+    }
+  },
+  "normal_view": {
+    "sample_size": 94
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {},
+  "outcome": "NEGATIVE",
+  "conclusion": "Groups differ by 3.0121R (spread between best and worst group)",
+  "confidence": "MEDIUM",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_fbef5704b584",
+  "previous_outcome": "NEGATIVE",
+  "changes_from_previous": {
+    "status": "no_material_change"
+  },
+  "research_gaps": []
+}

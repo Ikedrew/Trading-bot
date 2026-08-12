@@ -196,7 +196,7 @@ class LambdaResearchAdapter:
         }
 
     def _ensure_builders(self) -> None:
-        """Build universes if not already built."""
+        """Build universes if not already built, then enrich with outcomes."""
         if self._builders and all(
             b.is_built for b in self._builders.values()
         ):
@@ -208,6 +208,8 @@ class LambdaResearchAdapter:
             MarketUniverseBuilder,
             StrategyUniverseBuilder,
         )
+        from research_engine.v10.universes.outcome_enrichment import OutcomeEnrichment
+
         builders: dict[Universe, UniverseBuilder] = {}
         for UClass, utype in [
             (ExecutionUniverseBuilder, Universe.EXECUTION),
@@ -221,6 +223,12 @@ class LambdaResearchAdapter:
                 builders[utype] = b
             except Exception as e:
                 logger.warning(f"[LAMBDA_ADAPTER] Failed to build {utype.value}: {e}")
+
+        # Outcome enrichment
+        exe_builder = builders.get(Universe.EXECUTION)
+        if exe_builder and exe_builder.is_built:
+            enrichment = OutcomeEnrichment(exe_builder)
+            enrichment.enrich_all(builders)
 
         self._builders = builders
         self._resolver.set_builders(builders)

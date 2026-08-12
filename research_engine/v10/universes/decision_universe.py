@@ -63,10 +63,33 @@ class DecisionUniverseBuilder(UniverseBuilder):
             self.load()
 
         records = []
+        excluded_missing_entity_id = 0
+        excluded_missing_action = 0
+
         for raw in self._raw:
+            entity_id = raw.get("entity_id", "")
+            action = raw.get("action", "")
+            if not entity_id:
+                excluded_missing_entity_id += 1
+                continue
+            if not action:
+                excluded_missing_action += 1
+                continue
+
             record = self._normalise(raw)
             if record:
                 records.append(record)
+
+        total_excluded = excluded_missing_entity_id + excluded_missing_action
+        exclusions = {
+            "total": total_excluded,
+            "reasons": {
+                "missing_entity_id": excluded_missing_entity_id,
+                "missing_action": excluded_missing_action,
+            },
+            "source_records": len(self._raw),
+            "included_records": len(records),
+        }
 
         self._records = records
         self._built = True
@@ -91,8 +114,13 @@ class DecisionUniverseBuilder(UniverseBuilder):
                 Population.HIGH_SCORE_DECISIONS.value,
                 Population.LOW_SCORE_DECISIONS.value,
             ),
+            exclusions=exclusions,
         )
-        logger.info(f"[DECISION] Built {len(records)} normalised records")
+        logger.info(
+            f"[DECISION] Built {len(records)} normalised records "
+            f"(excluded {total_excluded}: {excluded_missing_entity_id} missing entity_id, "
+            f"{excluded_missing_action} missing action)"
+        )
         return records
 
     def get_population(self, population: Population) -> list[dict[str, Any]]:

@@ -1,0 +1,108 @@
+{
+  "question_id": "MS-002",
+  "title": "Pattern \u00d7 Market Context Interaction",
+  "run_id": "run_20260810_204356_0d5c46",
+  "run_timestamp": "2026-08-10T20:44:13Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "55e2b406db8990bf",
+    "MARKET": "28c6da12155700e5",
+    "STRATEGY": "c4c54ccc0373f660"
+  },
+  "data_snapshot_timestamp": "2026-08-10T20:44:13Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_market_states",
+    "all_strategies"
+  ],
+  "universes_used": [
+    "MARKET",
+    "STRATEGY"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 7507,
+    "analytical_sample": 7507,
+    "minimum_required": 10,
+    "sample_reduction_reason": "No reduction \u2014 all records usable"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "segmentation",
+      "expectancy"
+    ],
+    "primary_analysis": "segmentation"
+  },
+  "angle_evidence": {
+    "MARKET": {
+      "included": true
+    },
+    "STRATEGY": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "dimensions": [
+      "regime",
+      "pattern"
+    ],
+    "segment_count": 0,
+    "count": 4,
+    "wins": 1,
+    "losses": 3,
+    "win_rate": 0.25,
+    "mean_r": -0.8245,
+    "median_r": -1.0375,
+    "total_r": -3.2981,
+    "avg_win_r": 0.0927,
+    "avg_loss_r": -1.1303,
+    "profit_factor": 0.0273,
+    "std_r": 0.6255,
+    "expectancy": -0.8245
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 7507
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {},
+  "outcome": "NEGATIVE",
+  "conclusion": "Negative expectancy: -0.8245R per trade",
+  "confidence": "HIGH",
+  "recommendation": "",
+  "limitations": [
+    "Small sample (4 trades) \u2014 low statistical confidence"
+  ],
+  "data_quality_warnings": [
+    "Small sample (4 trades) \u2014 low statistical confidence"
+  ],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_190615_a30f2d",
+  "previous_outcome": "NEGATIVE",
+  "changes_from_previous": {
+    "sample_size_changes": {
+      "analytical_sample": {
+        "from": 7409,
+        "to": 7507
+      },
+      "population": {
+        "from": 7409,
+        "to": 7507
+      }
+    }
+  },
+  "research_gaps": []
+}

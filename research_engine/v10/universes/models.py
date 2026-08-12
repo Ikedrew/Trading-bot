@@ -23,11 +23,15 @@ from typing import Any
 
 
 class Universe(str, Enum):
-    """The four analytical universes."""
+    """The six analytical universes + Shadow research world."""
     EXECUTION = "EXECUTION"
     DECISION = "DECISION"
     MARKET = "MARKET"
     STRATEGY = "STRATEGY"
+    RISK = "RISK"
+    OUTCOME = "OUTCOME"
+    # Shadow research world
+    SHADOW_OUTCOME = "SHADOW_OUTCOME"
 
 
 class Population(str, Enum):
@@ -70,6 +74,30 @@ class Population(str, Enum):
     STRATEGY_ELIGIBLE = "strategy_eligible"
     STRATEGY_SELECTED = "strategy_selected"
     STRATEGY_REJECTED = "strategy_rejected"
+
+    # Risk universe populations
+    ALL_RISK_EVALUATIONS = "all_risk_evaluations"
+    RISK_APPROVED = "risk_approved"
+    RISK_BLOCKED = "risk_blocked"
+
+    # Outcome universe populations
+    ALL_OUTCOMES = "all_outcomes"
+    OUTCOME_WINS = "outcome_wins"
+    OUTCOME_LOSSES = "outcome_losses"
+
+    # Shadow Outcome universe populations
+    ALL_SHADOW_OUTCOMES = "all_shadow_outcomes"
+    SHADOW_WINS = "shadow_wins"
+    SHADOW_LOSSES = "shadow_losses"
+    PRIMARY_V10_SHADOW = "primary_v10_shadow"
+    HORIZON_SCALP = "horizon_scalp"
+    HORIZON_INTRADAY = "horizon_intraday"
+    HORIZON_EXTENDED = "horizon_extended"
+    SHADOW_FROM_EXECUTE = "shadow_from_execute"
+    SHADOW_FROM_NO_TRADE = "shadow_from_no_trade"
+    SHADOW_TP_HIT = "shadow_tp_hit"
+    SHADOW_SL_HIT = "shadow_sl_hit"
+    SHADOW_TIMEOUT = "shadow_timeout"
 
 
 class JoinType(str, Enum):

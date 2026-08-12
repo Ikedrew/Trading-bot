@@ -36,6 +36,7 @@ class UniverseMetadata:
     content_hash: str
     source_files: tuple[str, ...] = ()
     populations_available: tuple[str, ...] = ()
+    exclusions: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -45,6 +46,7 @@ class UniverseMetadata:
             "content_hash": self.content_hash,
             "source_files": list(self.source_files),
             "populations_available": list(self.populations_available),
+            "exclusions": self.exclusions,
         }
 
 
@@ -137,6 +139,7 @@ class UniverseBuilder(ABC):
         records: list[dict[str, Any]],
         source_files: tuple[str, ...],
         populations: tuple[str, ...],
+        exclusions: dict[str, Any] | None = None,
     ) -> UniverseMetadata:
         """Generate metadata for the built universe."""
         return UniverseMetadata(
@@ -148,6 +151,7 @@ class UniverseBuilder(ABC):
             content_hash=self._compute_hash(records),
             source_files=source_files,
             populations_available=populations,
+            exclusions=exclusions or {},
         )
 
     def _load_jsonl(self, path: Path) -> list[dict[str, Any]]:

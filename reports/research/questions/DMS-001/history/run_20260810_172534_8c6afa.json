@@ -1,0 +1,136 @@
+{
+  "question_id": "DMS-001",
+  "title": "Decision Quality Across Strategy \u00d7 Market",
+  "run_id": "run_20260810_172534_8c6afa",
+  "run_timestamp": "2026-08-10T17:25:51Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "78e8ef62586966bb",
+    "MARKET": "246081ab82230367",
+    "STRATEGY": "a15e587da03409c3"
+  },
+  "data_snapshot_timestamp": "2026-08-10T17:25:51Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "execute_decisions",
+    "all_market_states",
+    "all_strategies"
+  ],
+  "universes_used": [
+    "DECISION",
+    "MARKET",
+    "STRATEGY"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 370,
+    "analytical_sample": 370,
+    "minimum_required": 10,
+    "sample_reduction_reason": "No reduction \u2014 all records usable"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "segmentation",
+      "expectancy"
+    ],
+    "primary_analysis": "segmentation"
+  },
+  "angle_evidence": {
+    "DECISION": {
+      "included": true
+    },
+    "MARKET": {
+      "included": true
+    },
+    "STRATEGY": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "dimensions": [
+      "regime",
+      "family"
+    ],
+    "segment_count": 0,
+    "count": 80,
+    "wins": 30,
+    "losses": 50,
+    "win_rate": 0.375,
+    "mean_r": -0.1432,
+    "median_r": -1.0,
+    "total_r": -11.4588,
+    "avg_win_r": 1.5932,
+    "avg_loss_r": -1.1851,
+    "profit_factor": 0.8066,
+    "std_r": 1.6259,
+    "expectancy": -0.1432
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 370
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {},
+  "outcome": "NEGATIVE",
+  "conclusion": "Negative expectancy: -0.1432R per trade",
+  "confidence": "HIGH",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_015034_9622d9",
+  "previous_outcome": "NEGATIVE",
+  "changes_from_previous": {
+    "sample_size_changes": {
+      "sample_reduction_reason": {
+        "from": 0,
+        "to": "No reduction \u2014 all records usable"
+      },
+      "analytical_sample": {
+        "from": 0,
+        "to": 370
+      },
+      "minimum_required": {
+        "from": 0,
+        "to": 10
+      },
+      "population": {
+        "from": 0,
+        "to": 370
+      },
+      "total": {
+        "from": 352,
+        "to": 0
+      }
+    },
+    "metric_changes": {
+      "segment_count": {
+        "from": 9,
+        "to": 0
+      },
+      "dimensions": {
+        "from": [
+          "symbol"
+        ],
+        "to": [
+          "regime",
+          "family"
+        ]
+      }
+    }
+  },
+  "research_gaps": []
+}

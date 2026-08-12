@@ -1,0 +1,61 @@
+{
+  "validation_id": "val_prop_EM-001_dcbd05_0cf8",
+  "proposal_id": "prop_EM-001_dcbd05",
+  "candidate_id": "cand_prop_EM-001_dcbd05_6d49bb",
+  "baseline_identity": "current_production",
+  "candidate_identity": "cand_prop_EM-001_dcbd05_6d49bb",
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83"
+  },
+  "population_versions": {
+    "all_trades": "17fcb30c52e98a83"
+  },
+  "analysis_version": "1.0.0",
+  "baseline_metrics": {
+    "sample_size": 94,
+    "wins": 34,
+    "losses": 60,
+    "win_rate": 0.3617,
+    "mean_r": -0.1758,
+    "median_r": -1.0,
+    "total_r": -16.5231,
+    "profit_factor": 0.7601,
+    "std_r": 1.5628,
+    "max_drawdown_r": 28.1586
+  },
+  "candidate_metrics": {
+    "sample_size": 60,
+    "wins": 24,
+    "losses": 36,
+    "win_rate": 0.4,
+    "mean_r": -0.1112,
+    "median_r": -1.0,
+    "total_r": -6.6722,
+    "profit_factor": 0.8383,
+    "std_r": 1.5715,
+    "max_drawdown_r": 15.7643
+  },
+  "delta_metrics": {
+    "std_r": 0.0087,
+    "median_r": 0.0,
+    "wins": -10,
+    "sample_size": -34,
+    "profit_factor": 0.0782,
+    "max_drawdown_r": -12.3943,
+    "total_r": 9.8509,
+    "losses": -24,
+    "mean_r": 0.0646,
+    "win_rate": 0.0383
+  },
+  "sample_sizes": {
+    "analytical_sample": 60,
+    "minimum_required": 20
+  },
+  "status": "VALIDATED",
+  "improvement_detected": true,
+  "regression_detected": false,
+  "target_metric": "mean_r",
+  "target_improvement": 0.0646,
+  "limitations": [],
+  "governance_note": "This is a validation result. It does not modify the trading system."
+}

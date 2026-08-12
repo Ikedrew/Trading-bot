@@ -226,11 +226,43 @@ STRATEGY_CONTRACT = UniverseContract(
     lineage_fields=("entity_id", "source"),
 )
 
+RISK_CONTRACT = UniverseContract(
+    universe_id=Universe.RISK,
+    name="Risk Universe",
+    description="Risk evaluations. One record = one risk-control assessment for a proposed trade.",
+    grain="One risk evaluation event (risk mechanism assessed whether trade satisfies constraints)",
+    identity_field="entity_id",
+    source_datasets=(
+        "logs/decision_trace/<SYMBOL>/*.jsonl (v10_risk)",
+    ),
+    source_schema_versions=("2.0",),
+    join_keys=("entity_id", "correlation_id", "symbol", "cycle_id"),
+    coverage_fields=("timestamp_utc", "symbol"),
+    lineage_fields=("entity_id",),
+)
+
+OUTCOME_CONTRACT = UniverseContract(
+    universe_id=Universe.OUTCOME,
+    name="Outcome Universe",
+    description="Realised economic results. One record = one completed trade with realised R-multiple.",
+    grain="One completed trade with realised economic outcome",
+    identity_field="entity_id",
+    source_datasets=(
+        "data/research/research_universe.jsonl (via ExecutionUniverseBuilder)",
+    ),
+    source_schema_versions=("1.0",),
+    join_keys=("entity_id", "trade_id", "symbol"),
+    coverage_fields=("entry_time", "exit_time", "symbol"),
+    lineage_fields=("entity_id", "trade_id"),
+)
+
 UNIVERSE_CONTRACTS: dict[Universe, UniverseContract] = {
     Universe.EXECUTION: EXECUTION_CONTRACT,
     Universe.DECISION: DECISION_CONTRACT,
     Universe.MARKET: MARKET_CONTRACT,
     Universe.STRATEGY: STRATEGY_CONTRACT,
+    Universe.RISK: RISK_CONTRACT,
+    Universe.OUTCOME: OUTCOME_CONTRACT,
 }
 
 

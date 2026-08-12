@@ -116,7 +116,7 @@ E_003 = NewEngineQuestion(
         ),
     ),
     views=(ViewType.NORMAL,),
-    analysis_type=AnalysisType.DISTRIBUTION,
+    analysis_type=AnalysisType.SEGMENTATION,
     minimum_sample_size=20,
     status=QuestionStatus.READY,
     source_intent=("V10-EX1", "EX1"),
@@ -328,7 +328,7 @@ D_004 = NewEngineQuestion(
         ),
     ),
     views=(ViewType.NORMAL, ViewType.EXCEPTIONAL),
-    analysis_type=AnalysisType.DISTRIBUTION,
+    analysis_type=AnalysisType.SEGMENTATION,
     minimum_sample_size=50,
     status=QuestionStatus.READY,
     source_intent=("D5", "R1", "V10-R1"),
@@ -1605,6 +1605,174 @@ EDMS_002 = NewEngineQuestion(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# SHADOW RESEARCH QUESTIONS (SD-nnn)
+# Counterfactual questions operating on the Shadow Outcome Universe.
+# Evidence from these questions is ALWAYS labelled COUNTERFACTUAL.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SD_001 = NewEngineQuestion(
+    question_id="SD-001",
+    title="Shadow Counterfactual Expectancy",
+    research_intent=(
+        "What is the counterfactual expectancy of ALL detected opportunities? "
+        "This represents the total opportunity pool value before filtering."
+    ),
+    required_universes=(Universe.SHADOW_OUTCOME,),
+    required_populations=(Population.ALL_SHADOW_OUTCOMES,),
+    angle_requirements=(
+        AngleRequirement(
+            universe=Universe.SHADOW_OUTCOME,
+            populations=(Population.ALL_SHADOW_OUTCOMES, Population.SHADOW_WINS, Population.SHADOW_LOSSES),
+            required_fields=("r_multiple", "direction", "exit_reason"),
+        ),
+    ),
+    views=(ViewType.NORMAL,),
+    analysis_type=AnalysisType.EXPECTANCY,
+    minimum_sample_size=30,
+    status=QuestionStatus.READY,
+    source_intent=("E1-shadow",),
+    decision_enabled="What is the opportunity pool value before V10 filtering?",
+)
+
+SD_002 = NewEngineQuestion(
+    question_id="SD-002",
+    title="Missed Opportunity Cost",
+    research_intent=(
+        "What counterfactual outcome did opportunities produce that V10 "
+        "rejected (NO_TRADE decisions)? What is the cost of over-filtering?"
+    ),
+    required_universes=(Universe.SHADOW_OUTCOME,),
+    required_populations=(Population.SHADOW_FROM_NO_TRADE,),
+    angle_requirements=(
+        AngleRequirement(
+            universe=Universe.SHADOW_OUTCOME,
+            populations=(Population.SHADOW_FROM_NO_TRADE,),
+            required_fields=("r_multiple", "exit_reason", "pattern"),
+        ),
+    ),
+    views=(ViewType.NORMAL,),
+    analysis_type=AnalysisType.EXPECTANCY,
+    minimum_sample_size=20,
+    status=QuestionStatus.READY,
+    source_intent=("ED-002", "D5"),
+    decision_enabled="Is V10 rejecting profitable opportunities? What is the filtering cost?",
+)
+
+SD_004 = NewEngineQuestion(
+    question_id="SD-004",
+    title="Rejection Stage Counterfactual Expectancy",
+    research_intent=(
+        "What counterfactual expectancy did rejected opportunities produce, "
+        "segmented by the V10 pipeline stage that rejected them? Which stages "
+        "remove the most counterfactual edge?"
+    ),
+    required_universes=(Universe.SHADOW_OUTCOME, Universe.DECISION),
+    required_populations=(Population.SHADOW_FROM_NO_TRADE, Population.NO_TRADE_DECISIONS),
+    required_joins=(
+        JoinRequirement(
+            from_universe=Universe.SHADOW_OUTCOME,
+            to_universe=Universe.DECISION,
+            join_type=JoinType.ENTITY_ID,
+            join_field="entity_id",
+        ),
+    ),
+    angle_requirements=(
+        AngleRequirement(
+            universe=Universe.SHADOW_OUTCOME,
+            populations=(Population.SHADOW_FROM_NO_TRADE,),
+            required_fields=("r_multiple", "entity_id"),
+        ),
+        AngleRequirement(
+            universe=Universe.DECISION,
+            populations=(Population.NO_TRADE_DECISIONS,),
+            required_fields=("terminal_stage", "terminal_reason", "entity_id"),
+        ),
+    ),
+    views=(ViewType.NORMAL,),
+    analysis_type=AnalysisType.SEGMENTATION,
+    minimum_sample_size=20,
+    status=QuestionStatus.READY,
+    source_intent=("D-004", "R1"),
+    decision_enabled="Which rejection stages remove edge vs protect capital?",
+)
+
+SD_005 = NewEngineQuestion(
+    question_id="SD-005",
+    title="Shadow Horizon Comparison",
+    research_intent=(
+        "Which trade horizon (SCALP / INTRADAY / EXTENDED) captures the most "
+        "counterfactual edge from detected opportunities?"
+    ),
+    required_universes=(Universe.SHADOW_OUTCOME,),
+    required_populations=(
+        Population.HORIZON_SCALP, Population.HORIZON_INTRADAY,
+        Population.HORIZON_EXTENDED,
+    ),
+    angle_requirements=(
+        AngleRequirement(
+            universe=Universe.SHADOW_OUTCOME,
+            populations=(Population.HORIZON_SCALP, Population.HORIZON_INTRADAY),
+            required_fields=("r_multiple", "trade_horizon", "exit_reason"),
+        ),
+    ),
+    views=(ViewType.NORMAL,),
+    analysis_type=AnalysisType.COMPARISON,
+    minimum_sample_size=10,
+    status=QuestionStatus.READY,
+    source_intent=("S2", "S6"),
+    decision_enabled="Should V10 prefer a different trade horizon?",
+)
+
+SD_006 = NewEngineQuestion(
+    question_id="SD-006",
+    title="Shadow Strategy Expectancy",
+    research_intent=(
+        "Which strategy families produce positive counterfactual expectancy "
+        "across ALL detected opportunities (not just executed ones)?"
+    ),
+    required_universes=(Universe.SHADOW_OUTCOME,),
+    required_populations=(Population.ALL_SHADOW_OUTCOMES,),
+    angle_requirements=(
+        AngleRequirement(
+            universe=Universe.SHADOW_OUTCOME,
+            populations=(Population.ALL_SHADOW_OUTCOMES,),
+            required_fields=("r_multiple", "strategy_id", "pattern"),
+        ),
+    ),
+    views=(ViewType.NORMAL,),
+    analysis_type=AnalysisType.SEGMENTATION,
+    minimum_sample_size=10,
+    status=QuestionStatus.READY,
+    source_intent=("S-001", "E3"),
+    decision_enabled="Should any strategy family be disabled or prioritised?",
+)
+
+SD_007 = NewEngineQuestion(
+    question_id="SD-007",
+    title="Shadow Regime Expectancy",
+    research_intent=(
+        "Does market regime predict counterfactual outcome across ALL "
+        "detected opportunities? Should regime gate opportunity detection?"
+    ),
+    required_universes=(Universe.SHADOW_OUTCOME,),
+    required_populations=(Population.ALL_SHADOW_OUTCOMES,),
+    angle_requirements=(
+        AngleRequirement(
+            universe=Universe.SHADOW_OUTCOME,
+            populations=(Population.ALL_SHADOW_OUTCOMES,),
+            required_fields=("r_multiple", "regime"),
+        ),
+    ),
+    views=(ViewType.NORMAL,),
+    analysis_type=AnalysisType.SEGMENTATION,
+    minimum_sample_size=10,
+    status=QuestionStatus.READY,
+    source_intent=("M-001", "EM-001"),
+    decision_enabled="Should regime filter ALL opportunity detection, not just execution?",
+)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # QUESTION BANK REGISTRY
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1635,6 +1803,8 @@ QUESTION_BANK: tuple[NewEngineQuestion, ...] = (
     DMS_001,
     # Four-angle: All (EDMS-nnn)
     EDMS_001, EDMS_002,
+    # Shadow research questions (SD-nnn) — counterfactual evidence
+    SD_001, SD_002, SD_004, SD_005, SD_006, SD_007,
 )
 
 QUESTION_BANK_BY_ID: dict[str, NewEngineQuestion] = {

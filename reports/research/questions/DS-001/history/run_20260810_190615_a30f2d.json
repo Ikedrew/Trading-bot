@@ -1,0 +1,83 @@
+{
+  "question_id": "DS-001",
+  "title": "Strategy Confidence Calibration",
+  "run_id": "run_20260810_190615_a30f2d",
+  "run_timestamp": "2026-08-10T19:06:26Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "555aca36133851d7",
+    "MARKET": "5e70e6b4cfb6cc80",
+    "STRATEGY": "e303776138d6fd70"
+  },
+  "data_snapshot_timestamp": "2026-08-10T19:06:26Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "execute_decisions",
+    "strategy_selected"
+  ],
+  "universes_used": [
+    "DECISION",
+    "STRATEGY"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 373,
+    "analytical_sample": 0,
+    "minimum_required": 15,
+    "sample_reduction_reason": "Insufficient calibration data (0 records)"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "calibration"
+    ],
+    "primary_analysis": "calibration"
+  },
+  "angle_evidence": {
+    "DECISION": {
+      "included": true
+    },
+    "STRATEGY": {
+      "included": true
+    }
+  },
+  "primary_metrics": {},
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 373
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {},
+  "outcome": "INCONCLUSIVE",
+  "conclusion": "No conclusion",
+  "confidence": "INSUFFICIENT",
+  "recommendation": "",
+  "limitations": [
+    "Insufficient calibration data (0 records)"
+  ],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_172534_8c6afa",
+  "previous_outcome": "INCONCLUSIVE",
+  "changes_from_previous": {
+    "sample_size_changes": {
+      "population": {
+        "from": 370,
+        "to": 373
+      }
+    }
+  },
+  "research_gaps": []
+}

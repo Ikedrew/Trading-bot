@@ -1,0 +1,3 @@
+EURUSD: empty=674, has_eid=633
+Empty samples: ['phase_test_1', 't', 'phase_test_1', 'phase_test_1', 'phase_test_1']
+Has samples: ['lineage_test_1|EURUSD_1000', 'iso_A|EURUSD_1000', 'iso_B|EURUSD_1300']

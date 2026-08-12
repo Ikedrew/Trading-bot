@@ -1,0 +1,156 @@
+{
+  "question_id": "S-001",
+  "title": "Strategy Family Expectancy",
+  "run_id": "run_20260810_172534_8c6afa",
+  "run_timestamp": "2026-08-10T17:25:51Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "78e8ef62586966bb",
+    "MARKET": "246081ab82230367",
+    "STRATEGY": "a15e587da03409c3"
+  },
+  "data_snapshot_timestamp": "2026-08-10T17:25:51Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_strategies",
+    "trend_continuation",
+    "mean_reversion",
+    "breakout",
+    "momentum"
+  ],
+  "universes_used": [
+    "STRATEGY"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 14270,
+    "analytical_sample": 14270,
+    "minimum_required": 10,
+    "sample_reduction_reason": "No reduction \u2014 all records usable"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "segmentation",
+      "expectancy",
+      "anomaly_analysis"
+    ],
+    "primary_analysis": "segmentation"
+  },
+  "angle_evidence": {
+    "STRATEGY": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "dimensions": [
+      "family"
+    ],
+    "segment_count": 3,
+    "count": 81,
+    "wins": 30,
+    "losses": 51,
+    "win_rate": 0.3704,
+    "mean_r": -0.1538,
+    "median_r": -1.0,
+    "total_r": -12.4588,
+    "avg_win_r": 1.5932,
+    "avg_loss_r": -1.1815,
+    "profit_factor": 0.7932,
+    "std_r": 1.6185,
+    "expectancy": -0.1538
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 14270
+  },
+  "anomaly_view": {
+    "status": "INCONCLUSIVE",
+    "reason": "No anomalous records found in population",
+    "criteria": {
+      "anomaly_field": "anomaly",
+      "threshold": "anomaly == True"
+    },
+    "normal_count": 14270,
+    "anomaly_count": 0
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {
+    "segmentation": {
+      "BREAKOUT": {
+        "count": 11,
+        "mean": 0.019,
+        "total": 0.2088,
+        "win_rate": 0.3636
+      },
+      "REVERSAL": {
+        "count": 24,
+        "mean": -0.2891,
+        "total": -6.9395,
+        "win_rate": 0.25
+      },
+      "UNKNOWN": {
+        "count": 1,
+        "mean": 0.0927,
+        "total": 0.0927,
+        "win_rate": 1.0
+      }
+    }
+  },
+  "outcome": "NEGATIVE",
+  "conclusion": "Negative expectancy: -0.1538R per trade",
+  "confidence": "HIGH",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_015034_9622d9",
+  "previous_outcome": "NEGATIVE",
+  "changes_from_previous": {
+    "sample_size_changes": {
+      "sample_reduction_reason": {
+        "from": 0,
+        "to": "No reduction \u2014 all records usable"
+      },
+      "analytical_sample": {
+        "from": 0,
+        "to": 14270
+      },
+      "minimum_required": {
+        "from": 0,
+        "to": 10
+      },
+      "population": {
+        "from": 0,
+        "to": 14270
+      },
+      "total": {
+        "from": 13240,
+        "to": 0
+      }
+    },
+    "metric_changes": {
+      "segment_count": {
+        "from": 9,
+        "to": 3
+      },
+      "dimensions": {
+        "from": [
+          "symbol"
+        ],
+        "to": [
+          "family"
+        ]
+      }
+    }
+  },
+  "research_gaps": []
+}

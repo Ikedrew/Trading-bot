@@ -1,0 +1,166 @@
+{
+  "question_id": "EDMS-001",
+  "title": "Full System Attribution",
+  "run_id": "run_20260810_172534_8c6afa",
+  "run_timestamp": "2026-08-10T17:25:51Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "78e8ef62586966bb",
+    "MARKET": "246081ab82230367",
+    "STRATEGY": "a15e587da03409c3"
+  },
+  "data_snapshot_timestamp": "2026-08-10T17:25:51Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "all_trades",
+    "execute_decisions",
+    "all_market_states",
+    "all_strategies"
+  ],
+  "universes_used": [
+    "EXECUTION",
+    "DECISION",
+    "MARKET",
+    "STRATEGY"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 94,
+    "analytical_sample": 94,
+    "minimum_required": 30,
+    "sample_reduction_reason": "No reduction \u2014 all records usable"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "predictive_power",
+      "anomaly_analysis",
+      "exceptional_analysis"
+    ],
+    "primary_analysis": "predictive_power"
+  },
+  "angle_evidence": {
+    "EXECUTION": {
+      "included": true
+    },
+    "DECISION": {
+      "included": true
+    },
+    "MARKET": {
+      "included": true
+    },
+    "STRATEGY": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "monotonic": false,
+    "top_bottom_spread": -0.1949,
+    "bucket_count": 5
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 94
+  },
+  "anomaly_view": {
+    "status": "INCONCLUSIVE",
+    "reason": "No anomalous records found in population",
+    "criteria": {
+      "anomaly_field": "anomaly",
+      "threshold": "anomaly == True"
+    },
+    "normal_count": 94,
+    "anomaly_count": 0
+  },
+  "exceptional_view": {
+    "status": "AVAILABLE",
+    "criteria": {
+      "threshold_high": 2.0,
+      "threshold_low": -2.0,
+      "metric_field": "r_multiple"
+    },
+    "normal_count": 80,
+    "exceptional_high_count": 12,
+    "exceptional_low_count": 2,
+    "exceptional_rate": 0.1489,
+    "exceptional_high_mean": 2.5539,
+    "exceptional_low_mean": -4.3952,
+    "sample_sizes": {
+      "normal": 80,
+      "exceptional_high": 12,
+      "exceptional_low": 2
+    },
+    "evidence": [
+      "12 records above 2.0R",
+      "2 records below -2.0R"
+    ]
+  },
+  "conditioned_views": {
+    "predictive_power": {
+      "q1": {
+        "feature_mean": 0.4959,
+        "outcome_mean": -0.3178,
+        "count": 23
+      },
+      "q2": {
+        "feature_mean": 0.5593,
+        "outcome_mean": -0.1924,
+        "count": 23
+      },
+      "q3": {
+        "feature_mean": 0.6156,
+        "outcome_mean": -0.0727,
+        "count": 23
+      },
+      "q4": {
+        "feature_mean": 0.6908,
+        "outcome_mean": -0.0909,
+        "count": 23
+      },
+      "q5": {
+        "feature_mean": 0.7619,
+        "outcome_mean": -0.5127,
+        "count": 2
+      }
+    }
+  },
+  "outcome": "NOT_PREDICTIVE",
+  "conclusion": "Feature 'score' is NOT monotonically predictive; Top-bottom spread: -0.1949R",
+  "confidence": "MEDIUM",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260810_015034_9622d9",
+  "previous_outcome": "NOT_PREDICTIVE",
+  "changes_from_previous": {
+    "sample_size_changes": {
+      "sample_reduction_reason": {
+        "from": 0,
+        "to": "No reduction \u2014 all records usable"
+      },
+      "analytical_sample": {
+        "from": 0,
+        "to": 94
+      },
+      "minimum_required": {
+        "from": 0,
+        "to": 30
+      },
+      "population": {
+        "from": 0,
+        "to": 94
+      },
+      "total": {
+        "from": 94,
+        "to": 0
+      }
+    }
+  },
+  "research_gaps": []
+}

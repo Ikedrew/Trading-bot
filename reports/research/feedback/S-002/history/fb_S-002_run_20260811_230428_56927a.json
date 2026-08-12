@@ -1,0 +1,32 @@
+{
+  "feedback_id": "fb_S-002_run_20260811_230428_56927a",
+  "source_finding_id": "S-002_run_20260811_230428_56927a",
+  "run_id": "run_20260811_230428_56927a",
+  "question_id": "S-002",
+  "finding_outcome": "NEGATIVE",
+  "finding_confidence": "HIGH",
+  "system_area": "STRATEGY",
+  "feedback_type": "IDENTIFIED_WEAKNESS",
+  "interpretation": "Pattern Expectancy: evidence identifies a weakness in strategy (negative).",
+  "evidence_summary": "outcome=NEGATIVE, confidence=HIGH, population=15982, analytical_sample=15982",
+  "affected_component": "STRATEGY",
+  "hypothesis": "",
+  "recommended_research": [],
+  "proposal_eligible": true,
+  "proposal_blocked_reason": "",
+  "governance_note": "This is a research feedback artifact. It cannot directly modify trading behaviour.",
+  "question_version": "1.0.0",
+  "analysis_version": "1.0.0",
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "a413d1d2e48467dc",
+    "MARKET": "1954e3a4bab5be0e",
+    "STRATEGY": "bdc3d80a3cf03c4b",
+    "RISK": "4b831a4bd58842ad",
+    "OUTCOME": "17fcb30c52e98a83"
+  },
+  "population_versions": {
+    "all_strategies": "36429fe20294e3ed"
+  },
+  "created_at": "2026-08-11T23:07:22Z"
+}

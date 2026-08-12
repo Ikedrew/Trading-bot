@@ -1,0 +1,104 @@
+{
+  "question_id": "S-004",
+  "title": "Strategy Rejection Patterns",
+  "run_id": "run_20260809_223921_d247f4",
+  "run_timestamp": "2026-08-09T22:39:41Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {},
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "9b77178ec4c20195",
+    "MARKET": "a698b1e250afb2ce",
+    "STRATEGY": "f6dafc5c7d57344f"
+  },
+  "data_snapshot_timestamp": "2026-08-09T22:39:41Z",
+  "analysis_version": "1.0.0",
+  "populations_used": [
+    "strategy_rejected",
+    "all_strategies"
+  ],
+  "universes_used": [
+    "STRATEGY"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "total": 1946
+  },
+  "evidence": {
+    "primitives_executed": [
+      "distribution",
+      "expectancy",
+      "exceptional_analysis"
+    ],
+    "primary_analysis": "distribution"
+  },
+  "angle_evidence": {
+    "STRATEGY": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "count": 0
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 1946
+  },
+  "anomaly_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare ANOMALOUS view"
+  },
+  "exceptional_view": {
+    "status": "INCONCLUSIVE",
+    "reason": "No exceptional records found (thresholds: >2.0R, <-2.0R)",
+    "criteria": {
+      "threshold_high": 2.0,
+      "threshold_low": -2.0
+    },
+    "normal_count": 0,
+    "exceptional_count": 0
+  },
+  "conditioned_views": {},
+  "outcome": "COMPLETED",
+  "conclusion": "No conclusion",
+  "confidence": "HIGH",
+  "recommendation": "",
+  "limitations": [
+    "No records with field 'r_multiple'",
+    "No records with R-multiple data"
+  ],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260809_033621_3c7f7b",
+  "previous_outcome": "COMPLETED",
+  "changes_from_previous": {
+    "metric_changes": {
+      "normal_count": {
+        "from": 0,
+        "to": null
+      },
+      "exceptional_rate": {
+        "from": 0,
+        "to": null
+      },
+      "total": {
+        "from": 0,
+        "to": null
+      },
+      "exceptional_low_count": {
+        "from": 0,
+        "to": null
+      },
+      "exceptional_high_count": {
+        "from": 0,
+        "to": null
+      }
+    },
+    "new_anomaly_view": true
+  },
+  "research_gaps": []
+}
