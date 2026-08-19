@@ -1,6 +1,8 @@
 {
   "current_day_key": "2026-08-19",
-  "total_trades_today": 0,
-  "per_symbol": {},
-  "last_updated": 1787148157.3594286
+  "total_trades_today": 1,
+  "per_symbol": {
+    "EURUSD": 1
+  },
+  "last_updated": 1787149080.0690594
 }
