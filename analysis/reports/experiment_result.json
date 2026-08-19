@@ -1,0 +1,49 @@
+{
+  "experiment_id": "exp_8f84a3ec_20260630",
+  "tested_change": {
+    "action": "Reduce confluence threshold for HAMMER by 10% \u2014 pattern proven stable",
+    "target": "HAMMER",
+    "type": "EDGE_EXPANSION",
+    "expected_pnl_impact": 30.0,
+    "confidence": 100,
+    "source": "walk_forward"
+  },
+  "baseline_rules_count": 2,
+  "experimental_rules_count": 1,
+  "baseline_performance": {
+    "trades": 721,
+    "total_pnl": 32524.0,
+    "avg_pnl": 45.1096,
+    "winrate": 100.0,
+    "blocked": 120,
+    "max_drawdown": 0.0
+  },
+  "experimental_performance": {
+    "trades": 721,
+    "total_pnl": 32524.0,
+    "avg_pnl": 45.1096,
+    "winrate": 100.0,
+    "blocked": 120,
+    "max_drawdown": 0.0
+  },
+  "deltas": {
+    "pnl_delta": 0.0,
+    "winrate_delta": 0.0,
+    "expectancy_delta": 0.0,
+    "stability_delta": 0.0,
+    "robustness_delta": 0.0,
+    "drawdown_delta": 0.0,
+    "blocked_delta": 0
+  },
+  "decision": "INCONCLUSIVE",
+  "reason": "All deltas within noise band. Extend test window for clearer signal.",
+  "risk_notes": [],
+  "next_action": "Extend observation window. Re-run with 2x data before deciding.",
+  "metadata": {
+    "generated_at": "2026-06-30T21:34:32Z",
+    "trades_evaluated": 841,
+    "change_type": "EDGE_EXPANSION",
+    "change_target": "HAMMER",
+    "change_confidence": 100
+  }
+}

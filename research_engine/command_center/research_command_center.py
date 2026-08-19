@@ -187,6 +187,9 @@ def generate_command_report() -> ResearchCommandReport:
     # Section 12: Decision Gates
     decision_gates = evaluate_decision_gates(data_health, dashboard, reports)
 
+    # Section 13: Research Lifecycle (reads from lifecycle registry/catalogue)
+    lifecycle_section = _build_lifecycle_section()
+
     return ResearchCommandReport(
         generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         system_state=system_state,
@@ -201,6 +204,7 @@ def generate_command_report() -> ResearchCommandReport:
         recommendation=recommendation,
         traceability=traceability,
         decision_gates=decision_gates,
+        lifecycle_section=lifecycle_section,
     )
 
 
@@ -879,6 +883,126 @@ def _build_traceability(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 13: RESEARCH LIFECYCLE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _build_lifecycle_section():
+    """
+    Build the Research Lifecycle section by reading from InvestigationRegistry
+    and ExperimentCatalogue. Read-only — never modifies lifecycle state.
+    """
+    from research_engine.command_center.command_models import LifecycleSection, LifecycleHypothesisSummary
+
+    try:
+        from research_engine.lifecycle.registry import InvestigationRegistry
+        from research_engine.lifecycle.experiment_catalogue import ExperimentCatalogue
+        from research_engine.lifecycle.hypothesis import HypothesisStatus, ConclusionType
+
+        registry = InvestigationRegistry()
+        catalogue = ExperimentCatalogue()
+
+        hypotheses = registry.all()
+        experiments = catalogue.all()
+
+        if not hypotheses and not experiments:
+            return LifecycleSection(available=False, unavailable_reason="No lifecycle data yet")
+
+        # Hypothesis counts
+        h_by_status = {}
+        awaiting = 0
+        concluded_validated = 0
+        concluded_rejected = 0
+        concluded_inconclusive = 0
+
+        for h in hypotheses:
+            h_by_status[h.status.value] = h_by_status.get(h.status.value, 0) + 1
+            if (h.status == HypothesisStatus.CONCLUDED and
+                    h.conclusion_type == ConclusionType.VALIDATED and
+                    not h.human_approval_granted):
+                awaiting += 1
+            if h.conclusion_type == ConclusionType.VALIDATED:
+                concluded_validated += 1
+            elif h.conclusion_type == ConclusionType.REJECTED:
+                concluded_rejected += 1
+            elif h.conclusion_type == ConclusionType.INCONCLUSIVE:
+                concluded_inconclusive += 1
+
+        # Experiment counts
+        cat_summary = catalogue.get_summary()
+
+        # Recent hypotheses (last 5)
+        recent = sorted(hypotheses, key=lambda h: h.detected_timestamp or "", reverse=True)[:5]
+        recent_summaries = []
+        for h in recent:
+            recent_summaries.append(LifecycleHypothesisSummary(
+                hypothesis_id=h.hypothesis_id,
+                title=h.title[:60],
+                status=h.status.value,
+                conclusion=h.conclusion_type.value if h.conclusion_type else "",
+                confidence=h.conclusion_confidence,
+                classification="",
+                experiments_count=len(h.experiments),
+                created_at=h.detected_timestamp[:19] if h.detected_timestamp else "",
+            ))
+
+        # Research Triggers (read-only)
+        _trigger_data = _load_trigger_summary()
+
+        return LifecycleSection(
+            available=True,
+            total_hypotheses=len(hypotheses),
+            hypotheses_by_status=h_by_status,
+            hypotheses_testing=h_by_status.get("TESTING", 0),
+            hypotheses_challenged=h_by_status.get("CHALLENGED", 0),
+            hypotheses_concluded=h_by_status.get("CONCLUDED", 0) + h_by_status.get("PROMOTED", 0),
+            hypotheses_awaiting_approval=awaiting,
+            total_experiments=cat_summary.get("total_experiments", 0),
+            experiments_by_status=cat_summary.get("by_status", {}),
+            experiments_by_type=cat_summary.get("by_type", {}),
+            experiments_running=cat_summary.get("by_status", {}).get("RUNNING", 0),
+            experiments_completed=cat_summary.get("by_status", {}).get("COMPLETED", 0),
+            experiments_failed=cat_summary.get("by_status", {}).get("FAILED", 0),
+            conclusions_validated=concluded_validated,
+            conclusions_rejected=concluded_rejected,
+            conclusions_inconclusive=concluded_inconclusive,
+            human_decisions_needed=awaiting,
+            recent_hypotheses=recent_summaries,
+            total_triggers=_trigger_data.get("total", 0),
+            triggers_eligible=_trigger_data.get("eligible", 0),
+            triggers_investigating=_trigger_data.get("investigating", 0),
+            triggers_completed=_trigger_data.get("completed", 0),
+            triggers_dismissed=_trigger_data.get("dismissed", 0),
+            triggers_blocked=_trigger_data.get("blocked", 0),
+            trigger_candidates=_trigger_data.get("candidates", []),
+        )
+
+    except Exception as e:
+        return LifecycleSection(available=False, unavailable_reason=f"Error loading lifecycle: {str(e)[:100]}")
+
+
+def _load_trigger_summary() -> dict[str, Any]:
+    """Load trigger summary from FindingTriggerEngine. Read-only."""
+    try:
+        from research_engine.lifecycle.finding_trigger import FindingTriggerEngine
+        engine = FindingTriggerEngine()
+        summary = engine.get_summary()
+        by_status = summary.get("by_status", {})
+        return {
+            "total": summary.get("total_triggers", 0),
+            "eligible": by_status.get("ELIGIBLE", 0),
+            "investigating": by_status.get("INVESTIGATING", 0),
+            "completed": by_status.get("COMPLETED", 0),
+            "dismissed": by_status.get("DISMISSED", 0),
+            "blocked": by_status.get("BLOCKED", 0),
+            "candidates": summary.get("top_candidates", []),
+        }
+    except Exception:
+        return {"total": 0, "eligible": 0, "investigating": 0, "completed": 0,
+                "dismissed": 0, "blocked": 0, "candidates": []}
+
+
 def _make_cov(name: str, count: int, total: int) -> CoverageField:
     pct = count / total if total > 0 else 0.0
     if pct >= _COVERAGE_HIGH:
@@ -1237,6 +1361,59 @@ def print_report(report: ResearchCommandReport) -> None:
                 w(f"    [X] {action}")
     else:
         w("  No decision gate data available.")
+
+    w("")
+
+    # ─── 13. RESEARCH LIFECYCLE ───────────────────────────────────────
+    w(sep)
+    w("  13. RESEARCH LIFECYCLE")
+    w("  " + "-" * 56)
+    lc = getattr(report, 'lifecycle_section', None)
+    if lc and getattr(lc, 'available', False):
+        w(f"  Hypotheses:             {lc.total_hypotheses}")
+        for status, count in sorted(lc.hypotheses_by_status.items()):
+            w(f"    {status:<20s} {count}")
+        w(f"  Experiments:            {lc.total_experiments}")
+        if lc.experiments_running:
+            w(f"    Running:             {lc.experiments_running}")
+        w(f"    Completed:           {lc.experiments_completed}")
+        if lc.experiments_failed:
+            w(f"    Failed:              {lc.experiments_failed}")
+        w(f"  Conclusions:")
+        w(f"    VALIDATED:           {lc.conclusions_validated}")
+        w(f"    REJECTED:            {lc.conclusions_rejected}")
+        w(f"    INCONCLUSIVE:        {lc.conclusions_inconclusive}")
+        if lc.human_decisions_needed:
+            w(f"  Human decisions needed: {lc.human_decisions_needed}")
+        if lc.recent_hypotheses:
+            w("")
+            w("  Recent investigations:")
+            for h in lc.recent_hypotheses:
+                conclusion = h.conclusion or "..."
+                w(f"    {h.hypothesis_id} | {h.title[:40]} | {h.status} -> {conclusion}")
+        # Research Triggers
+        if lc.total_triggers > 0:
+            w("")
+            w("  Research Triggers:")
+            w(f"    Detected:          {lc.total_triggers}")
+            w(f"    Eligible:          {lc.triggers_eligible}")
+            if lc.triggers_investigating:
+                w(f"    Investigating:     {lc.triggers_investigating}")
+            w(f"    Completed:         {lc.triggers_completed}")
+            if lc.triggers_dismissed:
+                w(f"    Dismissed:         {lc.triggers_dismissed}")
+            if lc.triggers_blocked:
+                w(f"    Blocked:           {lc.triggers_blocked}")
+            if lc.trigger_candidates:
+                w("")
+                w("  Top investigation candidates:")
+                for c in lc.trigger_candidates[:3]:
+                    w(f"    {c.get('trigger_id','')} | {c.get('title','')[:40]} | "
+                      f"N={c.get('sample_size',0)} | {c.get('experiment_type','')}")
+    elif lc:
+        w(f"  {lc.unavailable_reason}")
+    else:
+        w("  No lifecycle data available.")
 
     w("")
     w(sep)

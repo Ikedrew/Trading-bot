@@ -1,25 +1,29 @@
 # V10 Data Governance Report
 
-Generated: 2026-08-09T00:15:41.439190+00:00
+Generated: 2026-08-14T13:33:47.709385+00:00
 Dataset version: 2026-08-07_1422
-**DATA TRUST: WARNING**
+**DATA TRUST: FAIL**
 
 ## Summary
 
 | Source | Count |
 |---|---|
 | MT5 matched | 106 |
-| Journal trades | 106 |
+| Journal trades | 147 |
 | Research trades | 94 |
 | Excluded trades | 12 |
 
-## Trade Counts [PASS]
+## Trade Counts [FAIL]
 
 - mt5_trades: 106
-- journal_trades: 106
+- journal_trades: 147
 - research_trades: 94
 - excluded_trades: 12
 - research_plus_excluded: 106
+
+**Issues:**
+- MT5 matched (106) != journal (147)
+- Journal (147) != research+excluded (106)
 
 ## Pnl Reconciliation [PASS]
 
@@ -55,7 +59,7 @@ Dataset version: 2026-08-07_1422
 - without_decision_trace: 0
 - coverage: 100%
 - coverage_pct: 100.0
-- decision_traces_loaded: 390
+- decision_traces_loaded: 502
 - unmatched_trade_ids: []
 
 ---

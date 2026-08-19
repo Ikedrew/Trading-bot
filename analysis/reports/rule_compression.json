@@ -1,0 +1,184 @@
+{
+  "metadata": {
+    "generated_at": "2026-06-30T21:56:23Z",
+    "rules_path": "analysis/reports/rules_latest.json"
+  },
+  "original_rule_count": 8,
+  "compressed_rule_count": 2,
+  "compression_ratio": 0.75,
+  "clusters": [
+    {
+      "cluster_id": "cluster_10afc3b9",
+      "cluster_key": {
+        "target": "HAMMER",
+        "type": "ADD_GATE",
+        "source": "hidden_edge_detection"
+      },
+      "rules": [
+        "edge_fd782ec8",
+        "edge_6279c2cf",
+        "edge_cc3549e1"
+      ],
+      "count": 3
+    },
+    {
+      "cluster_id": "cluster_64bca83a",
+      "cluster_key": {
+        "target": "HAMMER",
+        "type": "LOOSEN_GATE",
+        "source": "hidden_edge_detection"
+      },
+      "rules": [
+        "edge_004de379",
+        "edge_065f45d3",
+        "edge_dc96ebbc"
+      ],
+      "count": 3
+    },
+    {
+      "cluster_id": "cluster_03a26ba1",
+      "cluster_key": {
+        "target": "HAMMER",
+        "type": "LOOSEN_GATE",
+        "source": "pattern_expectancy"
+      },
+      "rules": [
+        "expectancy_loosen_9e2ca513"
+      ],
+      "count": 1
+    },
+    {
+      "cluster_id": "cluster_4fa5c210",
+      "cluster_key": {
+        "target": "ENGULFING_BULLISH",
+        "type": "TIGHTEN_GATE",
+        "source": "failure_signature_analysis"
+      },
+      "rules": [
+        "failure_c8dc582b"
+      ],
+      "count": 1
+    }
+  ],
+  "merged_rules": [
+    {
+      "rule_id": "merged_edge_fd782ec8",
+      "merged_from": [
+        "edge_fd782ec8",
+        "edge_6279c2cf",
+        "edge_cc3549e1"
+      ],
+      "merge_count": 3,
+      "confidence": 57
+    },
+    {
+      "rule_id": "merged_edge_004de379",
+      "merged_from": [
+        "edge_004de379",
+        "edge_065f45d3",
+        "edge_dc96ebbc"
+      ],
+      "merge_count": 3,
+      "confidence": 57
+    }
+  ],
+  "resolved_rules": [
+    "merged_edge_fd782ec8",
+    "failure_c8dc582b"
+  ],
+  "removed_redundant_rules": [
+    "edge_004de379",
+    "edge_065f45d3",
+    "edge_6279c2cf",
+    "edge_cc3549e1",
+    "edge_dc96ebbc",
+    "edge_fd782ec8"
+  ],
+  "conflict_resolutions": [
+    {
+      "target": "HAMMER",
+      "conflict_type": "opposing_direction",
+      "winner": "merged_edge_fd782ec8",
+      "winner_type": "ADD_GATE",
+      "winner_confidence": 57,
+      "removed": [
+        "expectancy_loosen_9e2ca513",
+        "merged_edge_004de379"
+      ],
+      "removed_types": [
+        "LOOSEN_GATE",
+        "LOOSEN_GATE"
+      ],
+      "reason": "Kept ADD_GATE (confidence=57) over 2 opposing rule(s) (LOOSEN_GATE). Resolution by priority: confidence > sample > magnitude."
+    }
+  ],
+  "system_metrics": {
+    "redundancy_score_before": 75,
+    "redundancy_score_after": 0,
+    "entropy_before": 37,
+    "entropy_after": 100,
+    "conflict_count_before": 3,
+    "conflict_count_after": 0,
+    "stability_improvement_estimate": 60
+  },
+  "final_rule_set": [
+    {
+      "rule_id": "failure_c8dc582b",
+      "type": "TIGHTEN_GATE",
+      "target": "ENGULFING_BULLISH",
+      "condition": "IF pattern == 'ENGULFING_BULLISH': REQUIRE additional_confirmation_strength > current",
+      "expected_effect": "Reduce losses in ENGULFING_BULLISH by requiring stronger entry confirmation. Currently 120 losses averaging -25.00 per trade.",
+      "expected_impact": 3.56718192627824,
+      "supporting_evidence": {
+        "source": "failure_signature_analysis",
+        "pattern": "ENGULFING_BULLISH",
+        "regime": "neutral",
+        "bias": "neutral",
+        "loss_count": 120,
+        "avg_loss": -25.0,
+        "total_loss": -3000.0,
+        "pct_of_all_losses": 100.0,
+        "max_loss": -50.0
+      },
+      "risk_notes": "Tightening gates may also filter out some winning trades in this context. Verify that winners in the same regime/bias are not disproportionately affected. Current dataset has 120 losses \u2014 sufficient for initial signal, but recommend 50+ trades before live deployment.",
+      "confidence_score": 90,
+      "priority_rank": 8
+    },
+    {
+      "rule_id": "merged_edge_fd782ec8",
+      "type": "ADD_GATE",
+      "target": "HAMMER",
+      "condition": "IF pattern == 'HAMMER': PRIORITISE WHEN context == [neutral]",
+      "expected_effect": "Prioritise HAMMER entries when HAMMER + neutral. Avg PnL 50.00 vs baseline 35.11. Winrate 100.0% vs 85.7% (24 trades).",
+      "confidence_score": 57,
+      "merged_from": [
+        "edge_fd782ec8",
+        "edge_6279c2cf",
+        "edge_cc3549e1"
+      ],
+      "merge_count": 3,
+      "supporting_evidence": {
+        "source": "hidden_edge_detection",
+        "dimension": "pattern+regime",
+        "context": "HAMMER + neutral",
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "winrate": 100.0,
+        "baseline_winrate": 85.73,
+        "edge_winrate": 14.27,
+        "confidence_raw": 0.571,
+        "merged_contexts": [
+          "HAMMER + neutral + neutral",
+          "HAMMER + neutral"
+        ],
+        "merged_dimensions": [
+          "pattern+bias",
+          "pattern+regime+bias",
+          "pattern+regime"
+        ],
+        "combined_sample_size": 72
+      },
+      "risk_notes": "Merged from 3 rules. Canonical: edge_fd782ec8. Combined sample: 72 trades. Confidence: 57/100 (weighted average)."
+    }
+  ]
+}

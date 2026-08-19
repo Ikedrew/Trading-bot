@@ -110,6 +110,7 @@ class TestIDFormat:
         "DM-", "DS-", "MS-",
         "EDM-", "EDS-", "DMS-",
         "EDMS-",
+        "SD-", "SR-",
     }
 
     def test_all_ids_have_valid_prefix(self):
@@ -134,8 +135,12 @@ class TestIDFormat:
             "M": {Universe.MARKET},
             "S": {Universe.STRATEGY},
         }
+        # Special multi-char prefixes that don't decompose into single-char universes
+        special_prefixes = {"SD", "SR"}
         for q in QUESTION_BANK:
             prefix = q.question_id.rsplit("-", 1)[0]
+            if prefix in special_prefixes:
+                continue  # SD/SR have their own universe semantics
             expected_universes = set()
             for char in prefix:
                 if char in prefix_to_universes:

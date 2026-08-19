@@ -1,0 +1,574 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-08-15T15:58:40.851586+00:00",
+  "hypotheses": {
+    "H-b858cb19": {
+      "hypothesis_id": "H-b858cb19",
+      "title": "THREE_BLACK_CROWS/THREE_WHITE_SOLDIERS contain reversal information",
+      "description": "TBC and TWS patterns currently produce -1R outcomes (100% SL hit). Initial investigation suggests they identify exhaustion points where the opposite direction (fading the move) may be profitable.",
+      "category": "DIRECTION_INVERSION",
+      "claim": "Inverting the direction of TBC (\u2192BUY) and TWS (\u2192SELL) produces positive expected value over a 60-bar horizon using the canonical shadow methodology.",
+      "null_hypothesis": "The inverted direction produces no better results than the original direction, OR the improvement is a general dataset property (not pattern-specific).",
+      "falsification_conditions": [
+        "OOS validation period shows mean R <= 0",
+        "Permutation test p-value fails Bonferroni correction (p > 0.002)",
+        "Majority (>50%) of placebo patterns also show positive inverted R",
+        "Effect concentrated in <3 symbols",
+        "Effect disappears after removing top-20 outliers"
+      ],
+      "source": "Baseline research: three_candle_failure_analysis",
+      "source_finding_id": "",
+      "detected_timestamp": "2026-08-13T14:22:36.940862+00:00",
+      "population_description": "All V10_PRIMARY shadow trades with pattern THREE_BLACK_CROWS or THREE_WHITE_SOLDIERS",
+      "status": "CONCLUDED",
+      "conclusion_type": "INCONCLUSIVE",
+      "conclusion_reason": "p=1.0000 does not pass Bonferroni threshold (0.0021)",
+      "conclusion_confidence": "LOW",
+      "experiments": [
+        {
+          "experiment_id": "EXP-61c9796d",
+          "experiment_type": "DIRECTION_INVERSION",
+          "status": "complete",
+          "result_summary": "Mean R=+0.0000, N=0, WR=0.0%",
+          "result_path": "",
+          "timestamp": "2026-08-13T14:22:36.945549+00:00"
+        }
+      ],
+      "transitions": [
+        {
+          "from": "DETECTED",
+          "to": "REGISTERED",
+          "timestamp": "2026-08-13T14:22:36.940862+00:00",
+          "reason": "Formally registered for investigation",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "REGISTERED",
+          "to": "TESTING",
+          "timestamp": "2026-08-13T14:22:36.944545+00:00",
+          "reason": "Starting experiment EXP-61c9796d",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "TESTING",
+          "to": "CHALLENGED",
+          "timestamp": "2026-08-13T14:22:39.227279+00:00",
+          "reason": "Challenged with validation: tests complete",
+          "evidence_ref": "EXP-61c9796d",
+          "actor": "system"
+        },
+        {
+          "from": "CHALLENGED",
+          "to": "CONCLUDED",
+          "timestamp": "2026-08-13T14:22:40.014933+00:00",
+          "reason": "INCONCLUSIVE: p=1.0000 does not pass Bonferroni threshold (0.0021)",
+          "evidence_ref": "EXP-61c9796d",
+          "actor": "system"
+        }
+      ],
+      "tags": [
+        "pattern_signal",
+        "direction_inversion",
+        "exhaustion",
+        "tbc",
+        "tws"
+      ],
+      "human_approval_required": true,
+      "human_approval_granted": false,
+      "human_approval_timestamp": "",
+      "human_approval_notes": "",
+      "discovery_bias_notes": "Hypothesis discovered after testing 6 stop widths \u00d7 2 patterns \u00d7 2 directions = 24 variants. Only inverted direction at 1R stop showed strong positive.",
+      "multiple_testing_count": 24,
+      "bonferroni_threshold": 0.0020833333333333333
+    },
+    "H-fcf078b8": {
+      "hypothesis_id": "H-fcf078b8",
+      "title": "MEAN_REVERSION shows unusually strong performance",
+      "description": "Mean R=+2.643, WR=70.9%, N=416",
+      "category": "PATTERN_SIGNAL",
+      "claim": "MEAN_REVERSION has genuine positive edge",
+      "null_hypothesis": "MEAN_REVERSION performance is due to sample bias or regime",
+      "falsification_conditions": [],
+      "source": "research_cycle:TRG-2c645654",
+      "source_finding_id": "strong_MEAN_REVERSION_416",
+      "detected_timestamp": "2026-08-14T16:52:48.550894+00:00",
+      "population_description": "",
+      "status": "CONCLUDED",
+      "conclusion_type": "VALIDATED",
+      "conclusion_reason": "Passes all gates: p=1.0000, OOS=+3.5591, symbols=10/10, placebo=PASS",
+      "conclusion_confidence": "HIGH",
+      "experiments": [
+        {
+          "experiment_id": "EXP-9782906b",
+          "experiment_type": "CONDITIONING_ANALYSIS",
+          "status": "complete",
+          "result_summary": "Mean R=+2.2055, N=407, WR=70.3%",
+          "result_path": "",
+          "timestamp": "2026-08-14T16:52:48.561901+00:00"
+        }
+      ],
+      "transitions": [
+        {
+          "from": "DETECTED",
+          "to": "REGISTERED",
+          "timestamp": "2026-08-14T16:52:48.550894+00:00",
+          "reason": "Formally registered for investigation",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "REGISTERED",
+          "to": "TESTING",
+          "timestamp": "2026-08-14T16:52:48.561901+00:00",
+          "reason": "Starting experiment EXP-9782906b",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "TESTING",
+          "to": "CHALLENGED",
+          "timestamp": "2026-08-14T16:52:57.298419+00:00",
+          "reason": "Challenged with validation: OOS positive, Outlier-robust",
+          "evidence_ref": "EXP-9782906b",
+          "actor": "system"
+        },
+        {
+          "from": "CHALLENGED",
+          "to": "CONCLUDED",
+          "timestamp": "2026-08-14T16:52:57.338410+00:00",
+          "reason": "VALIDATED: Passes all gates: p=1.0000, OOS=+3.5591, symbols=10/10, placebo=PASS",
+          "evidence_ref": "EXP-9782906b",
+          "actor": "system"
+        }
+      ],
+      "tags": [],
+      "human_approval_required": true,
+      "human_approval_granted": false,
+      "human_approval_timestamp": "",
+      "human_approval_notes": "",
+      "discovery_bias_notes": "",
+      "multiple_testing_count": 2,
+      "bonferroni_threshold": 0.025
+    },
+    "H-f92428e5": {
+      "hypothesis_id": "H-f92428e5",
+      "title": "MEAN_REVERSION shows 1.42R direction asymmetry (BUY >> SELL)",
+      "description": "BUY: N=323, R=+2.960 | SELL: N=93, R=+1.542 | delta=+1.418",
+      "category": "DIRECTION_INVERSION",
+      "claim": "Inverting MEAN_REVERSION from SELL to BUY produces positive R",
+      "null_hypothesis": "Direction has no systematic effect on MEAN_REVERSION outcome",
+      "falsification_conditions": [],
+      "source": "research_cycle:TRG-3a08c906",
+      "source_finding_id": "dir_asym_MEAN_REVERSION_323_93",
+      "detected_timestamp": "2026-08-14T16:52:57.394416+00:00",
+      "population_description": "",
+      "status": "TESTING",
+      "conclusion_type": null,
+      "conclusion_reason": "",
+      "conclusion_confidence": "",
+      "experiments": [
+        {
+          "experiment_id": "EXP-869c5cd5",
+          "experiment_type": "DIRECTION_INVERSION",
+          "status": "failed",
+          "result_summary": "FAILED: [WinError 5] Access is denied: 'logs\\\\research_lifecycle\\\\experiment_registry.tmp' -> 'logs\\\\researc",
+          "result_path": "",
+          "timestamp": "2026-08-14T16:52:57.408423+00:00"
+        }
+      ],
+      "transitions": [
+        {
+          "from": "DETECTED",
+          "to": "REGISTERED",
+          "timestamp": "2026-08-14T16:52:57.394416+00:00",
+          "reason": "Formally registered for investigation",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "REGISTERED",
+          "to": "TESTING",
+          "timestamp": "2026-08-14T16:52:57.408423+00:00",
+          "reason": "Starting experiment EXP-869c5cd5",
+          "evidence_ref": "",
+          "actor": "system"
+        }
+      ],
+      "tags": [],
+      "human_approval_required": true,
+      "human_approval_granted": false,
+      "human_approval_timestamp": "",
+      "human_approval_notes": "",
+      "discovery_bias_notes": "",
+      "multiple_testing_count": 2,
+      "bonferroni_threshold": 0.025
+    },
+    "H-441a8783": {
+      "hypothesis_id": "H-441a8783",
+      "title": "Score non-monotonicity: 2 inversions, Q4-Q1=-0.963R",
+      "description": "Q1=+1.196 Q2=+0.553 Q3=+3.882 Q4=+0.234",
+      "category": "SCORE_MONOTONICITY",
+      "claim": "V10 score does not monotonically predict outcome quality",
+      "null_hypothesis": "Higher score produces higher expected R",
+      "falsification_conditions": [],
+      "source": "research_cycle:TRG-ead382bc",
+      "source_finding_id": "score_mono_770_2",
+      "detected_timestamp": "2026-08-14T22:43:06.325331+00:00",
+      "population_description": "",
+      "status": "CONCLUDED",
+      "conclusion_type": "VALIDATED",
+      "conclusion_reason": "Passes all gates: p=1.0000, OOS=+0.9325, symbols=9/10, placebo=PASS",
+      "conclusion_confidence": "HIGH",
+      "experiments": [
+        {
+          "experiment_id": "EXP-34a3977d",
+          "experiment_type": "CONDITIONING_ANALYSIS",
+          "status": "complete",
+          "result_summary": "Mean R=+0.3475, N=2308, WR=39.6%",
+          "result_path": "",
+          "timestamp": "2026-08-14T22:43:06.348326+00:00"
+        }
+      ],
+      "transitions": [
+        {
+          "from": "DETECTED",
+          "to": "REGISTERED",
+          "timestamp": "2026-08-14T22:43:06.325331+00:00",
+          "reason": "Formally registered for investigation",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "REGISTERED",
+          "to": "TESTING",
+          "timestamp": "2026-08-14T22:43:06.348326+00:00",
+          "reason": "Starting experiment EXP-34a3977d",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "TESTING",
+          "to": "CHALLENGED",
+          "timestamp": "2026-08-14T22:43:29.055923+00:00",
+          "reason": "Challenged with validation: OOS positive, Outlier-robust",
+          "evidence_ref": "EXP-34a3977d",
+          "actor": "system"
+        },
+        {
+          "from": "CHALLENGED",
+          "to": "CONCLUDED",
+          "timestamp": "2026-08-14T22:43:29.105933+00:00",
+          "reason": "VALIDATED: Passes all gates: p=1.0000, OOS=+0.9325, symbols=9/10, placebo=PASS",
+          "evidence_ref": "EXP-34a3977d",
+          "actor": "system"
+        }
+      ],
+      "tags": [],
+      "human_approval_required": true,
+      "human_approval_granted": false,
+      "human_approval_timestamp": "",
+      "human_approval_notes": "",
+      "discovery_bias_notes": "",
+      "multiple_testing_count": 2,
+      "bonferroni_threshold": 0.025
+    },
+    "H-4a0eb544": {
+      "hypothesis_id": "H-4a0eb544",
+      "title": "Performance improvement: latest period +3.449R vs earlier",
+      "description": "P1=+0.037 P2=+0.591 P3=+3.764 | latest vs earlier: +3.449",
+      "category": "OTHER",
+      "claim": "System performance has materially shifted (improvement) in the latest period",
+      "null_hypothesis": "Performance variation is within normal statistical fluctuation",
+      "falsification_conditions": [],
+      "source": "research_cycle:TRG-577476b6",
+      "source_finding_id": "temporal_improvement_770",
+      "detected_timestamp": "2026-08-14T22:43:29.149920+00:00",
+      "population_description": "",
+      "status": "TESTING",
+      "conclusion_type": null,
+      "conclusion_reason": "",
+      "conclusion_confidence": "",
+      "experiments": [
+        {
+          "experiment_id": "EXP-84117242",
+          "experiment_type": "CONDITIONING_ANALYSIS",
+          "status": "failed",
+          "result_summary": "FAILED: [WinError 5] Access is denied: 'logs\\\\research_lifecycle\\\\experiment_registry.tmp' -> 'logs\\\\researc",
+          "result_path": "",
+          "timestamp": "2026-08-14T22:43:29.172920+00:00"
+        }
+      ],
+      "transitions": [
+        {
+          "from": "DETECTED",
+          "to": "REGISTERED",
+          "timestamp": "2026-08-14T22:43:29.149920+00:00",
+          "reason": "Formally registered for investigation",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "REGISTERED",
+          "to": "TESTING",
+          "timestamp": "2026-08-14T22:43:29.172920+00:00",
+          "reason": "Starting experiment EXP-84117242",
+          "evidence_ref": "",
+          "actor": "system"
+        }
+      ],
+      "tags": [],
+      "human_approval_required": true,
+      "human_approval_granted": false,
+      "human_approval_timestamp": "",
+      "human_approval_notes": "",
+      "discovery_bias_notes": "",
+      "multiple_testing_count": 2,
+      "bonferroni_threshold": 0.025
+    },
+    "H-3292f718": {
+      "hypothesis_id": "H-3292f718",
+      "title": "MEAN_REVERSION shows unusually strong performance",
+      "description": "Mean R=+2.621, WR=71.0%, N=421",
+      "category": "PATTERN_SIGNAL",
+      "claim": "MEAN_REVERSION has genuine positive edge",
+      "null_hypothesis": "MEAN_REVERSION performance is due to sample bias or regime",
+      "falsification_conditions": [],
+      "source": "research_cycle:TRG-88067c21",
+      "source_finding_id": "strong_MEAN_REVERSION_421",
+      "detected_timestamp": "2026-08-15T15:38:14.549329+00:00",
+      "population_description": "",
+      "status": "CONCLUDED",
+      "conclusion_type": "VALIDATED",
+      "conclusion_reason": "Passes all gates: p=1.0000, OOS=+2.5337, symbols=10/10, placebo=PASS",
+      "conclusion_confidence": "HIGH",
+      "experiments": [
+        {
+          "experiment_id": "EXP-4f5bb664",
+          "experiment_type": "CONDITIONING_ANALYSIS",
+          "status": "complete",
+          "result_summary": "Mean R=+2.0032, N=420, WR=70.7%",
+          "result_path": "",
+          "timestamp": "2026-08-15T15:38:14.577373+00:00"
+        }
+      ],
+      "transitions": [
+        {
+          "from": "DETECTED",
+          "to": "REGISTERED",
+          "timestamp": "2026-08-15T15:38:14.549329+00:00",
+          "reason": "Formally registered for investigation",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "REGISTERED",
+          "to": "TESTING",
+          "timestamp": "2026-08-15T15:38:14.577373+00:00",
+          "reason": "Starting experiment EXP-4f5bb664",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "TESTING",
+          "to": "CHALLENGED",
+          "timestamp": "2026-08-15T15:38:47.582989+00:00",
+          "reason": "Challenged with validation: OOS positive, Outlier-robust",
+          "evidence_ref": "EXP-4f5bb664",
+          "actor": "system"
+        },
+        {
+          "from": "CHALLENGED",
+          "to": "CONCLUDED",
+          "timestamp": "2026-08-15T15:38:47.618119+00:00",
+          "reason": "VALIDATED: Passes all gates: p=1.0000, OOS=+2.5337, symbols=10/10, placebo=PASS",
+          "evidence_ref": "EXP-4f5bb664",
+          "actor": "system"
+        }
+      ],
+      "tags": [],
+      "human_approval_required": true,
+      "human_approval_granted": false,
+      "human_approval_timestamp": "",
+      "human_approval_notes": "",
+      "discovery_bias_notes": "",
+      "multiple_testing_count": 2,
+      "bonferroni_threshold": 0.025
+    },
+    "H-c645e6cc": {
+      "hypothesis_id": "H-c645e6cc",
+      "title": "MEAN_REVERSION shows 1.38R direction asymmetry (BUY >> SELL)",
+      "description": "BUY: N=328, R=+2.927 | SELL: N=93, R=+1.542 | delta=+1.385",
+      "category": "DIRECTION_INVERSION",
+      "claim": "Inverting MEAN_REVERSION from SELL to BUY produces positive R",
+      "null_hypothesis": "Direction has no systematic effect on MEAN_REVERSION outcome",
+      "falsification_conditions": [],
+      "source": "research_cycle:TRG-d884a1fe",
+      "source_finding_id": "dir_asym_MEAN_REVERSION_328_93",
+      "detected_timestamp": "2026-08-15T15:38:47.650950+00:00",
+      "population_description": "",
+      "status": "REGISTERED",
+      "conclusion_type": null,
+      "conclusion_reason": "",
+      "conclusion_confidence": "",
+      "experiments": [],
+      "transitions": [
+        {
+          "from": "DETECTED",
+          "to": "REGISTERED",
+          "timestamp": "2026-08-15T15:38:47.650950+00:00",
+          "reason": "Formally registered for investigation",
+          "evidence_ref": "",
+          "actor": "system"
+        }
+      ],
+      "tags": [],
+      "human_approval_required": true,
+      "human_approval_granted": false,
+      "human_approval_timestamp": "",
+      "human_approval_notes": "",
+      "discovery_bias_notes": "",
+      "multiple_testing_count": 2,
+      "bonferroni_threshold": 0.025
+    },
+    "H-7e98ca45": {
+      "hypothesis_id": "H-7e98ca45",
+      "title": "NAS100 shows +0.483R anomaly vs other symbols",
+      "description": "NAS100: N=55, R=+1.909 | Others: N=715, R=+1.427",
+      "category": "OTHER",
+      "claim": "V10 performance on NAS100 is materially different from portfolio",
+      "null_hypothesis": "Performance does not vary meaningfully across symbols",
+      "falsification_conditions": [],
+      "source": "research_cycle:TRG-bb40a85a",
+      "source_finding_id": "sym_anom_NAS100_55",
+      "detected_timestamp": "2026-08-15T15:55:52.743816+00:00",
+      "population_description": "",
+      "status": "CONCLUDED",
+      "conclusion_type": "INCONCLUSIVE",
+      "conclusion_reason": "Mixed evidence \u2014 does not meet all validation criteria",
+      "conclusion_confidence": "LOW",
+      "experiments": [
+        {
+          "experiment_id": "EXP-2834fef3",
+          "experiment_type": "CONDITIONING_ANALYSIS",
+          "status": "complete",
+          "result_summary": "Mean R=+0.7618, N=109, WR=34.9%",
+          "result_path": "",
+          "timestamp": "2026-08-15T15:55:52.782901+00:00"
+        }
+      ],
+      "transitions": [
+        {
+          "from": "DETECTED",
+          "to": "REGISTERED",
+          "timestamp": "2026-08-15T15:55:52.743816+00:00",
+          "reason": "Formally registered for investigation",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "REGISTERED",
+          "to": "TESTING",
+          "timestamp": "2026-08-15T15:55:52.782901+00:00",
+          "reason": "Starting experiment EXP-2834fef3",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "TESTING",
+          "to": "CHALLENGED",
+          "timestamp": "2026-08-15T15:55:54.868554+00:00",
+          "reason": "Challenged with validation: OOS positive",
+          "evidence_ref": "EXP-2834fef3",
+          "actor": "system"
+        },
+        {
+          "from": "CHALLENGED",
+          "to": "CONCLUDED",
+          "timestamp": "2026-08-15T15:55:54.899492+00:00",
+          "reason": "INCONCLUSIVE: Mixed evidence \u2014 does not meet all validation criteria",
+          "evidence_ref": "EXP-2834fef3",
+          "actor": "system"
+        }
+      ],
+      "tags": [],
+      "human_approval_required": true,
+      "human_approval_granted": false,
+      "human_approval_timestamp": "",
+      "human_approval_notes": "",
+      "discovery_bias_notes": "",
+      "multiple_testing_count": 1,
+      "bonferroni_threshold": 0.05
+    },
+    "H-18894b37": {
+      "hypothesis_id": "H-18894b37",
+      "title": "NZDUSD shows -0.879R anomaly vs other symbols",
+      "description": "NZDUSD: N=131, R=+0.732 | Others: N=639, R=+1.611",
+      "category": "OTHER",
+      "claim": "V10 performance on NZDUSD is materially different from portfolio",
+      "null_hypothesis": "Performance does not vary meaningfully across symbols",
+      "falsification_conditions": [],
+      "source": "research_cycle:TRG-3622fcfe",
+      "source_finding_id": "sym_anom_NZDUSD_131",
+      "detected_timestamp": "2026-08-15T15:58:35.797511+00:00",
+      "population_description": "",
+      "status": "CONCLUDED",
+      "conclusion_type": "INCONCLUSIVE",
+      "conclusion_reason": "Mixed evidence \u2014 does not meet all validation criteria",
+      "conclusion_confidence": "LOW",
+      "experiments": [
+        {
+          "experiment_id": "EXP-52c6f6b1",
+          "experiment_type": "CONDITIONING_ANALYSIS",
+          "status": "complete",
+          "result_summary": "Mean R=+0.3217, N=353, WR=42.5%",
+          "result_path": "",
+          "timestamp": "2026-08-15T15:58:35.827828+00:00"
+        }
+      ],
+      "transitions": [
+        {
+          "from": "DETECTED",
+          "to": "REGISTERED",
+          "timestamp": "2026-08-15T15:58:35.797511+00:00",
+          "reason": "Formally registered for investigation",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "REGISTERED",
+          "to": "TESTING",
+          "timestamp": "2026-08-15T15:58:35.827828+00:00",
+          "reason": "Starting experiment EXP-52c6f6b1",
+          "evidence_ref": "",
+          "actor": "system"
+        },
+        {
+          "from": "TESTING",
+          "to": "CHALLENGED",
+          "timestamp": "2026-08-15T15:58:40.820191+00:00",
+          "reason": "Challenged with validation: OOS positive, Outlier-robust",
+          "evidence_ref": "EXP-52c6f6b1",
+          "actor": "system"
+        },
+        {
+          "from": "CHALLENGED",
+          "to": "CONCLUDED",
+          "timestamp": "2026-08-15T15:58:40.850589+00:00",
+          "reason": "INCONCLUSIVE: Mixed evidence \u2014 does not meet all validation criteria",
+          "evidence_ref": "EXP-52c6f6b1",
+          "actor": "system"
+        }
+      ],
+      "tags": [],
+      "human_approval_required": true,
+      "human_approval_granted": false,
+      "human_approval_timestamp": "",
+      "human_approval_notes": "",
+      "discovery_bias_notes": "",
+      "multiple_testing_count": 1,
+      "bonferroni_threshold": 0.05
+    }
+  }
+}

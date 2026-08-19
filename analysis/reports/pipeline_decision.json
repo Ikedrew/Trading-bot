@@ -1,0 +1,19 @@
+{
+  "decision": "SHADOW_MODE",
+  "confidence": 69,
+  "risk_state": "STABLE",
+  "active_ruleset": "compressed (2 rules)",
+  "reasoning": [
+    "Confidence 69/100 \u2014 eligible for shadow only"
+  ],
+  "pipeline_status": {
+    "compression": "OK",
+    "confidence": "OK",
+    "validation": "OK",
+    "drift": "OK",
+    "experiment": "OK"
+  },
+  "metadata": {
+    "generated_at": "2026-06-30T22:08:46Z"
+  }
+}

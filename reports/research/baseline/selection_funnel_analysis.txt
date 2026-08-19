@@ -1,0 +1,203 @@
+================================================================================
+SELECTION FUNNEL ANALYSIS: 985 EXECUTE → 94 LIVE
+================================================================================
+
+Loading decision_ledger...
+  Total decision_ledger records: 32264
+Loading V10_PRIMARY shadows...
+  V10_PRIMARY shadow records: 986
+Loading live trades...
+  Live trade records: 94
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: DECISION LEDGER — EXECUTE vs RISK_BLOCK COUNTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Overall decision distribution:
+    NO_TRADE: 16456
+    PATTERN_REJECT: 15445
+    RISK_BLOCK: 216
+    EXECUTE: 147
+
+  EXECUTE decisions (passed all guards): 147
+  RISK_BLOCK decisions (guard blocked): 216
+  Total V10-intended-EXECUTE: 363
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: GUARD-BY-GUARD BREAKDOWN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Guard rejection counts (from decision_ledger RISK_BLOCK):
+    correlation_guard: 101 (46.8%)
+    portfolio_exposure: 79 (36.6%)
+    daily_trade_limit: 23 (10.6%)
+    horizon_authority: 10 (4.6%)
+    weekend_protection: 3 (1.4%)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: ENTITY_ID CROSS-REFERENCE WITH SHADOW R
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Shadow records with entity_id: 228
+  Shadow records WITHOUT entity_id: 758
+
+  RISK_BLOCK records with shadow match: 0
+  RISK_BLOCK records without shadow match: 216
+  EXECUTE records with shadow match: 74
+  EXECUTE records without shadow match: 73
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4: COUNTERFACTUAL R DISTRIBUTION BY GUARD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  GUARD-PASSED (EXECUTE → broker) counterfactual shadow R:
+    N = 74
+    Mean R: -0.0642
+    Median R: -0.0407
+    Win rate: 47.3%
+    Stdev: 0.4679
+
+  GUARD-BLOCKED (RISK_BLOCK) counterfactual shadow R by guard:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5: SELECTION QUALITY — ARE GUARDS HELPING OR HURTING?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  INSUFFICIENT DATA for quality determination
+  (executed_r_values: 74, all_blocked_r: 0)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 6: FULL V10_PRIMARY POPULATION vs LIVE SUBSET
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ALL V10_PRIMARY shadows (full population):
+    N = 986
+    Mean R: +0.5822
+    Median R: +0.0000
+    Win rate: 48.3%
+
+  LIVE trades (realised):
+    N = 94
+    Mean R: -0.1758
+    Median R: -1.0000
+    Win rate: 36.2%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 7: TEMPORAL ANALYSIS — DAILY VOLUME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Date range: 2026-07-22 to 2026-08-13
+  Trading days: 16
+
+  Date         EXECUTE    RISK_BLOCK   Total V10  Block %
+  ──────────── ────────── ──────────── ────────── ────────
+  2026-07-22   16         75           91         82%
+  2026-07-23   12         0            12         0%
+  2026-07-24   14         6            20         30%
+  2026-07-27   17         11           28         39%
+  2026-07-28   16         9            25         36%
+  2026-07-29   20         17           37         46%
+  2026-07-30   6          0            6          0%
+  2026-08-03   4          4            8          50%
+  2026-08-04   10         29           39         74%
+  2026-08-05   6          31           37         84%
+  2026-08-06   5          6            11         55%
+  2026-08-07   2          11           13         85%
+  2026-08-10   7          9            16         56%
+  2026-08-11   2          0            2          0%
+  2026-08-12   7          4            11         36%
+  2026-08-13   3          4            7          57%
+
+  TOTAL: EXECUTE=147, RISK_BLOCK=216, Combined=363
+  Overall block rate: 59.5%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 8: V10 SCORE DISTRIBUTION — BLOCKED vs PASSED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  GUARD-PASSED scores:
+    N = 147, Mean = 5.38, Median = 5.0
+      Score 4: 12
+      Score 5: 77
+      Score 6: 48
+      Score 7: 10
+
+  GUARD-BLOCKED scores:
+    N = 216, Mean = 5.20, Median = 5.0
+      Score 4: 39
+      Score 5: 107
+      Score 6: 58
+      Score 7: 11
+      Score 8: 1
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 9: EXECUTION FAILURES (post-guard, pre-fill)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Execution failures in ledger: 54
+    execution_failed:broker_rejected: 54
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 10: COMPLETE FUNNEL RECONSTRUCTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  V10 EXECUTE DECISIONS (intent): 363
+    └─ RISK_BLOCK by guards: 216
+       ├─ correlation_guard: 101
+       ├─ portfolio_exposure: 79
+       ├─ daily_trade_limit: 23
+       ├─ horizon_authority: 10
+       ├─ weekend_protection: 3
+    └─ Passed guards: 147
+       ├─ Execution failures: 54
+       └─ Broker filled (LIVE): 94
+
+  FUNNEL ACCOUNTING:
+    Total V10 intent: 363
+    Guard-blocked: 216
+    Execution failures: 54
+    Live fills: 94
+    Accounted: 364
+    UNACCOUNTED: -1
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 11: TEMPORAL OVERLAP — SHADOW vs LEDGER PERIODS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Decision ledger (EXECUTE+BLOCK) period: 2026-07-22 15:12 → 2026-08-13 09:45
+
+================================================================================
+FINDINGS & CLASSIFICATION
+================================================================================
+
+1. FUNNEL STRUCTURE — PROVEN
+   V10 EXECUTE decision → prepare_execution() [shadow opens] →
+   HorizonAuthority (skipped V10) → evaluate_runtime_guards() →
+   ExecutionOrchestrator → Broker fill → LIVE trade
+
+2. GUARD BLOCKING VOLUME — PROVEN (from decision_ledger)
+   216 of 363 opportunities blocked by guards
+   Block rate: 59.5%
+
+3. GUARD SELECTION QUALITY — DATA LIMITATION
+   Insufficient entity_id overlap to determine guard quality
+
+4. ENTITY_ID COVERAGE GAP — DATA LIMITATION
+   V10_PRIMARY with entity_id: 228/986 (23%)
+   RISK_BLOCK matched to shadow: 0/216
+   EXECUTE matched to shadow: 74/147
+   758 shadows (77%) have NO entity_id — cannot be matched to ledger
+
+5. UNACCOUNTED FUNNEL GAP — UNRESOLVED
+   V10_PRIMARY shadows: 986
+   Ledger EXECUTE+BLOCK: 363
+   Difference: 623
+   Possible: shadow creation period extends beyond decision_ledger period,
+   or shadow opens during modes where no ledger entry was written.
+
+NEXT EXPERIMENT REQUIRED:
+  If guard quality cannot be determined from current entity_id coverage,
+  use TEMPORAL PROXIMITY matching: for each RISK_BLOCK, find the shadow
+  opened within ±30s for the same symbol. This bypasses the entity_id gap.

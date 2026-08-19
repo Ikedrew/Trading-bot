@@ -190,6 +190,8 @@ def build_v10_ledger_entry(result: PipelineResult, cycle_id: int = 0) -> dict[st
     decision = DecisionOutcome.EXECUTE if result.approved else DecisionOutcome.NO_TRADE
 
     # Build base ledger entry using existing function
+    # entity_id is preserved as-is (no changes to its value).
+    # observation_id is added alongside as a separate V10 identity field.
     ledger_entry = build_ledger_entry(
         symbol=state.symbol,
         cycle_id=cycle_id,
@@ -209,6 +211,7 @@ def build_v10_ledger_entry(result: PipelineResult, cycle_id: int = 0) -> dict[st
         last_stage=result.rejection_stage or "execution_approved",
         correlation_id=opp.observation_id,
         entity_id=opp.observation_id,
+        observation_id=opp.observation_id,
     )
 
     # Add V10-specific fields (extends, doesn't break schema)

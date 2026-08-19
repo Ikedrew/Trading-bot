@@ -55,8 +55,8 @@ class TestLifecycle:
     def test_invalid_transitions_rejected(self):
         # Cannot jump from PROPOSED to ACCEPTED
         assert not is_valid_transition("PROPOSED", "ACCEPTED")
-        # Cannot jump from PROPOSED to SHADOW_TESTING
-        assert not is_valid_transition("PROPOSED", "SHADOW_TESTING")
+        # PROPOSED → SHADOW_TESTING is now valid (direct activation for pre-validated candidates)
+        assert is_valid_transition("PROPOSED", "SHADOW_TESTING")
         # Cannot go backward from ACCEPTED
         assert not is_valid_transition("ACCEPTED", "PROPOSED")
 

@@ -1,0 +1,72 @@
+{
+  "run_id": "baseline_20260813T014133",
+  "timestamp": "2026-08-13T01:43:09Z",
+  "duration_seconds": 95.6,
+  "question_bank_hash": "95d2652aed50e7ee",
+  "total_questions": 51,
+  "executed": 48,
+  "blocked": 3,
+  "universes": {
+    "EXECUTION": 94,
+    "DECISION": 12439,
+    "MARKET": 10623,
+    "STRATEGY": 17588,
+    "RISK": 8819,
+    "OUTCOME": 94,
+    "SHADOW_OUTCOME": 4153
+  },
+  "enrichment": {
+    "DECISION": {
+      "universe": "DECISION",
+      "total_records": 12439,
+      "matched": 81,
+      "unmatched": 12358,
+      "match_rate": 0.0065,
+      "enrichment_fields": [
+        "r_multiple",
+        "execution_id",
+        "exit_reason",
+        "net_realised_pnl"
+      ]
+    },
+    "MARKET": {
+      "universe": "MARKET",
+      "total_records": 10623,
+      "matched": 4,
+      "unmatched": 10619,
+      "match_rate": 0.0004,
+      "enrichment_fields": [
+        "r_multiple",
+        "execution_id",
+        "exit_reason",
+        "net_realised_pnl"
+      ]
+    },
+    "STRATEGY": {
+      "universe": "STRATEGY",
+      "total_records": 17588,
+      "matched": 81,
+      "unmatched": 17507,
+      "match_rate": 0.0046,
+      "enrichment_fields": [
+        "r_multiple",
+        "execution_id",
+        "exit_reason",
+        "net_realised_pnl"
+      ]
+    },
+    "RISK": {
+      "universe": "RISK",
+      "total_records": 8819,
+      "matched": 4,
+      "unmatched": 8815,
+      "match_rate": 0.0005,
+      "enrichment_fields": [
+        "r_multiple",
+        "execution_id",
+        "exit_reason",
+        "net_realised_pnl"
+      ]
+    }
+  }
+}

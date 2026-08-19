@@ -1,0 +1,146 @@
+================================================================================
+STALENESS FREQUENCY ANALYSIS
+================================================================================
+
+Total execution attempts: 322
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OVERALL STALENESS RATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Total execution attempts: 322
+  STALE at decision time: 31 (9%)
+  FRESH at decision time: 291 (90%)
+
+  Staleness reasons:
+    TP_BELOW_ASK: 28
+    SL_ABOVE_ASK: 3
+
+  Stale → filled: 2
+  Stale → rejected: 29
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STALENESS BY SYMBOL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Symbol     Total   Stale   Fresh   Stale%   MeanDisp(R)
+  ────────── ─────── ─────── ─────── ──────── ────────────
+  AUDUSD     49      3       46      6%      +2.04
+  EURUSD     30      0       30      0%      +2.54
+  GBPUSD     24      2       22      8%      +2.74
+  NAS100     5       2       3       40%      +8.47
+  NZDUSD     53      0       53      0%      +2.29
+  US500      31      5       26      16%      +3.30
+  USDCAD     44      0       44      0%      +1.41
+  USDCHF     38      1       37      2%      +2.48
+  USDJPY     23      13      10      56%      +7.57
+  XAUUSD     25      5       20      20%      +1.37
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STALENESS BY PATTERN/STRATEGY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Pattern                   Total   Stale   Fresh   Stale%
+  ───────────────────────── ─────── ─────── ─────── ───────
+  BEARISH_ENGULFING         1       0       1       0%
+  BULLISH_ENGULFING         1       0       1       0%
+  EVENING_STAR              22      0       22      0%
+  HAMMER                    8       0       8       0%
+  HANGING_MAN               2       0       2       0%
+  MEAN_REVERSION            85      28      57      32%
+  MORNING_STAR              13      0       13      0%
+  THREE_BLACK_CROWS         9       0       9       0%
+  THREE_INSIDE_DOWN         3       0       3       0%
+  THREE_INSIDE_UP           2       0       2       0%
+  THREE_WHITE_SOLDIERS      5       0       5       0%
+  TREND_CONTINUATION        39      3       36      7%
+  TWEEZER_BOTTOM            67      0       67      0%
+  TWEEZER_TOP               65      0       65      0%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STALENESS BY SESSION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Session       Total   Stale   Fresh   Stale%
+  ───────────── ─────── ─────── ─────── ───────
+  ASIA          71      0       71      0%
+  LONDON        79      15      64      18%
+  NY            109     10      99      9%
+  OFF_SESSION   63      6       57      9%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STALENESS BY SIDE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  BUY: 31/198 stale (15%)
+  SELL: 0/124 stale (0%)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PRICE DISPLACEMENT (structural entry → current price)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  STALE orders — displacement in R-multiples:
+    N=29, Mean=+6.06R, Median=+3.06R, Min=+0.85R, Max=+26.65R
+  FRESH orders — displacement in R-multiples:
+    N=45, Mean=+2.52R, Median=+2.11R, Min=+1.04R, Max=+6.96R
+
+  Displacement distribution (price moved in R-multiples from structural zone):
+    Displacement    Total   Stale   Stale%
+    ─────────────── ─────── ─────── ───────
+    0.5–1.0R         2       2       100%
+    1.0–2.0R         23      2       8%
+    2.0–5.0R         36      16      44%
+    5.0–10.0R         8       4       50%
+    10.0–100.0R         5       5       100%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STALENESS BY RISK DISTANCE (tight vs wide stops)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  FX pairs only (N=166):
+    Quartile        N     Stale   Stale%   MeanRD
+    ─────────────── ───── ─────── ──────── ──────────
+    Q1 (tightest)   41    0       0%      0.00021
+    Q2              42    0       0%      0.00033
+    Q3              41    3       7%      0.00040
+    Q4 (widest)     42    16      38%      0.03962
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SYMBOL × SESSION INTERACTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Symbol_Session       Total   Stale   Stale%
+  ──────────────────── ─────── ─────── ───────
+  USDJPY_LONDON        8       6       75%
+  USDJPY_NY            9       5       55%
+  US500_LONDON         13      3       23%
+  XAUUSD_LONDON        7       3       42%
+  AUDUSD_OFF_SESSION   10      2       20%
+  NAS100_NY            4       2       50%
+  US500_OFF_SESSION    2       2       100%
+  USDJPY_OFF_SESSION   6       2       33%
+  XAUUSD_NY            6       2       33%
+  AUDUSD_LONDON        11      1       9%
+  GBPUSD_NY            9       1       11%
+  GBPUSD_LONDON        1       1       100%
+  USDCHF_LONDON        5       1       20%
+
+================================================================================
+CONCLUSIONS
+================================================================================
+
+1. OVERALL STALENESS RATE: 31/322 = 9.6%
+
+2. MOST AFFECTED PATTERN: MEAN_REVERSION (28/85 = 32% stale)
+
+3. MOST AFFECTED SYMBOL: USDJPY (13/23 = 56% stale)
+
+4. MOST AFFECTED SESSION: LONDON (15/79 = 18% stale)
+
+5. DIRECTIONAL BIAS: BUY=31/198 (15%), SELL=0/124 (0%)
+
+6. MECHANISM:
+   V10 entry engine produces geometry from structural zones (demand/supply OBs,
+   swing midpoints, BOS levels). These zones may be 1-50R below current price.
+   When price has moved far from the zone, TP is already below current ask (BUY)
+   or above current bid (SELL). The order is inherently unexecutable as MARKET.

@@ -1,0 +1,97 @@
+{
+  "question_id": "E-001",
+  "title": "System Expectancy",
+  "run_id": "run_20260815_172313_283998",
+  "run_timestamp": "2026-08-15T17:23:31Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {
+    "all_trades": "17fcb30c52e98a83"
+  },
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "d1322da11c954c77",
+    "MARKET": "10dd45e8dc7989d6",
+    "STRATEGY": "7e552e1b01d90474",
+    "RISK": "a631e1cc08d0088c",
+    "OUTCOME": "17fcb30c52e98a83",
+    "SHADOW_REALITY": "dad0cbca45de13e5"
+  },
+  "data_snapshot_timestamp": "2026-08-15T17:23:31Z",
+  "analysis_version": "1.0.0",
+  "evidence_source": "REALISED",
+  "populations_used": [
+    "all_trades"
+  ],
+  "universes_used": [
+    "EXECUTION"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 94,
+    "analytical_sample": 94,
+    "minimum_required": 20,
+    "sample_reduction_reason": "No reduction \u2014 all records usable"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "expectancy",
+      "anomaly_analysis"
+    ],
+    "primary_analysis": "expectancy"
+  },
+  "angle_evidence": {
+    "EXECUTION": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "count": 94,
+    "wins": 34,
+    "losses": 60,
+    "win_rate": 0.3617,
+    "mean_r": -0.1758,
+    "median_r": -1.0,
+    "total_r": -16.5231,
+    "avg_win_r": 1.5395,
+    "avg_loss_r": -1.1478,
+    "profit_factor": 0.7601,
+    "std_r": 1.5628,
+    "expectancy": -0.1758
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 94
+  },
+  "anomaly_view": {
+    "status": "INCONCLUSIVE",
+    "reason": "No anomalous records found in population",
+    "criteria": {
+      "anomaly_field": "anomaly",
+      "threshold": "anomaly == True"
+    },
+    "normal_count": 94,
+    "anomaly_count": 0
+  },
+  "exceptional_view": {
+    "status": "NOT_APPLICABLE",
+    "reason": "Question does not declare EXCEPTIONAL view"
+  },
+  "conditioned_views": {},
+  "outcome": "NEGATIVE",
+  "conclusion": "Negative expectancy: -0.1758R per trade",
+  "confidence": "MEDIUM",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260811_230428_56927a",
+  "previous_outcome": "NEGATIVE",
+  "changes_from_previous": {
+    "status": "no_material_change"
+  },
+  "research_gaps": []
+}

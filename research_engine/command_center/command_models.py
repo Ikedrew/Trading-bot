@@ -261,6 +261,7 @@ class ResearchCommandReport:
     recommendation: Recommendation
     traceability: ResearchTraceability = field(default_factory=ResearchTraceability)
     decision_gates: Any = None  # DecisionGateReport (imported at runtime to avoid circular)
+    lifecycle_section: Any = None  # LifecycleSection (optional — present if lifecycle data exists)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the full report for JSON output."""
@@ -376,3 +377,70 @@ class ResearchCommandReport:
 
 def _cov_dict(c: CoverageField) -> dict[str, Any]:
     return {"name": c.name, "pct": round(c.pct * 100, 1), "status": c.status}
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 13: RESEARCH LIFECYCLE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@dataclass
+class LifecycleHypothesisSummary:
+    """Summary of one hypothesis for Command Center display."""
+    hypothesis_id: str = ""
+    title: str = ""
+    status: str = ""
+    conclusion: str = ""
+    confidence: str = ""
+    classification: str = ""
+    experiments_count: int = 0
+    created_at: str = ""
+
+
+@dataclass
+class LifecycleSection:
+    """
+    Research Lifecycle observability section.
+    
+    Aggregates InvestigationRegistry + ExperimentCatalogue state
+    into a human-readable summary.
+    """
+    # Hypothesis counts
+    total_hypotheses: int = 0
+    hypotheses_by_status: dict[str, int] = field(default_factory=dict)
+    hypotheses_testing: int = 0
+    hypotheses_challenged: int = 0
+    hypotheses_concluded: int = 0
+    hypotheses_awaiting_approval: int = 0
+
+    # Experiment counts
+    total_experiments: int = 0
+    experiments_by_status: dict[str, int] = field(default_factory=dict)
+    experiments_by_type: dict[str, int] = field(default_factory=dict)
+    experiments_running: int = 0
+    experiments_completed: int = 0
+    experiments_failed: int = 0
+
+    # Conclusions
+    conclusions_validated: int = 0
+    conclusions_rejected: int = 0
+    conclusions_inconclusive: int = 0
+
+    # Governance
+    human_decisions_needed: int = 0
+
+    # Recent activity
+    recent_hypotheses: list[LifecycleHypothesisSummary] = field(default_factory=list)
+
+    # Research Triggers
+    total_triggers: int = 0
+    triggers_eligible: int = 0
+    triggers_investigating: int = 0
+    triggers_completed: int = 0
+    triggers_dismissed: int = 0
+    triggers_blocked: int = 0
+    trigger_candidates: list[dict] = field(default_factory=list)  # Top candidates for investigation
+
+    # Availability
+    available: bool = False
+    unavailable_reason: str = ""

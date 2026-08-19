@@ -142,7 +142,7 @@ def evaluate_runtime_guards(
     # ─── 2. TRADE COOLDOWN (B1) ──────────────────────────────────────
     if not trade_cooldown.can_open_trade(symbol, time.time()):
         _remaining = trade_cooldown.get_remaining_cooldown(symbol, time.time())
-        return GuardChainResult(
+        _result = GuardChainResult(
             allowed=False,
             guard_name="trade_cooldown",
             reason="trade_cooldown:cooldown_active",
@@ -150,6 +150,8 @@ def evaluate_runtime_guards(
             filter_key="cooldown",
             metadata={"remaining_s": round(_remaining, 0)},
         )
+        _emit_research_event(symbol, intent, _result)
+        return _result
 
     # ─── 3. CORRELATION GUARD (A3) ───────────────────────────────────
     _corr_result = check_correlation(
@@ -159,7 +161,7 @@ def evaluate_runtime_guards(
         open_positions=all_open_positions,
     )
     if not _corr_result.allowed:
-        return GuardChainResult(
+        _result = GuardChainResult(
             allowed=False,
             guard_name="correlation_guard",
             reason=f"correlation_guard:{_corr_result.reason}",
@@ -167,6 +169,8 @@ def evaluate_runtime_guards(
             filter_key="correlation",
             metadata={"direction": intent.side.name, "volume": intent.volume, "reason": _corr_result.reason},
         )
+        _emit_research_event(symbol, intent, _result)
+        return _result
 
     # ─── 4. PORTFOLIO EXPOSURE (A5) ──────────────────────────────────
     _proposed_risk = float(getattr(config, "RISK_PER_TRADE_PERCENT", 1.0))
@@ -175,7 +179,7 @@ def evaluate_runtime_guards(
         open_positions=all_open_positions,
     )
     if not _peg_result.allowed:
-        return GuardChainResult(
+        _result = GuardChainResult(
             allowed=False,
             guard_name="portfolio_exposure",
             reason=f"portfolio_exposure:{_peg_result.reason}",
@@ -189,6 +193,8 @@ def evaluate_runtime_guards(
                 "reason": _peg_result.reason,
             },
         )
+        _emit_research_event(symbol, intent, _result)
+        return _result
 
     # ─── 5. REGIME GUARD (I2) ────────────────────────────────────────
     _atr_ratio = 0.0
@@ -298,4 +304,27 @@ def evaluate_runtime_guards(
         pass  # Control layer failure must never prevent execution
 
     # ─── ALL GUARDS PASSED ────────────────────────────────────────────
-    return GuardChainResult(allowed=True)
+    _result = GuardChainResult(allowed=True)
+    _emit_research_event(symbol, intent, _result)
+    return _result
+
+
+# ─── RESEARCH EVENT EMISSION ──────────────────────────────────────────────────
+
+def _emit_research_event(symbol: str, intent: Any, result: GuardChainResult) -> None:
+    """Fire-and-forget research event for guard decisions. Never affects trading."""
+    try:
+        from core.research_events import persist_guard_event
+        persist_guard_event(
+            symbol=symbol,
+            cycle_id=0,  # Caller doesn't pass cycle_id; research can correlate by timestamp
+            correlation_id="",
+            guard_name=result.guard_name if not result.allowed else "ALL_PASSED",
+            allowed=result.allowed,
+            reason=result.reason if not result.allowed else "all_guards_passed",
+            metadata=result.metadata if not result.allowed else {},
+            direction=intent.side.name if hasattr(intent, "side") else "",
+            pattern=getattr(intent, "pattern", ""),
+        )
+    except Exception:
+        pass  # Must NEVER affect trading

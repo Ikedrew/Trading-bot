@@ -1,0 +1,435 @@
+{
+  "metadata": {
+    "generated_at": "2026-06-30T20:02:21Z",
+    "source": "local",
+    "total_events": 22350,
+    "total_trades": 841,
+    "total_pnl": 29524.0,
+    "overall_winrate": 85.73,
+    "unique_patterns": 3,
+    "unique_symbols": 2,
+    "date_range": {
+      "earliest": "2026-06-28T10:20:24.215Z",
+      "latest": "2026-06-28T23:41:17.635Z"
+    }
+  },
+  "pattern_expectancy": [
+    {
+      "pattern": "HAMMER",
+      "trades": 24,
+      "wins": 24,
+      "losses": 0,
+      "winrate": 100.0,
+      "avg_pnl": 50.0,
+      "total_pnl": 1200.0,
+      "avg_win": 50.0,
+      "avg_loss": 0.0,
+      "profit_factor": Infinity,
+      "expectancy_rank": 1
+    },
+    {
+      "pattern": "ENGULFING_BULLISH",
+      "trades": 816,
+      "wins": 696,
+      "losses": 120,
+      "winrate": 85.29,
+      "avg_pnl": 34.7059,
+      "total_pnl": 28320.0,
+      "avg_win": 45.0,
+      "avg_loss": -25.0,
+      "profit_factor": 10.44,
+      "expectancy_rank": 2
+    },
+    {
+      "pattern": "UNKNOWN",
+      "trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "winrate": 100.0,
+      "avg_pnl": 4.0,
+      "total_pnl": 4.0,
+      "avg_win": 4.0,
+      "avg_loss": 0.0,
+      "profit_factor": Infinity,
+      "expectancy_rank": 3
+    }
+  ],
+  "contextual_edge_matrix": {
+    "pattern_x_htf_bias": [
+      {
+        "pattern": "HAMMER",
+        "context": "neutral",
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "total_pnl": 1200.0,
+        "winrate": 100.0
+      },
+      {
+        "pattern": "ENGULFING_BULLISH",
+        "context": "neutral",
+        "trades": 816,
+        "avg_pnl": 34.7059,
+        "total_pnl": 28320.0,
+        "winrate": 85.29
+      },
+      {
+        "pattern": "UNKNOWN",
+        "context": "neutral",
+        "trades": 1,
+        "avg_pnl": 4.0,
+        "total_pnl": 4.0,
+        "winrate": 100.0
+      }
+    ],
+    "pattern_x_liquidity": [
+      {
+        "pattern": "HAMMER",
+        "context": "False",
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "total_pnl": 1200.0,
+        "winrate": 100.0
+      },
+      {
+        "pattern": "ENGULFING_BULLISH",
+        "context": "False",
+        "trades": 816,
+        "avg_pnl": 34.7059,
+        "total_pnl": 28320.0,
+        "winrate": 85.29
+      },
+      {
+        "pattern": "UNKNOWN",
+        "context": "False",
+        "trades": 1,
+        "avg_pnl": 4.0,
+        "total_pnl": 4.0,
+        "winrate": 100.0
+      }
+    ],
+    "pattern_x_bos": [
+      {
+        "pattern": "HAMMER",
+        "context": "False",
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "total_pnl": 1200.0,
+        "winrate": 100.0
+      },
+      {
+        "pattern": "ENGULFING_BULLISH",
+        "context": "False",
+        "trades": 816,
+        "avg_pnl": 34.7059,
+        "total_pnl": 28320.0,
+        "winrate": 85.29
+      },
+      {
+        "pattern": "UNKNOWN",
+        "context": "False",
+        "trades": 1,
+        "avg_pnl": 4.0,
+        "total_pnl": 4.0,
+        "winrate": 100.0
+      }
+    ],
+    "pattern_x_regime": [
+      {
+        "pattern": "HAMMER",
+        "context": "neutral",
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "total_pnl": 1200.0,
+        "winrate": 100.0
+      },
+      {
+        "pattern": "ENGULFING_BULLISH",
+        "context": "neutral",
+        "trades": 816,
+        "avg_pnl": 34.7059,
+        "total_pnl": 28320.0,
+        "winrate": 85.29
+      },
+      {
+        "pattern": "UNKNOWN",
+        "context": "neutral",
+        "trades": 1,
+        "avg_pnl": 4.0,
+        "total_pnl": 4.0,
+        "winrate": 100.0
+      }
+    ]
+  },
+  "failure_signatures": [
+    {
+      "pattern": "ENGULFING_BULLISH",
+      "regime": "neutral",
+      "bias": "neutral",
+      "signature": "ENGULFING_BULLISH | neutral | neutral",
+      "loss_count": 120,
+      "avg_loss": -25.0,
+      "total_loss": -3000.0,
+      "max_loss": -50.0,
+      "pct_of_all_losses": 100.0,
+      "severity_rank": 1
+    }
+  ],
+  "hidden_edges": [
+    {
+      "dimension": "pattern+regime",
+      "context": "HAMMER + neutral",
+      "context_parts": [
+        "HAMMER",
+        "neutral"
+      ],
+      "trades": 24,
+      "avg_pnl": 50.0,
+      "winrate": 100.0,
+      "total_pnl": 1200.0,
+      "baseline_avg_pnl": 35.1058,
+      "baseline_winrate": 85.73,
+      "edge_pnl": 14.8942,
+      "edge_winrate": 14.27,
+      "confidence": 0.571
+    },
+    {
+      "dimension": "pattern+bias",
+      "context": "HAMMER + neutral",
+      "context_parts": [
+        "HAMMER",
+        "neutral"
+      ],
+      "trades": 24,
+      "avg_pnl": 50.0,
+      "winrate": 100.0,
+      "total_pnl": 1200.0,
+      "baseline_avg_pnl": 35.1058,
+      "baseline_winrate": 85.73,
+      "edge_pnl": 14.8942,
+      "edge_winrate": 14.27,
+      "confidence": 0.571
+    },
+    {
+      "dimension": "pattern+regime+bias",
+      "context": "HAMMER + neutral + neutral",
+      "context_parts": [
+        "HAMMER",
+        "neutral",
+        "neutral"
+      ],
+      "trades": 24,
+      "avg_pnl": 50.0,
+      "winrate": 100.0,
+      "total_pnl": 1200.0,
+      "baseline_avg_pnl": 35.1058,
+      "baseline_winrate": 85.73,
+      "edge_pnl": 14.8942,
+      "edge_winrate": 14.27,
+      "confidence": 0.571
+    },
+    {
+      "dimension": "pattern+liquidity",
+      "context": "HAMMER + False",
+      "context_parts": [
+        "HAMMER",
+        "False"
+      ],
+      "trades": 24,
+      "avg_pnl": 50.0,
+      "winrate": 100.0,
+      "total_pnl": 1200.0,
+      "baseline_avg_pnl": 35.1058,
+      "baseline_winrate": 85.73,
+      "edge_pnl": 14.8942,
+      "edge_winrate": 14.27,
+      "confidence": 0.571
+    },
+    {
+      "dimension": "pattern+bos",
+      "context": "HAMMER + False",
+      "context_parts": [
+        "HAMMER",
+        "False"
+      ],
+      "trades": 24,
+      "avg_pnl": 50.0,
+      "winrate": 100.0,
+      "total_pnl": 1200.0,
+      "baseline_avg_pnl": 35.1058,
+      "baseline_winrate": 85.73,
+      "edge_pnl": 14.8942,
+      "edge_winrate": 14.27,
+      "confidence": 0.571
+    },
+    {
+      "dimension": "pattern+regime+liquidity",
+      "context": "HAMMER + neutral + False",
+      "context_parts": [
+        "HAMMER",
+        "neutral",
+        "False"
+      ],
+      "trades": 24,
+      "avg_pnl": 50.0,
+      "winrate": 100.0,
+      "total_pnl": 1200.0,
+      "baseline_avg_pnl": 35.1058,
+      "baseline_winrate": 85.73,
+      "edge_pnl": 14.8942,
+      "edge_winrate": 14.27,
+      "confidence": 0.571
+    }
+  ],
+  "summary": {
+    "key_findings": [
+      "System is net profitable (total PnL: 29524.00)",
+      "3 of 3 patterns are profitable",
+      "6 high-confidence edge zones detected",
+      "Top loss cluster: ENGULFING_BULLISH | neutral | neutral (120 losses, avg=-25.00)"
+    ],
+    "top_patterns": [
+      {
+        "pattern": "HAMMER",
+        "trades": 24,
+        "wins": 24,
+        "losses": 0,
+        "winrate": 100.0,
+        "avg_pnl": 50.0,
+        "total_pnl": 1200.0,
+        "avg_win": 50.0,
+        "avg_loss": 0.0,
+        "profit_factor": Infinity,
+        "expectancy_rank": 1
+      },
+      {
+        "pattern": "ENGULFING_BULLISH",
+        "trades": 816,
+        "wins": 696,
+        "losses": 120,
+        "winrate": 85.29,
+        "avg_pnl": 34.7059,
+        "total_pnl": 28320.0,
+        "avg_win": 45.0,
+        "avg_loss": -25.0,
+        "profit_factor": 10.44,
+        "expectancy_rank": 2
+      },
+      {
+        "pattern": "UNKNOWN",
+        "trades": 1,
+        "wins": 1,
+        "losses": 0,
+        "winrate": 100.0,
+        "avg_pnl": 4.0,
+        "total_pnl": 4.0,
+        "avg_win": 4.0,
+        "avg_loss": 0.0,
+        "profit_factor": Infinity,
+        "expectancy_rank": 3
+      }
+    ],
+    "worst_patterns": [],
+    "strongest_edges": [
+      {
+        "dimension": "pattern+regime",
+        "context": "HAMMER + neutral",
+        "context_parts": [
+          "HAMMER",
+          "neutral"
+        ],
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "winrate": 100.0,
+        "total_pnl": 1200.0,
+        "baseline_avg_pnl": 35.1058,
+        "baseline_winrate": 85.73,
+        "edge_pnl": 14.8942,
+        "edge_winrate": 14.27,
+        "confidence": 0.571
+      },
+      {
+        "dimension": "pattern+bias",
+        "context": "HAMMER + neutral",
+        "context_parts": [
+          "HAMMER",
+          "neutral"
+        ],
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "winrate": 100.0,
+        "total_pnl": 1200.0,
+        "baseline_avg_pnl": 35.1058,
+        "baseline_winrate": 85.73,
+        "edge_pnl": 14.8942,
+        "edge_winrate": 14.27,
+        "confidence": 0.571
+      },
+      {
+        "dimension": "pattern+regime+bias",
+        "context": "HAMMER + neutral + neutral",
+        "context_parts": [
+          "HAMMER",
+          "neutral",
+          "neutral"
+        ],
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "winrate": 100.0,
+        "total_pnl": 1200.0,
+        "baseline_avg_pnl": 35.1058,
+        "baseline_winrate": 85.73,
+        "edge_pnl": 14.8942,
+        "edge_winrate": 14.27,
+        "confidence": 0.571
+      },
+      {
+        "dimension": "pattern+liquidity",
+        "context": "HAMMER + False",
+        "context_parts": [
+          "HAMMER",
+          "False"
+        ],
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "winrate": 100.0,
+        "total_pnl": 1200.0,
+        "baseline_avg_pnl": 35.1058,
+        "baseline_winrate": 85.73,
+        "edge_pnl": 14.8942,
+        "edge_winrate": 14.27,
+        "confidence": 0.571
+      },
+      {
+        "dimension": "pattern+bos",
+        "context": "HAMMER + False",
+        "context_parts": [
+          "HAMMER",
+          "False"
+        ],
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "winrate": 100.0,
+        "total_pnl": 1200.0,
+        "baseline_avg_pnl": 35.1058,
+        "baseline_winrate": 85.73,
+        "edge_pnl": 14.8942,
+        "edge_winrate": 14.27,
+        "confidence": 0.571
+      }
+    ],
+    "critical_failures": [
+      {
+        "pattern": "ENGULFING_BULLISH",
+        "regime": "neutral",
+        "bias": "neutral",
+        "signature": "ENGULFING_BULLISH | neutral | neutral",
+        "loss_count": 120,
+        "avg_loss": -25.0,
+        "total_loss": -3000.0,
+        "max_loss": -50.0,
+        "pct_of_all_losses": 100.0,
+        "severity_rank": 1
+      }
+    ]
+  }
+}

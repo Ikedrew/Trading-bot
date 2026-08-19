@@ -52,6 +52,7 @@ def persist_execution_result(
     decision_id: str = "",
     correlation_id: str = "",
     entity_id: str = "",
+    observation_id: str = "",
     # Execution metadata
     decision_ts_utc_ms: int = 0,
     slippage: float = 0.0,
@@ -96,6 +97,7 @@ def persist_execution_result(
             "decision_id": decision_id,
             "correlation_id": correlation_id,
             "entity_id": entity_id,
+            "observation_id": observation_id,
             "decision_ts_utc_ms": decision_ts_utc_ms,
             # Protection verification (Phase 1 hardening)
             "requested_sl": requested_sl,

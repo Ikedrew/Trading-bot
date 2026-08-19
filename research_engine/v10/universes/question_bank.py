@@ -283,8 +283,9 @@ D_003 = NewEngineQuestion(
     question_id="D-003",
     title="Decision Threshold Effectiveness",
     research_intent=(
-        "Are score thresholds set optimally? Would raising/lowering the "
-        "threshold improve overall expectancy?"
+        "Does the decision score predict outcome quality within executed trades? "
+        "Do higher-scoring decisions produce better realised R-multiples? "
+        "(One-sided limitation: only observes above-threshold executed trades.)"
     ),
     required_universes=(Universe.DECISION,),
     required_populations=(
@@ -299,20 +300,19 @@ D_003 = NewEngineQuestion(
         ),
     ),
     views=(ViewType.NORMAL,),
-    analysis_type=AnalysisType.SEGMENTATION,
+    analysis_type=AnalysisType.CORRELATION,
     minimum_sample_size=20,
     status=QuestionStatus.READY,
     source_intent=("D4", "V10-D3", "Lambda-D3"),
-    decision_enabled="Should score thresholds be adjusted?",
+    decision_enabled="Does score predict outcome? (One-sided: only executed trades visible. Full threshold analysis requires cross-side shadow evidence.)",
 )
 
 D_004 = NewEngineQuestion(
     question_id="D-004",
-    title="Rejection Stage Analysis",
+    title="Rejection Stage Distribution",
     research_intent=(
-        "Where in the decision pipeline are trades most commonly rejected? "
-        "Which rejection stage removes the most potential edge vs protecting "
-        "from losses?"
+        "Where in the decision pipeline are opportunities most commonly "
+        "rejected? What is the rejection distribution across pipeline stages?"
     ),
     required_universes=(Universe.DECISION,),
     required_populations=(
@@ -332,7 +332,7 @@ D_004 = NewEngineQuestion(
     minimum_sample_size=50,
     status=QuestionStatus.READY,
     source_intent=("D5", "R1", "V10-R1"),
-    decision_enabled="Are guards removing edge or protecting capital?",
+    decision_enabled="Where are opportunities being rejected? (Counterfactual edge cost → SD-004)",
 )
 
 D_005 = NewEngineQuestion(
@@ -411,9 +411,9 @@ D_007 = NewEngineQuestion(
     views=(ViewType.NORMAL, ViewType.EXCEPTIONAL),
     analysis_type=AnalysisType.COUNTERFACTUAL,
     minimum_sample_size=20,
-    status=QuestionStatus.READY,
+    status=QuestionStatus.BLOCKED,
     source_intent=("R1", "R2", "V10-R1"),
-    decision_enabled="Should risk gates be tightened or relaxed?",
+    decision_enabled="Should risk gates be tightened or relaxed? (BLOCKED: requires cross-side Live+Shadow comparison — see SD-004 for counterfactual evidence)",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -669,11 +669,11 @@ S_003 = NewEngineQuestion(
 
 S_004 = NewEngineQuestion(
     question_id="S-004",
-    title="Strategy Rejection Patterns",
+    title="Strategy Gap Characterisation",
     research_intent=(
         "When opportunities are detected but no strategy matches, what "
-        "characterises these gaps? Are there profitable patterns the strategy "
-        "engine currently misses?"
+        "characterises these gaps? What market conditions, patterns, and "
+        "opportunity types occur most frequently without strategy coverage?"
     ),
     required_universes=(Universe.STRATEGY,),
     required_populations=(
@@ -769,9 +769,9 @@ ED_002 = NewEngineQuestion(
     views=(ViewType.NORMAL, ViewType.EXCEPTIONAL),
     analysis_type=AnalysisType.COUNTERFACTUAL,
     minimum_sample_size=20,
-    status=QuestionStatus.PARTIAL,
+    status=QuestionStatus.BLOCKED,
     source_intent=("D5", "Q3"),
-    decision_enabled="Should rejection thresholds be relaxed?",
+    decision_enabled="SUPERSEDED by SD-002. Original correlation_id join has ~0% match rate for NO_TRADE decisions. Use SD-002 (Shadow entity_id lineage) for counterfactual missed-opportunity analysis.",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1701,17 +1701,17 @@ SD_005 = NewEngineQuestion(
     title="Shadow Horizon Comparison",
     research_intent=(
         "Which trade horizon (SCALP / INTRADAY / EXTENDED) captures the most "
-        "counterfactual edge from detected opportunities?"
+        "counterfactual edge from detected opportunities using structure-based "
+        "geometry? (Excludes V10_PRIMARY which uses different geometry.)"
     ),
     required_universes=(Universe.SHADOW_OUTCOME,),
     required_populations=(
-        Population.HORIZON_SCALP, Population.HORIZON_INTRADAY,
-        Population.HORIZON_EXTENDED,
+        Population.SHADOW_FROM_NO_TRADE,
     ),
     angle_requirements=(
         AngleRequirement(
             universe=Universe.SHADOW_OUTCOME,
-            populations=(Population.HORIZON_SCALP, Population.HORIZON_INTRADAY),
+            populations=(Population.SHADOW_FROM_NO_TRADE,),
             required_fields=("r_multiple", "trade_horizon", "exit_reason"),
         ),
     ),
@@ -1720,7 +1720,7 @@ SD_005 = NewEngineQuestion(
     minimum_sample_size=10,
     status=QuestionStatus.READY,
     source_intent=("S2", "S6"),
-    decision_enabled="Should V10 prefer a different trade horizon?",
+    decision_enabled="Which structure-based horizon geometry captures most counterfactual edge?",
 )
 
 SD_006 = NewEngineQuestion(
@@ -1773,6 +1773,114 @@ SD_007 = NewEngineQuestion(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# SHADOW REALITY QUESTIONS (SR-nnn)
+# Shadow ↔ Reality comparison — measures model correspondence to live execution.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SR_001 = NewEngineQuestion(
+    question_id="SR-001",
+    title="Shadow-Reality Divergence",
+    research_intent=(
+        "What is the observed divergence between shadow model predictions and "
+        "realised live trade outcomes? Measures delta_r = shadow_r - realised_gross_r "
+        "across all matched V10_PRIMARY EXECUTE pairs."
+    ),
+    required_universes=(Universe.SHADOW_REALITY,),
+    required_populations=(Population.SR_MATCHED,),
+    angle_requirements=(
+        AngleRequirement(universe=Universe.SHADOW_REALITY, populations=(Population.SR_MATCHED,), required_fields=("delta_r", "shadow_r", "realised_gross_r")),
+    ),
+    views=(ViewType.NORMAL,),
+    analysis_type=AnalysisType.DISTRIBUTION,
+    minimum_sample_size=20,
+    status=QuestionStatus.READY,
+    source_intent=("X4", "X5"),
+    decision_enabled="Is the shadow model a reliable proxy for live execution outcomes?",
+)
+
+SR_002 = NewEngineQuestion(
+    question_id="SR-002",
+    title="Entry Slippage Distribution",
+    research_intent=(
+        "What is the distribution of entry price slippage between shadow intent "
+        "price and actual broker fill across matched pairs?"
+    ),
+    required_universes=(Universe.SHADOW_REALITY,),
+    required_populations=(Population.SR_MATCHED,),
+    angle_requirements=(
+        AngleRequirement(universe=Universe.SHADOW_REALITY, populations=(Population.SR_MATCHED,), required_fields=("entry_slippage",)),
+    ),
+    views=(ViewType.NORMAL,),
+    analysis_type=AnalysisType.DISTRIBUTION,
+    minimum_sample_size=20,
+    status=QuestionStatus.READY,
+    source_intent=("X1",),
+    decision_enabled="Is entry slippage a material source of edge loss?",
+)
+
+SR_003 = NewEngineQuestion(
+    question_id="SR-003",
+    title="Exit Reason Divergence",
+    research_intent=(
+        "How often does the shadow model correctly predict the exit reason? "
+        "Segments by shadow exit → real exit transitions to identify systematic "
+        "management effects."
+    ),
+    required_universes=(Universe.SHADOW_REALITY,),
+    required_populations=(Population.SR_MATCHED,),
+    angle_requirements=(
+        AngleRequirement(universe=Universe.SHADOW_REALITY, populations=(Population.SR_MATCHED,), required_fields=("shadow_exit_reason", "real_exit_reason", "exit_reason_match")),
+    ),
+    views=(ViewType.NORMAL,),
+    analysis_type=AnalysisType.SEGMENTATION,
+    minimum_sample_size=15,
+    status=QuestionStatus.READY,
+    source_intent=("X4",),
+    decision_enabled="Does trade management systematically alter outcomes vs shadow prediction?",
+)
+
+SR_004 = NewEngineQuestion(
+    question_id="SR-004",
+    title="Shadow-Reality by Pattern",
+    research_intent=(
+        "Does shadow-reality divergence vary by pattern? Some patterns may have "
+        "systematically different execution quality or management effects."
+    ),
+    required_universes=(Universe.SHADOW_REALITY,),
+    required_populations=(Population.SR_MATCHED,),
+    angle_requirements=(
+        AngleRequirement(universe=Universe.SHADOW_REALITY, populations=(Population.SR_MATCHED,), required_fields=("pattern", "delta_r")),
+    ),
+    views=(ViewType.NORMAL,),
+    analysis_type=AnalysisType.SEGMENTATION,
+    minimum_sample_size=10,
+    status=QuestionStatus.READY,
+    source_intent=("X5", "X6"),
+    decision_enabled="Should pattern-specific execution quality influence trade selection?",
+)
+
+SR_005 = NewEngineQuestion(
+    question_id="SR-005",
+    title="Shadow-Reality by Horizon",
+    research_intent=(
+        "Does shadow-reality divergence vary by trade horizon? Longer-duration "
+        "trades may accumulate more management effects."
+    ),
+    required_universes=(Universe.SHADOW_REALITY,),
+    required_populations=(Population.SR_MATCHED,),
+    angle_requirements=(
+        AngleRequirement(universe=Universe.SHADOW_REALITY, populations=(Population.SR_MATCHED,), required_fields=("trade_horizon", "delta_r")),
+    ),
+    views=(ViewType.NORMAL,),
+    analysis_type=AnalysisType.SEGMENTATION,
+    minimum_sample_size=10,
+    status=QuestionStatus.READY,
+    source_intent=("X5", "X6"),
+    decision_enabled="Should horizon-specific shadow model corrections be investigated?",
+)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # QUESTION BANK REGISTRY
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1805,6 +1913,8 @@ QUESTION_BANK: tuple[NewEngineQuestion, ...] = (
     EDMS_001, EDMS_002,
     # Shadow research questions (SD-nnn) — counterfactual evidence
     SD_001, SD_002, SD_004, SD_005, SD_006, SD_007,
+    # Shadow Reality questions (SR-nnn) — shadow↔reality comparison
+    SR_001, SR_002, SR_003, SR_004, SR_005,
 )
 
 QUESTION_BANK_BY_ID: dict[str, NewEngineQuestion] = {

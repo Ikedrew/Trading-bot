@@ -189,7 +189,14 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
         elif population == Population.SHADOW_LOSSES:
             return [r for r in records if r.get("r_multiple", 0) <= 0]
         elif population == Population.PRIMARY_V10_SHADOW:
-            return [r for r in records if r.get("shadow_type") == "V10_PRIMARY"]
+            return [
+                r for r in records
+                if (
+                    r.get("shadow_type") == "V10_PRIMARY"
+                    and r.get("v10_action") == "EXECUTE"
+                    and str(r.get("correlation_id", "")).startswith("COR-")
+                )
+            ]
         elif population == Population.HORIZON_SCALP:
             return [r for r in records if r.get("evaluated_horizon") == "SCALP" and r.get("shadow_type") == "HORIZON_ALTERNATIVE"]
         elif population == Population.HORIZON_INTRADAY:

@@ -1,0 +1,164 @@
+{
+  "metadata": {
+    "generated_at": "2026-06-30T22:08:45Z",
+    "curated_dir": "events/curated",
+    "rules_path": "analysis/reports/rule_compression.json",
+    "total_trades": 841,
+    "rules_tested": 2,
+    "regimes_tested": 4,
+    "random_seed": 42
+  },
+  "baseline_metrics": {
+    "trades": 721,
+    "total_pnl": 32524.0,
+    "avg_pnl": 45.1096,
+    "winrate": 100.0
+  },
+  "regime_results": [
+    {
+      "regime_type": "volatility_shock",
+      "description": "Amplified variance, sign flips on marginal trades, fast reversals",
+      "shifted_metrics": {
+        "trades": 630,
+        "total_pnl": 36576.6807,
+        "avg_pnl": 58.0582,
+        "winrate": 100.0
+      },
+      "pnl_change": 12.9486,
+      "winrate_change": 0.0,
+      "edge_decay": 0,
+      "stability_score": 82,
+      "pattern_impact": [
+        {
+          "pattern": "ENGULFING_BULLISH",
+          "original_avg_pnl": 45.0,
+          "shifted_avg_pnl": 57.5436,
+          "pnl_sensitivity": 12.5436
+        },
+        {
+          "pattern": "HAMMER",
+          "original_avg_pnl": 50.0,
+          "shifted_avg_pnl": 76.5895,
+          "pnl_sensitivity": 26.5895
+        },
+        {
+          "pattern": "UNKNOWN",
+          "original_avg_pnl": 4.0,
+          "shifted_avg_pnl": 0.8405,
+          "pnl_sensitivity": -3.1595
+        }
+      ]
+    },
+    {
+      "regime_type": "trend_dominance",
+      "description": "Directional bias, counter-trend penalty, reduced mean-reversion",
+      "shifted_metrics": {
+        "trades": 721,
+        "total_pnl": 29596.84,
+        "avg_pnl": 41.0497,
+        "winrate": 100.0
+      },
+      "pnl_change": -4.0599,
+      "winrate_change": 0.0,
+      "edge_decay": 9.0,
+      "stability_score": 94,
+      "pattern_impact": [
+        {
+          "pattern": "ENGULFING_BULLISH",
+          "original_avg_pnl": 45.0,
+          "shifted_avg_pnl": 40.95,
+          "pnl_sensitivity": -4.05
+        },
+        {
+          "pattern": "HAMMER",
+          "original_avg_pnl": 50.0,
+          "shifted_avg_pnl": 45.5,
+          "pnl_sensitivity": -4.5
+        },
+        {
+          "pattern": "UNKNOWN",
+          "original_avg_pnl": 4.0,
+          "shifted_avg_pnl": 3.64,
+          "pnl_sensitivity": -0.36
+        }
+      ]
+    },
+    {
+      "regime_type": "liquidity_fragmentation",
+      "description": "Degraded sweep/BOS reliability, false breakouts",
+      "shifted_metrics": {
+        "trades": 721,
+        "total_pnl": 32524.0,
+        "avg_pnl": 45.1096,
+        "winrate": 100.0
+      },
+      "pnl_change": 0.0,
+      "winrate_change": 0.0,
+      "edge_decay": 0,
+      "stability_score": 100,
+      "pattern_impact": [
+        {
+          "pattern": "ENGULFING_BULLISH",
+          "original_avg_pnl": 45.0,
+          "shifted_avg_pnl": 45.0,
+          "pnl_sensitivity": 0.0
+        },
+        {
+          "pattern": "HAMMER",
+          "original_avg_pnl": 50.0,
+          "shifted_avg_pnl": 50.0,
+          "pnl_sensitivity": 0.0
+        },
+        {
+          "pattern": "UNKNOWN",
+          "original_avg_pnl": 4.0,
+          "shifted_avg_pnl": 4.0,
+          "pnl_sensitivity": 0.0
+        }
+      ]
+    },
+    {
+      "regime_type": "low_vol_chop",
+      "description": "Compressed range, 25% false signals, reduced follow-through",
+      "shifted_metrics": {
+        "trades": 550,
+        "total_pnl": 12422.0,
+        "avg_pnl": 22.5855,
+        "winrate": 100.0
+      },
+      "pnl_change": -22.5241,
+      "winrate_change": 0.0,
+      "edge_decay": 49.93,
+      "stability_score": 70,
+      "pattern_impact": [
+        {
+          "pattern": "ENGULFING_BULLISH",
+          "original_avg_pnl": 45.0,
+          "shifted_avg_pnl": 22.5424,
+          "pnl_sensitivity": -22.4576
+        },
+        {
+          "pattern": "HAMMER",
+          "original_avg_pnl": 50.0,
+          "shifted_avg_pnl": 25.0,
+          "pnl_sensitivity": -25.0
+        },
+        {
+          "pattern": "UNKNOWN",
+          "original_avg_pnl": 4.0,
+          "shifted_avg_pnl": 2.0,
+          "pnl_sensitivity": -2.0
+        }
+      ]
+    }
+  ],
+  "overall_robustness_score": 86,
+  "worst_case_regime": "low_vol_chop",
+  "best_case_regime": "liquidity_fragmentation",
+  "failure_modes": [],
+  "summary": {
+    "system_robust": true,
+    "key_vulnerabilities": [],
+    "deployment_risk_level": "LOW"
+  }
+}

@@ -1,8 +1,8 @@
 {
   "engine_version": "1.0.0",
-  "last_updated": "2026-08-10T21:23:42Z",
-  "last_run_id": "run_20260810_212326_77abb8",
-  "last_run_timestamp": "2026-08-10T21:23:42Z",
+  "last_updated": "2026-08-15T17:25:47Z",
+  "last_run_id": "run_20260815_172534_c4a32a",
+  "last_run_timestamp": "2026-08-15T17:25:47Z",
   "universes": [],
   "populations_valid": 25,
   "populations_empty": 3,
@@ -13,32 +13,38 @@
   "questions_archived": 0,
   "questions_run": 44,
   "latest_run": {
-    "run_id": "run_20260810_212326_77abb8",
-    "timestamp": "2026-08-10T21:23:42Z",
+    "run_id": "run_20260815_172534_c4a32a",
+    "timestamp": "2026-08-15T17:25:47Z",
     "engine_version": "1.0.0",
     "question_bank_version": "1.0.0",
-    "questions_requested": 45,
-    "questions_executed": 44,
-    "questions_blocked": 1,
-    "questions_failed": 0,
-    "questions_inconclusive": 9,
-    "findings_generated": 44,
-    "anomalies_detected": 44,
-    "exceptional_views": 44,
+    "questions_requested": 56,
+    "questions_executed": 42,
+    "questions_blocked": 9,
+    "questions_failed": 5,
+    "questions_inconclusive": 8,
+    "findings_generated": 42,
+    "anomalies_detected": 47,
+    "exceptional_views": 47,
     "candidate_questions_generated": 0,
     "population_versions": {
       "EXECUTION": "17fcb30c52e98a83",
-      "DECISION": "d2d99e33311ea4e0",
-      "MARKET": "464337023a99bba0",
-      "STRATEGY": "b222d2738b11bc83"
+      "DECISION": "d1322da11c954c77",
+      "MARKET": "10dd45e8dc7989d6",
+      "STRATEGY": "7e552e1b01d90474",
+      "RISK": "a631e1cc08d0088c",
+      "OUTCOME": "17fcb30c52e98a83",
+      "SHADOW_REALITY": "dad0cbca45de13e5"
     },
     "universe_versions": {
       "EXECUTION": "17fcb30c52e98a83",
-      "DECISION": "d2d99e33311ea4e0",
-      "MARKET": "464337023a99bba0",
-      "STRATEGY": "b222d2738b11bc83"
+      "DECISION": "d1322da11c954c77",
+      "MARKET": "10dd45e8dc7989d6",
+      "STRATEGY": "7e552e1b01d90474",
+      "RISK": "a631e1cc08d0088c",
+      "OUTCOME": "17fcb30c52e98a83",
+      "SHADOW_REALITY": "dad0cbca45de13e5"
     },
-    "duration_seconds": 26.84,
+    "duration_seconds": 24.1,
     "executed_question_ids": [
       "E-001",
       "E-002",
@@ -55,7 +61,6 @@
       "D-004",
       "D-005",
       "D-006",
-      "D-007",
       "M-001",
       "M-002",
       "M-003",
@@ -67,7 +72,6 @@
       "S-003",
       "S-004",
       "ED-001",
-      "ED-002",
       "ED-003",
       "EM-001",
       "EM-002",
@@ -86,9 +90,23 @@
       "EDMS-002"
     ],
     "blocked_question_ids": [
-      "E-006"
+      "E-006",
+      "D-007",
+      "ED-002",
+      "SD-001",
+      "SD-002",
+      "SD-004",
+      "SD-005",
+      "SD-006",
+      "SD-007"
     ],
-    "failed_question_ids": []
+    "failed_question_ids": [
+      "SR-001",
+      "SR-002",
+      "SR-003",
+      "SR-004",
+      "SR-005"
+    ]
   },
   "growth_limits": {
     "max_active_questions": 60,

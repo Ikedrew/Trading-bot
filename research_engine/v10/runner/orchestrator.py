@@ -297,6 +297,7 @@ class ResearchExecutionOrchestrator:
             StrategyUniverseBuilder,
             RiskUniverseBuilder,
             OutcomeUniverseBuilder,
+            ShadowRealityUniverseBuilder,
         )
         from research_engine.v10.universes.outcome_enrichment import OutcomeEnrichment
 
@@ -328,6 +329,14 @@ class ResearchExecutionOrchestrator:
                 builders[Universe.OUTCOME] = outcome_builder
             except Exception as e:
                 logger.warning(f"[ORCHESTRATOR] Failed to build OUTCOME: {e}")
+
+        # Shadow Reality universe (shadow↔trade journal comparison)
+        try:
+            sr_builder = ShadowRealityUniverseBuilder()
+            sr_builder.build()
+            builders[Universe.SHADOW_REALITY] = sr_builder
+        except Exception as e:
+            logger.warning(f"[ORCHESTRATOR] Failed to build SHADOW_REALITY: {e}")
 
         return builders
 

@@ -1,0 +1,433 @@
+{
+  "metadata": {
+    "generated_at": "2026-06-30T22:08:44Z",
+    "curated_dir": "events/curated",
+    "total_trades": 841,
+    "n_windows": 4,
+    "requested_windows": 4,
+    "date_range": {
+      "earliest": "2026-06-28T10:20:24.215Z",
+      "latest": "2026-06-28T23:41:17.635Z"
+    },
+    "unique_patterns": 3,
+    "unique_symbols": 2
+  },
+  "walk_forward_windows": [
+    {
+      "window_idx": 0,
+      "train_period": {
+        "start": "2026-06-28T10:20:24.215Z",
+        "end": "2026-06-28T10:47:14.317Z",
+        "trade_count": 168
+      },
+      "test_period": {
+        "start": "2026-06-28T10:47:14.330Z",
+        "end": "2026-06-28T12:30:18.141Z",
+        "trade_count": 168
+      },
+      "train_metrics": {
+        "total_trades": 168,
+        "wins": 145,
+        "losses": 23,
+        "winrate": 86.31,
+        "avg_pnl": 35.3571,
+        "total_pnl": 5940.0,
+        "max_drawdown": 50.0,
+        "profit_factor": 11.33
+      },
+      "test_metrics": {
+        "total_trades": 168,
+        "wins": 144,
+        "losses": 24,
+        "winrate": 85.71,
+        "avg_pnl": 35.8333,
+        "total_pnl": 6020.0,
+        "max_drawdown": 50.0,
+        "profit_factor": 11.47
+      },
+      "delta_metrics": {
+        "winrate_change": -0.6,
+        "avg_pnl_change": 0.4762,
+        "drawdown_change": 0.0,
+        "trade_count_change": 0,
+        "pnl_degraded": false,
+        "winrate_degraded": true
+      },
+      "train_pattern_expectancy": {
+        "ENGULFING_BULLISH": {
+          "trades": 163,
+          "winrate": 85.89,
+          "avg_pnl": 34.908,
+          "total_pnl": 5690.0
+        },
+        "HAMMER": {
+          "trades": 5,
+          "winrate": 100.0,
+          "avg_pnl": 50.0,
+          "total_pnl": 250.0
+        }
+      },
+      "test_pattern_expectancy": {
+        "ENGULFING_BULLISH": {
+          "trades": 163,
+          "winrate": 85.28,
+          "avg_pnl": 35.3988,
+          "total_pnl": 5770.0
+        },
+        "HAMMER": {
+          "trades": 5,
+          "winrate": 100.0,
+          "avg_pnl": 50.0,
+          "total_pnl": 250.0
+        }
+      },
+      "pattern_deltas": {
+        "HAMMER": {
+          "train_avg_pnl": 50.0,
+          "test_avg_pnl": 50.0,
+          "pnl_change": 0.0,
+          "train_winrate": 100.0,
+          "test_winrate": 100.0,
+          "winrate_change": 0.0,
+          "train_trades": 5,
+          "test_trades": 5
+        },
+        "ENGULFING_BULLISH": {
+          "train_avg_pnl": 34.908,
+          "test_avg_pnl": 35.3988,
+          "pnl_change": 0.4908,
+          "train_winrate": 85.89,
+          "test_winrate": 85.28,
+          "winrate_change": -0.61,
+          "train_trades": 163,
+          "test_trades": 163
+        }
+      }
+    },
+    {
+      "window_idx": 1,
+      "train_period": {
+        "start": "2026-06-28T10:47:14.330Z",
+        "end": "2026-06-28T12:30:18.141Z",
+        "trade_count": 168
+      },
+      "test_period": {
+        "start": "2026-06-28T12:30:18.181Z",
+        "end": "2026-06-28T13:14:17.956Z",
+        "trade_count": 168
+      },
+      "train_metrics": {
+        "total_trades": 168,
+        "wins": 144,
+        "losses": 24,
+        "winrate": 85.71,
+        "avg_pnl": 35.8333,
+        "total_pnl": 6020.0,
+        "max_drawdown": 50.0,
+        "profit_factor": 11.47
+      },
+      "test_metrics": {
+        "total_trades": 168,
+        "wins": 144,
+        "losses": 24,
+        "winrate": 85.71,
+        "avg_pnl": 34.9107,
+        "total_pnl": 5865.0,
+        "max_drawdown": 50.0,
+        "profit_factor": 10.694
+      },
+      "delta_metrics": {
+        "winrate_change": 0.0,
+        "avg_pnl_change": -0.9226,
+        "drawdown_change": 0.0,
+        "trade_count_change": 0,
+        "pnl_degraded": true,
+        "winrate_degraded": false
+      },
+      "train_pattern_expectancy": {
+        "ENGULFING_BULLISH": {
+          "trades": 163,
+          "winrate": 85.28,
+          "avg_pnl": 35.3988,
+          "total_pnl": 5770.0
+        },
+        "HAMMER": {
+          "trades": 5,
+          "winrate": 100.0,
+          "avg_pnl": 50.0,
+          "total_pnl": 250.0
+        }
+      },
+      "test_pattern_expectancy": {
+        "ENGULFING_BULLISH": {
+          "trades": 163,
+          "winrate": 85.28,
+          "avg_pnl": 34.4479,
+          "total_pnl": 5615.0
+        },
+        "HAMMER": {
+          "trades": 5,
+          "winrate": 100.0,
+          "avg_pnl": 50.0,
+          "total_pnl": 250.0
+        }
+      },
+      "pattern_deltas": {
+        "HAMMER": {
+          "train_avg_pnl": 50.0,
+          "test_avg_pnl": 50.0,
+          "pnl_change": 0.0,
+          "train_winrate": 100.0,
+          "test_winrate": 100.0,
+          "winrate_change": 0.0,
+          "train_trades": 5,
+          "test_trades": 5
+        },
+        "ENGULFING_BULLISH": {
+          "train_avg_pnl": 35.3988,
+          "test_avg_pnl": 34.4479,
+          "pnl_change": -0.9509,
+          "train_winrate": 85.28,
+          "test_winrate": 85.28,
+          "winrate_change": 0.0,
+          "train_trades": 163,
+          "test_trades": 163
+        }
+      }
+    },
+    {
+      "window_idx": 2,
+      "train_period": {
+        "start": "2026-06-28T12:30:18.181Z",
+        "end": "2026-06-28T13:14:17.956Z",
+        "trade_count": 168
+      },
+      "test_period": {
+        "start": "2026-06-28T13:14:17.959Z",
+        "end": "2026-06-28T19:12:52.471Z",
+        "trade_count": 168
+      },
+      "train_metrics": {
+        "total_trades": 168,
+        "wins": 144,
+        "losses": 24,
+        "winrate": 85.71,
+        "avg_pnl": 34.9107,
+        "total_pnl": 5865.0,
+        "max_drawdown": 50.0,
+        "profit_factor": 10.694
+      },
+      "test_metrics": {
+        "total_trades": 168,
+        "wins": 143,
+        "losses": 25,
+        "winrate": 85.12,
+        "avg_pnl": 34.5238,
+        "total_pnl": 5800.0,
+        "max_drawdown": 50.0,
+        "profit_factor": 10.28
+      },
+      "delta_metrics": {
+        "winrate_change": -0.59,
+        "avg_pnl_change": -0.3869,
+        "drawdown_change": 0.0,
+        "trade_count_change": 0,
+        "pnl_degraded": true,
+        "winrate_degraded": true
+      },
+      "train_pattern_expectancy": {
+        "ENGULFING_BULLISH": {
+          "trades": 163,
+          "winrate": 85.28,
+          "avg_pnl": 34.4479,
+          "total_pnl": 5615.0
+        },
+        "HAMMER": {
+          "trades": 5,
+          "winrate": 100.0,
+          "avg_pnl": 50.0,
+          "total_pnl": 250.0
+        }
+      },
+      "test_pattern_expectancy": {
+        "ENGULFING_BULLISH": {
+          "trades": 164,
+          "winrate": 84.76,
+          "avg_pnl": 34.1463,
+          "total_pnl": 5600.0
+        },
+        "HAMMER": {
+          "trades": 4,
+          "winrate": 100.0,
+          "avg_pnl": 50.0,
+          "total_pnl": 200.0
+        }
+      },
+      "pattern_deltas": {
+        "HAMMER": {
+          "train_avg_pnl": 50.0,
+          "test_avg_pnl": 50.0,
+          "pnl_change": 0.0,
+          "train_winrate": 100.0,
+          "test_winrate": 100.0,
+          "winrate_change": 0.0,
+          "train_trades": 5,
+          "test_trades": 4
+        },
+        "ENGULFING_BULLISH": {
+          "train_avg_pnl": 34.4479,
+          "test_avg_pnl": 34.1463,
+          "pnl_change": -0.3016,
+          "train_winrate": 85.28,
+          "test_winrate": 84.76,
+          "winrate_change": -0.52,
+          "train_trades": 163,
+          "test_trades": 164
+        }
+      }
+    },
+    {
+      "window_idx": 3,
+      "train_period": {
+        "start": "2026-06-28T13:14:17.959Z",
+        "end": "2026-06-28T19:12:52.471Z",
+        "trade_count": 168
+      },
+      "test_period": {
+        "start": "2026-06-28T19:12:52.479Z",
+        "end": "2026-06-28T20:53:10.697Z",
+        "trade_count": 168
+      },
+      "train_metrics": {
+        "total_trades": 168,
+        "wins": 143,
+        "losses": 25,
+        "winrate": 85.12,
+        "avg_pnl": 34.5238,
+        "total_pnl": 5800.0,
+        "max_drawdown": 50.0,
+        "profit_factor": 10.28
+      },
+      "test_metrics": {
+        "total_trades": 168,
+        "wins": 144,
+        "losses": 24,
+        "winrate": 85.71,
+        "avg_pnl": 35.0893,
+        "total_pnl": 5895.0,
+        "max_drawdown": 50.0,
+        "profit_factor": 10.508
+      },
+      "delta_metrics": {
+        "winrate_change": 0.59,
+        "avg_pnl_change": 0.5655,
+        "drawdown_change": 0.0,
+        "trade_count_change": 0,
+        "pnl_degraded": false,
+        "winrate_degraded": false
+      },
+      "train_pattern_expectancy": {
+        "ENGULFING_BULLISH": {
+          "trades": 164,
+          "winrate": 84.76,
+          "avg_pnl": 34.1463,
+          "total_pnl": 5600.0
+        },
+        "HAMMER": {
+          "trades": 4,
+          "winrate": 100.0,
+          "avg_pnl": 50.0,
+          "total_pnl": 200.0
+        }
+      },
+      "test_pattern_expectancy": {
+        "ENGULFING_BULLISH": {
+          "trades": 163,
+          "winrate": 85.28,
+          "avg_pnl": 34.6319,
+          "total_pnl": 5645.0
+        },
+        "HAMMER": {
+          "trades": 5,
+          "winrate": 100.0,
+          "avg_pnl": 50.0,
+          "total_pnl": 250.0
+        }
+      },
+      "pattern_deltas": {
+        "HAMMER": {
+          "train_avg_pnl": 50.0,
+          "test_avg_pnl": 50.0,
+          "pnl_change": 0.0,
+          "train_winrate": 100.0,
+          "test_winrate": 100.0,
+          "winrate_change": 0.0,
+          "train_trades": 4,
+          "test_trades": 5
+        },
+        "ENGULFING_BULLISH": {
+          "train_avg_pnl": 34.1463,
+          "test_avg_pnl": 34.6319,
+          "pnl_change": 0.4856,
+          "train_winrate": 84.76,
+          "test_winrate": 85.28,
+          "winrate_change": 0.52,
+          "train_trades": 164,
+          "test_trades": 163
+        }
+      }
+    }
+  ],
+  "pattern_stability": [
+    {
+      "pattern": "HAMMER",
+      "stability_score": 100,
+      "windows_observed": 4,
+      "direction_consistency": 100.0,
+      "mean_avg_pnl": 50.0,
+      "variance_pnl": 0.0,
+      "mean_winrate": 100.0,
+      "variance_winrate": 0.0,
+      "regime_sensitivity": "low",
+      "avg_trades_per_window": 4.8,
+      "all_windows_profitable": true,
+      "worst_window_pnl": 50.0,
+      "best_window_pnl": 50.0
+    },
+    {
+      "pattern": "ENGULFING_BULLISH",
+      "stability_score": 99,
+      "windows_observed": 4,
+      "direction_consistency": 100.0,
+      "mean_avg_pnl": 34.6562,
+      "variance_pnl": 0.213858,
+      "mean_winrate": 85.15,
+      "variance_winrate": 0.0507,
+      "regime_sensitivity": "low",
+      "avg_trades_per_window": 163.2,
+      "all_windows_profitable": true,
+      "worst_window_pnl": 34.1463,
+      "best_window_pnl": 35.3988
+    }
+  ],
+  "overall_summary": {
+    "total_windows": 4,
+    "degradation_windows": 2,
+    "overall_edge_decay": false,
+    "pnl_trend": "declining",
+    "most_stable_patterns": [
+      {
+        "pattern": "HAMMER",
+        "score": 100,
+        "regime_sensitivity": "low"
+      },
+      {
+        "pattern": "ENGULFING_BULLISH",
+        "score": 99,
+        "regime_sensitivity": "low"
+      }
+    ],
+    "least_stable_patterns": [],
+    "summary_text": "Edge appears stable \u2014 2/4 windows maintain or improve performance. 2/2 patterns show high stability (score >= 70)."
+  }
+}

@@ -69,10 +69,14 @@ def _render(data: CockpitData) -> str:
 
 <nav>
 <button class="nav-btn active" onclick="showSection('overview')">Overview</button>
-<button class="nav-btn" onclick="showSection('angles')">Four Angles</button>
+<button class="nav-btn" onclick="showSection('universes')">Universes</button>
 <button class="nav-btn" onclick="showSection('questions')">Questions</button>
+<button class="nav-btn" onclick="showSection('discovery')">Discovery</button>
+<button class="nav-btn" onclick="showSection('candidates')">Candidates</button>
+<button class="nav-btn" onclick="showSection('shadow_reality')">Shadow↔Reality</button>
 <button class="nav-btn" onclick="showSection('runs')">Run History</button>
 <button class="nav-btn" onclick="showSection('health')">Health</button>
+<button class="nav-btn" onclick="showSection('prop_readiness')">Prop Readiness</button>
 <button class="nav-btn" onclick="showSection('development')">Development</button>
 </nav>
 
@@ -93,20 +97,24 @@ def _render(data: CockpitData) -> str:
 <div class="cards">
 <div class="card"><div class="num">{data.total_questions}</div><div class="lbl">Total Questions</div></div>
 <div class="card"><div class="num">{data.total_gaps}</div><div class="lbl">Research Gaps</div></div>
-<div class="card"><div class="num">{data.candidate_questions}</div><div class="lbl">Candidates</div></div>
+<div class="card"><div class="num">{data.candidates_total}</div><div class="lbl">Candidates</div></div>
 <div class="card"><div class="num">{len(data.run_history)}</div><div class="lbl">Runs</div></div>
 </div>
+<h3>Research Cycle Engine</h3>
+<div class="cards">
+<div class="card"><div class="num">{data.cycle_total}</div><div class="lbl">Research Cycles</div></div>
+<div class="card"><div class="num">{data.triggers_eligible}</div><div class="lbl">Triggers Eligible</div></div>
+<div class="card"><div class="num">{data.hypotheses_total}</div><div class="lbl">Hypotheses</div></div>
+<div class="card"><div class="num">{data.sr_matched}</div><div class="lbl">Shadow↔Real Pairs</div></div>
+</div>
+<p class="meta">Last cycle: {data.cycle_last_timestamp[:19] if data.cycle_last_timestamp else 'never'} | Status: {data.cycle_last_status} | Triggers: {data.cycle_last_triggers} | Investigated: {data.cycle_last_investigated}</p>
 {_render_universes(data)}
 </section>
 
-<!-- FOUR ANGLES -->
-<section id="angles" class="section">
-<h2>Four-Angle Research View</h2>
-{_render_angle("Execution", data.execution_questions)}
-{_render_angle("Decision", data.decision_questions)}
-{_render_angle("Market", data.market_questions)}
-{_render_angle("Strategy", data.strategy_questions)}
-{_render_angle("Cross-Angle", data.cross_angle_questions)}
+<!-- UNIVERSES -->
+<section id="universes" class="section">
+<h2>Research Universes</h2>
+{_render_universes_section(data)}
 </section>
 
 <!-- QUESTIONS -->
@@ -119,11 +127,29 @@ def _render(data: CockpitData) -> str:
 <button onclick="filterByStatus('BLOCKED')">Blocked</button>
 </div>
 <table id="questions-table">
-<thead><tr><th>ID</th><th>Title</th><th>Angles</th><th>Status</th><th>Outcome</th><th>Confidence</th><th>Sample</th></tr></thead>
+<thead><tr><th>ID</th><th>Title</th><th>Universes</th><th>Status</th><th>Outcome</th><th>Confidence</th><th>Sample</th></tr></thead>
 <tbody>
 {_render_question_rows(data.all_questions)}
 </tbody>
 </table>
+</section>
+
+<!-- DISCOVERY -->
+<section id="discovery" class="section">
+<h2>Autonomous Discovery</h2>
+{_render_discovery(data)}
+</section>
+
+<!-- CANDIDATES -->
+<section id="candidates" class="section">
+<h2>Optimisation Candidates</h2>
+{_render_candidates(data)}
+</section>
+
+<!-- SHADOW ↔ REALITY -->
+<section id="shadow_reality" class="section">
+<h2>Shadow ↔ Reality</h2>
+{_render_shadow_reality(data)}
 </section>
 
 <!-- RUN HISTORY -->
@@ -143,6 +169,12 @@ def _render(data: CockpitData) -> str:
 {_render_health(data)}
 <h3>Correlation Health</h3>
 {_render_correlation(data)}
+</section>
+
+<!-- PROP READINESS -->
+<section id="prop_readiness" class="section">
+<h2>Prop-Firm Readiness Gate</h2>
+{_render_prop_readiness(data)}
 </section>
 
 <!-- DEVELOPMENT -->
@@ -175,6 +207,7 @@ def _render_universes(data: CockpitData) -> str:
 
 
 def _render_angle(title: str, questions: list) -> str:
+    """Render a question group (used internally by universes section)."""
     if not questions:
         return f"<h3>{title} (0 questions)</h3>"
     rows = "".join(
@@ -182,6 +215,71 @@ def _render_angle(title: str, questions: list) -> str:
         for q in questions
     )
     return f"<h3>{title} ({len(questions)} questions)</h3><table><thead><tr><th>ID</th><th>Title</th><th>Status</th><th>Outcome</th><th>Confidence</th></tr></thead><tbody>{rows}</tbody></table>"
+
+
+def _render_universes_section(data: CockpitData) -> str:
+    """Render the full 3-state 8-universe architecture view."""
+    parts = []
+
+    # 3-state structure definitions
+    _UNIVERSE_MAP = {
+        "PRIMARY RESEARCH": [
+            ("EXECUTION", "Trade execution outcomes and lifecycle", data.execution_questions),
+            ("DECISION", "Decision pipeline reasoning and arbitration", data.decision_questions),
+            ("MARKET", "Market regime, phase, volatility, session", data.market_questions),
+            ("STRATEGY", "Strategy selection, family, pattern behaviour", data.strategy_questions),
+        ],
+        "RISK / OUTCOME": [
+            ("RISK", "Risk gate decisions and position sizing", [q for q in data.all_questions if "RISK" in q.angles]),
+            ("OUTCOME", "Realised trade outcomes (derived from Execution)", [q for q in data.all_questions if "OUTCOME" in q.angles]),
+        ],
+        "SHADOW RESEARCH": [
+            ("SHADOW_OUTCOME", "Counterfactual shadow simulation outcomes", [q for q in data.all_questions if "SHADOW_OUTCOME" in q.angles]),
+            ("SHADOW_REALITY", "Shadow prediction vs realised outcome comparison", [q for q in data.all_questions if "SHADOW_REALITY" in q.angles]),
+        ],
+    }
+
+    for state_name, universes in _UNIVERSE_MAP.items():
+        parts.append(f"<h3>{state_name}</h3>")
+        for uni_name, description, questions in universes:
+            q_count = len(questions)
+            if q_count == 0:
+                status_class = "st-blocked"
+                status_label = "UNRESEARCHED"
+            else:
+                ready = sum(1 for q in questions if q.status == "COMPLETE")
+                if ready == q_count:
+                    status_class = "st-complete"
+                    status_label = f"{ready}/{q_count} COMPLETE"
+                elif ready > 0:
+                    status_class = "st-inconclusive"
+                    status_label = f"{ready}/{q_count} COMPLETE"
+                else:
+                    status_class = "st-not_run"
+                    status_label = f"0/{q_count} COMPLETE"
+
+            parts.append(f"""<div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 16px;margin:8px 0">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div><strong>{uni_name}</strong> <span style="color:#8b949e;font-size:12px">— {description}</span></div>
+<div><span class="{status_class}" style="font-weight:600">{status_label}</span></div>
+</div>
+<div style="margin-top:6px;font-size:12px;color:#8b949e">Questions: {q_count} | IDs: {', '.join(q.question_id for q in questions[:8])}{'...' if q_count > 8 else ''}</div>
+</div>""")
+
+            if q_count == 0:
+                parts.append(f'<p style="color:#f85149;font-size:13px;margin:4px 0 12px 16px">No research questions target this universe. Research coverage gap.</p>')
+
+    # Cross-universe questions
+    cross = data.cross_angle_questions
+    if cross:
+        parts.append(f"<h3>CROSS-UNIVERSE ({len(cross)} questions)</h3>")
+        rows = "".join(
+            f"<tr><td>{q.question_id}</td><td>{q.title}</td><td>{', '.join(q.angles)}</td><td class='st-{q.status.lower()}'>{q.status}</td></tr>"
+            for q in cross
+        )
+        parts.append(f"<table><thead><tr><th>ID</th><th>Title</th><th>Universes</th><th>Status</th></tr></thead><tbody>{rows}</tbody></table>")
+
+    return "\n".join(parts)
 
 
 def _render_question_rows(questions: list) -> str:
@@ -236,11 +334,158 @@ def _render_changes(data: CockpitData) -> str:
     return f"<h3>Finding Changes</h3><table><thead><tr><th>Question</th><th>Title</th><th>Change</th></tr></thead><tbody>{rows}</tbody></table>"
 
 
+def _render_discovery(data: CockpitData) -> str:
+    """Render the Discovery section: triggers, investigations, knowledge."""
+    parts = []
+
+    # Cycle engine status
+    parts.append(f"""<h3>Research Cycle Engine</h3>
+<table><tbody>
+<tr><td>Total cycles</td><td>{data.cycle_total}</td></tr>
+<tr><td>Last cycle</td><td>{data.cycle_last_id}</td></tr>
+<tr><td>Last timestamp</td><td>{data.cycle_last_timestamp[:19] if data.cycle_last_timestamp else 'never'}</td></tr>
+<tr><td>Status</td><td>{data.cycle_last_status}</td></tr>
+<tr><td>Triggers detected (last)</td><td>{data.cycle_last_triggers}</td></tr>
+<tr><td>Investigated (last)</td><td>{data.cycle_last_investigated}</td></tr>
+</tbody></table>""")
+
+    # Triggers
+    parts.append(f"""<h3>Finding Triggers</h3>
+<div class="cards">
+<div class="card"><div class="num">{data.triggers_total}</div><div class="lbl">Total</div></div>
+<div class="card complete"><div class="num">{data.triggers_eligible}</div><div class="lbl">Eligible</div></div>
+<div class="card inconclusive"><div class="num">{data.triggers_dismissed}</div><div class="lbl">Dismissed</div></div>
+<div class="card"><div class="num">{data.triggers_investigated}</div><div class="lbl">Investigated</div></div>
+</div>""")
+
+    if data.triggers:
+        rows = "".join(
+            f"<tr><td>{t['trigger_id'][:20]}</td><td>{t['title']}</td><td>{t['category']}</td><td>{t['status']}</td><td>{t['sample_size']}</td></tr>"
+            for t in data.triggers[:20]
+        )
+        parts.append(f"<table><thead><tr><th>ID</th><th>Title</th><th>Category</th><th>Status</th><th>N</th></tr></thead><tbody>{rows}</tbody></table>")
+
+    # Knowledge / Findings
+    if data.knowledge_findings:
+        parts.append("<h3>Research Findings (Knowledge Map)</h3>")
+        rows = "".join(
+            f"<tr><td>{f['hypothesis_id'][:15]}</td><td>{f['title']}</td><td class='st-{f['conclusion'].lower()}'>{f['conclusion']}</td><td>{f['confidence']}</td><td>{f['mean_r']:+.4f}</td><td>{f['n']}</td></tr>"
+            for f in data.knowledge_findings
+        )
+        parts.append(f"<table><thead><tr><th>Hypothesis</th><th>Title</th><th>Conclusion</th><th>Confidence</th><th>Mean R</th><th>N</th></tr></thead><tbody>{rows}</tbody></table>")
+    else:
+        parts.append("<p>No lifecycle findings yet.</p>")
+
+    return "\n".join(parts)
+
+
+def _render_candidates(data: CockpitData) -> str:
+    """Render the Candidates section."""
+    parts = []
+
+    parts.append(f"""<div class="cards">
+<div class="card"><div class="num">{data.candidates_total}</div><div class="lbl">Total Candidates</div></div>
+</div>""")
+
+    if data.candidates:
+        rows = "".join(
+            f"<tr><td>{c['candidate_id']}</td><td>{c['status']}</td><td>{c['type']}</td><td>{c['risk_level']}</td><td>{c['created_at']}</td><td>{c['description']}</td><td>{c['validations']}</td></tr>"
+            for c in data.candidates
+        )
+        parts.append(f"""<table><thead><tr><th>ID</th><th>Status</th><th>Type</th><th>Risk</th><th>Created</th><th>Description</th><th>Validations</th></tr></thead><tbody>{rows}</tbody></table>""")
+
+        # Explain shadow-testability
+        parts.append("""<h3>Shadow-Testable Types</h3>
+<p>Candidates with these types can be prospectively shadow-tested: <strong>direction_inversion, geometry_modification, regime_conditioning, symbol_exclusion</strong></p>
+<p>Candidates with these types require manual review (not shadow-testable): <em>pattern_weighting, score_recalibration, research_recommendation</em></p>""")
+    else:
+        parts.append("<p>No optimisation candidates registered.</p>")
+
+    return "\n".join(parts)
+
+
+def _render_shadow_reality(data: CockpitData) -> str:
+    """Render the Shadow↔Reality section."""
+    parts = []
+
+    parts.append(f"""<div class="cards">
+<div class="card complete"><div class="num">{data.sr_matched}</div><div class="lbl">Matched Pairs</div></div>
+<div class="card inconclusive"><div class="num">{data.sr_shadow_only}</div><div class="lbl">Shadow Only</div></div>
+<div class="card blocked"><div class="num">{data.sr_real_only}</div><div class="lbl">Real Only</div></div>
+</div>""")
+
+    stats = data.sr_stats
+    if stats and stats.get("n", 0) > 0:
+        parts.append(f"""<h3>Comparison Statistics (N={stats['n']})</h3>
+<table><tbody>
+<tr><td>Mean delta R (shadow - real)</td><td><strong>{stats.get('mean_delta_r', 0):+.4f}</strong></td></tr>
+<tr><td>Median delta R</td><td>{stats.get('median_delta_r', 0):+.4f}</td></tr>
+<tr><td>Std delta R</td><td>{stats.get('std_delta_r', 0):.4f}</td></tr>
+<tr><td>Min / Max</td><td>{stats.get('min_delta_r', 0):+.4f} / {stats.get('max_delta_r', 0):+.4f}</td></tr>
+<tr><td>Shadow predicted better</td><td>{stats.get('shadow_better_count', 0)}</td></tr>
+<tr><td>Real outperformed shadow</td><td>{stats.get('real_better_count', 0)}</td></tr>
+<tr><td>Exit reason agreement</td><td>{stats.get('exit_reason_match_rate', 0):.0%}</td></tr>
+<tr><td>Geometry agreement</td><td>{stats.get('geometry_match_rate', 0):.0%}</td></tr>
+<tr><td>Mean entry slippage</td><td>{stats.get('mean_entry_slippage', 0):.6f}</td></tr>
+</tbody></table>
+<p class="meta">delta_r = shadow_r - realised_gross_r. Negative means shadow underestimates real performance. This is an observed divergence, not a causal attribution.</p>""")
+    else:
+        parts.append("<p>Insufficient matched pairs for comparison statistics.</p>")
+
+    return "\n".join(parts)
+
+
+def _render_prop_readiness(data: CockpitData) -> str:
+    """Render the Prop Readiness Gate section."""
+    status = data.prop_readiness_status or "UNKNOWN"
+    if status == "READY":
+        status_class = "st-complete"
+    elif status == "NOT_READY":
+        status_class = "st-blocked"
+    else:
+        status_class = "st-inconclusive"
+
+    parts = []
+    parts.append(f'<div class="cards"><div class="card {status_class.replace("st-","")}">'
+                 f'<div class="num" style="font-size:20px">{status}</div><div class="lbl">Readiness Status</div></div></div>')
+
+    # Evidence table
+    parts.append("""<h3>Evidence Requirements</h3><table>
+<thead><tr><th>Requirement</th><th>Threshold</th><th>Current</th><th>Status</th></tr></thead><tbody>""")
+
+    # Realised expectancy
+    exp = data.prop_realised_expectancy
+    exp_str = f"{exp:+.4f}R (N={data.prop_realised_n})" if exp is not None else "NOT COMPUTED"
+    exp_status = "st-complete" if (exp is not None and exp > 0) else "st-blocked"
+    parts.append(f"<tr><td>Positive realised expectancy</td><td>R &gt; 0</td><td>{exp_str}</td><td class='{exp_status}'>{'PASS' if exp and exp > 0 else 'FAIL'}</td></tr>")
+
+    # Shadow calibration
+    sr_str = f"{data.prop_shadow_calibration_n}/50 pairs"
+    sr_status = "st-complete" if data.prop_shadow_calibration_ok else "st-inconclusive"
+    parts.append(f"<tr><td>Shadow model calibrated</td><td>N &ge; 50 matched pairs</td><td>{sr_str}</td><td class='{sr_status}'>{'PASS' if data.prop_shadow_calibration_ok else 'PENDING'}</td></tr>")
+
+    # Research running
+    cycle_ok = data.cycle_total >= 1
+    parts.append(f"<tr><td>Research engine active</td><td>&ge; 1 cycle</td><td>{data.cycle_total} cycles</td><td class='{'st-complete' if cycle_ok else 'st-blocked'}'>{'PASS' if cycle_ok else 'FAIL'}</td></tr>")
+
+    parts.append("</tbody></table>")
+
+    # Reasons blocking
+    if data.prop_readiness_reasons:
+        parts.append("<h3>Blocking Reasons</h3><ul>")
+        for r in data.prop_readiness_reasons:
+            parts.append(f"<li>{r}</li>")
+        parts.append("</ul>")
+
+    parts.append('<p class="meta">This is an evidence assessment, not financial advice. Prop-firm deployment remains a human decision.</p>')
+    return "\n".join(parts)
+
+
 def _q_to_dict(q) -> dict:
     return {
         "id": q.question_id, "title": q.title, "status": q.status,
         "outcome": q.outcome, "confidence": q.confidence,
-        "angles": q.angles, "conclusion": q.conclusion,
+        "universes": q.angles, "conclusion": q.conclusion,
     }
 
 

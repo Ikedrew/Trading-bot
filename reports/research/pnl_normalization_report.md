@@ -1,6 +1,6 @@
 # V10 PnL Normalisation Report
 
-Generated: 2026-08-09T00:10:49.712757+00:00
+Generated: 2026-08-14T13:03:20.626121+00:00
 **Status: PASS**
 
 ## Canonical PnL Definition

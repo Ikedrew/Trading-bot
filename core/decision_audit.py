@@ -282,6 +282,7 @@ def persist_decision_audit(
     runtime_mode: str,
     risk_rejection: Any | None = None,
     entity_id: str = "",
+    observation_id: str = "",
     strategy_ts_utc_ms: int = 0,
 ) -> str:
     """
@@ -316,6 +317,8 @@ def persist_decision_audit(
         record["decision_id"] = _decision_id
         if entity_id:
             record["entity_id"] = entity_id
+        if observation_id:
+            record["observation_id"] = observation_id
         if strategy_ts_utc_ms:
             record["strategy_ts_utc_ms"] = strategy_ts_utc_ms
 
@@ -357,6 +360,7 @@ def persist_new_engine_decision_audit(
     closed_i: int,
     correlation_id: str = "",
     entity_id: str = "",
+    observation_id: str = "",
     strategy_ts_utc_ms: int = 0,
     runtime_session_id: str = "",
 ) -> str:
@@ -379,6 +383,7 @@ def persist_new_engine_decision_audit(
         closed_i: Index of last closed bar
         correlation_id: Decision spine correlation ID
         entity_id: Entity ID for causal linkage
+        observation_id: Canonical V10 opportunity identity
         strategy_ts_utc_ms: Strategy trace timestamp for linkage
 
     Returns:
@@ -467,6 +472,7 @@ def persist_new_engine_decision_audit(
             "decision_id": _decision_id,
             "correlation_id": correlation_id,
             "entity_id": entity_id,
+            "observation_id": observation_id,
             "strategy_ts_utc_ms": strategy_ts_utc_ms,
             "runtime_session_id": runtime_session_id,
         }

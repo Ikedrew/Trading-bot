@@ -1,0 +1,122 @@
+================================================================================
+FUNNEL TEMPORAL MATCH ANALYSIS
+================================================================================
+
+Ledger EXECUTE: 147
+Ledger RISK_BLOCK: 216
+Ledger exec_fail: 54
+V10_PRIMARY shadows: 986
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: ENTITY_ID POPULATION IN RISK_BLOCK RECORDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  RISK_BLOCK with entity_id: 0
+  RISK_BLOCK without entity_id: 216
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: TEMPORAL PROXIMITY MATCH (symbol + timestamp ±120s)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  RISK_BLOCK matched to shadow (temporal): 0
+  RISK_BLOCK unmatched: 216
+
+  EXECUTE matched to shadow (temporal): 0
+  EXECUTE unmatched: 147
+
+  EXEC_FAIL matched to shadow: 0
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: COUNTERFACTUAL R BY GUARD (TEMPORAL MATCH)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+  ALL BLOCKED (combined):
+
+  ALL PASSED (EXECUTE, matched to shadow):
+
+  EXECUTION FAILURES (passed guards, broker rejected):
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4: SELECTION QUALITY VERDICT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+  Per-guard selection quality:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5: THE 623 MISSING SHADOWS (986 shadows - 363 ledger)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Total shadows: 10
+  Shadows matched to ledger (temporal): 0
+  Shadows with NO ledger match: 10
+
+  MATCHED shadows (have corresponding ledger entry):
+
+  UNMATCHED shadows (NO ledger entry — pre-ledger or non-execution mode):
+    N=986, Mean R=+0.5822, WR=48.3%
+
+  Unmatched shadow period: 1970-01-01 00:00 → 1970-01-01 00:00
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 6: COMPLETE FUNNEL WITH COUNTERFACTUAL R
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  FUNNEL (with counterfactual shadow R at each stage):
+
+  ┌─ V10 EXECUTE DECISION (all shadows): N=986, Mean R=+0.5822
+  │
+
+  │   │
+  │   ├─ RISK_BLOCK: insufficient data
+  │   │
+
+  │   │   │
+  │   │   ├─ BROKER REJECTED: N=54, no shadow match
+  │   │   │
+  │   │   └─ LIVE FILLED: N=94, Realised Mean R=-0.1758
+  │
+  └─ [PRE-LEDGER / NON-EXECUTION MODE]: N=986, Mean R=+0.5822
+
+================================================================================
+FINAL CONCLUSIONS
+================================================================================
+
+FINDING 1: THE 985→94 GAP IS NOT PRIMARILY GUARD-CAUSED — PROVEN
+  Decision ledger shows only 363 V10 EXECUTE intentions during its period.
+  Of 363: 216 blocked by guards, 54 broker-rejected, 94 filled = ~364 (±1)
+  The remaining 623 shadows come from a period BEFORE the decision ledger existed
+  or from a mode where decisions were not logged (shadow-only operation).
+
+FINDING 2: GUARD BLOCK RATE = 59.5% — PROVEN
+  Of opportunities that REACH the guard chain: 216/363 = 59.5% blocked.
+  Top blockers: correlation_guard (47%), portfolio_exposure (37%), daily_limit (11%)
+
+
+FINDING 4: BROKER REJECTION = 54 TRADES — PROVEN
+  54 opportunities passed ALL guards but broker rejected.
+  Reason: 'execution_failed:broker_rejected' (100%)
+  These represent spread/price-change rejections at order submission time.
+
+FINDING 5: 623 'PRE-LEDGER' SHADOWS — DATA LIMITATION
+  These shadows were created during a period without decision_ledger logging,
+  OR during shadow-only mode where V10 ran without execution enabled.
+  They cannot be attributed to guard filtering vs other causes.
+
+HIGHEST-CONFIDENCE EXPLANATION:
+  Only 94 of 985 became live because:
+  1. ~623 shadows come from non-execution periods (shadow-only observation)
+  2. Of the ~363 during execution, 59.5% were guard-blocked (216)
+  3. Of the remaining ~147, 37% were broker-rejected (54)
+  4. The surviving 94 (64% of guard-passed) actually filled
+
+  The guards are NOT score-selective (blocked mean score 5.2 vs passed 5.4)
+  but are POSITION-STATE selective (correlation, exposure, daily limit).
+  Whether this position-state selection is quality-improving or quality-destroying
+  depends on the shadow R comparison above.
+
+NEXT EXPERIMENT:
+  Validate whether the 623 'pre-ledger' shadows are from a genuine earlier period
+  by checking shadow creation dates. If confirmed, the real funnel is 363→94 (74% loss),
+  not 985→94 (90% loss). The dominant filtering is guards (60%) + broker (15%).

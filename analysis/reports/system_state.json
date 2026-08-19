@@ -1,0 +1,87 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-06-30T22:08:46Z",
+  "active_state": {
+    "ruleset": "compressed",
+    "rule_count": 2,
+    "confidence": 69,
+    "confidence_grade": "B",
+    "risk_state": "STABLE",
+    "decision": "SHADOW_MODE",
+    "decision_mode": "SKIP",
+    "conflict_status": "warning",
+    "drift_score": 4,
+    "robustness_score": 86
+  },
+  "validation": {
+    "walk_forward_valid": true,
+    "shadow_positive": true,
+    "compression_valid": true,
+    "stress_test_passed": true,
+    "experiment_status": "inconclusive"
+  },
+  "health": {
+    "system_operational": true,
+    "edge_preserved": true,
+    "regime_safe": true,
+    "drift_safe": true,
+    "rules_coherent": false
+  },
+  "sources": {
+    "rule_compression": {
+      "available": true,
+      "path": "analysis/reports/rule_compression.json",
+      "last_generated": "2026-06-30T21:56:23Z"
+    },
+    "confidence_score": {
+      "available": true,
+      "path": "analysis/reports/confidence_score.json",
+      "last_generated": "2026-06-30T22:08:44Z"
+    },
+    "orchestrator": {
+      "available": true,
+      "path": "analysis/reports/trading_decision.json",
+      "last_generated": "2026-06-30T21:57:55Z"
+    },
+    "walk_forward": {
+      "available": true,
+      "path": "analysis/reports/walk_forward.json",
+      "last_generated": "2026-06-30T22:08:44Z"
+    },
+    "shadow_execution": {
+      "available": true,
+      "path": "analysis/reports/shadow_execution.json",
+      "last_generated": "2026-06-30T22:08:45Z"
+    },
+    "stress_test": {
+      "available": true,
+      "path": "analysis/reports/regime_stress_test.json",
+      "last_generated": "2026-06-30T22:08:45Z"
+    },
+    "drift_monitor": {
+      "available": true,
+      "path": "analysis/reports/drift_monitor.json",
+      "last_generated": "unknown"
+    },
+    "compression_validation": {
+      "available": true,
+      "path": "analysis/reports/compression_validation.json",
+      "last_generated": "2026-06-30T20:55:09Z"
+    },
+    "experiment": {
+      "available": true,
+      "path": "analysis/reports/experiment_result.json",
+      "last_generated": "2026-06-30T21:34:32Z"
+    },
+    "edge_optimiser": {
+      "available": true,
+      "path": "analysis/reports/edge_optimiser.json",
+      "last_generated": "2026-06-30T21:21:31Z"
+    },
+    "rule_interactions": {
+      "available": true,
+      "path": "analysis/reports/rule_interactions.json",
+      "last_generated": "2026-06-30T20:30:06Z"
+    }
+  }
+}

@@ -150,7 +150,20 @@ class TestDecisionRecordLineage:
         result = _run_pipeline()
         entry = build_v10_ledger_entry(result)
         assert entry["correlation_id"] == result.opportunity.observation_id
+        assert entry["observation_id"] == result.opportunity.observation_id
+
+    def test_ledger_entry_preserves_entity_id(self):
+        """entity_id is preserved as-is; observation_id is added alongside as a separate field."""
+        from core.v10.persistence_adapter import build_v10_ledger_entry
+        result = _run_pipeline()
+        entry = build_v10_ledger_entry(result)
+        # entity_id is preserved unchanged (same value as before this pass)
         assert entry["entity_id"] == result.opportunity.observation_id
+        # observation_id is added alongside as a separate field
+        assert entry["observation_id"] == result.opportunity.observation_id
+        # Both fields exist in the entry
+        assert "entity_id" in entry
+        assert "observation_id" in entry
 
 
 class TestNoCompetingRoot:

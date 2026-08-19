@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "evaluated_at": "2026-06-30T22:08:46Z",
+    "events_evaluated": 22350,
+    "trades_in_window": 841
+  },
+  "regime_drift_score": 1,
+  "pattern_drift_score": 0,
+  "rule_drift_score": 0,
+  "stability_drift_score": 22,
+  "overall_drift_score": 4,
+  "risk_state": "STABLE",
+  "live_vs_expected_summary": {
+    "regime_changes": [],
+    "pattern_shifts": [],
+    "rule_effectiveness_changes": []
+  },
+  "system_action": {
+    "mode": "LIVE",
+    "reason": "All metrics within expected envelope. No action required."
+  },
+  "recommendation": "Continue normal operations."
+}

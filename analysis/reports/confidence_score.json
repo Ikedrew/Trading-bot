@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "generated_at": "2026-06-30T22:08:44Z",
+    "inputs": {
+      "walk_forward": "analysis/reports/walk_forward.json",
+      "shadow_execution": "analysis/reports/shadow_execution.json",
+      "rule_interactions": "analysis/reports/rule_interactions.json"
+    },
+    "subsystems_available": 3
+  },
+  "time_robustness": {
+    "score": 84,
+    "available": true,
+    "components": {
+      "avg_pattern_stability": 99.5,
+      "edge_persistence": 50.0,
+      "regime_consistency": 100.0
+    },
+    "edge_decay_detected": false,
+    "patterns_assessed": 2,
+    "windows_used": 4
+  },
+  "execution_value": {
+    "score": 90,
+    "available": true,
+    "components": {
+      "pnl_improvement_score": 75.4,
+      "loss_avoidance_efficiency": 100.0,
+      "divergence_moderation": 100
+    },
+    "pnl_delta": 3000.0,
+    "divergence_rate": 14.27,
+    "avoided_losses": 120,
+    "missed_opportunities": 0
+  },
+  "system_stability": {
+    "score": 18,
+    "available": true,
+    "components": {
+      "stack_stability": 30,
+      "conflict_stability": 0,
+      "redundancy_stability": 25.0
+    },
+    "instability_flag": false,
+    "conflict_count": 12,
+    "redundancy_clusters": 2
+  },
+  "overall_confidence": {
+    "score": 69,
+    "grade": "B",
+    "verdict": "SHADOW_EXTEND",
+    "reason": "Moderate confidence. Continue shadow testing to confirm stability before promotion.",
+    "weights_used": {
+      "time_robustness": 0.4,
+      "execution_value": 0.35,
+      "system_stability": 0.25
+    },
+    "subsystems_available": 3
+  }
+}

@@ -62,12 +62,20 @@ QUESTION_PARAMETERS: dict[str, dict[str, object]] = {
     },
 
     # ─── Decision Universe ─────────────────────────────────────────────────────
-    # D-004: Rejection Stage Analysis (analysis_type changed to SEGMENTATION)
-    # Hypothesis: Where are trades rejected?
-    # terminal_reason is categorical (97% coverage). Segmentation shows counts per stage.
+    # D-004: Rejection Stage Distribution (descriptive — no realised outcome)
+    # Segmentation by terminal_reason. Uses score as metric (available for ~97%
+    # of NO_TRADE records). Shows rejection count and mean score per stage.
+    # Counterfactual edge cost is handled by SD-004.
     "D-004": {
         "dimensions": ["terminal_reason"],
-        "metric_field": "r_multiple",
+        "metric_field": "score",
+    },
+    # D-003: Decision Threshold Effectiveness
+    # predictive_power: buckets by score, computes mean r_multiple per bucket.
+    # Tests whether higher score → higher R (monotonicity).
+    "D-003": {
+        "feature_field": "score",
+        "outcome_field": "r_multiple",
     },
     # D-007: Risk Gate Value
     # comparison should group by whether risk approved or rejected.
@@ -131,10 +139,12 @@ QUESTION_PARAMETERS: dict[str, dict[str, object]] = {
         "dimensions": ["regime"],
         "metric_field": "r_multiple",
     },
-    # DM-003: Rejection Rate by Market State — segment by regime
+    # DM-003: Rejection Rate by Market State — segment by regime AND action
+    # Produces cross-tabulated counts: regime × action (EXECUTE/NO_TRADE)
+    # allowing rejection rate per regime to be derived from counts.
     "DM-003": {
-        "dimensions": ["regime"],
-        "metric_field": "r_multiple",
+        "dimensions": ["regime", "action"],
+        "metric_field": "score",
     },
     # MS-001: Strategy x Regime — segment by both
     "MS-001": {
@@ -231,6 +241,31 @@ QUESTION_PARAMETERS: dict[str, dict[str, object]] = {
     "SD-007": {
         "dimensions": ["regime"],
         "metric_field": "r_multiple",
+    },
+
+    # ─── Shadow Reality Questions ─────────────────────────────────────────────
+    # SR-001: Shadow-Reality Divergence (distribution of delta_r)
+    "SR-001": {
+        "metric_field": "delta_r",
+    },
+    # SR-002: Entry Slippage Distribution
+    "SR-002": {
+        "metric_field": "entry_slippage",
+    },
+    # SR-003: Exit Reason Divergence (segment by shadow→real exit transition)
+    "SR-003": {
+        "dimensions": ["shadow_exit_reason"],
+        "metric_field": "delta_r",
+    },
+    # SR-004: Shadow-Reality by Pattern
+    "SR-004": {
+        "dimensions": ["pattern"],
+        "metric_field": "delta_r",
+    },
+    # SR-005: Shadow-Reality by Horizon
+    "SR-005": {
+        "dimensions": ["trade_horizon"],
+        "metric_field": "delta_r",
     },
 }
 

@@ -1,0 +1,139 @@
+{
+  "metadata": {
+    "generated_at": "2026-06-30T22:08:45Z",
+    "curated_dir": "events/curated",
+    "rules_path": "analysis/reports/rules_latest.json",
+    "total_trades": 841,
+    "rules_evaluated": 8
+  },
+  "baseline_results": {
+    "trades": 841,
+    "wins": 721,
+    "losses": 120,
+    "winrate": 85.73,
+    "avg_pnl": 35.1058,
+    "total_pnl": 29524.0
+  },
+  "shadow_results": {
+    "trades": 721,
+    "wins": 721,
+    "losses": 0,
+    "winrate": 100.0,
+    "avg_pnl": 45.1096,
+    "total_pnl": 32524.0
+  },
+  "divergence_metrics": {
+    "divergence_rate": 14.27,
+    "trades_diverged": 120,
+    "missed_opportunities": 0,
+    "avoided_losses": 120,
+    "total_blocked_pnl": -3000.0,
+    "avg_blocked_pnl": -25.0
+  },
+  "rule_impact_analysis": [
+    {
+      "rule_id": "failure_c8dc582b",
+      "rule_type": "TIGHTEN_GATE",
+      "target": "ENGULFING_BULLISH",
+      "trades_evaluated": 841,
+      "trades_affected": 120,
+      "trades_blocked": 120,
+      "losses_prevented": 120,
+      "winners_removed": 0,
+      "prevented_loss_pnl": 3000.0,
+      "removed_winner_pnl": 0.0,
+      "net_effect": 3000.0
+    },
+    {
+      "rule_id": "edge_fd782ec8",
+      "rule_type": "ADD_GATE",
+      "target": "HAMMER",
+      "trades_evaluated": 841,
+      "trades_affected": 24,
+      "trades_blocked": 0,
+      "losses_prevented": 0,
+      "winners_removed": 0,
+      "prevented_loss_pnl": 0.0,
+      "removed_winner_pnl": 0.0,
+      "net_effect": 0.0
+    },
+    {
+      "rule_id": "edge_6279c2cf",
+      "rule_type": "ADD_GATE",
+      "target": "HAMMER",
+      "trades_evaluated": 841,
+      "trades_affected": 24,
+      "trades_blocked": 0,
+      "losses_prevented": 0,
+      "winners_removed": 0,
+      "prevented_loss_pnl": 0.0,
+      "removed_winner_pnl": 0.0,
+      "net_effect": 0.0
+    },
+    {
+      "rule_id": "edge_cc3549e1",
+      "rule_type": "ADD_GATE",
+      "target": "HAMMER",
+      "trades_evaluated": 841,
+      "trades_affected": 24,
+      "trades_blocked": 0,
+      "losses_prevented": 0,
+      "winners_removed": 0,
+      "prevented_loss_pnl": 0.0,
+      "removed_winner_pnl": 0.0,
+      "net_effect": 0.0
+    },
+    {
+      "rule_id": "edge_004de379",
+      "rule_type": "LOOSEN_GATE",
+      "target": "HAMMER",
+      "trades_evaluated": 841,
+      "trades_affected": 24,
+      "trades_blocked": 0,
+      "losses_prevented": 0,
+      "winners_removed": 0,
+      "prevented_loss_pnl": 0.0,
+      "removed_winner_pnl": 0.0,
+      "net_effect": 0.0
+    },
+    {
+      "rule_id": "edge_065f45d3",
+      "rule_type": "LOOSEN_GATE",
+      "target": "HAMMER",
+      "trades_evaluated": 841,
+      "trades_affected": 24,
+      "trades_blocked": 0,
+      "losses_prevented": 0,
+      "winners_removed": 0,
+      "prevented_loss_pnl": 0.0,
+      "removed_winner_pnl": 0.0,
+      "net_effect": 0.0
+    },
+    {
+      "rule_id": "edge_dc96ebbc",
+      "rule_type": "LOOSEN_GATE",
+      "target": "HAMMER",
+      "trades_evaluated": 841,
+      "trades_affected": 24,
+      "trades_blocked": 0,
+      "losses_prevented": 0,
+      "winners_removed": 0,
+      "prevented_loss_pnl": 0.0,
+      "removed_winner_pnl": 0.0,
+      "net_effect": 0.0
+    },
+    {
+      "rule_id": "expectancy_loosen_9e2ca513",
+      "rule_type": "LOOSEN_GATE",
+      "target": "HAMMER",
+      "trades_evaluated": 841,
+      "trades_affected": 24,
+      "trades_blocked": 0,
+      "losses_prevented": 0,
+      "winners_removed": 0,
+      "prevented_loss_pnl": 0.0,
+      "removed_winner_pnl": 0.0,
+      "net_effect": 0.0
+    }
+  ]
+}

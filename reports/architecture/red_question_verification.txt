@@ -1,0 +1,68 @@
+============================================================
+RED QUESTION REMEDIATION VERIFICATION
+============================================================
+
+────────────────────────────────────────────────────────────
+D-004: Rejection Stage Distribution
+────────────────────────────────────────────────────────────
+  Title: Rejection Stage Distribution
+  Status: READY
+  Analysis type: segmentation
+  Required universes: ['DECISION']
+  Required populations: ['no_trade_decisions', 'rejected_at_opportunity', 'rejected_at_strategy', 'rejected_at_entry', 'rejected_at_risk', 'rejected_at_execution']
+  Required fields: ['terminal_stage', 'terminal_reason']
+  ✓ r_multiple NOT in required_fields
+  Primitive params: {'dimensions': ['terminal_reason'], 'metric_field': 'score'}
+  ✓ metric_field = 'score' (not r_multiple)
+  ✓ SD-004 still uses metric_field='r_multiple' for counterfactual edge cost
+  ✓ D-004 = descriptive topology; SD-004 = counterfactual edge cost
+  VERDICT: GREEN
+
+────────────────────────────────────────────────────────────
+D-007: Risk Gate Value
+────────────────────────────────────────────────────────────
+  Title: Risk Gate Value
+  Status: BLOCKED
+  ✓ Status is BLOCKED
+  Decision note: Should risk gates be tightened or relaxed? (BLOCKED: requires cross-side Live+Sh
+  VERDICT: BLOCKED (correctly prevented from execution)
+
+────────────────────────────────────────────────────────────
+ED-002: Missed Opportunity Cost (broken join)
+────────────────────────────────────────────────────────────
+  Title: Missed Opportunity Cost
+  Status: BLOCKED
+  ✓ Status is BLOCKED
+  Decision note: SUPERSEDED by SD-002. Original correlation_id join has ~0% match rate for NO_TRADE decisions. Use SD
+  ✓ SD-002 (canonical replacement) is READY
+  ✓ SD-002 uses SHADOW_OUTCOME + entity_id lineage (not correlation_id)
+  VERDICT: BLOCKED (superseded conceptually by SD-002)
+
+────────────────────────────────────────────────────────────
+GOVERNANCE: BLOCKED questions prevented from execution
+────────────────────────────────────────────────────────────
+  research.py cmd_run_question checks QuestionStatus.BLOCKED: CONFIRMED
+  BLOCKED questions print status and return without execution: CONFIRMED
+  ✓ D-007 cannot produce a misleading finding
+  ✓ ED-002 cannot attempt the broken correlation_id join
+
+============================================================
+FINAL CLASSIFICATION
+============================================================
+  D-004:  GREEN (descriptive, no r_multiple, SD-004 owns counterfactual)
+  D-007:  BLOCKED (insufficient variation, preserved for future)
+  ED-002: BLOCKED (superseded by SD-002, broken join prevented)
+
+  QUESTION BANK TOTALS:
+    READY:   43
+    PARTIAL: 5
+    BLOCKED: 3
+    TOTAL:   51
+
+  PREVIOUS RED: 3 (D-004, D-007, ED-002)
+  CURRENT RED:  0
+  D-004 → GREEN (descriptive question, valid metric)
+  D-007 → BLOCKED (governance prevents execution)
+  ED-002 → BLOCKED (governance prevents execution)
+
+ALL VERIFICATIONS PASS

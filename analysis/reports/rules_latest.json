@@ -1,0 +1,218 @@
+{
+  "metadata": {
+    "generated_at": "2026-06-30T20:07:14Z",
+    "source_report": "2026-06-30T20:02:21Z",
+    "total_trades_analysed": 841,
+    "candidates_generated": 8,
+    "rules_qualified": 8,
+    "rules_output": 8,
+    "thresholds": {
+      "min_sample_size": 10,
+      "min_edge_trades": 15,
+      "min_winrate_delta": 5.0,
+      "min_confidence": 25,
+      "max_rules": 10
+    }
+  },
+  "rules": [
+    {
+      "rule_id": "edge_fd782ec8",
+      "type": "ADD_GATE",
+      "target": "HAMMER",
+      "condition": "IF pattern == 'HAMMER': PRIORITISE WHEN context == [neutral]",
+      "expected_effect": "Prioritise HAMMER entries when HAMMER + neutral. Avg PnL 50.00 vs baseline 35.11. Winrate 100.0% vs 85.7% (24 trades).",
+      "expected_impact": 14.894199999999998,
+      "supporting_evidence": {
+        "source": "hidden_edge_detection",
+        "dimension": "pattern+regime",
+        "context": "HAMMER + neutral",
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "winrate": 100.0,
+        "baseline_winrate": 85.73,
+        "edge_winrate": 14.27,
+        "confidence_raw": 0.571
+      },
+      "risk_notes": "Edge detected over 24 trades. Sample size is moderate \u2014 monitor for stability. Edge may degrade in different market conditions or with regime changes. Recommend shadow-testing for 2+ weeks before live activation.",
+      "confidence_score": 57,
+      "priority_rank": 1
+    },
+    {
+      "rule_id": "edge_6279c2cf",
+      "type": "ADD_GATE",
+      "target": "HAMMER",
+      "condition": "IF pattern == 'HAMMER': PRIORITISE WHEN context == [neutral]",
+      "expected_effect": "Prioritise HAMMER entries when HAMMER + neutral. Avg PnL 50.00 vs baseline 35.11. Winrate 100.0% vs 85.7% (24 trades).",
+      "expected_impact": 14.894199999999998,
+      "supporting_evidence": {
+        "source": "hidden_edge_detection",
+        "dimension": "pattern+bias",
+        "context": "HAMMER + neutral",
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "winrate": 100.0,
+        "baseline_winrate": 85.73,
+        "edge_winrate": 14.27,
+        "confidence_raw": 0.571
+      },
+      "risk_notes": "Edge detected over 24 trades. Sample size is moderate \u2014 monitor for stability. Edge may degrade in different market conditions or with regime changes. Recommend shadow-testing for 2+ weeks before live activation.",
+      "confidence_score": 57,
+      "priority_rank": 2
+    },
+    {
+      "rule_id": "edge_cc3549e1",
+      "type": "ADD_GATE",
+      "target": "HAMMER",
+      "condition": "IF pattern == 'HAMMER': PRIORITISE WHEN context == [neutral, neutral]",
+      "expected_effect": "Prioritise HAMMER entries when HAMMER + neutral + neutral. Avg PnL 50.00 vs baseline 35.11. Winrate 100.0% vs 85.7% (24 trades).",
+      "expected_impact": 14.894199999999998,
+      "supporting_evidence": {
+        "source": "hidden_edge_detection",
+        "dimension": "pattern+regime+bias",
+        "context": "HAMMER + neutral + neutral",
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "winrate": 100.0,
+        "baseline_winrate": 85.73,
+        "edge_winrate": 14.27,
+        "confidence_raw": 0.571
+      },
+      "risk_notes": "Edge detected over 24 trades. Sample size is moderate \u2014 monitor for stability. Edge may degrade in different market conditions or with regime changes. Recommend shadow-testing for 2+ weeks before live activation.",
+      "confidence_score": 57,
+      "priority_rank": 3
+    },
+    {
+      "rule_id": "edge_004de379",
+      "type": "LOOSEN_GATE",
+      "target": "HAMMER",
+      "condition": "IF pattern == 'HAMMER' AND context == [False]: ALLOW with reduced confluence threshold",
+      "expected_effect": "Loosen entry requirements for HAMMER in context [HAMMER + False]. This subset shows 100.0% winrate vs 85.7% baseline (+14.3pp edge) over 24 trades.",
+      "expected_impact": 14.894199999999998,
+      "supporting_evidence": {
+        "source": "hidden_edge_detection",
+        "dimension": "pattern+liquidity",
+        "context": "HAMMER + False",
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "winrate": 100.0,
+        "baseline_winrate": 85.73,
+        "edge_winrate": 14.27,
+        "confidence_raw": 0.571
+      },
+      "risk_notes": "Edge detected over 24 trades. Sample size is moderate \u2014 monitor for stability. Edge may degrade in different market conditions or with regime changes. Recommend shadow-testing for 2+ weeks before live activation.",
+      "confidence_score": 57,
+      "priority_rank": 4
+    },
+    {
+      "rule_id": "edge_065f45d3",
+      "type": "LOOSEN_GATE",
+      "target": "HAMMER",
+      "condition": "IF pattern == 'HAMMER' AND context == [False]: ALLOW with reduced confluence threshold",
+      "expected_effect": "Loosen entry requirements for HAMMER in context [HAMMER + False]. This subset shows 100.0% winrate vs 85.7% baseline (+14.3pp edge) over 24 trades.",
+      "expected_impact": 14.894199999999998,
+      "supporting_evidence": {
+        "source": "hidden_edge_detection",
+        "dimension": "pattern+bos",
+        "context": "HAMMER + False",
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "winrate": 100.0,
+        "baseline_winrate": 85.73,
+        "edge_winrate": 14.27,
+        "confidence_raw": 0.571
+      },
+      "risk_notes": "Edge detected over 24 trades. Sample size is moderate \u2014 monitor for stability. Edge may degrade in different market conditions or with regime changes. Recommend shadow-testing for 2+ weeks before live activation.",
+      "confidence_score": 57,
+      "priority_rank": 5
+    },
+    {
+      "rule_id": "edge_dc96ebbc",
+      "type": "LOOSEN_GATE",
+      "target": "HAMMER",
+      "condition": "IF pattern == 'HAMMER' AND context == [neutral, False]: ALLOW with reduced confluence threshold",
+      "expected_effect": "Loosen entry requirements for HAMMER in context [HAMMER + neutral + False]. This subset shows 100.0% winrate vs 85.7% baseline (+14.3pp edge) over 24 trades.",
+      "expected_impact": 14.894199999999998,
+      "supporting_evidence": {
+        "source": "hidden_edge_detection",
+        "dimension": "pattern+regime+liquidity",
+        "context": "HAMMER + neutral + False",
+        "trades": 24,
+        "avg_pnl": 50.0,
+        "winrate": 100.0,
+        "baseline_winrate": 85.73,
+        "edge_winrate": 14.27,
+        "confidence_raw": 0.571
+      },
+      "risk_notes": "Edge detected over 24 trades. Sample size is moderate \u2014 monitor for stability. Edge may degrade in different market conditions or with regime changes. Recommend shadow-testing for 2+ weeks before live activation.",
+      "confidence_score": 57,
+      "priority_rank": 6
+    },
+    {
+      "rule_id": "expectancy_loosen_9e2ca513",
+      "type": "LOOSEN_GATE",
+      "target": "HAMMER",
+      "condition": "IF pattern == 'HAMMER': REDUCE minimum_confluence_score by 5-10%",
+      "expected_effect": "Allow more HAMMER trades by reducing entry threshold. Pattern shows 100.0% WR, avg PnL 50.00 (+42% vs baseline) but only 24/841 of total volume.",
+      "expected_impact": 7.447086801426874,
+      "supporting_evidence": {
+        "source": "pattern_expectancy",
+        "pattern": "HAMMER",
+        "trades": 24,
+        "winrate": 100.0,
+        "avg_pnl": 50.0,
+        "profit_factor": 999,
+        "baseline_avg_pnl": 35.10582639714625,
+        "baseline_winrate": 85.73
+      },
+      "risk_notes": "Pattern has only 24 trades in dataset. Small sample sizes can show deceptively high performance. Recommend minimum 30 trades before loosening gates. Monitor for degradation weekly after any change.",
+      "confidence_score": 55,
+      "priority_rank": 7
+    },
+    {
+      "rule_id": "failure_c8dc582b",
+      "type": "TIGHTEN_GATE",
+      "target": "ENGULFING_BULLISH",
+      "condition": "IF pattern == 'ENGULFING_BULLISH': REQUIRE additional_confirmation_strength > current",
+      "expected_effect": "Reduce losses in ENGULFING_BULLISH by requiring stronger entry confirmation. Currently 120 losses averaging -25.00 per trade.",
+      "expected_impact": 3.56718192627824,
+      "supporting_evidence": {
+        "source": "failure_signature_analysis",
+        "pattern": "ENGULFING_BULLISH",
+        "regime": "neutral",
+        "bias": "neutral",
+        "loss_count": 120,
+        "avg_loss": -25.0,
+        "total_loss": -3000.0,
+        "pct_of_all_losses": 100.0,
+        "max_loss": -50.0
+      },
+      "risk_notes": "Tightening gates may also filter out some winning trades in this context. Verify that winners in the same regime/bias are not disproportionately affected. Current dataset has 120 losses \u2014 sufficient for initial signal, but recommend 50+ trades before live deployment.",
+      "confidence_score": 90,
+      "priority_rank": 8
+    }
+  ],
+  "summary": {
+    "total_rules": 8,
+    "by_type": {
+      "ADD_GATE": 3,
+      "LOOSEN_GATE": 4,
+      "TIGHTEN_GATE": 1
+    },
+    "top_rule": {
+      "id": "edge_fd782ec8",
+      "type": "ADD_GATE",
+      "target": "HAMMER",
+      "confidence": 57,
+      "summary": "Prioritise HAMMER entries when HAMMER + neutral. Avg PnL 50.00 vs baseline 35.11. Winrate 100.0% vs 85.7% (24 trades)."
+    },
+    "strongest_insights": [
+      "[ADD_GATE] HAMMER: IF pattern == 'HAMMER': PRIORITISE WHEN context == [neutral]",
+      "[ADD_GATE] HAMMER: IF pattern == 'HAMMER': PRIORITISE WHEN context == [neutral]"
+    ]
+  },
+  "warnings": [
+    "8 rule(s) based on <30 trades. These are directional signals only \u2014 not deployment-ready. Wait for more data to confirm.",
+    "Multiple rules target the same pattern(s): ['HAMMER']. Avoid stacking contradictory rules. Implement one at a time and re-evaluate.",
+    "STANDARD DISCLAIMER: All rules are based on historical correlation, not causation. Market conditions change. Implement rules in shadow mode first, measure impact over 50+ new trades, then promote to production."
+  ]
+}

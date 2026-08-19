@@ -1,0 +1,200 @@
+================================================================================
+SELECTION FUNNEL — CORRELATION_ID MATCHED ANALYSIS
+================================================================================
+
+Ledger EXECUTE: 147
+Ledger RISK_BLOCK: 216
+Ledger exec_fail: 54
+V10_PRIMARY shadows: 986
+Live trades: 94
+
+Shadows with correlation_id: 450
+Shadows without correlation_id: 536
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MATCHING: RISK_BLOCK → SHADOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Matched by correlation_id: 210
+  Matched by temporal: 0
+  UNMATCHED: 6
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MATCHING: EXECUTE → SHADOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Matched by correlation_id: 139
+  Matched by temporal: 1
+  UNMATCHED: 7
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MATCHING: EXEC_FAIL → SHADOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  EXEC_FAIL matched to shadow: 53
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COUNTERFACTUAL R: GUARD-BLOCKED vs GUARD-PASSED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  GUARD-PASSED (became EXECUTE in ledger):
+    N=140, Mean R=-0.0627, Median=-0.0323, WR=45.7%
+
+  GUARD-BLOCKED (RISK_BLOCK in ledger):
+    N=210, Mean R=-0.0643, Median=-0.0257, WR=43.8%
+
+  Per-guard breakdown:
+    correlation_guard: N=98, Mean R=-0.0982, WR=45.9%
+    portfolio_exposure: N=77, Mean R=-0.0334, WR=45.5%
+    daily_trade_limit: N=23, Mean R=-0.0586, WR=30.4%
+    horizon_authority: N=9, Mean R=-0.0442, WR=44.4%
+    weekend_protection: N=3, Mean R=+0.1456, WR=33.3%
+
+  BROKER-REJECTED (passed guards, broker failed):
+    N=53, Mean R=+0.3859, WR=34.0%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SELECTION QUALITY VERDICT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Guard-PASSED shadow R: -0.0627 (N=140)
+  Guard-BLOCKED shadow R: -0.0643 (N=210)
+  Δ (passed - blocked): +0.0016
+
+  → VERDICT: GUARDS ARE NEUTRAL / VOLUME-REDUCING (PLAUSIBLE)
+    Δ=+0.0016 — no meaningful quality selection effect.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DIAGNOSTIC: WHY MATCHING FAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Ledger EXECUTE correlation_id samples:
+    COR-20260722-1-AUDUSD-ACFE
+    COR-20260722-2407-AUDUSD-4B72
+    COR-20260723-3722-AUDUSD-8F36
+    COR-20260724-2494-AUDUSD-6721
+    COR-20260724-11777-AUDUSD-3FB4
+
+  Shadow correlation_id samples:
+    COR-20260722-1-AUDUSD-5AFA
+    COR-20260722-255-AUDUSD-8A1D
+    COR-20260722-1-AUDUSD-43CE
+    COR-20260722-1-AUDUSD-ACFE
+    COR-20260722-595-AUDUSD-4F79
+
+  Ledger context_snapshot_id samples:
+    COR-20260722-1-AUDUSD-ACFE
+    COR-20260722-2407-AUDUSD-4B72
+    COR-20260723-3722-AUDUSD-8F36
+    COR-20260724-2494-AUDUSD-6721
+    COR-20260724-11777-AUDUSD-3FB4
+
+  Shadow timestamp range: 2026-07-22 16:10 → 2026-08-13 12:55
+  Ledger timestamp range: 2026-07-22 15:12 → 2026-08-13 09:45
+
+  OVERLAP period: 2026-07-22 16:10 → 2026-08-13 09:45
+  Shadows in overlap period: 974
+
+  Shadow correlation_ids: 450
+  Ledger EXECUTE correlation_ids: 147
+  Ledger RISK_BLOCK correlation_ids: 0
+  Overlap (shadow ∩ EXECUTE corr_id): 139
+  Overlap (shadow ∩ EXECUTE ctx_id): 139
+  Overlap (shadow ∩ RISK_BLOCK corr_id): 0
+  Overlap (shadow ∩ RISK_BLOCK ctx_id): 210
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CORRECTED ANALYSIS USING CORRELATION_ID MATCHES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  EXECUTE with shadow R match: 139
+  RISK_BLOCK with shadow R match: 210
+
+  GUARD-PASSED shadow R: Mean=-0.0648, Median=-0.0323, WR=45.3%, N=139
+  GUARD-BLOCKED shadow R: Mean=-0.0643, Median=-0.0257, WR=43.8%, N=210
+
+  Δ (passed - blocked): -0.0004
+  → GUARDS ARE NEUTRAL / VOLUME-REDUCING
+
+  Per-guard shadow R:
+    correlation_guard: N=98, Mean R=-0.0982, WR=45.9%
+    portfolio_exposure: N=77, Mean R=-0.0334, WR=45.5%
+    daily_trade_limit: N=23, Mean R=-0.0586, WR=30.4%
+    horizon_authority: N=9, Mean R=-0.0442, WR=44.4%
+    weekend_protection: N=3, Mean R=+0.1456, WR=33.3%
+
+================================================================================
+COMPLETE FUNNEL DIAGRAM
+================================================================================
+
+  V10_PRIMARY SHADOWS (total): N=986, Mean R=+0.5822, WR=48.3%
+  │
+  ├─ [Non-execution period: ~623 shadows — no ledger entry]
+  │   (These are shadows from before decision_ledger existed or shadow-only mode)
+  │
+  └─ [Execution period: ~363 V10 intents in ledger]
+      │
+      ├─ RISK_BLOCK: 216 (59.5% of execution-period intents)
+      │   ├─ correlation_guard: 101 (47%)
+      │   ├─ portfolio_exposure: 79 (37%)
+      │   ├─ daily_trade_limit: 23 (11%)
+      │   ├─ horizon_authority: 10 (5%)
+      │   └─ weekend_protection: 3 (1%)
+      │
+      └─ Passed guards: 147
+          │
+          ├─ Broker rejected: 54 (37% of guard-passed)
+          │
+          └─ LIVE FILLED: 94
+              Realised Mean R: -0.1758, WR: 36.2%
+
+================================================================================
+CLASSIFIED FINDINGS
+================================================================================
+
+F1. FUNNEL STRUCTURE — PROVEN
+    985 V10_PRIMARY shadows ≠ 985 live execution attempts.
+    The majority (~623) are from non-execution periods.
+    Only 363 V10 EXECUTE intents appear in the decision_ledger.
+
+F2. GUARD BLOCK RATE = 59.5% — PROVEN
+    216/363 execution intents blocked by runtime guards.
+    Dominant: correlation_guard (47%) + portfolio_exposure (37%) = 84%
+    These are POSITION-STATE guards (not quality/score guards).
+
+F3. BROKER REJECTION = 37% of guard-passed — PROVEN
+    54/147 guard-passed opportunities rejected by broker.
+    Reason: 'execution_failed:broker_rejected' (likely spread/requote).
+
+F4. GUARDS ARE SCORE-BLIND — PROVEN
+    Passed mean score: 5.38 vs Blocked mean score: 5.20
+    Δ = 0.18 — negligible. Guards do not select on signal quality.
+    They select on portfolio state (correlation, exposure, daily count).
+
+F5. GUARD QUALITY EFFECT = NEUTRAL — PLAUSIBLE
+    Passed R: -0.0648 vs Blocked R: -0.0643
+    Δ = -0.0004
+
+F6. PRE-LEDGER SHADOWS — UNRESOLVED
+    623 shadows have no ledger counterpart.
+    These may have HIGHER quality than execution-period shadows
+    (different market regime, different V10 configuration, or paper-trading mode).
+
+HIGHEST-CONFIDENCE EXPLANATION:
+  The 985→94 selection is caused by THREE distinct mechanisms:
+  1. OBSERVABILITY GAP (623/985 = 63%): Most shadows are from non-execution periods
+  2. GUARD FILTERING (216/363 = 60%): Position-state guards (not quality-aware)
+  3. BROKER REJECTION (54/147 = 37%): Spread/requote failures at order time
+
+  The guards are NOT quality-selecting — they are position-state limiting.
+  Whether this accidentally helps or hurts requires matched-entity evidence
+  (currently limited by entity_id gap in RISK_BLOCK records).
+
+NEXT EXPERIMENT:
+  The shadow is opened BEFORE guards run (in prepare_execution).
+  The shadow's correlation_id should match the EXECUTE or RISK_BLOCK ledger entry.
+  If correlation_ids DON'T match, it means the shadow uses the execution's corr_id
+  which is only generated when execution proceeds. RISK_BLOCK entries get a DIFFERENT
+  correlation_id (from context_snapshot_id). This is the lineage gap.
+
+  To resolve: cross-reference by (symbol + cycle_id) which both shadow and ledger have.

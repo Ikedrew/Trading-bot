@@ -1,0 +1,140 @@
+{
+  "question_id": "D-006",
+  "title": "Opportunity Failure Characterisation",
+  "run_id": "run_20260815_172313_283998",
+  "run_timestamp": "2026-08-15T17:23:31Z",
+  "engine_version": "1.0.0",
+  "question_version": "1.0.0",
+  "population_versions": {
+    "execute_decisions": "1e2e9bd22ec66d03"
+  },
+  "universe_versions": {
+    "EXECUTION": "17fcb30c52e98a83",
+    "DECISION": "d1322da11c954c77",
+    "MARKET": "10dd45e8dc7989d6",
+    "STRATEGY": "7e552e1b01d90474",
+    "RISK": "a631e1cc08d0088c",
+    "OUTCOME": "17fcb30c52e98a83",
+    "SHADOW_REALITY": "dad0cbca45de13e5"
+  },
+  "data_snapshot_timestamp": "2026-08-15T17:23:31Z",
+  "analysis_version": "1.0.0",
+  "evidence_source": "REALISED",
+  "populations_used": [
+    "execute_decisions"
+  ],
+  "universes_used": [
+    "DECISION"
+  ],
+  "filters_applied": {},
+  "segmentation": {},
+  "sample_sizes": {
+    "population": 480,
+    "analytical_sample": 480,
+    "minimum_required": 15,
+    "sample_reduction_reason": "No reduction \u2014 all records usable"
+  },
+  "evidence": {
+    "primitives_executed": [
+      "segmentation",
+      "expectancy",
+      "anomaly_analysis",
+      "exceptional_analysis"
+    ],
+    "primary_analysis": "segmentation"
+  },
+  "angle_evidence": {
+    "DECISION": {
+      "included": true
+    }
+  },
+  "primary_metrics": {
+    "dimensions": [
+      "opportunity_state"
+    ],
+    "segment_count": 1,
+    "count": 80,
+    "wins": 30,
+    "losses": 50,
+    "win_rate": 0.375,
+    "mean_r": -0.1432,
+    "median_r": -1.0,
+    "total_r": -11.4588,
+    "avg_win_r": 1.5932,
+    "avg_loss_r": -1.1851,
+    "profit_factor": 0.8066,
+    "std_r": 1.6259,
+    "expectancy": -0.1432
+  },
+  "statistical_results": {},
+  "effect_sizes": {},
+  "normal_view": {
+    "sample_size": 480
+  },
+  "anomaly_view": {
+    "status": "INCONCLUSIVE",
+    "reason": "No anomalous records found in population",
+    "criteria": {
+      "anomaly_field": "anomaly",
+      "threshold": "anomaly == True"
+    },
+    "normal_count": 480,
+    "anomaly_count": 0
+  },
+  "exceptional_view": {
+    "status": "AVAILABLE",
+    "criteria": {
+      "threshold_high": 2.0,
+      "threshold_low": -2.0,
+      "metric_field": "r_multiple"
+    },
+    "normal_count": 68,
+    "exceptional_high_count": 10,
+    "exceptional_low_count": 2,
+    "exceptional_rate": 0.15,
+    "exceptional_high_mean": 2.6292,
+    "exceptional_low_mean": -4.3952,
+    "sample_sizes": {
+      "normal": 68,
+      "exceptional_high": 10,
+      "exceptional_low": 2
+    },
+    "evidence": [
+      "10 records above 2.0R",
+      "2 records below -2.0R"
+    ]
+  },
+  "conditioned_views": {
+    "segmentation": {
+      "WATCHING": {
+        "count": 4,
+        "mean": -0.8245,
+        "total": -3.2981,
+        "win_rate": 0.25
+      }
+    }
+  },
+  "outcome": "NEGATIVE",
+  "conclusion": "Negative expectancy: -0.1432R per trade",
+  "confidence": "HIGH",
+  "recommendation": "",
+  "limitations": [],
+  "data_quality_warnings": [],
+  "supporting_evidence": [],
+  "contradictory_evidence": [],
+  "previous_run_id": "run_20260811_230428_56927a",
+  "previous_outcome": "NEGATIVE",
+  "changes_from_previous": {
+    "sample_size_changes": {
+      "analytical_sample": {
+        "from": 378,
+        "to": 480
+      },
+      "population": {
+        "from": 378,
+        "to": 480
+      }
+    }
+  },
+  "research_gaps": []
+}

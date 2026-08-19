@@ -13,6 +13,7 @@ from research_engine.v10.candidates.models import CandidateStatus
 _VALID_TRANSITIONS: dict[str, set[str]] = {
     CandidateStatus.PROPOSED: {
         CandidateStatus.VALIDATING,
+        CandidateStatus.SHADOW_TESTING,  # Direct activation for pre-validated candidates
         CandidateStatus.ARCHIVED,
         CandidateStatus.REJECTED,
     },

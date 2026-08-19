@@ -1,0 +1,73 @@
+============================================================
+AMBER QUESTION REMEDIATION VERIFICATION
+============================================================
+
+Builders ready. Execution=94, Decision=12398, Shadow=4153
+
+────────────────────────────────────────────────────────────
+D-001: Score Predictive Power (GREEN — no change needed)
+────────────────────────────────────────────────────────────
+  Population: EXECUTE_DECISIONS = 394 records
+  With r_multiple (enriched): 80 (20%)
+  Analysis: correlation → predictive_power
+  Status: GREEN (canonical entity_id enrichment confirmed)
+
+────────────────────────────────────────────────────────────
+S-004: Strategy Gap Characterisation (GREEN — wording fixed)
+────────────────────────────────────────────────────────────
+  Title: Strategy Gap Characterisation
+  Intent: When opportunities are detected but no strategy matches, what characterises thes...
+  Analysis: distribution
+  Status: GREEN (descriptive, no outcome dependency)
+
+────────────────────────────────────────────────────────────
+D-003: Decision Threshold Effectiveness
+────────────────────────────────────────────────────────────
+  Analysis type: correlation
+  ✓ analysis_type = CORRELATION → maps to predictive_power primitive
+  Params: {'feature_field': 'score', 'outcome_field': 'r_multiple'}
+  ✓ feature_field=score, outcome_field=r_multiple
+  Finding: outcome=NOT_PREDICTIVE, confidence=MEDIUM
+  Metrics: {'monotonic': False, 'top_bottom_spread': 0.1367, 'bucket_count': 4}
+  One-sided limitation: DOCUMENTED in intent
+  Status: AMBER (correct analysis but one-sided)
+
+────────────────────────────────────────────────────────────
+DM-003: Rejection Rate by Market State
+────────────────────────────────────────────────────────────
+  Params: {'dimensions': ['regime', 'action'], 'metric_field': 'score'}
+  ✓ dimensions=[regime, action], metric_field=score
+  Finding: outcome=NEGATIVE, confidence=HIGH
+  Sample size: {'population': 12398, 'analytical_sample': 12398, 'minimum_required': 30, 'sample_reduction_reason': 'No reduction — all records usable'}
+  Metric keys: ['dimensions', 'segment_count', 'count', 'wins', 'losses', 'win_rate', 'mean_r', 'median_r', 'total_r', 'avg_win_r']
+  Sub-sample sizes available: False
+  Evidence keys: ['primitives_executed', 'primary_analysis']
+  Status: Verifying output semantics...
+
+────────────────────────────────────────────────────────────
+SD-005: Shadow Horizon Comparison
+────────────────────────────────────────────────────────────
+  Required populations: ['shadow_from_no_trade']
+  ✓ Population = SHADOW_FROM_NO_TRADE (all HORIZON_ALTERNATIVE records)
+  Population size: 3201
+  Horizon distribution: {'SCALP': 1824, 'INTRADAY': 1359, 'EXTENDED': 18}
+  ✓ Multiple horizon groups present (3)
+  V10_PRIMARY in population: 0 (should be 0)
+  ✓ No V10_PRIMARY contamination
+  Params: {'group_field': 'trade_horizon', 'metric_field': 'r_multiple'}
+  Finding: outcome=NEGATIVE, confidence=HIGH
+  Evidence source: COUNTERFACTUAL
+  ✓ evidence_source = COUNTERFACTUAL
+  Groups discovered: 3
+  Groups sufficient: 3
+  Metric keys: ['population_size', 'analytical_sample', 'groups_discovered', 'groups_sufficient', 'groups_insufficient', 'overall_mean', 'group_spread', 'mean_r']
+  Status: GREEN
+
+============================================================
+FINAL AMBER REMEDIATION RESULTS
+============================================================
+  D-001:  GREEN (no change, enrichment verified)
+  D-003:  AMBER (correct analysis, one-sided limitation documented)
+  S-004:  GREEN (descriptive, wording narrowed)
+  DM-003: GREEN (regime×action segmentation)
+  SD-005: GREEN (multi-horizon comparison, no V10_PRIMARY)

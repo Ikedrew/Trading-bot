@@ -1,0 +1,26 @@
+{
+  "decision": "SHADOW_MODE",
+  "confidence": 69,
+  "risk_state": "STABLE",
+  "active_strategy": "Compressed rules (2) targeting: HAMMER, ENGULFING_BULLISH",
+  "reasoning": [
+    "Confidence 69/100 \u2014 eligible for shadow only"
+  ],
+  "blocking_factors": [],
+  "supporting_factors": [
+    "Live drift stable (score=4)",
+    "Walk-forward: edge stable across time windows",
+    "Shadow engine outperforms baseline (+3000)",
+    "Compression validation: edge preserved",
+    "Regime robustness 86/100 \u2014 all regimes viable"
+  ],
+  "recommended_position_action": "SKIP",
+  "edge_summary": {
+    "strength": "System maintains 100/100 stability under liquidity_fragmentation",
+    "weakness": "12 high-severity rule conflicts creating decision ambiguity",
+    "current_limitation": "rule_conflicts"
+  },
+  "metadata": {
+    "generated_at": "2026-06-30T21:57:55Z"
+  }
+}

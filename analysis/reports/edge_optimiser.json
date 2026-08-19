@@ -1,0 +1,163 @@
+{
+  "metadata": {
+    "generated_at": "2026-06-30T21:21:31Z",
+    "inputs_loaded": [
+      "walk_forward",
+      "shadow",
+      "interactions",
+      "compression",
+      "compression_validation",
+      "stress_test",
+      "confidence",
+      "drift"
+    ],
+    "inputs_missing": []
+  },
+  "profit_leaks": [
+    {
+      "source": "rule_conflicts",
+      "impact": "12 high-severity rule conflicts creating decision ambiguity",
+      "severity": 90,
+      "category": "rule_conflict",
+      "detail": {
+        "conflict_count": 12,
+        "targets": [
+          "HAMMER"
+        ]
+      }
+    },
+    {
+      "source": "regime_decay:low_vol_chop",
+      "impact": "49.9% edge decay under low_vol_chop conditions",
+      "severity": 49,
+      "category": "regime_vulnerability",
+      "detail": {
+        "regime": "low_vol_chop",
+        "pnl_change": -22.5241,
+        "stability": 70
+      }
+    }
+  ],
+  "opportunity_zones": [
+    {
+      "area": "strong_regime:liquidity_fragmentation",
+      "reason": "System maintains 100/100 stability under liquidity_fragmentation",
+      "expected_gain": "Increase allocation during liquidity_fragmentation conditions",
+      "confidence": 100
+    },
+    {
+      "area": "stable_pattern:HAMMER",
+      "reason": "HAMMER profitable in all windows (stability=100)",
+      "expected_gain": "Loosen entry filters to capture more trades from this pattern",
+      "confidence": 100
+    },
+    {
+      "area": "stable_pattern:ENGULFING_BULLISH",
+      "reason": "ENGULFING_BULLISH profitable in all windows (stability=99)",
+      "expected_gain": "Loosen entry filters to capture more trades from this pattern",
+      "confidence": 99
+    },
+    {
+      "area": "strong_regime:trend_dominance",
+      "reason": "System maintains 94/100 stability under trend_dominance",
+      "expected_gain": "Increase allocation during trend_dominance conditions",
+      "confidence": 94
+    },
+    {
+      "area": "perfect_filter:failure_c8dc582b",
+      "reason": "Rule blocks 120 losses with 0 missed winners \u2014 ideal filter",
+      "expected_gain": "Confirm and strengthen this rule; consider expanding its scope",
+      "confidence": 85
+    },
+    {
+      "area": "time_robust_edge",
+      "reason": "Time robustness score 84/100 \u2014 edge is stable over time",
+      "expected_gain": "System can increase trade frequency without time-decay risk",
+      "confidence": 84
+    }
+  ],
+  "recommended_actions": [
+    {
+      "action": "Reduce confluence threshold for HAMMER by 10% \u2014 pattern proven stable",
+      "target": "HAMMER",
+      "type": "EDGE_EXPANSION",
+      "expected_pnl_impact": 30.0,
+      "risk_change": "marginal increase \u2014 justified by high stability score",
+      "confidence": 100,
+      "source": "walk_forward",
+      "priority": 100,
+      "rank": 1
+    },
+    {
+      "action": "Reduce confluence threshold for ENGULFING_BULLISH by 10% \u2014 pattern proven stable",
+      "target": "ENGULFING_BULLISH",
+      "type": "EDGE_EXPANSION",
+      "expected_pnl_impact": 29.7,
+      "risk_change": "marginal increase \u2014 justified by high stability score",
+      "confidence": 99,
+      "source": "walk_forward",
+      "priority": 99,
+      "rank": 2
+    },
+    {
+      "action": "Resolve rule conflicts on HAMMER \u2014 consolidate opposing rules",
+      "target": "HAMMER",
+      "type": "STABILITY_FIX",
+      "expected_pnl_impact": 0,
+      "risk_change": "reduced \u2014 elimination of decision ambiguity",
+      "confidence": 90,
+      "source": "rule_interactions",
+      "priority": 90,
+      "rank": 3
+    },
+    {
+      "action": "Expand scope of high-precision blocking rule to related patterns",
+      "target": "failure_c8dc582b",
+      "type": "EDGE_EXPANSION",
+      "expected_pnl_impact": 17.0,
+      "risk_change": "minimal \u2014 rule already proven with zero false positives",
+      "confidence": 85,
+      "source": "shadow_execution",
+      "priority": 85,
+      "rank": 4
+    },
+    {
+      "action": "Increase maximum concurrent position count or reduce cooldown period",
+      "target": "position_management",
+      "type": "VOLUME_INCREASE",
+      "expected_pnl_impact": 42.0,
+      "risk_change": "moderate increase \u2014 compensated by time-stable edge",
+      "confidence": 70,
+      "source": "confidence_score",
+      "priority": 67.2,
+      "rank": 5
+    },
+    {
+      "action": "Add regime-aware position sizing for low_vol_chop conditions",
+      "target": "low_vol_chop",
+      "type": "RISK_REDUCTION",
+      "expected_pnl_impact": 11.26,
+      "risk_change": "reduced \u2014 lower exposure in vulnerable regime",
+      "confidence": 51,
+      "source": "regime_stress_test",
+      "priority": 49,
+      "rank": 6
+    }
+  ],
+  "priority_stack": [
+    "Reduce confluence threshold for HAMMER by 10% \u2014 pattern proven stable",
+    "Reduce confluence threshold for ENGULFING_BULLISH by 10% \u2014 pattern proven stable",
+    "Resolve rule conflicts on HAMMER \u2014 consolidate opposing rules",
+    "Expand scope of high-precision blocking rule to related patterns",
+    "Increase maximum concurrent position count or reduce cooldown period"
+  ],
+  "system_summary": {
+    "current_edge_state": "Grade B (69/100) \u2014 SHADOW_EXTEND",
+    "main_constraint": "rule_conflicts",
+    "fastest_path_to_improvement": "Reduce confluence threshold for HAMMER by 10% \u2014 pattern proven stable (expected +30.00, confidence=100)",
+    "total_leaks_found": 2,
+    "total_opportunities": 6,
+    "total_actions": 6,
+    "system_health": "critical"
+  }
+}

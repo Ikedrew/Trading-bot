@@ -1,0 +1,134 @@
+======================================================================
+SHADOW LINEAGE + COVERAGE VALIDATION AUDIT
+======================================================================
+
+Raw loaded: 5786
+After exclusion: 4153
+Excluded (test/invalid): 1633
+
+──────────────────────────────────────────────────────────────────────
+SHADOW TYPE INVENTORY
+──────────────────────────────────────────────────────────────────────
+  HORIZON_ALTERNATIVE: 3201 (77%)
+  V10_PRIMARY: 952 (22%)
+
+──────────────────────────────────────────────────────────────────────
+SHADOW → DECISION LINEAGE
+──────────────────────────────────────────────────────────────────────
+Decision traces loaded: 16503
+Decision unique entities: 12381
+Shadow unique entities (with eid): 1734
+
+Type                       Total  Matched  Orphan  No EID  Match%
+───────────────────────── ────── ──────── ─────── ─────── ───────
+  HORIZON_ALTERNATIVE       3201     3072       0     129     95%
+  V10_PRIMARY                952      194       0     758     20%
+  TOTAL                     4153     3266       0     887 78%
+
+──────────────────────────────────────────────────────────────────────
+SHADOW → MARKET LINEAGE (via Decision join)
+──────────────────────────────────────────────────────────────────────
+  Shadow with market context (via Decision regime): 252/4153 (6%)
+  Note: Market linkage is via entity_id → Decision → v10_market_state
+
+──────────────────────────────────────────────────────────────────────
+SHADOW → STRATEGY LINEAGE
+──────────────────────────────────────────────────────────────────────
+  From shadow record (strategy_id): 1285/4153 (30%)
+  From Decision join (strategy_family): 252/4153 (6%)
+
+──────────────────────────────────────────────────────────────────────
+HORIZON GEOMETRY VALIDATION
+──────────────────────────────────────────────────────────────────────
+Horizon       Count  R Valid  Entry     SL     TP
+──────────── ────── ──────── ────── ────── ──────
+  EXTENDED       18       18     18     18     18
+  INTRADAY     1359     1359   1359   1359   1359
+  SCALP        1824     1824   1824   1824   1824
+  UNKNOWN       952      952    952    952    952
+
+──────────────────────────────────────────────────────────────────────
+SHADOW OUTCOME FIELD COMPLETENESS
+──────────────────────────────────────────────────────────────────────
+  entity_id                   3266/4153 (78%)
+  shadow_trade_id             4153/4153 (100%)
+  shadow_type                 4153/4153 (100%)
+  trade_horizon               3201/4153 (77%)
+  r_multiple                  3936/4153 (94%)
+  mfe_r                       3777/4153 (90%)
+  mae_r                       4132/4153 (99%)
+  exit_reason                 4153/4153 (100%)
+  bars_held                   4153/4153 (100%)
+  direction                   4153/4153 (100%)
+  entry_price                 4153/4153 (100%)
+  stop_loss                   4153/4153 (100%)
+  take_profit                 4153/4153 (100%)
+  symbol                      4153/4153 (100%)
+  score                       4153/4153 (100%)
+  pattern                     4153/4153 (100%)
+  strategy_id                 1285/4153 (30%)
+  evidence_source             4153/4153 (100%)
+  has_entity_id               3266/4153 (78%)
+
+──────────────────────────────────────────────────────────────────────
+DUPLICATES AND CARDINALITY
+──────────────────────────────────────────────────────────────────────
+  shadow_trade_id unique: 3474/4153 (duplicates: 679)
+  entity_id cardinality distribution:
+    1 shadow(s) per entity: 286 entities
+    2 shadow(s) per entity: 1367 entities
+    3 shadow(s) per entity: 78 entities
+    4 shadow(s) per entity: 3 entities
+  Duplicate (entity_id, horizon) pairs: 3
+
+──────────────────────────────────────────────────────────────────────
+ORPHAN AND LEGACY CLASSIFICATION
+──────────────────────────────────────────────────────────────────────
+  VALID_CURRENT (new lineage contract): 0
+  VALID_LEGACY (entity_id joins, no contract fields): 3266
+  ORPHAN (entity_id doesn't match any Decision): 0
+  NO_LINEAGE (empty entity_id): 887
+  Research-usable (VALID_CURRENT + VALID_LEGACY): 3266
+
+──────────────────────────────────────────────────────────────────────
+RESEARCH QUESTION COMPATIBILITY
+──────────────────────────────────────────────────────────────────────
+  SD-001 (ALL_SHADOW_OUTCOMES): pop=4153, r_valid=4153 → OK
+  SD-002 (SHADOW_FROM_NO_TRADE): pop=3201, r_valid=3201 → OK
+  SD-004 (joinable to Decision): pop=3072 → OK
+  SD-005 (horizon groups ≥10 obs): 3 groups → OK
+         Horizons: {'SCALP': 1824, 'INTRADAY': 1359, 'EXTENDED': 18}
+  SD-006 (strategy_id coverage): 1285/4153 (30%) → OK
+  SD-007 (regime in shadow record): 2946/4153 (70%)
+  SD-007 (regime via Decision join): 252/4153 (6%) → OK
+
+──────────────────────────────────────────────────────────────────────
+FINAL COVERAGE SCORECARD
+──────────────────────────────────────────────────────────────────────
+  Metric                               Count     %
+  ─────────────────────────────────── ────── ─────
+  Total Shadow observations             4153  100%
+  Valid entity_id                       3266   78%
+  Valid r_multiple                      4153  100%
+  Decision lineage (matched)            3266   78%
+  Market context (via join)              252    6%
+  Strategy (from record)                1285   30%
+  Strategy (from Decision join)          252    6%
+  New lineage contract                     0    0%
+  Research-usable (current+legacy)      3266   78%
+  Orphaned                                 0    0%
+  No lineage (empty entity_id)           887   21%
+
+======================================================================
+TRUST CLASSIFICATION
+======================================================================
+
+  🟢 TRUSTED
+  Reason: High lineage coverage, complete R-multiples, minimal orphaning
+
+  Decision match: 78%
+  R-multiple coverage: 100%
+  Orphan rate: 0%
+  Research-usable: 78%
+
+======================================================================

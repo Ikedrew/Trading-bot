@@ -23,7 +23,7 @@ from typing import Any
 
 
 class Universe(str, Enum):
-    """The six analytical universes + Shadow research world."""
+    """The six analytical universes + Shadow research world + Shadow Reality."""
     EXECUTION = "EXECUTION"
     DECISION = "DECISION"
     MARKET = "MARKET"
@@ -32,6 +32,8 @@ class Universe(str, Enum):
     OUTCOME = "OUTCOME"
     # Shadow research world
     SHADOW_OUTCOME = "SHADOW_OUTCOME"
+    # Shadow ↔ Reality comparison
+    SHADOW_REALITY = "SHADOW_REALITY"
 
 
 class Population(str, Enum):
@@ -98,6 +100,12 @@ class Population(str, Enum):
     SHADOW_TP_HIT = "shadow_tp_hit"
     SHADOW_SL_HIT = "shadow_sl_hit"
     SHADOW_TIMEOUT = "shadow_timeout"
+
+    # Shadow Reality universe populations
+    SR_ALL = "sr_all"
+    SR_MATCHED = "sr_matched"
+    SR_SHADOW_ONLY = "sr_shadow_only"
+    SR_REAL_ONLY = "sr_real_only"
 
 
 class JoinType(str, Enum):

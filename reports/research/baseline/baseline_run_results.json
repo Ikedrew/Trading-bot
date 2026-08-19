@@ -1,0 +1,1449 @@
+[
+  {
+    "question_id": "E-001",
+    "title": "System Expectancy",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 20,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "count": 94,
+      "wins": 34,
+      "losses": 60,
+      "win_rate": 0.3617,
+      "mean_r": -0.1758,
+      "median_r": -1.0,
+      "total_r": -16.5231,
+      "avg_win_r": 1.5395,
+      "avg_loss_r": -1.1478,
+      "profit_factor": 0.7601,
+      "std_r": 1.5628,
+      "expectancy": -0.1758
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "E-002",
+    "title": "Win/Loss Distribution Shape",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 30,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "count": 94,
+      "mean": -0.1758,
+      "median": -1.0,
+      "std": 1.5628,
+      "min": -4.5,
+      "max": 5.449,
+      "expectancy_count": 94,
+      "wins": 34,
+      "losses": 60,
+      "win_rate": 0.3617,
+      "mean_r": -0.1758,
+      "median_r": -1.0,
+      "total_r": -16.5231,
+      "avg_win_r": 1.5395,
+      "avg_loss_r": -1.1478
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "E-003",
+    "title": "Exit Reason Distribution",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 20,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "exit_reason"
+      ],
+      "segment_count": 2,
+      "count": 94,
+      "wins": 34,
+      "losses": 60,
+      "win_rate": 0.3617,
+      "mean_r": -0.1758,
+      "median_r": -1.0,
+      "total_r": -16.5231,
+      "avg_win_r": 1.5395,
+      "avg_loss_r": -1.1478,
+      "profit_factor": 0.7601,
+      "std_r": 1.5628,
+      "expectancy": -0.1758
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "E-004",
+    "title": "Execution Quality by Session",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "symbol"
+      ],
+      "segment_count": 9,
+      "count": 94,
+      "wins": 34,
+      "losses": 60,
+      "win_rate": 0.3617,
+      "mean_r": -0.1758,
+      "median_r": -1.0,
+      "total_r": -16.5231,
+      "avg_win_r": 1.5395,
+      "avg_loss_r": -1.1478,
+      "profit_factor": 0.7601,
+      "std_r": 1.5628,
+      "expectancy": -0.1758
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "E-005",
+    "title": "Probability of Ruin",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 50,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "count": 94,
+      "wins": 34,
+      "losses": 60,
+      "win_rate": 0.3617,
+      "mean_r": -0.1758,
+      "median_r": -1.0,
+      "total_r": -16.5231,
+      "avg_win_r": 1.5395,
+      "avg_loss_r": -1.1478,
+      "profit_factor": 0.7601,
+      "std_r": 1.5628,
+      "expectancy": -0.1758,
+      "distribution_count": 94,
+      "mean": -0.1758,
+      "median": -1.0
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "E-007",
+    "title": "Stop Placement Effectiveness",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 20,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "count": 94,
+      "wins": 34,
+      "losses": 60,
+      "win_rate": 0.3617,
+      "mean_r": -0.1758,
+      "median_r": -1.0,
+      "total_r": -16.5231,
+      "avg_win_r": 1.5395,
+      "avg_loss_r": -1.1478,
+      "profit_factor": 0.7601,
+      "std_r": 1.5628,
+      "expectancy": -0.1758,
+      "distribution_count": 94,
+      "mean": -0.1758,
+      "median": -1.0
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "E-008",
+    "title": "Pattern Degradation Over Time",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "STABLE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 50,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "trend": "STABLE",
+      "periods": 3
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "E-009",
+    "title": "Trade Duration vs Outcome",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NOT_PREDICTIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 20,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "monotonic": false,
+      "top_bottom_spread": 2.6489,
+      "bucket_count": 5
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "E-010",
+    "title": "Risk:Reward Ratio Effectiveness",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 20,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "population_size": 94,
+      "analytical_sample": 94,
+      "groups_discovered": 2,
+      "groups_sufficient": 2,
+      "groups_insufficient": 0,
+      "overall_mean": -0.1758,
+      "group_spread": 3.0121,
+      "mean_r": -0.1758
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "D-001",
+    "title": "Score Predictive Power",
+    "status": "COMPLETE",
+    "population_size": 12439,
+    "evidence_source": "REALISED",
+    "outcome": "NOT_PREDICTIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 12439,
+      "analytical_sample": 81,
+      "minimum_required": 20,
+      "sample_reduction_reason": "12358 records lack required outcome field (r_multiple unavailable)"
+    },
+    "primary_metrics": {
+      "monotonic": false,
+      "top_bottom_spread": 0.3451,
+      "bucket_count": 5
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "D-002",
+    "title": "EV Calibration",
+    "status": "COMPLETE",
+    "population_size": 394,
+    "evidence_source": "REALISED",
+    "outcome": "POORLY_CALIBRATED",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 394,
+      "analytical_sample": 76,
+      "minimum_required": 15,
+      "sample_reduction_reason": "318 records missing required feature or outcome field"
+    },
+    "primary_metrics": {
+      "mean_calibration_error": 0.2113,
+      "buckets": 6
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "D-003",
+    "title": "Decision Threshold Effectiveness",
+    "status": "COMPLETE",
+    "population_size": 12439,
+    "evidence_source": "REALISED",
+    "outcome": "NOT_PREDICTIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 12439,
+      "analytical_sample": 81,
+      "minimum_required": 20,
+      "sample_reduction_reason": "12358 records lack required outcome field (r_multiple unavailable)"
+    },
+    "primary_metrics": {
+      "monotonic": false,
+      "top_bottom_spread": 0.3451,
+      "bucket_count": 5
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "D-004",
+    "title": "Rejection Stage Distribution",
+    "status": "COMPLETE",
+    "population_size": 12045,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 12045,
+      "analytical_sample": 12045,
+      "minimum_required": 50,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "terminal_reason"
+      ],
+      "segment_count": 878,
+      "count": 1,
+      "wins": 0,
+      "losses": 1,
+      "win_rate": 0.0,
+      "mean_r": -1.0,
+      "median_r": -1.0,
+      "total_r": -1.0,
+      "avg_win_r": 0,
+      "avg_loss_r": -1.0,
+      "profit_factor": 0.0,
+      "std_r": 0,
+      "expectancy": -1.0
+    },
+    "warnings": [
+      "Small sample (1 trades) \u2014 low statistical confidence"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "D-005",
+    "title": "Opportunity Quality Predictive Value",
+    "status": "COMPLETE",
+    "population_size": 394,
+    "evidence_source": "REALISED",
+    "outcome": "INCONCLUSIVE",
+    "confidence": "INSUFFICIENT",
+    "sample_sizes": {
+      "population": 394,
+      "analytical_sample": 4,
+      "minimum_required": 15,
+      "sample_reduction_reason": "390 records lack required outcome field (r_multiple unavailable)"
+    },
+    "primary_metrics": {},
+    "warnings": [
+      "Insufficient data (4 records)"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "D-006",
+    "title": "Opportunity Failure Characterisation",
+    "status": "COMPLETE",
+    "population_size": 394,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 394,
+      "analytical_sample": 394,
+      "minimum_required": 15,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "opportunity_state"
+      ],
+      "segment_count": 1,
+      "count": 80,
+      "wins": 30,
+      "losses": 50,
+      "win_rate": 0.375,
+      "mean_r": -0.1432,
+      "median_r": -1.0,
+      "total_r": -11.4588,
+      "avg_win_r": 1.5932,
+      "avg_loss_r": -1.1851,
+      "profit_factor": 0.8066,
+      "std_r": 1.6259,
+      "expectancy": -0.1432
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "M-001",
+    "title": "Regime Predicts Outcomes",
+    "status": "COMPLETE",
+    "population_size": 10623,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 10623,
+      "analytical_sample": 10623,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "regime"
+      ],
+      "segment_count": 2,
+      "count": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 0.25,
+      "mean_r": -0.8245,
+      "median_r": -1.0375,
+      "total_r": -3.2981,
+      "avg_win_r": 0.0927,
+      "avg_loss_r": -1.1303,
+      "profit_factor": 0.0273,
+      "std_r": 0.6255,
+      "expectancy": -0.8245
+    },
+    "warnings": [
+      "Small sample (4 trades) \u2014 low statistical confidence"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "M-002",
+    "title": "HTF Alignment Value",
+    "status": "COMPLETE",
+    "population_size": 10623,
+    "evidence_source": "REALISED",
+    "outcome": "INCONCLUSIVE",
+    "confidence": "INSUFFICIENT",
+    "sample_sizes": {
+      "population": 10623,
+      "analytical_sample": 4,
+      "minimum_required": 15,
+      "sample_reduction_reason": "10619 records lack required outcome field (r_multiple unavailable)"
+    },
+    "primary_metrics": {},
+    "warnings": [
+      "Insufficient data (4 records)"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "M-003",
+    "title": "Volatility State Impact",
+    "status": "COMPLETE",
+    "population_size": 10623,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 10623,
+      "analytical_sample": 10623,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "regime",
+        "volatility_state"
+      ],
+      "segment_count": 2,
+      "count": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 0.25,
+      "mean_r": -0.8245,
+      "median_r": -1.0375,
+      "total_r": -3.2981,
+      "avg_win_r": 0.0927,
+      "avg_loss_r": -1.1303,
+      "profit_factor": 0.0273,
+      "std_r": 0.6255,
+      "expectancy": -0.8245
+    },
+    "warnings": [
+      "Small sample (4 trades) \u2014 low statistical confidence"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "M-004",
+    "title": "Market Structure Clarity",
+    "status": "COMPLETE",
+    "population_size": 10623,
+    "evidence_source": "REALISED",
+    "outcome": "INCONCLUSIVE",
+    "confidence": "INSUFFICIENT",
+    "sample_sizes": {
+      "population": 10623,
+      "analytical_sample": 4,
+      "minimum_required": 15,
+      "sample_reduction_reason": "10619 records lack required outcome field (r_multiple unavailable)"
+    },
+    "primary_metrics": {},
+    "warnings": [
+      "Insufficient data (4 records)"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "M-005",
+    "title": "Location Quality Impact",
+    "status": "COMPLETE",
+    "population_size": 10623,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 10623,
+      "analytical_sample": 10623,
+      "minimum_required": 15,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "location_type"
+      ],
+      "segment_count": 1,
+      "count": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 0.25,
+      "mean_r": -0.8245,
+      "median_r": -1.0375,
+      "total_r": -3.2981,
+      "avg_win_r": 0.0927,
+      "avg_loss_r": -1.1303,
+      "profit_factor": 0.0273,
+      "std_r": 0.6255,
+      "expectancy": -0.8245
+    },
+    "warnings": [
+      "Small sample (4 trades) \u2014 low statistical confidence"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "M-006",
+    "title": "Session Edge Variation",
+    "status": "COMPLETE",
+    "population_size": 10623,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 10623,
+      "analytical_sample": 10623,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "session"
+      ],
+      "segment_count": 2,
+      "count": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 0.25,
+      "mean_r": -0.8245,
+      "median_r": -1.0375,
+      "total_r": -3.2981,
+      "avg_win_r": 0.0927,
+      "avg_loss_r": -1.1303,
+      "profit_factor": 0.0273,
+      "std_r": 0.6255,
+      "expectancy": -0.8245
+    },
+    "warnings": [
+      "Small sample (4 trades) \u2014 low statistical confidence"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "S-001",
+    "title": "Strategy Family Expectancy",
+    "status": "COMPLETE",
+    "population_size": 17588,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 17588,
+      "analytical_sample": 17588,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "family"
+      ],
+      "segment_count": 3,
+      "count": 81,
+      "wins": 30,
+      "losses": 51,
+      "win_rate": 0.3704,
+      "mean_r": -0.1538,
+      "median_r": -1.0,
+      "total_r": -12.4588,
+      "avg_win_r": 1.5932,
+      "avg_loss_r": -1.1815,
+      "profit_factor": 0.7932,
+      "std_r": 1.6185,
+      "expectancy": -0.1538
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "S-002",
+    "title": "Pattern Expectancy",
+    "status": "COMPLETE",
+    "population_size": 17588,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 17588,
+      "analytical_sample": 17588,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "pattern"
+      ],
+      "segment_count": 11,
+      "count": 81,
+      "wins": 30,
+      "losses": 51,
+      "win_rate": 0.3704,
+      "mean_r": -0.1538,
+      "median_r": -1.0,
+      "total_r": -12.4588,
+      "avg_win_r": 1.5932,
+      "avg_loss_r": -1.1815,
+      "profit_factor": 0.7932,
+      "std_r": 1.6185,
+      "expectancy": -0.1538
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "S-003",
+    "title": "Strategy Selection Accuracy",
+    "status": "COMPLETE",
+    "population_size": 433,
+    "evidence_source": "REALISED",
+    "outcome": "POORLY_CALIBRATED",
+    "confidence": "LOW",
+    "sample_sizes": {
+      "population": 433,
+      "analytical_sample": 35,
+      "minimum_required": 15,
+      "sample_reduction_reason": "398 records lack required outcome field (r_multiple unavailable)"
+    },
+    "primary_metrics": {
+      "mean_calibration_error": 0.494,
+      "buckets": 5
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "S-004",
+    "title": "Strategy Gap Characterisation",
+    "status": "COMPLETE",
+    "population_size": 1946,
+    "evidence_source": "REALISED",
+    "outcome": "INCONCLUSIVE",
+    "confidence": "INSUFFICIENT",
+    "sample_sizes": {
+      "population": 1946,
+      "analytical_sample": 0,
+      "minimum_required": 20,
+      "sample_reduction_reason": "No records with field 'r_multiple'"
+    },
+    "primary_metrics": {
+      "count": 0
+    },
+    "warnings": [
+      "No records with field 'r_multiple'",
+      "No records with R-multiple data"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "ED-001",
+    "title": "Decision-to-Execution Edge Leakage",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 20,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "population_size": 94,
+      "analytical_sample": 94,
+      "groups_discovered": 4,
+      "groups_sufficient": 4,
+      "groups_insufficient": 0,
+      "overall_mean": -0.1758,
+      "group_spread": 1.3213,
+      "mean_r": -0.1758
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "ED-003",
+    "title": "Position Sizing Effectiveness",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 30,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "count": 94,
+      "wins": 34,
+      "losses": 60,
+      "win_rate": 0.3617,
+      "mean_r": -0.1758,
+      "median_r": -1.0,
+      "total_r": -16.5231,
+      "avg_win_r": 1.5395,
+      "avg_loss_r": -1.1478,
+      "profit_factor": 0.7601,
+      "std_r": 1.5628,
+      "expectancy": -0.1758,
+      "distribution_count": 94,
+      "mean": -0.1758,
+      "median": -1.0
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "EM-001",
+    "title": "Regime-Conditioned Expectancy",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "regime"
+      ],
+      "segment_count": 4,
+      "count": 94,
+      "wins": 34,
+      "losses": 60,
+      "win_rate": 0.3617,
+      "mean_r": -0.1758,
+      "median_r": -1.0,
+      "total_r": -16.5231,
+      "avg_win_r": 1.5395,
+      "avg_loss_r": -1.1478,
+      "profit_factor": 0.7601,
+      "std_r": 1.5628,
+      "expectancy": -0.1758
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "EM-002",
+    "title": "Market Drift Detection",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "STABLE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 30,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "trend": "STABLE",
+      "periods": 3
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "ES-001",
+    "title": "Execution Quality by Strategy",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "family"
+      ],
+      "segment_count": 3,
+      "count": 94,
+      "wins": 34,
+      "losses": 60,
+      "win_rate": 0.3617,
+      "mean_r": -0.1758,
+      "median_r": -1.0,
+      "total_r": -16.5231,
+      "avg_win_r": 1.5395,
+      "avg_loss_r": -1.1478,
+      "profit_factor": 0.7601,
+      "std_r": 1.5628,
+      "expectancy": -0.1758
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "DM-001",
+    "title": "Decision Quality Under Regime",
+    "status": "COMPLETE",
+    "population_size": 394,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 394,
+      "analytical_sample": 394,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "regime"
+      ],
+      "segment_count": 2,
+      "count": 80,
+      "wins": 30,
+      "losses": 50,
+      "win_rate": 0.375,
+      "mean_r": -0.1432,
+      "median_r": -1.0,
+      "total_r": -11.4588,
+      "avg_win_r": 1.5932,
+      "avg_loss_r": -1.1851,
+      "profit_factor": 0.8066,
+      "std_r": 1.6259,
+      "expectancy": -0.1432
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "DM-002",
+    "title": "Opportunity Detection vs Market State",
+    "status": "COMPLETE",
+    "population_size": 12439,
+    "evidence_source": "REALISED",
+    "outcome": "COMPLETED",
+    "confidence": "INSUFFICIENT",
+    "sample_sizes": {
+      "population": 12439,
+      "analytical_sample": 4,
+      "minimum_required": 15,
+      "sample_reduction_reason": "12435 records lack required outcome field (r_multiple unavailable)"
+    },
+    "primary_metrics": {
+      "population_size": 12439,
+      "analytical_sample": 4,
+      "groups_discovered": 2,
+      "groups_sufficient": 0,
+      "groups_insufficient": 2
+    },
+    "warnings": [
+      "All 2 groups have fewer than 3 observations each"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "DM-003",
+    "title": "Rejection Rate by Market State",
+    "status": "COMPLETE",
+    "population_size": 12439,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 12439,
+      "analytical_sample": 12439,
+      "minimum_required": 30,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "regime",
+        "action"
+      ],
+      "segment_count": 5,
+      "count": 81,
+      "wins": 30,
+      "losses": 51,
+      "win_rate": 0.3704,
+      "mean_r": -0.1538,
+      "median_r": -1.0,
+      "total_r": -12.4588,
+      "avg_win_r": 1.5932,
+      "avg_loss_r": -1.1815,
+      "profit_factor": 0.7932,
+      "std_r": 1.6185,
+      "expectancy": -0.1538
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "DS-001",
+    "title": "Strategy Confidence Calibration",
+    "status": "COMPLETE",
+    "population_size": 394,
+    "evidence_source": "REALISED",
+    "outcome": "INCONCLUSIVE",
+    "confidence": "INSUFFICIENT",
+    "sample_sizes": {
+      "population": 394,
+      "analytical_sample": 0,
+      "minimum_required": 15,
+      "sample_reduction_reason": "Insufficient calibration data (0 records)"
+    },
+    "primary_metrics": {},
+    "warnings": [
+      "Insufficient calibration data (0 records)"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "DS-002",
+    "title": "Strategy Conditions vs Outcome",
+    "status": "COMPLETE",
+    "population_size": 394,
+    "evidence_source": "REALISED",
+    "outcome": "INCONCLUSIVE",
+    "confidence": "INSUFFICIENT",
+    "sample_sizes": {
+      "population": 394,
+      "analytical_sample": 0,
+      "minimum_required": 15,
+      "sample_reduction_reason": "Insufficient data (0 records)"
+    },
+    "primary_metrics": {},
+    "warnings": [
+      "Insufficient data (0 records)"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "MS-001",
+    "title": "Strategy \u00d7 Regime Interaction",
+    "status": "COMPLETE",
+    "population_size": 10623,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 10623,
+      "analytical_sample": 10623,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "regime",
+        "family"
+      ],
+      "segment_count": 0,
+      "count": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 0.25,
+      "mean_r": -0.8245,
+      "median_r": -1.0375,
+      "total_r": -3.2981,
+      "avg_win_r": 0.0927,
+      "avg_loss_r": -1.1303,
+      "profit_factor": 0.0273,
+      "std_r": 0.6255,
+      "expectancy": -0.8245
+    },
+    "warnings": [
+      "Small sample (4 trades) \u2014 low statistical confidence"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "MS-002",
+    "title": "Pattern \u00d7 Market Context Interaction",
+    "status": "COMPLETE",
+    "population_size": 10623,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 10623,
+      "analytical_sample": 10623,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "regime",
+        "pattern"
+      ],
+      "segment_count": 0,
+      "count": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 0.25,
+      "mean_r": -0.8245,
+      "median_r": -1.0375,
+      "total_r": -3.2981,
+      "avg_win_r": 0.0927,
+      "avg_loss_r": -1.1303,
+      "profit_factor": 0.0273,
+      "std_r": 0.6255,
+      "expectancy": -0.8245
+    },
+    "warnings": [
+      "Small sample (4 trades) \u2014 low statistical confidence"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "MS-003",
+    "title": "Strategy Availability by Market State",
+    "status": "COMPLETE",
+    "population_size": 10623,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "INSUFFICIENT",
+    "sample_sizes": {
+      "population": 10623,
+      "analytical_sample": 4,
+      "minimum_required": 30,
+      "sample_reduction_reason": "10619 records lack required outcome field (r_multiple unavailable)"
+    },
+    "primary_metrics": {
+      "count": 4,
+      "mean": -0.8245,
+      "median": -1.0375,
+      "std": 0.6255,
+      "min": -1.3157,
+      "max": 0.0927,
+      "expectancy_count": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 0.25,
+      "mean_r": -0.8245,
+      "median_r": -1.0375,
+      "total_r": -3.2981,
+      "avg_win_r": 0.0927,
+      "avg_loss_r": -1.1303
+    },
+    "warnings": [
+      "Small sample (4 trades) \u2014 low statistical confidence"
+    ],
+    "error": ""
+  },
+  {
+    "question_id": "EDM-001",
+    "title": "Complete Trade Lifecycle Analysis",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 20,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "population_size": 94,
+      "analytical_sample": 94,
+      "groups_discovered": 4,
+      "groups_sufficient": 4,
+      "groups_insufficient": 0,
+      "overall_mean": -0.1758,
+      "group_spread": 1.3213,
+      "mean_r": -0.1758
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "DMS-001",
+    "title": "Decision Quality Across Strategy \u00d7 Market",
+    "status": "COMPLETE",
+    "population_size": 394,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 394,
+      "analytical_sample": 394,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "regime",
+        "family"
+      ],
+      "segment_count": 0,
+      "count": 80,
+      "wins": 30,
+      "losses": 50,
+      "win_rate": 0.375,
+      "mean_r": -0.1432,
+      "median_r": -1.0,
+      "total_r": -11.4588,
+      "avg_win_r": 1.5932,
+      "avg_loss_r": -1.1851,
+      "profit_factor": 0.8066,
+      "std_r": 1.6259,
+      "expectancy": -0.1432
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "EDMS-001",
+    "title": "Full System Attribution",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NOT_PREDICTIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 30,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "monotonic": false,
+      "top_bottom_spread": -0.1949,
+      "bucket_count": 5
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "EDMS-002",
+    "title": "Promotion Impact Analysis",
+    "status": "COMPLETE",
+    "population_size": 94,
+    "evidence_source": "REALISED",
+    "outcome": "NEGATIVE",
+    "confidence": "MEDIUM",
+    "sample_sizes": {
+      "population": 94,
+      "analytical_sample": 94,
+      "minimum_required": 50,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "count": 94,
+      "wins": 34,
+      "losses": 60,
+      "win_rate": 0.3617,
+      "mean_r": -0.1758,
+      "median_r": -1.0,
+      "total_r": -16.5231,
+      "avg_win_r": 1.5395,
+      "avg_loss_r": -1.1478,
+      "profit_factor": 0.7601,
+      "std_r": 1.5628,
+      "expectancy": -0.1758,
+      "distribution_count": 94,
+      "mean": -0.1758,
+      "median": -1.0
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "SD-001",
+    "title": "Shadow Counterfactual Expectancy",
+    "status": "COMPLETE",
+    "population_size": 4153,
+    "evidence_source": "COUNTERFACTUAL",
+    "outcome": "POSITIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 4153,
+      "analytical_sample": 4153,
+      "minimum_required": 30,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "count": 4153,
+      "wins": 1759,
+      "losses": 2394,
+      "win_rate": 0.4235,
+      "mean_r": 0.0737,
+      "median_r": -0.0278,
+      "total_r": 306.0631,
+      "avg_win_r": 0.769,
+      "avg_loss_r": -0.4372,
+      "profit_factor": 1.2924,
+      "std_r": 0.9126,
+      "expectancy": 0.0737
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "SD-002",
+    "title": "Missed Opportunity Cost",
+    "status": "COMPLETE",
+    "population_size": 3201,
+    "evidence_source": "COUNTERFACTUAL",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 3201,
+      "analytical_sample": 3201,
+      "minimum_required": 20,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "count": 3201,
+      "wins": 1309,
+      "losses": 1892,
+      "win_rate": 0.4089,
+      "mean_r": -0.072,
+      "median_r": -0.0476,
+      "total_r": -230.4032,
+      "avg_win_r": 0.4467,
+      "avg_loss_r": -0.4308,
+      "profit_factor": 0.7174,
+      "std_r": 0.6335,
+      "expectancy": -0.072
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "SD-004",
+    "title": "Rejection Stage Counterfactual Expectancy",
+    "status": "COMPLETE",
+    "population_size": 3201,
+    "evidence_source": "COUNTERFACTUAL",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 3201,
+      "analytical_sample": 3201,
+      "minimum_required": 20,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "terminal_reason"
+      ],
+      "segment_count": 0,
+      "count": 3201,
+      "wins": 1309,
+      "losses": 1892,
+      "win_rate": 0.4089,
+      "mean_r": -0.072,
+      "median_r": -0.0476,
+      "total_r": -230.4032,
+      "avg_win_r": 0.4467,
+      "avg_loss_r": -0.4308,
+      "profit_factor": 0.7174,
+      "std_r": 0.6335,
+      "expectancy": -0.072
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "SD-005",
+    "title": "Shadow Horizon Comparison",
+    "status": "COMPLETE",
+    "population_size": 3201,
+    "evidence_source": "COUNTERFACTUAL",
+    "outcome": "NEGATIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 3201,
+      "analytical_sample": 3201,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "population_size": 3201,
+      "analytical_sample": 3201,
+      "groups_discovered": 3,
+      "groups_sufficient": 3,
+      "groups_insufficient": 0,
+      "overall_mean": -0.072,
+      "group_spread": 0.1723,
+      "mean_r": -0.072
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "SD-006",
+    "title": "Shadow Strategy Expectancy",
+    "status": "COMPLETE",
+    "population_size": 4153,
+    "evidence_source": "COUNTERFACTUAL",
+    "outcome": "POSITIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 4153,
+      "analytical_sample": 4153,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "strategy_id"
+      ],
+      "segment_count": 13,
+      "count": 4153,
+      "wins": 1759,
+      "losses": 2394,
+      "win_rate": 0.4235,
+      "mean_r": 0.0737,
+      "median_r": -0.0278,
+      "total_r": 306.0631,
+      "avg_win_r": 0.769,
+      "avg_loss_r": -0.4372,
+      "profit_factor": 1.2924,
+      "std_r": 0.9126,
+      "expectancy": 0.0737
+    },
+    "warnings": [],
+    "error": ""
+  },
+  {
+    "question_id": "SD-007",
+    "title": "Shadow Regime Expectancy",
+    "status": "COMPLETE",
+    "population_size": 4153,
+    "evidence_source": "COUNTERFACTUAL",
+    "outcome": "POSITIVE",
+    "confidence": "HIGH",
+    "sample_sizes": {
+      "population": 4153,
+      "analytical_sample": 4153,
+      "minimum_required": 10,
+      "sample_reduction_reason": "No reduction \u2014 all records usable"
+    },
+    "primary_metrics": {
+      "dimensions": [
+        "regime"
+      ],
+      "segment_count": 3,
+      "count": 4153,
+      "wins": 1759,
+      "losses": 2394,
+      "win_rate": 0.4235,
+      "mean_r": 0.0737,
+      "median_r": -0.0278,
+      "total_r": 306.0631,
+      "avg_win_r": 0.769,
+      "avg_loss_r": -0.4372,
+      "profit_factor": 1.2924,
+      "std_r": 0.9126,
+      "expectancy": 0.0737
+    },
+    "warnings": [],
+    "error": ""
+  }
+]

@@ -232,6 +232,7 @@ def build_ledger_entry(
     context_snapshot_id: str = "",
     correlation_id: str = "",
     entity_id: str = "",
+    observation_id: str = "",
     # Performance
     decision_latency_ms: int = 0,
     # Metadata
@@ -274,6 +275,7 @@ def build_ledger_entry(
         "context_snapshot_id": context_snapshot_id,
         "correlation_id": correlation_id,
         "entity_id": entity_id,
+        "observation_id": observation_id,
         "decision_latency_ms": decision_latency_ms,
         "engine_version": engine_version,
         "schema_version": _SCHEMA_VERSION,
