@@ -127,6 +127,15 @@ class Opportunity:
     decision_id: str = ""            # Links to decision_audit (populated at ASSESSED)
     runtime_session_id: str = ""     # Distinguishes bot restart sessions
 
+    # Additive Data/Shadow derivation (FIXED DECISION §5.2). Observational only.
+    # passed_identification_condition =
+    #   (identification_verdict == VALID) AND (len(eligible_horizons) > 0)
+    # Default False; populated at the primary-opportunity enrichment point in
+    # live_scanner.py from already-produced verdict + horizon eligibility.
+    # Not an identifier; not a new stage; additive field on the existing
+    # opportunities_v1 Data record (asdict auto-serializes).
+    passed_identification_condition: bool = False
+
     def to_dict(self) -> dict[str, Any]:
         """Serialize to dict for JSONL persistence."""
         return asdict(self)

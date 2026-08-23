@@ -336,6 +336,32 @@ class DecisionLedgerWriter:
         except Exception:
             self._total_errors += 1
 
+    def write(self, entry: dict[str, Any]) -> bool:
+        """
+        Write a pre-built ledger entry dict to the ledger.
+
+        Accepts an already-built entry (e.g. from build_v10_ledger_entry)
+        and appends it to the same buffer used by record(), reusing the
+        same batch/timer flush and the same local + S3 persistence.
+
+        Returns True if the entry was accepted into the buffer,
+        False if it could not be accepted (e.g. build argument error).
+        """
+        try:
+            with self._lock:
+                # Hard ceiling: drop oldest if buffer exceeds 5x batch size
+                # This prevents unbounded memory growth on persistent flush failure
+                if len(self._buffer) >= self._flush_batch_size * 5:
+                    self._buffer = self._buffer[-(self._flush_batch_size * 4):]
+                    self._total_errors += 1
+                self._buffer.append(entry)
+                if len(self._buffer) >= self._flush_batch_size:
+                    self._flush_locked()
+            return True
+        except Exception:
+            self._total_errors += 1
+            return False
+
     def tick(self) -> None:
         """
         Called periodically (e.g. end of cycle) to flush on timer.

@@ -208,6 +208,11 @@ class ShadowTradeEngine:
         self._active: dict[str, ShadowTrade] = {}  # trade_id → ShadowTrade
         self._max_bars = max_bars
         self._closed_count = 0
+        # In-memory per-symbol dedup: symbol → last evaluated bar_time.
+        # Guarantees lifecycle mutation occurs at most once per (symbol, bar_time)
+        # even when callers (e.g. BarProvider) dispatch on every poll.
+        # Intentionally NOT persisted — this engine is stateless across restarts.
+        self._last_evaluated_bar: dict[str, float] = {}
 
     @property
     def active_count(self) -> int:
@@ -321,6 +326,17 @@ class ShadowTradeEngine:
         Returns list of Trade Truth v2 records for any trades that closed this bar.
         """
         closed_records: list[dict[str, Any]] = []
+
+        # ─── BAR DEDUP GUARD (in-memory, per symbol+bar_time) ──────────
+        # Callers may invoke evaluate_bar repeatedly for the same
+        # (symbol, bar_time) — e.g. BarProvider dispatches Shadow before its
+        # own dedup gate. Lifecycle/statistical mutation below must occur at
+        # most once per (symbol, bar_time). In-memory only: intentionally
+        # stateless across restarts, matching this engine's stateless design.
+        _last_evaluated = self._last_evaluated_bar.get(symbol)
+        if _last_evaluated is not None and bar_time == _last_evaluated:
+            return closed_records
+        self._last_evaluated_bar[symbol] = bar_time
 
         trades_to_close: list[str] = []
 

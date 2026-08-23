@@ -253,17 +253,17 @@ def persist_v10_full(result: PipelineResult, cycle_id: int = 0) -> None:
         logger.info("[V10_PERSIST] step=ledger_written obs_id=%s", obs_id)
 
     except Exception as exc:
-        logger.debug("[V10_PERSIST] full persistence failed: %s", exc)
+        logger.error("[V10_PERSIST] full persistence failed: %s", exc)
 
 
-def _write_to_ledger(entry: dict) -> None:
-    """Write to the existing decision ledger (fire-and-forget)."""
-    try:
-        from core.decision_ledger import get_ledger
-        ledger = get_ledger()
-        ledger.write(entry)
-    except Exception:
-        pass  # Ledger failure must never block
+def _write_to_ledger(entry: dict) -> bool:
+    """Write the pre-built ledger entry to the existing decision ledger."""
+    from core.decision_ledger import get_ledger
+    ledger = get_ledger()
+    accepted = ledger.write(entry)
+    if not accepted:
+        raise RuntimeError("decision ledger writer rejected the entry")
+    return True
 
 
 def _generate_id(symbol: str, timestamp: float) -> str:
