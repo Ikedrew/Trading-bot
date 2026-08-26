@@ -33,6 +33,7 @@ def create_opportunity(
     ask: float = 0.0,
     session_state: str = "",
     runtime_session_id: str = "",
+    canonical_opportunity_id: str = "",
 ) -> Opportunity:
     """
     Create an Opportunity from a detected Signal and available context.
@@ -59,8 +60,14 @@ def create_opportunity(
     now = datetime.now(timezone.utc)
     detected_at_utc = now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
-    # Build unique ID from symbol + bar_time + pattern
-    opportunity_id = f"{symbol}_{signal.bar_time}_{signal.pattern}"
+    # Build THE canonical opportunity lineage ID (single authoritative mint point)
+    from core.identity.canonical import make_canonical_opportunity_id
+
+    opportunity_id = make_canonical_opportunity_id(
+        symbol=symbol,
+        bar_time=signal.bar_time,
+        pattern=signal.pattern,
+    )
 
     # Extract trigger candle OHLC
     trigger_candle: dict[str, float] = {}
@@ -138,6 +145,13 @@ def create_opportunity(
         state=OpportunityState.DETECTED.value,
         sibling_patterns=sibling_patterns or [],
         # Metadata
+        # Explicit canonical lineage root (Phase 3). Single-authority rule: if a
+        # caller already established the root it is passed through VERBATIM;
+        # otherwise the approved mint (same function live_scanner uses) fills it,
+        # which by determinism equals that downstream mint for identical inputs.
+        canonical_opportunity_id=(
+            canonical_opportunity_id or opportunity_id
+        ),
         entity_id=f"{symbol}_{signal.bar_time}",
         runtime_session_id=runtime_session_id,
     )

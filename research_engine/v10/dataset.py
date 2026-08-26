@@ -161,9 +161,20 @@ def enrich_with_decision_trace(trades: list[dict], trace_dir: str | None = None)
         symbol = t.get("symbol", "")
         decision = None
 
-        match = re.match(r"COR-\d{8}-(\d+)-", cor_id)
-        if match:
-            decision = dt_by_key.get(f"{symbol}_{int(match.group(1))}")
+        # Remediation Stage 8: current-epoch lineage uses the explicit
+        # canonical_opportunity_id field — NO regex reconstruction.
+        canonical = (
+            (t.get("identity") or {}).get("canonical_opportunity_id")
+            or t.get("canonical_opportunity_id", "")
+        )
+        if canonical and canonical in dt_by_key:
+            decision = dt_by_key[canonical]
+
+        # Historical fallback (read-only compat for pre-canonical records)
+        if not decision:
+            match = re.match(r"COR-\d{8}-(\d+)-", cor_id)
+            if match:
+                decision = dt_by_key.get(f"{symbol}_{int(match.group(1))}")
         if not decision:
             entry_time = t.get("entry_time", 0)
             if entry_time and symbol:

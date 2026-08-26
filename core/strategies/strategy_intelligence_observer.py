@@ -273,6 +273,21 @@ def _do_observe(ctx: Any) -> None:
     record["decision_side"] = side
     record["decision_reason"] = str(reason)[:200] if reason else ""
 
+    # ─── Phase 3 Step 6 — observation-layer lineage enrichment ────────
+    # Identity semantics: the existing {symbol}_{cycle}_{ts} observation_id is
+    # PRESERVED as the dataset-local ID. We add the observation-level entity_id
+    # plus the canonical root ONLY when the engine already established one for
+    # this bar. Non-opportunity cycles keep "" — nothing is fabricated, so a
+    # bare observation stays joinable via symbol+cycle+bar_time without ever
+    # claiming an opportunity it did not produce.
+    record["bar_time"] = int(ctx.bar_time)
+    record["timeframe"] = "M5"
+    record.setdefault("entity_id", f"{ctx.symbol}_{int(ctx.bar_time)}")
+    record["entity_id"] = record.get("entity_id", "") or f"{ctx.symbol}_{int(ctx.bar_time)}"
+    record["canonical_opportunity_id"] = str(
+        engine_result.get("canonical_opportunity_id", "") or ""
+    )
+
     # Add entity_id for deterministic joins to shadow_trades and decision_trace
     # entity_id format: f"{symbol}_{bar_time}" — same as decision pipeline
     record["entity_id"] = engine_result.get("entity_id", "") or f"{ctx.symbol}_{int(ctx.bar_time)}"

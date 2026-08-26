@@ -263,7 +263,8 @@ def _build_shadow_result(record: dict[str, Any], horizon: str) -> HorizonShadowR
         _version = ACTIVE_CONTRACT_VERSION.get(horizon, f"{horizon}_RESEARCH_V1")
         return HorizonShadowResult(
             shadow_id=record.get("trade_id", ""),
-            source_opportunity_id=record.get("correlation_id", ""),
+            source_opportunity_id=(record.get("identity") or {}).get("canonical_opportunity_id")
+            or record.get("canonical_opportunity_id", ""),
             symbol=record.get("symbol", ""),
             direction=record.get("direction", ""),
             horizon=horizon,

@@ -181,6 +181,16 @@ def enrich_trades(
         decision = None
         method = "unmatched"
 
+        # Method 0 (remediation Stage 8): explicit canonical lineage field —
+        # no string reconstruction for current-epoch records.
+        canonical = (
+            (trade.get("identity") or {}).get("canonical_opportunity_id")
+            or trade.get("canonical_opportunity_id", "")
+        )
+        if canonical and canonical in dt_by_cor:
+            decision = dt_by_cor[canonical]
+            method = "canonical_opportunity_id"
+
         # Method 1: Direct correlation_id match on decision trace
         if cor_id and cor_id in dt_by_cor:
             decision = dt_by_cor[cor_id]

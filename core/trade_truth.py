@@ -117,6 +117,8 @@ def build_trade_truth(
     net_profit: float = 0.0,
     # Exit classification
     exit_reason: str = "system_close",
+    # Canonical lineage (remediation)
+    canonical_opportunity_id: str = "",
 ) -> dict[str, Any]:
     """
     Build a Pure Execution Reality record.
@@ -135,6 +137,7 @@ def build_trade_truth(
         "identity": {
             "trade_id": trade_id,
             "correlation_id": correlation_id,
+            "canonical_opportunity_id": canonical_opportunity_id,
             "symbol": symbol,
         },
 

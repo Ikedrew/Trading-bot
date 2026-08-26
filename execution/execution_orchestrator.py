@@ -104,6 +104,10 @@ class ExecutionOrchestrator:
         correlation_id: str,
         entity_id: str,
         observation_id: str = "",
+        canonical_opportunity_id: str = "",
+        bid_at_execution: float = 0.0,
+        ask_at_execution: float = 0.0,
+        risk_distance: float = 0.0,
         mt5_state: str,
     ) -> ExecutionOutcome:
         """
@@ -116,7 +120,11 @@ class ExecutionOrchestrator:
             decision_id: Unique decision identifier.
             correlation_id: Correlation ID for tracing.
             entity_id: Entity ID for forensic linking.
-            observation_id: Canonical V10 opportunity identity.
+            observation_id: Retired lineage role (schema compatibility).
+            canonical_opportunity_id: Canonical opportunity lineage root
+                (Phase 1 data capture) — persisted on the primary
+                execution-result record so every broker attempt joins to its
+                originating opportunity without multi-hop lookups.
             mt5_state: Current MT5 connection state.
 
         Returns:
@@ -172,8 +180,12 @@ class ExecutionOrchestrator:
                 correlation_id=correlation_id,
                 entity_id=entity_id,
                 observation_id=observation_id,
+                canonical_opportunity_id=canonical_opportunity_id,
                 decision_ts_utc_ms=_decision_ts,
                 slippage=_exec_slippage,
+                bid_at_execution=bid_at_execution,
+                ask_at_execution=ask_at_execution,
+                risk_distance=risk_distance,
             )
         except Exception:
             pass  # Execution result persistence must never affect trading

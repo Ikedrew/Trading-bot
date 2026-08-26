@@ -63,6 +63,12 @@ def build_assessment(
     assessment_id = f"{symbol}_{bar_time}_{pattern}_assessment"
     opportunity_id = f"{symbol}_{bar_time}_{pattern}"
 
+    # Canonical lineage root (remediation) — prefer explicit engine stamp
+    from core.identity.canonical import make_canonical_opportunity_id
+    canonical_opportunity_id = str(
+        engine_result.get("canonical_opportunity_id", "") or ""
+    ) or make_canonical_opportunity_id(symbol=symbol, bar_time=bar_time, pattern=pattern)
+
     # Extract scoring
     score_neutral = float(engine_result.get("score_neutral", 0.0) or 0.0)
     score_strategy = float(engine_result.get("score_strategy", 0.0) or 0.0)
@@ -175,6 +181,7 @@ def build_assessment(
         ask_at_assessment=ask,
         # Join keys
         entity_id=entity_id,
+        canonical_opportunity_id=canonical_opportunity_id,
         correlation_id=correlation_id,
         runtime_session_id=runtime_session_id,
         # Timestamp

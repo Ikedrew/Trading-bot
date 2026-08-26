@@ -122,6 +122,12 @@ class Opportunity:
     # Other patterns detected on same bar (for multi-pattern context)
 
     # ─── F) METADATA ─────────────────────────────────────────────────
+    canonical_opportunity_id: str = ""
+    # THE authoritative lineage root (Phase 3 data capture). Equals the minted
+    # opportunity_id for every pattern-qualified opportunity (both derive from
+    # the single approved authority core.identity.canonical); carried as an
+    # explicit named join key so consumers never parse opportunity_id format.
+    # Never repurposed; legacy opportunity_id preserved verbatim.
     entity_id: str = ""              # For joining to decision_audit, trade_truth
     correlation_id: str = ""         # Execution chain link (if executed)
     decision_id: str = ""            # Links to decision_audit (populated at ASSESSED)

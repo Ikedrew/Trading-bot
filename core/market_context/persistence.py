@@ -26,11 +26,37 @@ _SCHEMA_VERSION = "market_context_v2"
 class MarketContextPersistence:
     """Writes MarketContext records to local JSONL and optional S3 mirror."""
 
-    def persist(self, context_dict: dict[str, Any]) -> None:
-        """Persist a serialized MarketContext record. Never raises."""
+    def persist(self, context_dict: dict[str, Any], *, entity_id: str = "",
+                correlation_id: str = "", bar_time=None) -> None:
+        """Persist a serialized MarketContext record. Never raises.
+
+        Phase 3 Step 2 — identity enrichment lifecycle timing:
+            MarketContext is captured pre-opportunity-qualification, so the
+            canonical opportunity root legitimately does NOT exist yet and is
+            never fabricated here. Observation-level identity is attached when
+            the caller supplies it:
+                entity_id   {SYMBOL}_{int(bar_time)} (deterministic, no mint)
+                bar_time    closed-bar epoch seconds of the snapshot
+                correlation_id  cycle correlation string when known
+        Downstream join to the canonical root happens through assessment /
+        decision rows carrying both this entity_id and the root.
+        """
         try:
             symbol = context_dict.get("symbol", "UNKNOWN")
             date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+            # Observation-level identity — set only with real values (rule:
+            # never fabricate lineage). Empty strings stay empty otherwise.
+            if bar_time not in (None, "", 0):
+                context_dict.setdefault("bar_time", int(bar_time))
+                if not entity_id and symbol != "UNKNOWN":
+                    context_dict.setdefault(
+                        "entity_id", f"{symbol}_{int(bar_time)}"
+                    )
+            if entity_id:
+                context_dict.setdefault("entity_id", entity_id)
+            if correlation_id:
+                context_dict.setdefault("correlation_id", correlation_id)
 
             context_dict["schema_version"] = _SCHEMA_VERSION
 

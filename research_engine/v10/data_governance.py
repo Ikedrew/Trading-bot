@@ -413,8 +413,22 @@ class DataGovernanceValidator:
             symbol = t.get("symbol", "")
             found = False
 
-            # Extract cycle_id from correlation_id
-            if cor_id:
+            # Remediation Stage 8: current-epoch lineage joins on the explicit
+            # canonical_opportunity_id — regex parsing is historical-only.
+            canonical = (
+                (t.get("identity") or {}).get("canonical_opportunity_id")
+                or t.get("canonical_opportunity_id", "")
+            )
+            if canonical:
+                # Canonical IDs are deterministic from (symbol, bar_time,
+                # pattern); the entity-level index provides the bridge to
+                # legacy decision-trace keys without any string parsing.
+                bar_time = canonical.split("*")[1] if "*" in canonical else ""
+                if bar_time and f"{symbol}_{bar_time}" in dt_by_entity:
+                    found = True
+
+            # Extract cycle_id from correlation_id — HISTORICAL FALLBACK ONLY
+            if not found and cor_id:
                 m = re.match(r"COR-\d{8}-(\d+)-([A-Z0-9]+)-", cor_id)
                 if m:
                     cycle_id = int(m.group(1))

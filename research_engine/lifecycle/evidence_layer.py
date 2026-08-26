@@ -146,7 +146,8 @@ def collect_evidence(
     Does NOT modify trigger logic — triggers are generated separately.
 
     Args:
-        real_shadows: V10_PRIMARY shadows with correlation_id
+        real_shadows: canonical-lineage (HORIZON_ALTERNATIVE) shadow records;
+            historically these were V10_PRIMARY records — see Phase 1I-C.
         all_shadows: ALL_SHADOW_OUTCOMES population
         triggers_generated: count of triggers from the actual detector run
         cycle_id: research cycle identifier
@@ -537,10 +538,14 @@ def _evidence_exit_inefficiency(shadows: list[dict], ts: str) -> EvidenceRecord:
 
 
 def _evidence_guard_value(shadows: list[dict], ts: str) -> EvidenceRecord:
+    # Phase 1I-C: the controlled guard-value comparison previously used the
+    # retired V10_PRIMARY shadow_type. It now operates on the canonical
+    # HORIZON_ALTERNATIVE lineage (both groups share STRUCTURE_BASED geometry,
+    # so the "controlled comparison" property is preserved).
     v10_exec = [s["r_multiple"] for s in shadows
-                if s.get("shadow_type") == "V10_PRIMARY" and s.get("v10_action") == "EXECUTE" and s.get("r_multiple") is not None]
+                if s.get("shadow_type") == "HORIZON_ALTERNATIVE" and s.get("v10_action") == "EXECUTE" and s.get("r_multiple") is not None]
     v10_notrade = [s["r_multiple"] for s in shadows
-                   if s.get("shadow_type") == "V10_PRIMARY" and s.get("v10_action") == "NO_TRADE" and s.get("r_multiple") is not None]
+                   if s.get("shadow_type") == "HORIZON_ALTERNATIVE" and s.get("v10_action") == "NO_TRADE" and s.get("r_multiple") is not None]
 
     if len(v10_exec) < 30 or len(v10_notrade) < 30:
         return EvidenceRecord(detector_id="DET-009", detector_name="guard_value_controlled",
@@ -560,7 +565,7 @@ def _evidence_guard_value(shadows: list[dict], ts: str) -> EvidenceRecord:
     return EvidenceRecord(
         detector_id="DET-009", detector_name="guard_value_controlled",
         surface="risk_guards", timestamp=ts,
-        population_name="ALL_SHADOW (V10_PRIMARY only)", population_size=len(v10_exec) + len(v10_notrade),
+        population_name="ALL_SHADOW (HORIZON_ALTERNATIVE)", population_size=len(v10_exec) + len(v10_notrade),
         groups_examined=2, metric_name="notrade_minus_execute_r",
         metric_value=round(delta, 4), baseline_value=round(mean_exec, 4),
         effect_size=round(delta, 4),
@@ -781,15 +786,15 @@ def _evidence_strategy_degradation(shadows: list[dict], ts: str) -> EvidenceReco
 
 
 def _evidence_shadow_reality(ts: str) -> EvidenceRecord:
-    try:
-        from research_engine.v10.universes.shadow_reality_universe import ShadowRealityUniverseBuilder
-        builder = ShadowRealityUniverseBuilder()
-        builder.build()
-        stats = builder.get_statistics()
-    except Exception:
-        return EvidenceRecord(detector_id="DET-015", detector_name="sr_divergence",
-                              surface="shadow_reality", timestamp=ts,
-                              status=EvidenceStatus.NOT_OBSERVABLE, reason="SR bridge unavailable")
+    # Phase 1I-C: the Shadow↔Reality bridge was V10_PRIMARY-specific
+    # (V10_PRIMARY EXECUTE shadows joined to the trade journal via COR-* ids).
+    # It was retired together with V10_PRIMARY. A future shadow↔reality join
+    # must be designed around the canonical lineage's own identity model.
+    _ = ts
+    return EvidenceRecord(detector_id="DET-015", detector_name="sr_divergence",
+                          surface="shadow_reality", timestamp=ts,
+                          status=EvidenceStatus.NOT_OBSERVABLE,
+                          reason="SR bridge retired with V10_PRIMARY (Phase 1I-C)")
 
     n = stats.get("n", 0)
     if n < 15:

@@ -1,0 +1,186 @@
+_grep_gates.py:4: PATTERNS = ["canonical_opportunity_id"]
+core\decision_audit.py:286: canonical_opportunity_id: str = "",
+core\decision_audit.py:323: if canonical_opportunity_id:
+core\decision_audit.py:324: record["canonical_opportunity_id"] = canonical_opportunity_id
+core\decision_audit.py:367: canonical_opportunity_id: str = "",
+core\decision_audit.py:480: "canonical_opportunity_id": canonical_opportunity_id,
+core\decision_audit.py:529: canonical_opportunity_id: str = "",
+core\decision_audit.py:558: "canonical_opportunity_id": canonical_opportunity_id,
+core\decision_ledger.py:237: canonical_opportunity_id: str = "",
+core\decision_ledger.py:283: "canonical_opportunity_id": canonical_opportunity_id,
+core\decision_trace.py:311: canonical_opportunity_id: str = ""
+core\decision_trace.py:398: "canonical_opportunity_id": self.canonical_opportunity_id,
+core\decision_trace.py:546: _canonical_opp_id = str(engine_result.get("canonical_opportunity_id", "") or "")
+core\decision_trace.py:791: canonical_opportunity_id=_canonical_opp_id,
+core\execution_context.py:135: canonical_opportunity_id: str = ""
+core\execution_context.py:143: "canonical_opportunity_id": self.canonical_opportunity_id,
+core\execution_context.py:179: canonical_opportunity_id: str = "",
+core\execution_context.py:216: canonical_opportunity_id=canonical_opportunity_id,
+core\shadow_trades.py:145: canonical_opportunity_id: str = ""  # THE authoritative lineage root (remediation)
+core\shadow_trades.py:251: canonical_opportunity_id: str = "",
+core\shadow_trades.py:293: canonical_opportunity_id=canonical_opportunity_id,
+core\shadow_trades.py:494: "canonical_opportunity_id": trade.canonical_opportunity_id or None,
+core\shadow_trades.py:623: canonical_opportunity_id=identity.get("canonical_opportunity_id", "") or "",
+core\shadow_trades.py:632: tid, trade.symbol, trade.canonical_opportunity_id or "-",
+core\shadow_trades.py:666: Carries the full identity domain (including canonical_opportunity_id)
+core\shadow_trades.py:678: "canonical_opportunity_id": trade.canonical_opportunity_id or None,
+core\trade_identity.py:56: canonical_opportunity_id: str = ""
+core\trade_identity.py:78: "canonical_opportunity_id": self.canonical_opportunity_id,
+core\trade_identity.py:92: canonical_opportunity_id=data.get("canonical_opportunity_id", ""),
+core\trade_journal.py:108: canonical_opportunity_id: str = ""
+core\trade_journal.py:221: _canonical_opp_id = _identity.canonical_opportunity_id if _identity is not None else ""
+core\trade_journal.py:247: canonical_opportunity_id=_canonical_opp_id,
+core\trade_journal.py:455: canonical_opportunity_id=getattr(record, "canonical_opportunity_id", ""),
+core\trade_truth.py:121: canonical_opportunity_id: str = "",
+core\trade_truth.py:140: "canonical_opportunity_id": canonical_opportunity_id,
+core\assessment\assessment.py:125: canonical_opportunity_id: str = ""  # THE authoritative lineage root (remediation)
+core\assessment\builder.py:67: from core.identity.canonical import make_canonical_opportunity_id
+core\assessment\builder.py:68: canonical_opportunity_id = str(
+core\assessment\builder.py:69: engine_result.get("canonical_opportunity_id", "") or ""
+core\assessment\builder.py:70: ) or make_canonical_opportunity_id(symbol=symbol, bar_time=bar_time, pattern=pattern)
+core\assessment\builder.py:184: canonical_opportunity_id=canonical_opportunity_id,
+core\horizon\shadow_evaluation.py:266: source_opportunity_id=(record.get("identity") or {}).get("canonical_opportunity_id")
+core\horizon\shadow_evaluation.py:267: or record.get("canonical_opportunity_id", ""),
+core\identity\canonical.py:6: canonical_opportunity_id = "{canonical_symbol}*{normalized_bar_time}*{primary_pattern}"
+core\identity\canonical.py:24: canonical_opportunity_id   canonical lineage ROOT
+core\identity\canonical.py:62: def make_canonical_opportunity_id(
+core\identity\canonical.py:92: def canonical_opportunity_id_from_parts(
+core\identity\canonical.py:98: """Alias of :func:`make_canonical_opportunity_id` (readable call sites)."""
+core\identity\canonical.py:99: return make_canonical_opportunity_id(symbol=symbol, bar_time=bar_time, pattern=pattern)
+core\identity\canonical.py:103: "make_canonical_opportunity_id",
+core\identity\canonical.py:104: "canonical_opportunity_id_from_parts",
+core\identity\__init__.py:4: canonical_opportunity_id_from_parts,
+core\identity\__init__.py:5: make_canonical_opportunity_id,
+core\identity\__init__.py:9: "make_canonical_opportunity_id",
+core\identity\__init__.py:10: "canonical_opportunity_id_from_parts",
+core\opportunity\factory.py:63: from core.identity.canonical import make_canonical_opportunity_id
+core\opportunity\factory.py:65: opportunity_id = make_canonical_opportunity_id(
+core\persistence\execution_result_writer.py:56: canonical_opportunity_id: str = "",
+core\persistence\execution_result_writer.py:102: "canonical_opportunity_id": canonical_opportunity_id,
+core\runtime\decision_recorder.py:72: canonical_opportunity_id: str = "",
+core\runtime\decision_recorder.py:96: "canonical_opportunity_id": canonical_opportunity_id,
+core\runtime\decision_recorder.py:176: canonical_opportunity_id=self._decision.get("canonical_opportunity_id", ""),
+core\runtime\engine_execution_handler.py:48: canonical_opportunity_id: str = ""
+core\runtime\engine_execution_handler.py:60: canonical_opportunity_id: str = "",
+core\runtime\engine_execution_handler.py:126: canonical_opportunity_id=canonical_opportunity_id or new_result.get("canonical_opportunity_id", ""),
+core\runtime\engine_execution_handler.py:178: canonical_opportunity_id=canonical_opportunity_id or new_result.get("canonical_opportunity_id", ""),
+core\runtime\live_scanner.py:667: from core.identity.canonical import make_canonical_opportunity_id
+core\runtime\live_scanner.py:668: _canonical_opp_id = make_canonical_opportunity_id(
+core\runtime\live_scanner.py:676: _cycle_decision["canonical_opportunity_id"] = _canonical_opp_id
+core\runtime\live_scanner.py:680: _new_result["canonical_opportunity_id"] = _canonical_opp_id
+core\runtime\live_scanner.py:774: canonical_opportunity_id=_canonical_opp_id if "_canonical_opp_id" in dir() else "",
+core\runtime\live_scanner.py:871: canonical_opportunity_id=_canonical_opp_id if "_canonical_opp_id" in dir() else "",
+core\runtime\live_scanner.py:1121: canonical_opportunity_id=_canonical_opp_id if "_canonical_opp_id" in dir() else "",
+core\runtime\live_scanner.py:1453: canonical_opportunity_id=_cycle_decision.get("canonical_opportunity_id", ""),
+core\runtime\live_scanner.py:1695: canonical_opportunity_id=_canonical_opp_id if "_canonical_opp_id" in dir() else "",
+core\runtime\live_scanner.py:1753: canonical_opportunity_id=_canonical_opp_id if "_canonical_opp_id" in dir() else "",
+core\shadow\integration.py:62: canonical_opportunity_id: str,
+core\shadow\integration.py:74: if not canonical_opportunity_id:
+core\shadow\integration.py:124: "canonical_opportunity_id": canonical_opportunity_id,
+core\shadow\models.py:5: canonical_opportunity_id
+core\shadow\models.py:11: - canonical_opportunity_id is INHERITED, copied verbatim onto every event.
+core\shadow\runtime.py:5: - child lineage of canonical_opportunity_id; one shadow_trade_id per horizon
+core\shadow\runtime.py:86: canonical_opportunity_id: str = "",
+core\shadow\runtime.py:94: "canonical_opportunity_id": canonical_opportunity_id,
+core\shadow\runtime.py:120: canonical_opportunity_id, entity_id, symbol, cycle_id,
+core\shadow\runtime.py:128: root = str(ctx.get("canonical_opportunity_id", "") or "")
+core\shadow\runtime.py:209: canonical_opportunity_id=root,
+core\shadow\runtime.py:248: root = str(ctx.get("canonical_opportunity_id", "") or "")
+core\shadow\runtime.py:271: canonical_opportunity_id=root,
+core\shadow\runtime.py:335: "canonical_opportunity_id": root,
+core\shadow\runtime.py:444: canonical_opportunity_id=sim["canonical_opportunity_id"],
+core\shadow\runtime.py:491: canonical_opportunity_id=sim["canonical_opportunity_id"],
+core\shadow\runtime.py:540: root = str(ev.get("canonical_opportunity_id", "") or "")
+core\shadow\runtime.py:552: "canonical_opportunity_id": ev.get("canonical_opportunity_id", ""),
+core\shadow\runtime.py:588: "canonical_opportunity_id": sim["canonical_opportunity_id"],
+core\shadow\__init__.py:4: First-class DATA-layer child lineage of canonical_opportunity_id.
+research_engine\data_access\loaders.py:84: Key fields: trade_id, correlation_id, canonical_opportunity_id, symbol,
+research_engine\data_quality\classifier.py:104: # canonical_opportunity_id lineage root. Records that otherwise look
+research_engine\data_quality\classifier.py:106: canonical = identity.get("canonical_opportunity_id", "") or record.get("canonical_opportunity_id", "")
+research_engine\data_quality\tests\test_classifier.py:16: def _record(entity_id="", strategy="", h4_regime="", correlation_id="", r_multiple=0.5, horizon="", canonical_opportunity_id=""):
+research_engine\data_quality\tests\test_classifier.py:22: "canonical_opportunity_id": canonical_opportunity_id,
+research_engine\data_quality\tests\test_classifier.py:33: canonical_opportunity_id="EURUSD*123*HAMMER",
+research_engine\data_quality\tests\test_classifier.py:44: canonical_opportunity_id="EURUSD*123*P")
+research_engine\data_quality\tests\test_classifier.py:78: canonical_opportunity_id="X*123*FALSE_BREAK")
+research_engine\data_quality\tests\test_classifier.py:91: canonical_opportunity_id="X*1*CONTINUATION"),
+research_engine\data_quality\tests\test_classifier.py:104: canonical_opportunity_id="X*1*P")] * 5
+research_engine\data_quality\tests\test_classifier.py:121: canonical_opportunity_id="X*1*CONTINUATION"),
+research_engine\data_quality\tests\test_classifier.py:124: canonical_opportunity_id="Y*2*P"),
+research_engine\data_quality\tests\test_classifier.py:132: canonical_opportunity_id="X*1*CONTINUATION"),
+research_engine\v10\dataset.py:165: # canonical_opportunity_id field — NO regex reconstruction.
+research_engine\v10\dataset.py:167: (t.get("identity") or {}).get("canonical_opportunity_id")
+research_engine\v10\dataset.py:168: or t.get("canonical_opportunity_id", "")
+research_engine\v10\data_governance.py:417: # canonical_opportunity_id — regex parsing is historical-only.
+research_engine\v10\data_governance.py:419: (t.get("identity") or {}).get("canonical_opportunity_id")
+research_engine\v10\data_governance.py:420: or t.get("canonical_opportunity_id", "")
+research_engine\v10\decision_enrichment.py:187: (trade.get("identity") or {}).get("canonical_opportunity_id")
+research_engine\v10\decision_enrichment.py:188: or trade.get("canonical_opportunity_id", "")
+research_engine\v10\decision_enrichment.py:192: method = "canonical_opportunity_id"
+tests\test_canonical_identity.py:12: from core.identity.canonical import make_canonical_opportunity_id
+tests\test_canonical_identity.py:17: cid = make_canonical_opportunity_id(
+tests\test_canonical_identity.py:23: a = make_canonical_opportunity_id(symbol="GBPUSD", bar_time=1000, pattern="HAMMER")
+tests\test_canonical_identity.py:24: b = make_canonical_opportunity_id(symbol="GBPUSD", bar_time=1000, pattern="HAMMER")
+tests\test_canonical_identity.py:31: a = make_canonical_opportunity_id(symbol="EURUSD", bar_time=1784800000, pattern="HAMMER")
+tests\test_canonical_identity.py:32: b = make_canonical_opportunity_id(symbol="EURUSD", bar_time=1784800000.0, pattern="HAMMER")
+tests\test_canonical_identity.py:36: cid = make_canonical_opportunity_id(symbol="EURUSD", bar_time=1784800000.9, pattern="HAMMER")
+tests\test_canonical_identity.py:42: a = make_canonical_opportunity_id(symbol=" eurusd ", bar_time=1, pattern="HAMMER")
+tests\test_canonical_identity.py:43: b = make_canonical_opportunity_id(symbol="EURUSD", bar_time=1, pattern="HAMMER")
+tests\test_canonical_identity.py:47: a = make_canonical_opportunity_id(symbol="EURUSD", bar_time=1, pattern="hammer")
+tests\test_canonical_identity.py:53: assert make_canonical_opportunity_id(symbol="EURUSD", bar_time=1, pattern="") == ""
+tests\test_canonical_identity.py:56: assert make_canonical_opportunity_id(symbol="", bar_time=1, pattern="HAMMER") == ""
+tests\test_canonical_identity.py:62: cid = make_canonical_opportunity_id(symbol="EURUSD", bar_time=42, pattern="HAMMER")
+tests\test_canonical_identity.py:68: a = make_canonical_opportunity_id(symbol="EURUSD", bar_time=42, pattern="HAMMER")
+tests\test_canonical_identity.py:69: b = make_canonical_opportunity_id(symbol="EURUSD", bar_time=42, pattern="MORNING_STAR")
+tests\test_canonical_lineage_contract.py:6: canonical_opportunity_id = "{SYMBOL}*{int(float(bar_time))}*{PATTERN}"
+tests\test_canonical_lineage_contract.py:25: from core.identity.canonical import make_canonical_opportunity_id
+tests\test_canonical_lineage_contract.py:49: "canonical_opportunity_id": CANONICAL,
+tests\test_canonical_lineage_contract.py:65: a = make_canonical_opportunity_id(symbol="EURUSD", bar_time=1784800000, pattern="HAMMER")
+tests\test_canonical_lineage_contract.py:66: b = make_canonical_opportunity_id(symbol="EURUSD", bar_time=1784800000, pattern="HAMMER")
+tests\test_canonical_lineage_contract.py:70: assert make_canonical_opportunity_id(
+tests\test_canonical_lineage_contract.py:72: ) == make_canonical_opportunity_id(
+tests\test_canonical_lineage_contract.py:77: cid = make_canonical_opportunity_id(symbol="EURUSD", bar_time=1, pattern="HAMMER")
+tests\test_canonical_lineage_contract.py:98: assert a.canonical_opportunity_id == CANONICAL
+tests\test_canonical_lineage_contract.py:104: assert d["canonical_opportunity_id"] == CANONICAL
+tests\test_canonical_lineage_contract.py:118: canonical_opportunity_id=CANONICAL,
+tests\test_canonical_lineage_contract.py:130: assert entry["canonical_opportunity_id"] == CANONICAL
+tests\test_canonical_lineage_contract.py:135: assert build_entry(led)["canonical_opportunity_id"] == CANONICAL
+tests\test_canonical_lineage_contract.py:140: assert build_entry(led)["canonical_opportunity_id"] == CANONICAL
+tests\test_canonical_lineage_contract.py:156: canonical_opportunity_id=CANONICAL,
+tests\test_canonical_lineage_contract.py:209: canonical_opportunity_id=CANONICAL,
+tests\test_canonical_lineage_contract.py:212: assert d["canonical_opportunity_id"] == CANONICAL
+tests\test_canonical_lineage_contract.py:215: assert rebuilt.canonical_opportunity_id == CANONICAL
+tests\test_canonical_lineage_contract.py:218: cid = make_canonical_opportunity_id(symbol="EURUSD", bar_time=1784800000, pattern="HAMMER")
+tests\test_canonical_lineage_contract.py:228: canonical_opportunity_id=CANONICAL,
+tests\test_canonical_lineage_contract.py:230: assert truth["identity"]["canonical_opportunity_id"] == CANONICAL
+tests\test_canonical_lineage_contract.py:236: bid=1.1, ask=1.1001, canonical_opportunity_id=CANONICAL,
+tests\test_canonical_lineage_contract.py:238: assert ctx["canonical_opportunity_id"] == CANONICAL
+tests\test_canonical_lineage_contract.py:244: assert "canonical_opportunity_id" in sig.parameters
+tests\test_canonical_lineage_contract.py:264: canonical_opportunity_id=CANONICAL,
+tests\test_canonical_lineage_contract.py:275: assert t.canonical_opportunity_id == CANONICAL  # invariant 2
+tests\test_canonical_lineage_contract.py:290: assert rec["identity"]["canonical_opportunity_id"] == CANONICAL
+tests\test_canonical_lineage_contract.py:304: assert closes[0]["identity"]["canonical_opportunity_id"] == CANONICAL
+tests\test_canonical_lineage_contract.py:321: assert all(x.canonical_opportunity_id == CANONICAL for x in recovered.values())
+tests\test_canonical_lineage_contract.py:327: assert t.canonical_opportunity_id == CANONICAL
+tests\test_canonical_lineage_contract.py:341: "event_type": "OPEN", "identity": {"trade_id": "a", "canonical_opportunity_id": CANONICAL},
+tests\test_canonical_lineage_contract.py:345: close_rec = {"identity": {"trade_id": "b", "canonical_opportunity_id": CANONICAL},
+tests\test_canonical_lineage_contract.py:362: "canonical_opportunity_id": CANONICAL},
+tests\test_canonical_lineage_contract.py:381: "identity": {"canonical_opportunity_id": CANONICAL},
+tests\test_canonical_lineage_contract.py:388: (trade.get("identity") or {}).get("canonical_opportunity_id")
+tests\test_canonical_lineage_contract.py:389: or trade.get("canonical_opportunity_id", "")
+tests\test_shadow_live_integration_adapter.py:174: canonical_opportunity_id=ROOT_ID,
+tests\test_shadow_live_integration_adapter.py:217: assert ctx["canonical_opportunity_id"] == ROOT_ID
+tests\test_shadow_live_integration_adapter.py:283: _invoke(recorded, canonical_opportunity_id=odd_root)
+tests\test_shadow_live_integration_adapter.py:285: assert recorded.calls[0]["canonical_opportunity_id"] == odd_root
+tests\test_shadow_live_integration_adapter.py:286: assert recorded.calls[0]["canonical_opportunity_id"] != odd_root.upper()
+tests\test_shadow_live_integration_adapter.py:287: assert recorded.calls[0]["canonical_opportunity_id"] != odd_root.lower()
+tests\test_shadow_live_integration_adapter.py:292: assert recorded.calls[0]["canonical_opportunity_id"] == ROOT_ID
+tests\test_shadow_live_integration_adapter.py:293: assert type(recorded.calls[0]["canonical_opportunity_id"]) is str
+tests\test_shadow_live_integration_adapter.py:308: assert ctx["canonical_opportunity_id"] == ROOT_ID
+tests\test_shadow_live_integration_adapter.py:327: _invoke(recorded, canonical_opportunity_id="")
+tests\test_shadow_live_integration_adapter.py:333: _invoke(recorded, canonical_opportunity_id=None)
+tests\test_shadow_runtime_contract.py:52: "canonical_opportunity_id": ROOT_ID,
+tests\test_shadow_runtime_contract.py:103: assert ev["canonical_opportunity_id"] == ROOT_ID
+tests\test_shadow_runtime_contract.py:118: assert {e["canonical_opportunity_id"] for e in opens} == {ROOT_ID}
+tests\test_shadow_runtime_contract.py:126: ctx["canonical_opportunity_id"] = ""
+
+TOTAL HIT LINES: 184

@@ -1,7 +1,7 @@
 """
-Candidate Shadow Hook — Creates paired candidate shadow observations alongside V10_PRIMARY.
+Candidate Shadow Hook — Opens paired candidate shadow observations.
 
-Called from engine_execution_handler.py AFTER the V10_PRIMARY shadow is opened.
+Called from engine_execution_handler.py after shadow observations are opened.
 For each candidate in SHADOW_TESTING status, opens an additional shadow trade
 with the candidate's modified geometry.
 
@@ -14,10 +14,16 @@ CONTRACT:
     - Uses existing ShadowTradeEngine.open_trade()
     - Preserves correlation_id and entity_id for pairing
 
-PAIRING MODEL:
+PAIRED OBSERVATION MODEL:
     Same opportunity (correlation_id, entity_id):
-        V10_PRIMARY      → baseline outcome
         CANDIDATE_{id}   → candidate counterfactual outcome
+
+    RETIRED (Phase 1I-C): the legacy V10_PRIMARY baseline shadow type is
+    removed from the architecture and is no longer created at runtime
+    (live_scanner emits only the canonical HORIZON_ALTERNATIVE lineage).
+    Candidate-vs-baseline evaluation is retired until an honest baseline
+    against the canonical Horizon Shadow lineage is defined. Candidate
+    shadows are still opened and collected observationally.
 
 This module NEVER modifies production V10.
 """
@@ -51,8 +57,8 @@ def open_candidate_shadows(
     """
     Open candidate shadow observations for all active SHADOW_TESTING candidates.
     
-    Called after V10_PRIMARY shadow is created. Uses the same opportunity context
-    but applies candidate-specific geometry modifications.
+    Called after the canonical shadow observations are created. Uses the same
+    opportunity context but applies candidate-specific geometry modifications.
     
     Returns number of candidate shadows opened.
     Never raises — all errors are logged and suppressed.

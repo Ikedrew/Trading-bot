@@ -308,6 +308,7 @@ class DecisionTrace:
     observation_id: str = ""
     decision_id: str = ""
     correlation_id: str = ""
+    canonical_opportunity_id: str = ""
     engine_version: str = ""
 
     # V10 Market Understanding (multi-timeframe state at decision time)
@@ -394,6 +395,7 @@ class DecisionTrace:
             "observation_id": self.observation_id,
             "decision_id": self.decision_id,
             "correlation_id": self.correlation_id,
+            "canonical_opportunity_id": self.canonical_opportunity_id,
             "engine_version": self.engine_version,
             "v10_market_state": self.v10_market_state,
             "v10_opportunity": self.v10_opportunity,
@@ -541,6 +543,7 @@ def _build_trace(
     _obs_id = ""
     _decision_id = ""
     _correlation_id = ""
+    _canonical_opp_id = str(engine_result.get("canonical_opportunity_id", "") or "")
     _engine_version = ""
     _v10_market_state: dict[str, Any] = {}
     _v10_opportunity: dict[str, Any] = {}
@@ -785,6 +788,7 @@ def _build_trace(
         observation_id=_obs_id,
         decision_id=_decision_id,
         correlation_id=_correlation_id,
+        canonical_opportunity_id=_canonical_opp_id,
         engine_version=_engine_version,
         v10_market_state=_v10_market_state,
         v10_opportunity=_v10_opportunity,

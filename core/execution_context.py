@@ -131,6 +131,8 @@ class ExecutionContext:
     infrastructure: Infrastructure
     risk_environment: RiskEnvironment
     events_ref: EventsRef
+    # Canonical lineage (remediation) — authoritative opportunity root
+    canonical_opportunity_id: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to flat dict for JSONL persistence."""
@@ -138,6 +140,7 @@ class ExecutionContext:
             "correlation_id": self.correlation_id,
             "symbol": self.symbol,
             "timestamp_utc": self.timestamp_utc,
+            "canonical_opportunity_id": self.canonical_opportunity_id,
             "market_access": asdict(self.market_access),
             "infrastructure": asdict(self.infrastructure),
             "risk_environment": asdict(self.risk_environment),
@@ -172,6 +175,8 @@ def build_execution_context(
     # Events references
     last_candle_ts: int = 0,
     last_feature_ts: int = 0,
+    # Canonical lineage (remediation)
+    canonical_opportunity_id: str = "",
 ) -> ExecutionContext:
     """
     Build an immutable execution context snapshot.
@@ -208,6 +213,7 @@ def build_execution_context(
         correlation_id=correlation_id,
         symbol=symbol,
         timestamp_utc=timestamp_utc,
+        canonical_opportunity_id=canonical_opportunity_id,
         market_access=MarketAccess(
             session_state=session_state,
             spread=spread,

@@ -55,6 +55,7 @@ ALLOWED_S3_WRITERS = {
     ROOT / "core" / "protection_verification.py",
     ROOT / "core" / "risk_deviation.py",
     ROOT / "core" / "contracts" / "quarantine.py",
+    ROOT / "core" / "shadow" / "persistence.py",
 }
 
 # Modules allowed to import boto3 (includes non-writers like aws_glue_setup)
@@ -74,6 +75,7 @@ LAYER_PREFIX_OWNERSHIP = {
     "core/edge_optimisation.py": "edge_optimisation/",
     "core/strategy_compiler.py": "strategy_compiler/",
     "core/execution_context.py": "execution_context/",
+    "core/shadow/persistence.py": "shadow_runtime/",
 }
 
 

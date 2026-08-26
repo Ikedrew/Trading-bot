@@ -51,8 +51,11 @@ class TradeIdentity:
     #: Decision audit record ID (empty string if audit persistence failed).
     decision_id: str = ""
 
-    #: V10 observation_id — deterministic research root identity.
-    #: Links this trade back to the exact V10 reasoning chain.
+    #: Canonical opportunity lineage root (remediation) — THE authoritative
+    #: lineage ID linking this trade to its originating opportunity.
+    canonical_opportunity_id: str = ""
+
+    #: Retired lineage role — schema-compatibility only. No longer a root.
     observation_id: str = ""
 
     #: Cycle number from the live scanner at decision time.
@@ -72,6 +75,7 @@ class TradeIdentity:
         return {
             "correlation_id": self.correlation_id,
             "decision_id": self.decision_id,
+            "canonical_opportunity_id": self.canonical_opportunity_id,
             "observation_id": self.observation_id,
             "cycle_id": self.cycle_id,
             "strategy": self.strategy,
@@ -85,6 +89,7 @@ class TradeIdentity:
         return cls(
             correlation_id=data.get("correlation_id", ""),
             decision_id=data.get("decision_id", ""),
+            canonical_opportunity_id=data.get("canonical_opportunity_id", ""),
             observation_id=data.get("observation_id", ""),
             cycle_id=int(data.get("cycle_id", 0)),
             strategy=str(data.get("strategy", "")),

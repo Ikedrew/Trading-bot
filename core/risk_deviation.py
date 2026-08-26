@@ -99,6 +99,11 @@ class RiskDeviationResult:
     # Metadata
     timestamp_utc: str
 
+    # Phase 3 Step 5: canonical lineage root of the originating opportunity.
+    # Propagated from the journal's TradeRecord (Position identity); empty for
+    # recovered/legacy trades — never fabricated.
+    canonical_opportunity_id: str = ""
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
@@ -116,6 +121,7 @@ def compute_risk_deviation(
     entry_price: float,
     exit_price: float,
     initial_sl: float,
+    canonical_opportunity_id: str = "",
 ) -> RiskDeviationResult:
     """
     Compute risk deviation for a completed trade.
@@ -188,6 +194,7 @@ def compute_risk_deviation(
         trade_id=trade_id,
         symbol=symbol,
         correlation_id=correlation_id,
+        canonical_opportunity_id=str(canonical_opportunity_id or ""),
         planned_risk_R=planned_risk_R,
         actual_risk_R=actual_risk_R,
         risk_deviation=risk_deviation,

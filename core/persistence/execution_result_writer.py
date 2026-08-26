@@ -53,9 +53,15 @@ def persist_execution_result(
     correlation_id: str = "",
     entity_id: str = "",
     observation_id: str = "",
+    canonical_opportunity_id: str = "",
     # Execution metadata
     decision_ts_utc_ms: int = 0,
     slippage: float = 0.0,
+    # Phase 3 Step 4: execution-moment market facts (additive; 0.0 = unknown).
+    # Derived from the live feed tick at the execution boundary — never invented.
+    bid_at_execution: float = 0.0,
+    ask_at_execution: float = 0.0,
+    risk_distance: float = 0.0,
     # Protection verification (Phase 1 hardening)
     requested_sl: float = 0.0,
     broker_confirmed_sl: float = 0.0,
@@ -98,7 +104,17 @@ def persist_execution_result(
             "correlation_id": correlation_id,
             "entity_id": entity_id,
             "observation_id": observation_id,
+            "canonical_opportunity_id": canonical_opportunity_id,
             "decision_ts_utc_ms": decision_ts_utc_ms,
+            # Phase 3 Step 4/7: execution-moment facts + derived planned-risk
+            # geometry. This row is the ENTRY-FACTS snapshot for the trade:
+            # outcome fields (pnl/MFE/MAE/exit) are structurally absent here.
+            "bid_at_execution": bid_at_execution or None,
+            "ask_at_execution": ask_at_execution or None,
+            "spread_at_execution": round(
+                ask_at_execution - bid_at_execution, 8
+            ) if (ask_at_execution > 0 and bid_at_execution > 0) else None,
+            "risk_distance": round(risk_distance, 8) if risk_distance else None,
             # Protection verification (Phase 1 hardening)
             "requested_sl": requested_sl,
             "broker_confirmed_sl": broker_confirmed_sl,

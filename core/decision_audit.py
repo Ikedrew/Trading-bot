@@ -283,6 +283,7 @@ def persist_decision_audit(
     risk_rejection: Any | None = None,
     entity_id: str = "",
     observation_id: str = "",
+    canonical_opportunity_id: str = "",
     strategy_ts_utc_ms: int = 0,
 ) -> str:
     """
@@ -319,6 +320,8 @@ def persist_decision_audit(
             record["entity_id"] = entity_id
         if observation_id:
             record["observation_id"] = observation_id
+        if canonical_opportunity_id:
+            record["canonical_opportunity_id"] = canonical_opportunity_id
         if strategy_ts_utc_ms:
             record["strategy_ts_utc_ms"] = strategy_ts_utc_ms
 
@@ -361,6 +364,7 @@ def persist_new_engine_decision_audit(
     correlation_id: str = "",
     entity_id: str = "",
     observation_id: str = "",
+    canonical_opportunity_id: str = "",
     strategy_ts_utc_ms: int = 0,
     runtime_session_id: str = "",
 ) -> str:
@@ -473,6 +477,7 @@ def persist_new_engine_decision_audit(
             "correlation_id": correlation_id,
             "entity_id": entity_id,
             "observation_id": observation_id,
+            "canonical_opportunity_id": canonical_opportunity_id,
             "strategy_ts_utc_ms": strategy_ts_utc_ms,
             "runtime_session_id": runtime_session_id,
         }
@@ -521,6 +526,7 @@ def persist_risk_rejection(
     guard: str,
     reason: str,
     correlation_id: str = "",
+    canonical_opportunity_id: str = "",
     metadata: dict[str, Any] | None = None,
 ) -> None:
     """
@@ -549,6 +555,7 @@ def persist_risk_rejection(
             "guard": guard,
             "guard_reason": reason,
             "correlation_id": correlation_id,
+            "canonical_opportunity_id": canonical_opportunity_id,
             "rejection_type": "RISK_GUARD",
             "metadata": metadata or {},
         }

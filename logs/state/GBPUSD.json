@@ -1,8 +1,8 @@
 {
   "_meta": {
     "symbol": "GBPUSD",
-    "saved_at_utc": "2026-08-21T01:26:20.358567+00:00",
-    "saved_at_unix": 1787275580.3585677
+    "saved_at_utc": "2026-08-26T23:37:49.715204+00:00",
+    "saved_at_unix": 1787787469.715204
   },
   "current_bias": null,
   "bias_phase": "EXPIRED",
@@ -14,7 +14,7 @@
   "last_strong_impulse_direction": null,
   "regime_state": "RANGING",
   "volatility_filter": 0.0,
-  "last_successful_open_mono": null,
+  "last_successful_open_mono": 1787776500.0,
   "structure_score": 0.0,
   "structure_regime": "WEAK",
   "last_failed_setups": []

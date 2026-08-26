@@ -509,21 +509,17 @@ class CockpitDataAggregator:
             pass
 
     def _load_shadow_reality(self, data: CockpitData) -> None:
-        """Load Shadow→Reality bridge statistics."""
-        try:
-            from research_engine.v10.universes.shadow_reality_universe import ShadowRealityUniverseBuilder
-            from research_engine.v10.universes.shadow_reality_models import ComparisonStatus
-            builder = ShadowRealityUniverseBuilder()
-            builder.build()
-            report = builder.get_coverage_report()
-            data.sr_matched = report.matched
-            data.sr_shadow_only = report.shadow_only
-            data.sr_real_only = report.real_only
-            data.sr_stats = builder.get_statistics()
-            data.sr_mean_delta_r = data.sr_stats.get("mean_delta_r", 0.0)
-            data.sr_exit_match_rate = data.sr_stats.get("exit_reason_match_rate", 0.0)
-        except Exception as e:
-            logger.debug(f"[COCKPIT] Shadow reality load failed: {e}")
+        """Shadow→Reality bridge — RETIRED with V10_PRIMARY (Phase 1I-C).
+
+        The legacy bridge joined V10_PRIMARY EXECUTE shadows to the trade
+        journal via COR-* correlation ids; that identity model is obsolete.
+        Metrics stay at their neutral defaults until a future shadow↔reality
+        join is designed on the canonical Horizon lineage's identity model.
+        """
+        logger.debug(
+            "[COCKPIT] Shadow reality metrics retired with V10_PRIMARY "
+            "(Phase 1I-C); reporting neutral defaults"
+        )
 
     def _compute_prop_readiness(self, data: CockpitData) -> None:
         """

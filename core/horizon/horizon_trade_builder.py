@@ -155,6 +155,60 @@ def build_all_horizon_trades(
     return trades
 
 
+# ─── NEW Shadow Runtime support (additive — used by core/shadow/runtime.py) ───
+
+SL_BUFFERS = {
+    "SCALP": _SL_BUFFER_SCALP,
+    "INTRADAY": _SL_BUFFER_INTRADAY,
+    "EXTENDED": _SL_BUFFER_EXTENDED,
+}
+"""SL buffer applied per horizon (price units). Persisted as provenance."""
+
+_SL_INPUT_REQUIREMENTS = {
+    "SCALP": {"SELL": "m5_candle_high", "BUY": "m5_candle_low"},
+    "INTRADAY": {"SELL": "m15_nearest_resistance", "BUY": "m15_nearest_support"},
+    "EXTENDED": {"SELL": "h1_last_swing_high", "BUY": "h1_last_swing_low"},
+}
+
+
+def horizon_missing_inputs(
+    horizon: str,
+    direction: str,
+    *,
+    m5_candle_high: float | None = None,
+    m5_candle_low: float | None = None,
+    m15_nearest_support: float | None = None,
+    m15_nearest_resistance: float | None = None,
+    h1_last_swing_high: float | None = None,
+    h1_last_swing_low: float | None = None,
+) -> list[str]:
+    """
+    Report which construction inputs are missing for this horizon/direction.
+
+    Mirrors the exact conditions that make _build_* return None, so the NEW
+    Shadow Runtime can record ELIGIBLE_BUT_UNCONSTRUCTIBLE with the precise
+    missing dependency instead of the horizon silently disappearing.
+    """
+    levels = {
+        "m5_candle_high": m5_candle_high,
+        "m5_candle_low": m5_candle_low,
+        "m15_nearest_support": m15_nearest_support,
+        "m15_nearest_resistance": m15_nearest_resistance,
+        "h1_last_swing_high": h1_last_swing_high,
+        "h1_last_swing_low": h1_last_swing_low,
+    }
+    required = _SL_INPUT_REQUIREMENTS.get(horizon, {}).get(direction.upper())
+    if required is None:
+        return [f"horizon:{horizon}"]
+    missing = [name for name, v in levels.items() if v is None]
+    # The SL-critical input first; other absent levels are informational.
+    ordered = ([required] if required in missing else []) + [
+        m for m in missing if m != required
+    ]
+    return ordered
+
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # PER-HORIZON BUILDERS
 # ═══════════════════════════════════════════════════════════════════════════════

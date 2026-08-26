@@ -233,6 +233,10 @@ def build_ledger_entry(
     correlation_id: str = "",
     entity_id: str = "",
     observation_id: str = "",
+    # Canonical lineage (remediation) — THE authoritative lineage root
+    canonical_opportunity_id: str = "",
+    # V10 research payload (remediation) — travels inside the authoritative row
+    v10: dict[str, Any] | None = None,
     # Performance
     decision_latency_ms: int = 0,
     # Metadata
@@ -276,6 +280,8 @@ def build_ledger_entry(
         "correlation_id": correlation_id,
         "entity_id": entity_id,
         "observation_id": observation_id,
+        "canonical_opportunity_id": canonical_opportunity_id,
+        "v10": v10,
         "decision_latency_ms": decision_latency_ms,
         "engine_version": engine_version,
         "schema_version": _SCHEMA_VERSION,

@@ -366,52 +366,19 @@ def detect_sr_divergence(
     divergence_threshold: float = 0.30,
 ) -> list[FindingTrigger]:
     """
-    Detect when Shadow↔Reality divergence exceeds acceptable bounds.
+    RETIRED (Phase 1I-C): Shadow↔Reality divergence detection.
 
-    Uses the ShadowRealityUniverseBuilder to compute current mean delta_r.
+    The ShadowRealityUniverse joined V10_PRIMARY EXECUTE shadows to the trade
+    journal via COR-* correlation_ids — a relationship specific to the retired
+    V10_PRIMARY architecture. It was retired together with V10_PRIMARY rather
+    than being faked onto the canonical Horizon lineage (whose identity model
+    intentionally does not claim fill identity with the trade journal).
+
+    Kept as a graceful no-op so existing call sites remain stable. A new
+    shadow↔reality system may be designed later around the canonical
+    lineage's own identity model.
     """
-    try:
-        from research_engine.v10.universes.shadow_reality_universe import ShadowRealityUniverseBuilder
-        from research_engine.v10.universes.shadow_reality_models import ComparisonStatus
-        builder = ShadowRealityUniverseBuilder()
-        builder.build()
-        stats = builder.get_statistics()
-    except Exception:
-        return []
-
-    n = stats.get("n", 0)
-    if n < min_matched:
-        return []
-
-    mean_delta = stats.get("mean_delta_r", 0)
-    triggers: list[FindingTrigger] = []
-
-    if abs(mean_delta) > divergence_threshold:
-        direction = "overestimates" if mean_delta > 0 else "underestimates"
-        trigger = FindingTrigger(
-            finding_id=f"sr_div_{n}_{abs(mean_delta):.2f}",
-            source=source,
-            category=TriggerCategory.SR_DIVERGENCE,
-            title=f"Shadow model {direction} reality by {abs(mean_delta):.3f}R (N={n})",
-            observation=(
-                f"Shadow↔Reality: mean delta_r={mean_delta:+.4f} (N={n}). "
-                f"Shadow {direction} realised outcomes. "
-                f"Exit agreement={stats.get('exit_reason_match_rate', 0):.0%}."
-            ),
-            sample_size=n,
-            confidence="MEDIUM" if n >= 30 else "LOW",
-            suggested_patterns=[],
-            trigger_reason=f"|mean_delta_r|={abs(mean_delta):.3f} > {divergence_threshold}",
-            priority=1,
-            suggested_experiment_type=ExperimentType.POPULATION_COMPARISON,
-            suggested_hypothesis_category=HypothesisCategory.EXECUTION_LEAKAGE,
-            suggested_claim="Shadow model predictions diverge materially from reality",
-            suggested_null="Shadow model accurately represents live outcomes",
-        )
-        result = engine._screen(trigger)
-        if result:
-            triggers.append(result)
-    return triggers
+    return []
 
 
 def detect_drawdown_approaching(
@@ -496,18 +463,19 @@ def detect_guard_value_controlled(
     min_delta: float = 0.15,
 ) -> list[FindingTrigger]:
     """
-    CORRECTED guard-value detector using controlled population comparison.
+    Guard-value detector using controlled population comparison.
 
-    Compares ONLY V10_PRIMARY shadows: EXECUTE vs NO_TRADE with same shadow_type.
-    This eliminates the HORIZON_ALTERNATIVE geometry confound.
+    Compares ONLY canonical-lineage (HORIZON_ALTERNATIVE) shadows:
+    EXECUTE vs NO_TRADE responses, both sharing STRUCTURE_BASED geometry,
+    so the comparison stays internally controlled.
     """
-    # Filter to V10_PRIMARY only
+    # Filter to canonical shadow lineage only
     v10_execute = [s for s in shadows
-                   if s.get("shadow_type") == "V10_PRIMARY"
+                   if s.get("shadow_type") == "HORIZON_ALTERNATIVE"
                    and s.get("v10_action") == "EXECUTE"
                    and s.get("r_multiple") is not None]
     v10_no_trade = [s for s in shadows
-                    if s.get("shadow_type") == "V10_PRIMARY"
+                    if s.get("shadow_type") == "HORIZON_ALTERNATIVE"
                     and s.get("v10_action") == "NO_TRADE"
                     and s.get("r_multiple") is not None]
 
@@ -531,7 +499,7 @@ def detect_guard_value_controlled(
             category=TriggerCategory.GUARD_VALUE_NEGATIVE,
             title=f"Guards may destroy edge (controlled): NO_TRADE R ({mean_notrade:+.3f}) > EXECUTE R ({mean_exec:+.3f})",
             observation=(
-                f"V10_PRIMARY controlled comparison: "
+                f"HORIZON_ALTERNATIVE controlled comparison: "
                 f"EXECUTE (N={len(v10_execute)}) mean R={mean_exec:+.3f}. "
                 f"NO_TRADE (N={len(v10_no_trade)}) mean R={mean_notrade:+.3f}. "
                 f"Delta={delta:+.3f}R. Same shadow_type, same geometry source."
@@ -575,7 +543,7 @@ DETECTOR_REGISTRY: list[dict[str, Any]] = [
     {"detector_id": "DET-012", "name": "detect_slippage_deterioration", "surface": "execution_slippage", "category": "SLIPPAGE_DETERIORATION", "population": "execution_results", "shadow_testable": False, "status": "ACTIVE"},
     {"detector_id": "DET-013", "name": "detect_horizon_quality", "surface": "horizon_selection", "category": "HORIZON_QUALITY", "population": "real_shadows (PRIMARY)", "shadow_testable": True, "status": "ACTIVE"},
     {"detector_id": "DET-014", "name": "detect_strategy_degradation", "surface": "strategy_selection", "category": "STRATEGY_DEGRADATION", "population": "real_shadows (PRIMARY)", "shadow_testable": False, "status": "ACTIVE"},
-    {"detector_id": "DET-015", "name": "detect_sr_divergence", "surface": "shadow_reality", "category": "SR_DIVERGENCE", "population": "Shadow Reality Bridge", "shadow_testable": False, "status": "ACTIVE"},
+    {"detector_id": "DET-015", "name": "detect_sr_divergence", "surface": "shadow_reality", "category": "SR_DIVERGENCE", "population": "Shadow Reality Bridge", "shadow_testable": False, "status": "RETIRED"},  # Retired with V10_PRIMARY (Phase 1I-C)
     {"detector_id": "DET-016", "name": "detect_drawdown_approaching", "surface": "drawdown_daily_loss", "category": "DRAWDOWN_APPROACHING", "population": "decision_trace (account_snapshot)", "shadow_testable": False, "status": "ACTIVE"},
     # BLACK surface detectors (require research_events instrumentation)
     {"detector_id": "DET-017", "name": "detect_cooldown_anomaly", "surface": "trade_cooldown", "category": "GUARD_VALUE_NEGATIVE", "population": "research_events (GUARD_DECISION)", "shadow_testable": False, "status": "ACTIVE"},
@@ -621,7 +589,7 @@ def run_surface_detectors(
     # Strategy degradation (on PRIMARY with correlation_id)
     triggers.extend(detect_strategy_degradation(real_shadows, engine=engine, source=source))
 
-    # Guard value CORRECTED (on all shadows, V10_PRIMARY filter inside)
+    # Guard value controlled (on all shadows, HORIZON_ALTERNATIVE filter inside)
     triggers.extend(detect_guard_value_controlled(all_shadows, engine=engine, source=source))
 
     # Slippage deterioration (from execution_results)
@@ -631,8 +599,8 @@ def run_surface_detectors(
     except Exception:
         pass
 
-    # Shadow↔Reality divergence
-    triggers.extend(detect_sr_divergence(engine=engine, source=source))
+    # Shadow↔Reality divergence — RETIRED with V10_PRIMARY (Phase 1I-C);
+    # detect_sr_divergence is kept as a graceful no-op for API stability.
 
     # Drawdown approaching
     triggers.extend(detect_drawdown_approaching(engine=engine, source=source))

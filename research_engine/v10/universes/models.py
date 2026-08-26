@@ -91,7 +91,6 @@ class Population(str, Enum):
     ALL_SHADOW_OUTCOMES = "all_shadow_outcomes"
     SHADOW_WINS = "shadow_wins"
     SHADOW_LOSSES = "shadow_losses"
-    PRIMARY_V10_SHADOW = "primary_v10_shadow"
     HORIZON_SCALP = "horizon_scalp"
     HORIZON_INTRADAY = "horizon_intraday"
     HORIZON_EXTENDED = "horizon_extended"

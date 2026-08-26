@@ -68,6 +68,17 @@ EVENT_STREAM_ENABLED = True         # Enables/disables local JSONL event logging
 EVENT_STREAM_S3_MIRROR = True       # Enables/disables S3 batch event persistence
 DECISION_AUDIT_ENABLED = True       # Enables/disables decision audit trail persistence
 
+# --- NEW Shadow Runtime (per-opportunity horizon shadows) ---
+# Gated integration: when False, the legacy horizon-shadow branch runs unchanged.
+# When True, the pre-verdict shadow branch and BarProvider closed-bar routing
+# are handled by core/shadow/runtime.py (NEW lineage, own event stream).
+SHADOW_RUNTIME_V2_ENABLED = False  # Phase 1 data-capture: gate MUST be OFF for gated trials (LIVE_SHADOW_DATA_CAPTURE_CONTRACT.md F10)
+# PROVISIONAL physical location of the NEW Shadow dataset (isolated behind
+# core/shadow/persistence.py). Final production name/location is a pending
+# architecture decision — legacy logs/shadow_trades/ is never reused.
+SHADOW_RUNTIME_DIR = "logs/shadow_runtime_v1"
+
+
 # --- Broker execution ---
 EXECUTION_ENABLED = True           # Enables/disables live order placement (master kill for broker I/O)
 TRADE_MANAGEMENT_ENABLED = True    # Enables/disables SL/TP modifications (post-entry management)
@@ -122,7 +133,7 @@ ENABLE_EV_GATE = False                   # When True, only positive-EV trades ar
 
 # --- MT5 runtime lifecycle ---
 MT5_CENTRALISED_INIT = True     # When True, main.py owns mt5.initialize/shutdown (single authority)
-MT5_TERMINAL_PATH = r"C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe"
+MT5_TERMINAL_PATH = r"C:\Program Files\MetaTrader 5\terminal64.exe"
 MT5_RECONNECT_COOLDOWN_SECONDS = 10.0  # Base seconds between reconnect attempts
 MT5_RECONNECT_MAX_COOLDOWN_SECONDS = 60.0  # Maximum backoff cap (seconds)
 OBSERVABILITY_VALIDATION_ENABLED = False  # When True, trade event buffer collects events for validation

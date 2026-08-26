@@ -20,7 +20,6 @@ from research_engine.v10.universes.market_universe import MarketUniverseBuilder
 from research_engine.v10.universes.strategy_universe import StrategyUniverseBuilder
 from research_engine.v10.universes.risk_universe import RiskUniverseBuilder
 from research_engine.v10.universes.outcome_universe import OutcomeUniverseBuilder
-from research_engine.v10.universes.shadow_reality_universe import ShadowRealityUniverseBuilder
 
 __all__ = [
     "UniverseBuilder",
@@ -31,5 +30,4 @@ __all__ = [
     "StrategyUniverseBuilder",
     "RiskUniverseBuilder",
     "OutcomeUniverseBuilder",
-    "ShadowRealityUniverseBuilder",
 ]

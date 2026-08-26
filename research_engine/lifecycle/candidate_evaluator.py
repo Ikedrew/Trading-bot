@@ -7,6 +7,12 @@ Transforms accumulated prospective observations into an evidence-backed verdict:
 Uses exclusively PROSPECTIVE observations (after candidate activation).
 Reuses existing validation_harness infrastructure for all statistical tests.
 
+PHASE 1I-C NOTE: the former baseline population (shadow_type == "V10_PRIMARY")
+has been removed from the architecture. Candidate-vs-baseline pairing is
+retired until an honest baseline is defined against the canonical Horizon
+Shadow lineage; evaluations currently resolve to INCONCLUSIVE. The generic
+statistical machinery is preserved for that future work.
+
 This module NEVER modifies production V10 or promotes candidates automatically.
 """
 
@@ -254,36 +260,20 @@ class CandidateEvaluator:
     # ─── INTERNAL ─────────────────────────────────────────────────────
 
     def _build_pairs(self, observations: list[dict], candidate_type: str) -> list[dict]:
-        """Build paired baseline/candidate observations by entity_id."""
-        baseline_by_entity = {}
-        candidate_by_entity = {}
+        """Build paired baseline/candidate observations by entity_id.
 
-        for obs in observations:
-            shadow_type = self._get_shadow_type(obs)
-            entity = self._get_entity_id(obs)
-            if not entity:
-                continue
-            r = self._get_r_multiple(obs)
-            if r is None:
-                continue
-            symbol = self._get_symbol(obs)
-
-            if shadow_type == "V10_PRIMARY":
-                baseline_by_entity[entity] = {"r": r, "symbol": symbol}
-            elif shadow_type == candidate_type:
-                candidate_by_entity[entity] = {"r": r, "symbol": symbol}
-
-        # Pair by entity_id
-        pairs = []
-        for entity in baseline_by_entity:
-            if entity in candidate_by_entity:
-                pairs.append({
-                    "entity_id": entity,
-                    "baseline_r": baseline_by_entity[entity]["r"],
-                    "candidate_r": candidate_by_entity[entity]["r"],
-                    "symbol": baseline_by_entity[entity]["symbol"],
-                })
-        return pairs
+        RETIRED (Phase 1I-C): the legacy baseline population was
+        shadow_type == "V10_PRIMARY", which has been removed from the
+        architecture. The canonical Horizon Shadow lineage is NOT a
+        semantically equivalent baseline (different geometry source,
+        different identity model), so no artificial substitution is made.
+        Pair building therefore yields no pairs until a later phase defines
+        an honest candidate comparison against the canonical lineage;
+        evaluations consequently resolve to INCONCLUSIVE on the
+        minimum-sample gate. The generic pairing/statistical machinery
+        above is preserved for that future work.
+        """
+        return []
 
     def _make_decision(self, result: CandidateEvaluation) -> tuple[str, str, str]:
         """Determine VALIDATED / REJECTED / INCONCLUSIVE."""

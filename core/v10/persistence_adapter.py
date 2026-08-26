@@ -232,6 +232,44 @@ def build_v10_ledger_entry(result: PipelineResult, cycle_id: int = 0) -> dict[st
 # ═══════════════════════════════════════════════════════════════
 
 
+# ── V10 RESEARCH PAYLOAD (attached to authoritative ledger row) ───────
+
+
+def build_v10_payload(result: PipelineResult) -> dict[str, Any]:
+    """
+    Build the V10 research payload attached to the AUTHORITATIVE decision
+    ledger record written by DecisionRecorder.
+
+    Remediation contract: persist_v10_full() no longer writes a second ledger
+    row. The research-grade V10 data travels inside the single authoritative
+    row as the ``v10`` sub-dict, preserving full S3 coverage via the shared
+    DecisionLedgerWriter sink.
+
+    The V10-internal observation hash is retained ONLY as a child research ID
+    (``v10_observation_id``) — it is NOT a lineage root.
+    """
+    state = result.market_state
+    opp = result.opportunity
+    strat = result.strategy
+    hz = result.horizon
+    entry = result.entry
+
+    return {
+        "engine": "V10",
+        "schema": _SCHEMA_VERSION,
+        "final_action": "EXECUTE" if result.approved else "NO_TRADE",
+        "rejection_stage": result.rejection_stage or None,
+        "v10_observation_id": opp.observation_id if opp else "",
+        "strategy_family": strat.strategy_family if strat else "",
+        "horizon": hz.horizon_type if hz else "",
+        "entry_method": entry.entry_method if entry else "",
+        "opportunity_state": opp.opportunity_state if opp else "",
+        "opportunity_type": opp.opportunity_type if opp else "",
+        "timestamp_utc": state.timestamp_utc if state else 0.0,
+        "symbol": state.symbol if state else "",
+    }
+
+
 def persist_v10_full(result: PipelineResult, cycle_id: int = 0) -> None:
     """
     Persist the full V10 decision — local JSONL, S3, and ledger.

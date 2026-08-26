@@ -88,7 +88,7 @@ class TestOpportunityCreation:
         signal = _make_signal()
         opp = create_opportunity(signal=signal, symbol="GBPUSD", cycle_id=42)
 
-        assert opp.opportunity_id == "GBPUSD_1784800000_TWEEZER_TOP"
+        assert opp.opportunity_id == "GBPUSD*1784800000*TWEEZER_TOP"
         assert opp.symbol == "GBPUSD"
         assert opp.cycle_id == 42
         assert opp.direction == "SELL"
@@ -266,7 +266,7 @@ class TestSerialization:
         d = opp.to_dict()
 
         assert isinstance(d, dict)
-        assert d["opportunity_id"] == "EURUSD_1784800000_TWEEZER_TOP"
+        assert d["opportunity_id"] == "EURUSD*1784800000*TWEEZER_TOP"
         assert d["symbol"] == "EURUSD"
         assert d["direction"] == "SELL"
         assert d["pattern"] == "TWEEZER_TOP"

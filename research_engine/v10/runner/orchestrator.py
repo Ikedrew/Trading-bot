@@ -297,7 +297,6 @@ class ResearchExecutionOrchestrator:
             StrategyUniverseBuilder,
             RiskUniverseBuilder,
             OutcomeUniverseBuilder,
-            ShadowRealityUniverseBuilder,
         )
         from research_engine.v10.universes.outcome_enrichment import OutcomeEnrichment
 
@@ -330,13 +329,13 @@ class ResearchExecutionOrchestrator:
             except Exception as e:
                 logger.warning(f"[ORCHESTRATOR] Failed to build OUTCOME: {e}")
 
-        # Shadow Reality universe (shadow↔trade journal comparison)
-        try:
-            sr_builder = ShadowRealityUniverseBuilder()
-            sr_builder.build()
-            builders[Universe.SHADOW_REALITY] = sr_builder
-        except Exception as e:
-            logger.warning(f"[ORCHESTRATOR] Failed to build SHADOW_REALITY: {e}")
+        # Shadow Reality universe — RETIRED with V10_PRIMARY (Phase 1I-C).
+        # The legacy bridge joined V10_PRIMARY EXECUTE shadows to the trade
+        # journal via COR-* ids; that identity model is obsolete. A future
+        # shadow↔reality join must be designed on the canonical Horizon
+        # lineage's own identity model.
+        if Universe.SHADOW_REALITY in builders:
+            builders.pop(Universe.SHADOW_REALITY, None)
 
         return builders
 

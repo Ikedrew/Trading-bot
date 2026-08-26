@@ -67,10 +67,13 @@ def run_v10_cycle(
             result["entity_id"] = _fallback_entity_id
         # Persist decision and print report
         try:
-            from core.v10.persistence_adapter import persist_v10_full
             from core.v10.decision_report import format_v10_decision
             if result.get("v10_pipeline_result"):
-                persist_v10_full(result["v10_pipeline_result"])
+                # Remediation: NO second ledger row here. The V10 research
+                # payload is attached to this result and persisted by the
+                # sole authoritative writer (DecisionRecorder) via live_scanner.
+                from core.v10.persistence_adapter import build_v10_payload
+                result["v10_payload"] = build_v10_payload(result["v10_pipeline_result"])
                 # Print V10 reasoning chain for all decisions
                 print(format_v10_decision(result["v10_pipeline_result"]))
         except Exception:

@@ -76,18 +76,38 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def load_shadow_trades(symbol: str | None = None) -> list[dict[str, Any]]:
+def load_shadow_trades(symbol: str | None = None, *, outcomes_only: bool = True) -> list[dict[str, Any]]:
     """
     Load shadow trade records.
 
     Source: logs/shadow_trades/{SYMBOL}/{DATE}.jsonl
-    Key fields: trade_id, correlation_id, symbol, pnl_r_multiple, exit_reason,
-                bars_held, mfe_r, mae_r, direction, entry_price, stop_loss, take_profit
+    Key fields: trade_id, correlation_id, canonical_opportunity_id, symbol,
+                pnl_r_multiple, exit_reason, bars_held, mfe_r, mae_r,
+                direction, entry_price, stop_loss, take_profit
+
+    Remediation Stage 8: lifecycle OPEN events are NEVER completed outcomes.
+    With ``outcomes_only=True`` (default) records carrying ``event_type=="OPEN""
+    are excluded. Historical records without ``event_type`` are CLOSE/outcome
+    records and always included.
     """
     records = []
+    skipped_open = 0
     for path in _iter_jsonl_files("shadow_trades", symbol):
-        records.extend(_load_jsonl(path))
-    logger.info("[RESEARCH_LOADER] loaded %d shadow trade records", len(records))
+        loaded = _load_jsonl(path)
+        if outcomes_only:
+            kept = []
+            for rec in loaded:
+                if rec.get("event_type") == "OPEN":
+                    skipped_open += 1
+                    continue
+                kept.append(rec)
+            records.extend(kept)
+        else:
+            records.extend(loaded)
+    logger.info(
+        "[RESEARCH_LOADER] loaded %d shadow trade records (excluded %d OPEN events)",
+        len(records), skipped_open,
+    )
     return records
 
 

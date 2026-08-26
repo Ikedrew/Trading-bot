@@ -103,6 +103,10 @@ class TradeRecord:
     # Trade Identity (from Position.trade_identity — never from thread-local context)
     correlation_id: str = ""
 
+    # Canonical lineage (remediation) — THE authoritative opportunity root,
+    # carried frozen from Position.trade_identity.
+    canonical_opportunity_id: str = ""
+
     # Horizon Identity (from Position.trade_horizon — set at execution time)
     trade_horizon: str = "SCALP"
 
@@ -214,6 +218,7 @@ def build_trade_record(
     # Never falls back to thread-local context — identity is owned by the Position.
     _identity = getattr(position, "trade_identity", None)
     _cor_id = _identity.correlation_id if _identity is not None else ""
+    _canonical_opp_id = _identity.canonical_opportunity_id if _identity is not None else ""
 
     return TradeRecord(
         trade_id=position.position_id,
@@ -239,6 +244,7 @@ def build_trade_record(
         max_favourable_price=position.max_favourable_price,
         recorded_at_utc=utc_ms_to_iso(utc_ms()),
         correlation_id=_cor_id,
+        canonical_opportunity_id=_canonical_opp_id,
         trade_horizon=getattr(position, "trade_horizon", "SCALP"),
     )
 
@@ -446,6 +452,7 @@ def persist_trade(record: TradeRecord) -> bool:
             _truth_record = build_trade_truth(
                 trade_id=record.trade_id,
                 correlation_id=_cor_id,
+                canonical_opportunity_id=getattr(record, "canonical_opportunity_id", ""),
                 symbol=record.symbol,
                 entry_fill_price=record.entry_price,
                 exit_fill_price=record.exit_price,
@@ -484,6 +491,9 @@ def persist_trade(record: TradeRecord) -> bool:
                 entry_price=record.entry_price,
                 exit_price=record.exit_price,
                 initial_sl=record.initial_sl,
+                # Phase 3 Step 5: risk deviation joins to the originating
+                # opportunity via the Position-owned immutable identity.
+                canonical_opportunity_id=getattr(record, "canonical_opportunity_id", ""),
             )
             persist_risk_deviation(_rd_result)
         except Exception:

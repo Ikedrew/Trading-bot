@@ -13,9 +13,14 @@ from research_engine.data_quality.classifier import (
 )
 
 
-def _record(entity_id="", strategy="", h4_regime="", correlation_id="", r_multiple=0.5, horizon=""):
+def _record(entity_id="", strategy="", h4_regime="", correlation_id="", r_multiple=0.5, horizon="", canonical_opportunity_id=""):
     return {
-        "identity": {"entity_id": entity_id, "strategy_id": strategy, "correlation_id": correlation_id},
+        "identity": {
+            "entity_id": entity_id,
+            "strategy_id": strategy,
+            "correlation_id": correlation_id,
+            "canonical_opportunity_id": canonical_opportunity_id,
+        },
         "decision_snapshot": {"h4_regime": h4_regime, "trade_horizon": horizon, "pattern": "X"},
         "simulated_outcome": {"pnl_r_multiple": r_multiple},
     }
@@ -23,11 +28,20 @@ def _record(entity_id="", strategy="", h4_regime="", correlation_id="", r_multip
 
 class TestClassifyRecord:
     def test_current_full_lineage(self):
-        r = _record(entity_id="EURUSD_123", strategy="CONTINUATION", h4_regime="TRENDING")
+        r = _record(
+            entity_id="EURUSD_123", strategy="CONTINUATION", h4_regime="TRENDING",
+            canonical_opportunity_id="EURUSD*123*HAMMER",
+        )
         assert classify_record(r) == DataEpoch.CURRENT
 
+    def test_current_looking_without_canonical_is_legacy(self):
+        """Lineage contract: CURRENT-epoch records REQUIRE the canonical root."""
+        r = _record(entity_id="EURUSD_123", strategy="CONTINUATION", h4_regime="TRENDING")
+        assert classify_record(r) == DataEpoch.LEGACY
+
     def test_current_empty_strategy_with_entity_and_regime(self):
-        r = _record(entity_id="EURUSD_123", strategy="", h4_regime="RANGING")
+        r = _record(entity_id="EURUSD_123", strategy="", h4_regime="RANGING",
+                    canonical_opportunity_id="EURUSD*123*P")
         assert classify_record(r) == DataEpoch.CURRENT
 
     def test_transitional_entity_no_regime(self):
@@ -60,7 +74,8 @@ class TestClassifyRecord:
         assert classify_record(r) == DataEpoch.LEGACY
 
     def test_false_break_is_valid(self):
-        r = _record(entity_id="X", strategy="FALSE_BREAK", h4_regime="TRENDING")
+        r = _record(entity_id="X", strategy="FALSE_BREAK", h4_regime="TRENDING",
+                    canonical_opportunity_id="X*123*FALSE_BREAK")
         assert classify_record(r) == DataEpoch.CURRENT
 
 
@@ -72,7 +87,8 @@ class TestClassifyDataset:
 
     def test_mixed_dataset(self):
         records = [
-            _record(entity_id="X", strategy="CONTINUATION", h4_regime="TRENDING"),
+            _record(entity_id="X", strategy="CONTINUATION", h4_regime="TRENDING",
+                    canonical_opportunity_id="X*1*CONTINUATION"),
             _record(entity_id="X", strategy="REVERSAL", h4_regime=""),
             _record(strategy="NONE_SCALP"),
         ]
@@ -84,7 +100,8 @@ class TestClassifyDataset:
         assert result.usable_count == 2
 
     def test_summary_format(self):
-        records = [_record(entity_id="X", strategy="", h4_regime="T")] * 5
+        records = [_record(entity_id="X", strategy="", h4_regime="T",
+                           canonical_opportunity_id="X*1*P")] * 5
         result = classify_dataset(records)
         assert "CURRENT: 5" in result.summary
         assert "100%" in result.summary
@@ -100,16 +117,19 @@ class TestClassifyDataset:
 class TestFilters:
     def test_filter_current(self):
         records = [
-            _record(entity_id="X", strategy="CONTINUATION", h4_regime="T"),
+            _record(entity_id="X", strategy="CONTINUATION", h4_regime="T",
+                    canonical_opportunity_id="X*1*CONTINUATION"),
             _record(strategy="NONE_SCALP"),
-            _record(entity_id="Y", strategy="", h4_regime="R"),
+            _record(entity_id="Y", strategy="", h4_regime="R",
+                    canonical_opportunity_id="Y*2*P"),
         ]
         current = filter_current(records)
         assert len(current) == 2  # Both with entity+regime
 
     def test_filter_usable(self):
         records = [
-            _record(entity_id="X", strategy="CONTINUATION", h4_regime="T"),
+            _record(entity_id="X", strategy="CONTINUATION", h4_regime="T",
+                    canonical_opportunity_id="X*1*CONTINUATION"),
             _record(entity_id="X", strategy="REVERSAL", h4_regime=""),
             _record(strategy="NONE_SCALP"),
         ]

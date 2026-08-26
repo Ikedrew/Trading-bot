@@ -100,15 +100,21 @@ def classify_record(record: dict[str, Any]) -> DataEpoch:
         return DataEpoch.LEGACY
 
     # Rule 3: Full lineage → CURRENT
+    # Remediation Stage 8/9: a CURRENT-epoch record REQUIRES the explicit
+    # canonical_opportunity_id lineage root. Records that otherwise look
+    # current but lack it fail the lineage contract → LEGACY.
+    canonical = identity.get("canonical_opportunity_id", "") or record.get("canonical_opportunity_id", "")
     has_entity = bool(entity_id)
     has_clean_strategy = strategy in _VALID_STRATEGIES
     has_regime = h4_regime not in ("", "UNKNOWN", "TRANSITIONAL")
 
     if has_entity and has_clean_strategy:
         if has_regime:
+            # Would be CURRENT-epoch → requires the canonical lineage root.
+            if not canonical:
+                return DataEpoch.LEGACY  # fails the canonical lineage contract
             return DataEpoch.CURRENT
-        else:
-            return DataEpoch.TRANSITIONAL
+        return DataEpoch.TRANSITIONAL
 
     # Rule 4: Partial — has some useful fields but not full lineage
     has_correlation = bool(correlation_id) and not correlation_id.startswith("HORIZON-")

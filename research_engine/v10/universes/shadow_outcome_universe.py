@@ -15,7 +15,7 @@ This universe provides:
     - Bars held
     - Entry geometry (entry/SL/TP/direction/position_size)
     - Risk parameters (risk_distance, R:R ratio)
-    - Shadow type classification (PRIMARY_V10, HORIZON_SCALP, etc.)
+    - Shadow type classification (HORIZON_ALTERNATIVE horizons)
     - Lineage to originating decision via entity_id
 
 This universe does NOT provide:
@@ -74,7 +74,7 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
 
     Preserves:
         - Records with empty entity_id (usable for non-join populations)
-        - Records from all horizons and primary shadows
+        - Records from all Horizon shadow horizons
     """
 
     def __init__(self, source_dir: Path | str | None = None):
@@ -161,7 +161,6 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
                 Population.ALL_SHADOW_OUTCOMES.value,
                 Population.SHADOW_WINS.value,
                 Population.SHADOW_LOSSES.value,
-                Population.PRIMARY_V10_SHADOW.value,
                 Population.HORIZON_SCALP.value,
                 Population.HORIZON_INTRADAY.value,
                 Population.HORIZON_EXTENDED.value,
@@ -188,15 +187,6 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
             return [r for r in records if r.get("r_multiple", 0) > 0]
         elif population == Population.SHADOW_LOSSES:
             return [r for r in records if r.get("r_multiple", 0) <= 0]
-        elif population == Population.PRIMARY_V10_SHADOW:
-            return [
-                r for r in records
-                if (
-                    r.get("shadow_type") == "V10_PRIMARY"
-                    and r.get("v10_action") == "EXECUTE"
-                    and str(r.get("correlation_id", "")).startswith("COR-")
-                )
-            ]
         elif population == Population.HORIZON_SCALP:
             return [r for r in records if r.get("evaluated_horizon") == "SCALP" and r.get("shadow_type") == "HORIZON_ALTERNATIVE"]
         elif population == Population.HORIZON_INTRADAY:
@@ -204,9 +194,11 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
         elif population == Population.HORIZON_EXTENDED:
             return [r for r in records if r.get("evaluated_horizon") == "EXTENDED" and r.get("shadow_type") == "HORIZON_ALTERNATIVE"]
         elif population == Population.SHADOW_FROM_EXECUTE:
-            return [r for r in records if r.get("v10_action") == "EXECUTE" or r.get("shadow_type") == "V10_PRIMARY"]
+            # Canonical lineage: horizon shadows that responded to an EXECUTE verdict
+            return [r for r in records if r.get("shadow_type") == "HORIZON_ALTERNATIVE" and r.get("v10_action") == "EXECUTE"]
         elif population == Population.SHADOW_FROM_NO_TRADE:
-            return [r for r in records if r.get("shadow_type") == "HORIZON_ALTERNATIVE"]
+            # Canonical lineage: horizon shadows that responded to a NO_TRADE verdict
+            return [r for r in records if r.get("shadow_type") == "HORIZON_ALTERNATIVE" and r.get("v10_action") == "NO_TRADE"]
         elif population == Population.SHADOW_TP_HIT:
             return [r for r in records if r.get("exit_reason") == "take_profit"]
         elif population == Population.SHADOW_SL_HIT:
@@ -237,13 +229,14 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
             return None
 
         # Classify shadow type — prefer explicit field, fall back to trade_id prefix
+        # NOTE: the legacy "shadow_" prefix no longer maps to V10_PRIMARY (Phase 1I-C);
+        # historical shadow_-prefixed records normalise as UNKNOWN and enter no
+        # active canonical-lineage population.
         shadow_type_explicit = identity.get("shadow_type", "") or ""
         if shadow_type_explicit:
             shadow_type = shadow_type_explicit
         elif trade_id.startswith("hshadow_"):
             shadow_type = "HORIZON_ALTERNATIVE"
-        elif trade_id.startswith("shadow_"):
-            shadow_type = "V10_PRIMARY"
         else:
             shadow_type = "UNKNOWN"
 
@@ -328,6 +321,5 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
             # Lineage quality flags
             "has_entity_id": bool(entity_id),
             "has_correlation_id": bool(identity.get("correlation_id", "")),
-            "has_v10_geometry": shadow_type == "V10_PRIMARY",
             "has_lineage_contract": has_lineage_contract,
         }

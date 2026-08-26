@@ -1,6 +1,11 @@
 {
-  "current_day_key": "2026-08-21",
-  "total_trades_today": 0,
-  "per_symbol": {},
-  "last_updated": 1787270901.8143442
+  "current_day_key": "2026-08-26",
+  "total_trades_today": 8,
+  "per_symbol": {
+    "USDCAD": 1,
+    "XAUUSD": 2,
+    "EURUSD": 3,
+    "GBPUSD": 2
+  },
+  "last_updated": 1787765709.6868906
 }

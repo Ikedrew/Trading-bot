@@ -122,7 +122,8 @@ class Assessment:
 
     # ─── JOIN KEYS ────────────────────────────────────────────────────
     entity_id: str = ""              # Joins to decision_audit, trade_truth, opportunity
-    correlation_id: str = ""         # Joins to execution chain (if executed)
+    canonical_opportunity_id: str = ""  # THE authoritative lineage root (remediation)
+    correlation_id: str = ""         # Technical tracing only (never a join requirement)
     decision_id: str = ""            # Joins to decision_audit
     runtime_session_id: str = ""     # Distinguishes bot sessions
 

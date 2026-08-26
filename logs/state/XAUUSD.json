@@ -1,8 +1,8 @@
 {
   "_meta": {
     "symbol": "XAUUSD",
-    "saved_at_utc": "2026-08-21T01:26:20.417702+00:00",
-    "saved_at_unix": 1787275580.417702
+    "saved_at_utc": "2026-08-26T23:37:49.778915+00:00",
+    "saved_at_unix": 1787787469.7789156
   },
   "current_bias": null,
   "bias_phase": "EXPIRED",
@@ -14,7 +14,7 @@
   "last_strong_impulse_direction": null,
   "regime_state": "RANGING",
   "volatility_filter": 0.0,
-  "last_successful_open_mono": null,
+  "last_successful_open_mono": 1787773200.0,
   "structure_score": 0.0,
   "structure_regime": "WEAK",
   "last_failed_setups": []

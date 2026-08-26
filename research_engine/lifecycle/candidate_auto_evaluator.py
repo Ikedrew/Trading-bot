@@ -72,7 +72,10 @@ def auto_evaluate_candidates(
     Scan SHADOW_TESTING candidates and evaluate those with sufficient paired evidence.
 
     For each candidate in SHADOW_TESTING:
-        1. Count prospective paired observations (V10_PRIMARY + CANDIDATE_{id} with same entity_id)
+        1. Count prospective paired observations vs a baseline population
+           (RETIRED in Phase 1I-C: the old V10_PRIMARY baseline no longer
+           exists; pair counting returns 0 until a canonical-lineage baseline
+           is defined, so candidates remain in SHADOW_TESTING)
         2. If pairs >= minimum_pairs, call evaluate_candidate()
         3. Let the bridge handle lifecycle transitions
 
@@ -180,35 +183,18 @@ def _count_prospective_pairs(
     Count the number of paired (baseline + candidate) observations available
     for this candidate, considering only prospective data (after created_at).
 
-    Returns the number of entity_ids that have BOTH a V10_PRIMARY and a
-    CANDIDATE_{candidate_id} observation after the prospective boundary.
+    RETIRED (Phase 1I-C): the legacy baseline population was
+    shadow_type == "V10_PRIMARY", which has been removed from the architecture.
+    The canonical Horizon Shadow lineage is NOT a semantically equivalent
+    baseline (different geometry source, different identity model), so no
+    artificial substitution is made. Pair counting therefore always returns 0
+    and candidates simply remain in SHADOW_TESTING pending insufficient
+    evidence. A later phase may define an honest candidate-vs-canonical-lineage
+    comparison.
+
+    Returns 0 unconditionally.
     """
-    candidate_shadow_type = f"CANDIDATE_{candidate_id}"
-
-    # Parse prospective boundary
-    boundary_ts = _parse_timestamp(candidate_created_at)
-
-    baseline_entities: set[str] = set()
-    candidate_entities: set[str] = set()
-
-    for obs in observations:
-        # Check prospective boundary
-        obs_ts = _get_entry_time(obs)
-        if obs_ts is not None and obs_ts < boundary_ts:
-            continue
-
-        entity_id = _get_entity_id(obs)
-        if not entity_id:
-            continue
-
-        shadow_type = _get_shadow_type(obs)
-        if shadow_type == "V10_PRIMARY":
-            baseline_entities.add(entity_id)
-        elif shadow_type == candidate_shadow_type:
-            candidate_entities.add(entity_id)
-
-    # Pairs = entities present in BOTH sets
-    return len(baseline_entities & candidate_entities)
+    return 0
 
 
 def _load_observations(shadow_dir: str | None = None) -> list[dict[str, Any]]:

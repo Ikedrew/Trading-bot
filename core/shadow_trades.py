@@ -27,7 +27,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -142,6 +142,8 @@ class ShadowTrade:
     market_phase: str = ""            # IMPULSE | PULLBACK | CONSOLIDATION | EXHAUSTION | REVERSAL | ""
     market_phase_confidence: float = 0.0
     entity_id: str = ""               # Deterministic join key: f"{symbol}_{bar_time}" — links to DecisionTrace
+    canonical_opportunity_id: str = ""  # THE authoritative lineage root (remediation)
+    recovered: bool = False            # True when rebuilt by restart recovery
     regime: str = ""                  # TRENDING | RANGE | TRANSITIONAL | ""
     h4_regime: str = ""               # Raw H4 regime classification
     h1_bias: str = ""                 # BULLISH | BEARISH | NEUTRAL | ""
@@ -150,7 +152,7 @@ class ShadowTrade:
     # ─── SHADOW LINEAGE CONTRACT (approved specification) ────────────
     # These fields preserve the relationship between this shadow observation
     # and the authoritative Live V10 decision, per the approved Shadow Design.
-    shadow_type: str = ""             # "V10_PRIMARY" | "HORIZON_ALTERNATIVE" | "" (legacy)
+    shadow_type: str = ""             # "HORIZON_ALTERNATIVE" | "CANDIDATE_*"; legacy values exist only in historical records
     v10_selected_horizon: str = ""    # What V10 HorizonEngine chose for this opportunity
     horizon_selection_status: str = ""  # "SELECTED" | "ALTERNATIVE" | "UNKNOWN" (legacy)
     evaluated_horizon: str = ""       # Which horizon THIS shadow observation evaluates
@@ -213,6 +215,9 @@ class ShadowTradeEngine:
         # even when callers (e.g. BarProvider) dispatch on every poll.
         # Intentionally NOT persisted — this engine is stateless across restarts.
         self._last_evaluated_bar: dict[str, float] = {}
+        # Remediation Stage 7: recover open shadows from persisted OPEN events
+        # (max lifespan 60 M5 bars = 5h ⇒ at most 2 date partitions needed).
+        self._recover_open_trades()
 
     @property
     def active_count(self) -> int:
@@ -243,6 +248,7 @@ class ShadowTradeEngine:
         market_phase: str = "",
         market_phase_confidence: float = 0.0,
         entity_id: str = "",
+        canonical_opportunity_id: str = "",
         regime: str = "",
         h4_regime: str = "",
         h1_bias: str = "",
@@ -284,6 +290,7 @@ class ShadowTradeEngine:
             market_phase=market_phase,
             market_phase_confidence=market_phase_confidence,
             entity_id=entity_id,
+            canonical_opportunity_id=canonical_opportunity_id,
             regime=regime,
             h4_regime=h4_regime,
             h1_bias=h1_bias,
@@ -301,6 +308,12 @@ class ShadowTradeEngine:
             v10_action=v10_action,
         )
         self._active[trade_id] = trade
+        # Remediation Stage 7: persist the OPEN event so interrupted
+        # lifecycles can be recovered on restart instead of silently lost.
+        try:
+            _persist_shadow_open(trade)
+        except Exception:
+            pass  # Open persistence must never block the shadow engine
         return trade
 
     def evaluate_bar(
@@ -470,11 +483,15 @@ class ShadowTradeEngine:
         return {
             "schema_version": "shadow_trades_v2",
             "source": "shadow_trade_engine",
+            # Remediation Stage 7: explicit lifecycle event type.
+            # Historical records without this field are interpreted as CLOSE.
+            "event_type": "CLOSE",
 
             # ─── DOMAIN 1: IDENTITY ───────────────────────────────────
             "identity": {
                 "trade_id": trade.trade_id,
                 "correlation_id": trade.correlation_id,
+                "canonical_opportunity_id": trade.canonical_opportunity_id or None,
                 "symbol": trade.symbol,
                 "strategy_id": trade.strategy,
                 "cycle_id": str(trade.cycle_id),
@@ -540,6 +557,85 @@ class ShadowTradeEngine:
             },
         }
 
+    # ─── RESTART RECOVERY (remediation Stage 7) ───────────────────────
+    def _recover_open_trades(self) -> None:
+        """
+        Rebuild active shadows from persisted OPEN events on startup.
+
+        Scans at most the last TWO date partitions (max shadow lifespan is
+        60 M5 bars = 5h). Records WITHOUT an ``event_type`` field are
+        historical CLOSE/outcome records (never rewritten). A trade_id whose
+        latest event is OPEN with no matching CLOSE is rebuilt as an active
+        ShadowTrade flagged ``recovered=True``. Never raises.
+        """
+        try:
+            base = Path(_LOCAL_DIR)
+            if not base.exists():
+                return
+            now_utc = datetime.now(timezone.utc)
+            dates = {
+                (now_utc - timedelta(days=offset)).strftime("%Y-%m-%d")
+                for offset in (0, 1)
+            }
+            latest: dict[str, tuple[str, dict[str, Any]]] = {}  # trade_id -> (event, record)
+            for path in sorted(base.glob("*/*.jsonl")):
+                if path.stem not in dates:
+                    continue
+                try:
+                    with open(path, "r", encoding="utf-8") as fh:
+                        for line in fh:
+                            line = line.strip()
+                            if not line:
+                                continue
+                            try:
+                                rec = json.loads(line)
+                            except Exception:
+                                continue
+                            tid = (rec.get("identity") or {}).get("trade_id") or rec.get("trade_id")
+                            if not tid:
+                                continue
+                            event = rec.get("event_type") or _SHADOW_EVENT_CLOSE  # historical default
+                            latest[tid] = (event, rec)
+                except Exception:
+                    continue
+
+            for tid, (event, rec) in latest.items():
+                if event != _SHADOW_EVENT_OPEN:
+                    continue  # closed / outcome / unknown — not recoverable
+                identity = rec.get("identity") or {}
+                snap = rec.get("decision_snapshot") or {}
+                try:
+                    trade = ShadowTrade(
+                        trade_id=tid,
+                        cycle_id=int(identity.get("cycle_id", 0) or 0),
+                        symbol=identity.get("symbol", "UNKNOWN"),
+                        direction=str(snap.get("direction", "BUY")).upper(),
+                        entry_price=float(snap.get("entry_intent_price", 0.0) or 0.0),
+                        stop_loss=float(snap.get("stop_loss_intent", 0.0) or 0.0),
+                        take_profit=float(snap.get("take_profit_intent", 0.0) or 0.0),
+                        entry_time=float(snap.get("timestamp_decision_utc", 0.0) or 0.0),
+                        strategy=identity.get("strategy_id", ""),
+                        pattern=str(snap.get("pattern", "")),
+                        score=float(snap.get("score", 0.0) or 0.0),
+                        lot_size=0.01,
+                        correlation_id=identity.get("correlation_id", "") or "",
+                        entity_id=identity.get("entity_id", "") or "",
+                        canonical_opportunity_id=identity.get("canonical_opportunity_id", "") or "",
+                        trade_horizon=snap.get("trade_horizon", "") or "",
+                        evaluated_horizon=identity.get("evaluated_horizon", "") or "",
+                        shadow_type=identity.get("shadow_type", "") or "",
+                    )
+                    trade.recovered = True
+                    self._active[tid] = trade
+                    logger.info(
+                        "[SHADOW_RECOVERY] recovered_open trade_id=%s symbol=%s canonical=%s",
+                        tid, trade.symbol, trade.canonical_opportunity_id or "-",
+                    )
+                except Exception as exc:
+                    logger.debug("[SHADOW_RECOVERY_SKIP] %s: %s", tid, exc)
+        except Exception as exc:
+            logger.debug("[SHADOW_RECOVERY_FAIL] %s", exc)
+
     def get_active_trades(self, symbol: str | None = None) -> list[ShadowTrade]:
         """Return active trades, optionally filtered by symbol."""
         if symbol:
@@ -558,6 +654,76 @@ class ShadowTradeEngine:
 # ═══════════════════════════════════════════════════════════════════════════════
 # PERSISTENCE (local + S3)
 # ═══════════════════════════════════════════════════════════════════════════════
+
+_SHADOW_EVENT_OPEN = "OPEN"
+_SHADOW_EVENT_CLOSE = "CLOSE"
+
+
+def _build_shadow_open_record(trade: "ShadowTrade") -> dict[str, Any]:
+    """
+    Build the OPEN lifecycle event record for a newly opened shadow.
+
+    Carries the full identity domain (including canonical_opportunity_id)
+    but NO outcome domain — an OPEN is never a completed outcome.
+    """
+    risk_dist = abs(trade.entry_price - trade.stop_loss)
+    pip_size = 0.01 if "JPY" in trade.symbol.upper() else 0.0001
+    return {
+        "schema_version": "shadow_trades_v2",
+        "source": "shadow_trade_engine",
+        "event_type": _SHADOW_EVENT_OPEN,
+        "identity": {
+            "trade_id": trade.trade_id,
+            "correlation_id": trade.correlation_id,
+            "canonical_opportunity_id": trade.canonical_opportunity_id or None,
+            "symbol": trade.symbol,
+            "strategy_id": trade.strategy,
+            "cycle_id": str(trade.cycle_id),
+            "entity_id": trade.entity_id or None,
+            "shadow_type": trade.shadow_type or None,
+            "evaluated_horizon": trade.evaluated_horizon or None,
+        },
+        "decision_snapshot": {
+            "timestamp_decision_utc": trade.entry_time,
+            "entry_intent_price": trade.entry_price,
+            "stop_loss_intent": trade.stop_loss,
+            "take_profit_intent": trade.take_profit,
+            "direction": trade.direction,
+            "risk_price_distance": round(risk_dist, 8),
+            "risk_pips": round(risk_dist / pip_size, 2) if pip_size else 0.0,
+            "pattern": trade.pattern,
+            "score": round(trade.score, 4),
+            "trade_horizon": trade.trade_horizon or None,
+        },
+        "timestamps": {"entry_time": trade.entry_time},
+    }
+
+
+def _persist_shadow_open(trade: "ShadowTrade") -> None:
+    """Persist the OPEN event for a shadow trade. Never raises."""
+    try:
+        record = _build_shadow_open_record(trade)
+        date_str = datetime.fromtimestamp(trade.entry_time, tz=timezone.utc).strftime("%Y-%m-%d")
+        symbol = trade.symbol or "UNKNOWN"
+
+        local_path = Path(_LOCAL_DIR) / symbol / f"{date_str}.jsonl"
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        line = json.dumps(record, separators=(",", ":"), default=str) + "\n"
+        fd = os.open(str(local_path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+        try:
+            os.write(fd, line.encode("utf-8"))
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+
+        try:
+            from core import config as _cfg
+            if getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
+                _s3_append(symbol, date_str, line)
+        except Exception:
+            pass
+    except Exception as exc:
+        logger.debug("[SHADOW_OPEN_PERSIST_FAIL] %s", exc)
 
 def _persist_shadow_trade(record: dict[str, Any]) -> None:
     """Persist to local JSONL and mirror to S3. Never raises."""

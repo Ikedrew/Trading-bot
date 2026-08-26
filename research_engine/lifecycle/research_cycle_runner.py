@@ -377,7 +377,12 @@ class ResearchCycleRunner:
             from research_engine.v10.universes.models import Population
             builder = ShadowOutcomeUniverseBuilder()
             builder.build()
-            shadows = builder.get_population(Population.PRIMARY_V10_SHADOW)
+            shadows_all = builder.get_population(Population.ALL_SHADOW_OUTCOMES)
+            # Phase 1I-C: PRIMARY_V10_SHADOW population retired with V10_PRIMARY.
+            # Pattern-level R statistics now use the canonical Horizon Shadow
+            # lineage (HORIZON_ALTERNATIVE records carry the same opportunity
+            # pattern/score context at decision time).
+            shadows = [s for s in shadows_all if s.get("shadow_type") == "HORIZON_ALTERNATIVE"]
 
             # Filter to real (has correlation_id)
             real_shadows = [s for s in shadows if s.get("correlation_id")]

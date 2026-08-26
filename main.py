@@ -14,10 +14,25 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# --- OUTPUT ENCODING GUARD ----------------------------------------------
+# On Windows, redirected stdout/stderr default to the legacy locale codec
+# (cp1252), which cannot encode every diagnostic character used by runtime
+# prints (e.g. arrows/warning glyphs). An unencodable diagnostic raised
+# UnicodeEncodeError mid-scan and was silently swallowed by per-symbol error
+# handling, aborting pattern detection on every cycle (Shadow Trial 2 defect).
+# Reconfigure both streams to UTF-8 with replacement so no diagnostic can ever
+# crash the pipeline, however the bot is launched.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass  # Non-reconfigurable stream (e.g. test capture) -- leave as-is
+# --- END OUTPUT ENCODING GUARD --------------------------------------------
+
 from core import config  # noqa: E402
 from core.loop import run_live, run_replay, run_replay_scanner, run_live_scanner  # noqa: E402
 from core.mt5_validation import validate_account  # noqa: E402
-from core.config_validation import validate_and_freeze_config  # noqa: E402  # noqa: E402
+from core.config_validation import validate_and_freeze_config  # noqa: E402
 from core.discord_notifier import send_discord  # noqa: E402
 from core.runtime.shutdown import request_shutdown, is_shutdown_requested  # noqa: E402
 from risk.levels import validate_risk_coverage  # noqa: E402
