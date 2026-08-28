@@ -1,0 +1,2347 @@
+{
+"strategy_observations": {
+"records_sampled": 23,
+"fields": {
+"bar_time": [
+"int",
+"1787889000"
+],
+"candidate_strategies": [
+"list[dict]",
+"[{'strategy_id': 'range_reversal_v1', 'eligible': False, 'st"
+],
+"canonical_opportunity_id": [
+"str",
+"NZDUSD*1787889000*EVENING_STAR"
+],
+"conditions_failed": [
+"int",
+"5"
+],
+"conditions_missing": [
+"int",
+"0"
+],
+"conditions_passed": [
+"int",
+"0"
+],
+"confidence": [
+"float",
+"0.0"
+],
+"cycle_id": [
+"int",
+"2"
+],
+"decision_action": [
+"str",
+"NO_TRADE"
+],
+"decision_reason": [
+"str",
+"V10 [opportunity]: No opportunity (INVALID)"
+],
+"decision_score": [
+"float",
+"0.37"
+],
+"decision_side": [
+"str",
+""
+],
+"detected_pattern": [
+"str",
+""
+],
+"direction": [
+"str",
+"BULLISH"
+],
+"eligible_by_phase": [
+"bool",
+"False"
+],
+"entity_id": [
+"str",
+"NZDUSD_1787889000"
+],
+"evaluation_status": [
+"str",
+"NO_ELIGIBLE_STRATEGIES"
+],
+"h1_bias": [
+"str",
+"BULLISH"
+],
+"h4_regime": [
+"str",
+"RANGING"
+],
+"market_phase": [
+"str",
+"PULLBACK"
+],
+"missing_data": [
+"list[empty]",
+"[]"
+],
+"observation_id": [
+"str",
+"NZDUSD_2_1787889000"
+],
+"pattern_in_triggers": [
+"bool",
+"False"
+],
+"schema_version": [
+"str",
+"strategy_observation_v1"
+],
+"strategy_conditions.fully_met": [
+"list[empty]",
+"[]"
+],
+"strategy_conditions.fully_met_count": [
+"int",
+"0"
+],
+"strategy_conditions.not_met_count": [
+"int",
+"5"
+],
+"strategy_conditions.partially_met_count": [
+"int",
+"0"
+],
+"strategy_conditions.phase_eligible": [
+"list[empty]/list[str]",
+"[]"
+],
+"strategy_conditions.phase_eligible_count": [
+"int",
+"0"
+],
+"strategy_family": [
+"str",
+"UNKNOWN"
+],
+"symbol": [
+"str",
+"NZDUSD"
+],
+"timeframe": [
+"str",
+"M5"
+],
+"timestamp_utc": [
+"float",
+"1787889000.0"
+],
+"tradability_score": [
+"float",
+"0.7297"
+]
+}
+},
+"opportunities": {
+"records_sampled": 24,
+"fields": {
+"_persisted_at": [
+"str",
+"2026-08-28T01:00:25.709Z"
+],
+"_state_at_persist": [
+"str",
+"DETECTED"
+],
+"ask_at_detection": [
+"float",
+"0.59545"
+],
+"bias_direction": [
+"str",
+""
+],
+"bias_phase": [
+"str",
+"EXPIRED"
+],
+"bid_at_detection": [
+"float",
+"0.59543"
+],
+"canonical_opportunity_id": [
+"str",
+"NZDUSD*1787889600*TWEEZER_TOP"
+],
+"correlation_id": [
+"str",
+""
+],
+"cycle_id": [
+"int",
+"237"
+],
+"dataset_version": [
+"str",
+"2026.1"
+],
+"decision_id": [
+"str",
+""
+],
+"detected_at_bar_time": [
+"int",
+"1787889600"
+],
+"detected_at_utc": [
+"str",
+"2026-08-28T01:00:25.708Z"
+],
+"detection_timeframe": [
+"str",
+"M5"
+],
+"direction": [
+"str",
+"SELL"
+],
+"entity_id": [
+"str",
+"NZDUSD_1787889600"
+],
+"evidence_scores.behaviour_score": [
+"float",
+"0.7999999999999999"
+],
+"evidence_scores.formation_score": [
+"float",
+"0.4"
+],
+"evidence_scores.location_score": [
+"float",
+"0.5"
+],
+"evidence_scores.structure_score": [
+"float",
+"0.15"
+],
+"h1_bos_confirmed": [
+"bool",
+"False"
+],
+"h1_direction": [
+"str",
+"BULLISH"
+],
+"h1_swing_structure": [
+"str",
+"HH_HL"
+],
+"h4_regime": [
+"str",
+"RANGING"
+],
+"h4_regime_confidence": [
+"float",
+"0.7746735780337031"
+],
+"opportunity_id": [
+"str",
+"NZDUSD*1787889600*TWEEZER_TOP"
+],
+"outcome_trade_id": [
+"str",
+""
+],
+"overall_score": [
+"float",
+"0.0"
+],
+"passed_identification_condition": [
+"bool",
+"False"
+],
+"pattern": [
+"str",
+"TWEEZER_TOP"
+],
+"pattern_confidence": [
+"float",
+"0.98"
+],
+"rejection_reason": [
+"str",
+""
+],
+"rejection_stage": [
+"str",
+""
+],
+"runtime_session_id": [
+"str",
+"dd7d514beb23"
+],
+"schema_version": [
+"str",
+"opportunity_v1"
+],
+"session_at_detection": [
+"str",
+"ASIA"
+],
+"sibling_patterns": [
+"list[empty]",
+"[]"
+],
+"spread_at_detection": [
+"float",
+"2e-05"
+],
+"state": [
+"str",
+"DETECTED"
+],
+"strategy_classification": [
+"str",
+""
+],
+"strategy_confidence": [
+"float",
+"0.0"
+],
+"symbol": [
+"str",
+"NZDUSD"
+],
+"trigger_candle.close": [
+"float",
+"0.59543"
+],
+"trigger_candle.high": [
+"float",
+"0.59558"
+],
+"trigger_candle.low": [
+"float",
+"0.59542"
+],
+"trigger_candle.open": [
+"float",
+"0.59555"
+]
+}
+},
+"decision_trace": {
+"records_sampled": 18,
+"fields": {
+"action": [
+"str",
+"NO_TRADE"
+],
+"canonical_opportunity_id": [
+"str",
+"NZDUSD*1787889000*EVENING_STAR"
+],
+"closest_flip_component": [
+"NoneType",
+"None"
+],
+"closest_flip_delta": [
+"NoneType",
+"None"
+],
+"components.behaviour_score": [
+"float",
+"0.8"
+],
+"components.formation_score": [
+"float",
+"0.4"
+],
+"components.location_score": [
+"float",
+"0.5"
+],
+"components.structure_score": [
+"float",
+"0.15"
+],
+"confirmation_score": [
+"NoneType",
+"None"
+],
+"correlation_id": [
+"str",
+"v10_NZDUSD_1787889000_2"
+],
+"cycle_id": [
+"int",
+"2"
+],
+"decision_id": [
+"str",
+"d27292952cc5e6cf"
+],
+"engine_version": [
+"str",
+"V10"
+],
+"entity_id": [
+"str",
+"NZDUSD_1787889000"
+],
+"ev": [
+"NoneType",
+"None"
+],
+"ev_positive": [
+"NoneType",
+"None"
+],
+"flip_feasible": [
+"bool",
+"False"
+],
+"h4_alignment": [
+"float",
+"0.0"
+],
+"htf_alignment": [
+"float",
+"0.0"
+],
+"largest_drag_component": [
+"NoneType",
+"None"
+],
+"largest_drag_value": [
+"float",
+"0.0"
+],
+"market_phase": [
+"NoneType",
+"None"
+],
+"market_phase_confidence": [
+"float",
+"0.0"
+],
+"market_state": [
+"NoneType",
+"None"
+],
+"market_state_confidence": [
+"float",
+"0.0"
+],
+"observation_id": [
+"str",
+"d27292952cc5e6cf"
+],
+"p_success": [
+"NoneType",
+"None"
+],
+"pattern_count": [
+"int",
+"1"
+],
+"pattern_detected": [
+"bool",
+"False"
+],
+"pattern_name": [
+"NoneType",
+"None"
+],
+"pattern_quality": [
+"float",
+"0.0"
+],
+"policy_reasoning": [
+"str",
+""
+],
+"regime": [
+"NoneType",
+"None"
+],
+"regime_confidence": [
+"float",
+"0.0"
+],
+"regime_source": [
+"str",
+""
+],
+"regime_timeframe": [
+"str",
+""
+],
+"rr_effective": [
+"NoneType",
+"None"
+],
+"runtime_session_id": [
+"str",
+"dd7d514beb23"
+],
+"schema_version": [
+"str",
+"decision_trace_v2"
+],
+"score_delta": [
+"float",
+"0.37"
+],
+"score_neutral": [
+"float",
+"0.0"
+],
+"score_strategy": [
+"float",
+"0.37"
+],
+"selected_strategy": [
+"NoneType",
+"None"
+],
+"stages_passed": [
+"list[empty]",
+"[]"
+],
+"stages_reached": [
+"list[empty]",
+"[]"
+],
+"strategy_confidence": [
+"float",
+"0.0"
+],
+"symbol": [
+"str",
+"NZDUSD"
+],
+"terminal_reason": [
+"str",
+"V10 [opportunity]: No opportunity (INVALID)"
+],
+"terminal_stage": [
+"str",
+"unknown"
+],
+"threshold_gap": [
+"float",
+"0.0"
+],
+"timestamp_utc": [
+"str",
+"2026-08-28T00:52:15.533Z"
+],
+"trade_horizon": [
+"NoneType",
+"None"
+],
+"trend_alignment_confidence": [
+"float",
+"0.0"
+],
+"trend_alignment_source": [
+"str",
+""
+],
+"trend_alignment_timeframe": [
+"str",
+""
+],
+"v10_account_snapshot.balance": [
+"float",
+"53212.72"
+],
+"v10_account_snapshot.daily_loss_pct": [
+"float",
+"0.0"
+],
+"v10_account_snapshot.equity": [
+"float",
+"53212.72"
+],
+"v10_account_snapshot.leverage": [
+"int",
+"30"
+],
+"v10_account_snapshot.margin_free": [
+"float",
+"53212.72"
+],
+"v10_account_snapshot.open_positions": [
+"int",
+"0"
+],
+"v10_broker_snapshot.ask": [
+"float",
+"0.59562"
+],
+"v10_broker_snapshot.bid": [
+"float",
+"0.5956"
+],
+"v10_broker_snapshot.market_open": [
+"bool",
+"True"
+],
+"v10_broker_snapshot.spread": [
+"float",
+"2.0000000000020002e-05"
+],
+"v10_broker_snapshot.stops_level": [
+"int",
+"0"
+],
+"v10_broker_snapshot.symbol": [
+"str",
+"NZDUSD"
+],
+"v10_broker_snapshot.tick_value": [
+"float",
+"0.7354617596658062"
+],
+"v10_broker_snapshot.volume_min": [
+"float",
+"0.01"
+],
+"v10_broker_snapshot.volume_step": [
+"float",
+"0.01"
+],
+"v10_entry.direction": [
+"str",
+"NONE"
+],
+"v10_entry.entry_price": [
+"float",
+"0.0"
+],
+"v10_entry.expected_rr": [
+"float",
+"0.0"
+],
+"v10_entry.method": [
+"str",
+"CONFIRMATION_ENTRY"
+],
+"v10_entry.reward_distance": [
+"float",
+"0.0"
+],
+"v10_entry.risk_distance": [
+"float",
+"0.0"
+],
+"v10_entry.status": [
+"str",
+"INVALID"
+],
+"v10_entry.stop_price": [
+"float",
+"0.0"
+],
+"v10_entry.target_price": [
+"float",
+"0.0"
+],
+"v10_execution.approved": [
+"bool",
+"False"
+],
+"v10_execution.order_type": [
+"NoneType",
+"None"
+],
+"v10_execution.rejection_reason": [
+"str",
+"Risk rejected: Entry is INVALID \u2014 cannot assess risk"
+],
+"v10_execution.volume": [
+"NoneType",
+"None"
+],
+"v10_horizon.duration_minutes": [
+"int",
+"30"
+],
+"v10_horizon.max_move": [
+"float",
+"20.0"
+],
+"v10_horizon.min_move": [
+"float",
+"5.0"
+],
+"v10_horizon.type": [
+"str",
+"SCALP"
+],
+"v10_horizon.unit": [
+"str",
+"PIPS"
+],
+"v10_market_state.h1.bos_confirmed": [
+"bool",
+"False"
+],
+"v10_market_state.h1.bos_direction": [
+"str",
+""
+],
+"v10_market_state.h1.choch_detected": [
+"bool",
+"False"
+],
+"v10_market_state.h1.choch_direction": [
+"str",
+""
+],
+"v10_market_state.h1.dominant_trend": [
+"str",
+"BULLISH"
+],
+"v10_market_state.h1.structural_clarity": [
+"float",
+"0.3962"
+],
+"v10_market_state.h1.swing_high": [
+"float",
+"0.59572"
+],
+"v10_market_state.h1.swing_low": [
+"float",
+"0.59451"
+],
+"v10_market_state.h4.atr": [
+"float",
+"0.0"
+],
+"v10_market_state.h4.last_bos_direction": [
+"str",
+""
+],
+"v10_market_state.h4.market_phase": [
+"str",
+"PULLBACK"
+],
+"v10_market_state.h4.structure_type": [
+"str",
+""
+],
+"v10_market_state.h4.swing_high": [
+"float",
+"0.0"
+],
+"v10_market_state.h4.swing_low": [
+"float",
+"0.0"
+],
+"v10_market_state.h4.trend": [
+"str",
+"NEUTRAL"
+],
+"v10_market_state.h4.trend_strength": [
+"float",
+"0.0"
+],
+"v10_market_state.h4.volatility_state": [
+"str",
+"NEUTRAL"
+],
+"v10_market_state.htf_alignment.macro_bias": [
+"str",
+"BULLISH"
+],
+"v10_market_state.htf_alignment.macro_bias_strength": [
+"float",
+"0.2773"
+],
+"v10_market_state.htf_alignment.structure_alignment": [
+"float",
+"0.5"
+],
+"v10_market_state.location.inside_institutional_zone": [
+"bool",
+"False"
+],
+"v10_market_state.location.location_type": [
+"str",
+"OPEN_SPACE"
+],
+"v10_market_state.location.premium_discount": [
+"str",
+"PREMIUM"
+],
+"v10_market_state.location.range_position": [
+"float",
+"0.8837"
+],
+"v10_market_state.location.zone_quality": [
+"float",
+"0.0"
+],
+"v10_market_state.m15.displacement_direction": [
+"str",
+""
+],
+"v10_market_state.m15.displacement_present": [
+"bool",
+"False"
+],
+"v10_market_state.m15.internal_bos": [
+"bool",
+"False"
+],
+"v10_market_state.m15.internal_bos_direction": [
+"str",
+""
+],
+"v10_market_state.m15.pullback_active": [
+"bool",
+"True"
+],
+"v10_market_state.m15.range_position": [
+"float",
+"0.8837"
+],
+"v10_market_state.m5.atr": [
+"float",
+"0.00015785714285714608"
+],
+"v10_market_state.m5.confirmation_candle": [
+"bool",
+"False"
+],
+"v10_market_state.m5.momentum_direction": [
+"str",
+"NEUTRAL"
+],
+"v10_market_state.m5.momentum_strength": [
+"float",
+"0.0"
+],
+"v10_market_state.m5.rejection_present": [
+"bool",
+"False"
+],
+"v10_market_state.m5.spread_atr_ratio": [
+"float",
+"0.126697"
+],
+"v10_market_state.regime.expansion_state": [
+"str",
+"NEUTRAL"
+],
+"v10_market_state.regime.regime": [
+"str",
+"RANGING"
+],
+"v10_market_state.regime.regime_confidence": [
+"float",
+"0.5"
+],
+"v10_market_state.regime.volatility_state": [
+"str",
+"NEUTRAL"
+],
+"v10_opportunity.behaviour_score": [
+"float",
+"0.7999999999999999"
+],
+"v10_opportunity.directional_bias": [
+"str",
+"BULLISH"
+],
+"v10_opportunity.formation_score": [
+"float",
+"0.3"
+],
+"v10_opportunity.location_score": [
+"float",
+"0.5"
+],
+"v10_opportunity.opportunity_type": [
+"str",
+"ZONE_REACTION"
+],
+"v10_opportunity.overall_quality": [
+"float",
+"0.37"
+],
+"v10_opportunity.reasoning": [
+"list[empty]/list[str]",
+"['At H1 premium boundary \u2014 institutional supply expected', '"
+],
+"v10_opportunity.state": [
+"str",
+"INVALID"
+],
+"v10_opportunity.structure_score": [
+"float",
+"0.04999999999999999"
+],
+"v10_risk.approved": [
+"bool",
+"False"
+],
+"v10_risk.max_loss_amount": [
+"float",
+"0.0"
+],
+"v10_risk.position_size": [
+"float",
+"0.0"
+],
+"v10_risk.rejection_reason": [
+"str",
+"Entry is INVALID \u2014 cannot assess risk"
+],
+"v10_risk.risk_percentage": [
+"float",
+"0.0"
+],
+"v10_strategy.confidence": [
+"float",
+"0.0"
+],
+"v10_strategy.direction": [
+"str",
+"BULLISH"
+],
+"v10_strategy.family": [
+"str",
+"NONE"
+],
+"v10_strategy.reasoning": [
+"list[str]",
+"['Opportunity state is INVALID \u2014 no strategy applicable']"
+],
+"weakest_component": [
+"NoneType/str",
+"None"
+],
+"weakest_value": [
+"float",
+"0.0"
+],
+"weights_used": [
+"str",
+""
+]
+}
+},
+"decision_audit": {
+"records_sampled": 18,
+"fields": {
+"canonical_opportunity_id": [
+"str",
+""
+],
+"confirmation_score": [
+"NoneType",
+"None"
+],
+"correlation_id": [
+"str",
+"COR-20260828-2-NZDUSD-8D7D"
+],
+"cycle_id": [
+"int",
+"2"
+],
+"decision_id": [
+"str",
+"e75daa8f5ba4482b87ef1cccc54589c7"
+],
+"engine_state.bias_phase": [
+"str",
+"EXPIRED"
+],
+"engine_state.bias_strength": [
+"float",
+"0.0"
+],
+"engine_state.current_bias": [
+"NoneType",
+"None"
+],
+"engine_state.regime_state": [
+"str",
+"RANGING"
+],
+"engine_version": [
+"str",
+"V10"
+],
+"entity_id": [
+"str",
+"NZDUSD_1787889000"
+],
+"ev": [
+"NoneType",
+"None"
+],
+"ev_experiment_mode": [
+"bool",
+"False"
+],
+"ev_gate_enabled": [
+"bool",
+"True"
+],
+"ev_positive": [
+"NoneType",
+"None"
+],
+"ev_rejection_bypassed": [
+"bool",
+"False"
+],
+"ev_would_have_blocked": [
+"bool",
+"False"
+],
+"intent": [
+"NoneType",
+"None"
+],
+"market_state": [
+"NoneType",
+"None"
+],
+"market_state_confidence": [
+"NoneType",
+"None"
+],
+"observation_id": [
+"str",
+"NZDUSD*1787889000*EVENING_STAR"
+],
+"p_success": [
+"NoneType",
+"None"
+],
+"pattern": [
+"NoneType",
+"None"
+],
+"policy_reasoning": [
+"NoneType",
+"None"
+],
+"policy_trade_allowed": [
+"NoneType",
+"None"
+],
+"reason": [
+"str",
+"V10 [opportunity]: No opportunity (INVALID)"
+],
+"regime": [
+"str",
+"unknown"
+],
+"rr_effective": [
+"NoneType",
+"None"
+],
+"runtime_mode": [
+"str",
+"LIVE"
+],
+"runtime_session_id": [
+"str",
+"dd7d514beb23"
+],
+"schema_version": [
+"str",
+"decision_audit_v1"
+],
+"score": [
+"float",
+"0.37"
+],
+"score_neutral": [
+"float",
+"0.0"
+],
+"score_strategy": [
+"float",
+"0.0"
+],
+"should_trade": [
+"bool",
+"False"
+],
+"side": [
+"NoneType",
+"None"
+],
+"strategy": [
+"NoneType",
+"None"
+],
+"strategy_confidence": [
+"float",
+"0.0"
+],
+"strategy_ts_utc_ms": [
+"int",
+"0"
+],
+"symbol": [
+"str",
+"NZDUSD"
+],
+"timeframe": [
+"int",
+"5"
+],
+"timestamp_unix": [
+"float",
+"1787878340.826"
+],
+"timestamp_utc": [
+"str",
+"2026-08-28T00:52:20.826Z"
+],
+"trigger_candle.close": [
+"float",
+"0.5956"
+],
+"trigger_candle.high": [
+"float",
+"0.59566"
+],
+"trigger_candle.low": [
+"float",
+"0.59555"
+],
+"trigger_candle.open": [
+"float",
+"0.59565"
+],
+"trigger_candle.time": [
+"int",
+"1787889000"
+],
+"ts_utc_ms": [
+"int",
+"1787878340826"
+]
+}
+},
+"decision_ledger": {
+"records_sampled": 24,
+"fields": {
+"canonical_opportunity_id": [
+"str",
+"NZDUSD*1787889300*THREE_BLACK_CROWS"
+],
+"causal_signature": [
+"str",
+"session+pattern+regime+score\u2192V10 [opportunity]"
+],
+"context_snapshot_id": [
+"str",
+"COR-20260828-96-NZDUSD-60F4"
+],
+"correlation_id": [
+"str",
+"COR-20260828-96-NZDUSD-60F4"
+],
+"cycle_id": [
+"int",
+"96"
+],
+"decision": [
+"str",
+"NO_TRADE"
+],
+"decision_latency_ms": [
+"int",
+"75133"
+],
+"dual_ev": [
+"NoneType",
+"None"
+],
+"engine_version": [
+"str",
+"V10"
+],
+"entity_id": [
+"str",
+"NZDUSD_1787889300"
+],
+"execution_intent": [
+"NoneType",
+"None"
+],
+"last_stage": [
+"str",
+"V10 [opportunity]"
+],
+"observation_id": [
+"str",
+""
+],
+"pattern_state": [
+"str",
+"detected"
+],
+"reason": [
+"str",
+"V10 [opportunity]: No opportunity (INVALID)"
+],
+"reasoning": [
+"NoneType",
+"None"
+],
+"regime": [
+"str",
+"RANGING"
+],
+"risk_state.daily_loss_pct": [
+"float",
+"0.0"
+],
+"risk_state.drawdown_pct": [
+"float",
+"0.0"
+],
+"risk_state.exposure_level": [
+"float",
+"0.0"
+],
+"risk_state.risk_flag": [
+"str",
+""
+],
+"schema_version": [
+"str",
+"decision_ledger_v1"
+],
+"score_attribution": [
+"NoneType",
+"None"
+],
+"session_state": [
+"str",
+"open"
+],
+"signal_score": [
+"float",
+"0.135"
+],
+"signal_type": [
+"NoneType",
+"None"
+],
+"symbol": [
+"str",
+"NZDUSD"
+],
+"timestamp": [
+"str",
+"2026-08-28T00:56:01.435Z"
+],
+"timestamp_unix": [
+"float",
+"1787878561.435"
+],
+"uncertainty": [
+"NoneType",
+"None"
+],
+"v10": [
+"NoneType",
+"None"
+],
+"v10.engine": [
+"str",
+"V10"
+],
+"v10.entry_method": [
+"str",
+"CONFIRMATION_ENTRY"
+],
+"v10.final_action": [
+"str",
+"NO_TRADE"
+],
+"v10.horizon": [
+"str",
+"SCALP"
+],
+"v10.opportunity_state": [
+"str",
+"INVALID"
+],
+"v10.opportunity_type": [
+"str",
+"NONE"
+],
+"v10.rejection_stage": [
+"str",
+"opportunity"
+],
+"v10.schema": [
+"str",
+"v10_decision_v1"
+],
+"v10.strategy_family": [
+"str",
+"NONE"
+],
+"v10.symbol": [
+"str",
+"NZDUSD"
+],
+"v10.timestamp_utc": [
+"int",
+"1787889300"
+],
+"v10.v10_observation_id": [
+"str",
+"98140a1366c7bb10"
+]
+}
+},
+"execution_context": {
+"records_sampled": 24,
+"fields": {
+"bar_time": [
+"int",
+"1787889300"
+],
+"canonical_opportunity_id": [
+"str",
+""
+],
+"correlation_id": [
+"str",
+"COR-20260828-96-NZDUSD-60F4"
+],
+"cycle_id": [
+"int",
+"96"
+],
+"entity_id": [
+"str",
+"NZDUSD_1787889300"
+],
+"events_ref.last_candle_ts": [
+"int",
+"1787889300000"
+],
+"events_ref.last_feature_ts": [
+"int",
+"0"
+],
+"infrastructure.bars_since_last_gap": [
+"int",
+"3"
+],
+"infrastructure.feed_state": [
+"str",
+"HEALTHY"
+],
+"infrastructure.latency_ms": [
+"int",
+"62129"
+],
+"infrastructure.tick_age_ms": [
+"int",
+"-11568"
+],
+"market_access.ask": [
+"float",
+"0.59551"
+],
+"market_access.bid": [
+"float",
+"0.59549"
+],
+"market_access.session_state": [
+"str",
+"ASIA"
+],
+"market_access.spread": [
+"float",
+"2e-05"
+],
+"market_access.spread_atr_ratio": [
+"float",
+"0.0"
+],
+"risk_environment.correlation_exposure": [
+"float",
+"0.0"
+],
+"risk_environment.daily_loss_pct": [
+"float",
+"0.0"
+],
+"risk_environment.drawdown_pct": [
+"float",
+"0.0"
+],
+"risk_environment.open_positions": [
+"int",
+"0"
+],
+"schema_version": [
+"str",
+"execution_context_v1"
+],
+"symbol": [
+"str",
+"NZDUSD"
+],
+"timestamp_utc": [
+"float",
+"1787889300.0"
+]
+}
+},
+"v3_shadow/entry_assessment": {
+"records_sampled": 23,
+"fields": {
+"candidates": [
+"list[dict]",
+"[{'trigger_type': 'BOS_CONFIRMATION', 'detected': False, 'st"
+],
+"confidence": [
+"float",
+"0.6067"
+],
+"conflicting_factors": [
+"list[str]",
+"['No BOS confirmation', 'No displacement detected', 'No clea"
+],
+"direction": [
+"str",
+"BEARISH"
+],
+"entry_at_zone": [
+"bool",
+"True"
+],
+"entry_behaviour_type": [
+"str",
+"UNKNOWN"
+],
+"entry_price": [
+"float",
+"0.59561"
+],
+"entry_quality_score": [
+"float",
+"0.5"
+],
+"entry_state": [
+"str",
+"NO_ENTRY_CONFIRMATION"
+],
+"horizon_alignment": [
+"float",
+"0.5"
+],
+"location_alignment": [
+"float",
+"1.0"
+],
+"observations": [
+"list[str]",
+"['Entry: NO_ENTRY_CONFIRMATION', 'Direction: BEARISH']"
+],
+"primary_trigger": [
+"str",
+"NONE"
+],
+"schema_version": [
+"str",
+"v3_entry_assessment_v1"
+],
+"supporting_factors": [
+"list[empty]/list[str]",
+"[]"
+],
+"symbol": [
+"str",
+"NZDUSD"
+],
+"timestamp_utc": [
+"float",
+"1787889000.0"
+],
+"trigger_strength": [
+"float",
+"0.0"
+],
+"trigger_timeframe": [
+"str",
+""
+]
+}
+},
+"v3_shadow/risk_assessment": {
+"records_sampled": 23,
+"fields": {
+"confidence": [
+"float",
+"0.6757"
+],
+"conflicting_factors": [
+"list[empty]/list[str]",
+"[]"
+],
+"cost_adjusted_expectancy": [
+"float",
+"1.23"
+],
+"expected_move_max_pips": [
+"float",
+"50.0"
+],
+"expected_move_min_pips": [
+"float",
+"20.0"
+],
+"horizon": [
+"str",
+"INTRADAY"
+],
+"observations": [
+"list[str]",
+"['Risk: ACCEPTABLE_RISK', 'Geometry: stop=10.0 target=35.0 R"
+],
+"risk_quality_score": [
+"float",
+"1.0"
+],
+"risk_reward_ratio": [
+"float",
+"3.5"
+],
+"risk_state": [
+"str",
+"ACCEPTABLE_RISK"
+],
+"schema_version": [
+"str",
+"v3_risk_assessment_v1"
+],
+"spread_cost_pips": [
+"float",
+"0.2"
+],
+"spread_to_risk_ratio": [
+"float",
+"0.02"
+],
+"stop_distance_pips": [
+"float",
+"10.0"
+],
+"stop_source": [
+"str",
+"M15_STRUCTURE"
+],
+"supporting_factors": [
+"list[str]",
+"['Strong RR (3.5:1)', 'Low spread impact (2% of risk)', 'Sto"
+],
+"symbol": [
+"str",
+"NZDUSD"
+],
+"target_distance_pips": [
+"float",
+"35.0"
+],
+"target_source": [
+"str",
+"EXPECTED_MOVEMENT"
+],
+"timestamp_utc": [
+"float",
+"1787889000.0"
+]
+}
+},
+"v3_shadow/horizon_assessment": {
+"records_sampled": 23,
+"fields": {
+"candidates": [
+"list[dict]",
+"[{'horizon': 'SCALP', 'plausibility': 0.55, 'expected_move_m"
+],
+"confidence": [
+"float",
+"0.5367"
+],
+"conflicting_factors": [
+"list[empty]",
+"[]"
+],
+"duration_class": [
+"str",
+"MEDIUM"
+],
+"expected_move_max_pips": [
+"float",
+"50.0"
+],
+"expected_move_min_pips": [
+"float",
+"20.0"
+],
+"management_profile": [
+"str",
+"TRAIL_BREAKEVEN"
+],
+"observations": [
+"list[str]",
+"['Horizon: INTRADAY (plausibility 0.70)', 'Expected: 20-50 p"
+],
+"opportunity_state": [
+"str",
+"INTERESTING_CONTEXT"
+],
+"schema_version": [
+"str",
+"v3_horizon_assessment_v2"
+],
+"selected_horizon": [
+"str",
+"INTRADAY"
+],
+"spread_risk_estimate": [
+"float",
+"0.1"
+],
+"stop_framework": [
+"str",
+"M15_STRUCTURE"
+],
+"structure_timeframe": [
+"str",
+"M15"
+],
+"supporting_factors": [
+"list[str]",
+"['Inside quality zone (0.70)', 'Position: PREMIUM', 'Liquidi"
+],
+"symbol": [
+"str",
+"NZDUSD"
+],
+"target_framework": [
+"str",
+"LIQUIDITY_TARGET"
+],
+"timestamp_utc": [
+"float",
+"1787889000.0"
+],
+"volatility_fit": [
+"str",
+"SUITABLE"
+]
+}
+},
+"v3_shadow/opportunity_assessment": {
+"records_sampled": 23,
+"fields": {
+"assessment_state": [
+"str",
+"INTERESTING_CONTEXT"
+],
+"behaviour_alignment.conflicts": [
+"list[empty]",
+"[]"
+],
+"behaviour_alignment.factors": [
+"list[str]",
+"['Normal volatility']"
+],
+"behaviour_alignment.missing": [
+"list[empty]",
+"[]"
+],
+"behaviour_alignment.score": [
+"float",
+"0.4"
+],
+"confidence": [
+"float",
+"0.7667"
+],
+"conflicting_factors": [
+"list[empty]/list[str]",
+"['Premium location (historically weaker)']"
+],
+"context_quality": [
+"float",
+"0.63"
+],
+"location_alignment.conflicts": [
+"list[empty]/list[str]",
+"['Premium location (historically weaker)']"
+],
+"location_alignment.factors": [
+"list[str]",
+"['Inside institutional zone: SUPPLY_OB', 'Institutional alig"
+],
+"location_alignment.missing": [
+"list[empty]/list[str]",
+"[]"
+],
+"location_alignment.score": [
+"float",
+"0.8"
+],
+"missing_information": [
+"list[empty]/list[str]",
+"['No BOS confirmation']"
+],
+"observations": [
+"list[str]",
+"['Assessment: INTERESTING_CONTEXT', 'Structure: Clear macro "
+],
+"schema_version": [
+"str",
+"v3_opportunity_assessment_v1"
+],
+"structure_alignment.conflicts": [
+"list[empty]",
+"[]"
+],
+"structure_alignment.factors": [
+"list[str]",
+"['Clear macro bias: BULLISH', 'Authority: M15']"
+],
+"structure_alignment.missing": [
+"list[empty]/list[str]",
+"['No BOS confirmation']"
+],
+"structure_alignment.score": [
+"float",
+"0.5"
+],
+"supporting_factors": [
+"list[str]",
+"['Clear macro bias: BULLISH', 'Authority: M15', 'Inside inst"
+],
+"symbol": [
+"str",
+"NZDUSD"
+],
+"timestamp_utc": [
+"float",
+"1787889000.0"
+]
+}
+},
+"v3_shadow/execution_assessment": {
+"records_sampled": 23,
+"fields": {
+"conflicting_factors": [
+"list[empty]/list[str]",
+"[]"
+],
+"direction": [
+"str",
+"BEARISH"
+],
+"entry_price": [
+"float",
+"0.5956"
+],
+"entry_state": [
+"str",
+"NO_ENTRY_CONFIRMATION"
+],
+"estimated_slippage": [
+"float",
+"0.2"
+],
+"execution_state": [
+"str",
+"SIMULATED_ONLY"
+],
+"horizon": [
+"str",
+"INTRADAY"
+],
+"management_profile": [
+"str",
+"TRAIL_AND_BREAKEVEN"
+],
+"observations": [
+"list[str]",
+"['Execution: SIMULATED_ONLY', 'Direction: BEARISH', 'Entry: "
+],
+"opportunity_state": [
+"str",
+"INTERESTING_CONTEXT"
+],
+"order_type": [
+"str",
+"MARKET_ENTRY"
+],
+"position_size_lots": [
+"float",
+"0.01"
+],
+"risk_state": [
+"str",
+"ACCEPTABLE_RISK"
+],
+"schema_version": [
+"str",
+"v3_execution_assessment_v1"
+],
+"spread_at_entry": [
+"float",
+"0.2"
+],
+"stop_price": [
+"float",
+"0.5966"
+],
+"supporting_factors": [
+"list[empty]",
+"[]"
+],
+"symbol": [
+"str",
+"NZDUSD"
+],
+"target_price": [
+"float",
+"0.5921"
+],
+"timestamp_utc": [
+"float",
+"1787889000.0"
+],
+"total_entry_cost_pips": [
+"float",
+"0.4"
+]
+}
+},
+"v3_shadow/market_context": {
+"records_sampled": 23,
+"fields": {
+"behaviour.compression_bars": [
+"int",
+"0"
+],
+"behaviour.confidence": [
+"float",
+"0.7"
+],
+"behaviour.displacement_active": [
+"bool",
+"False"
+],
+"behaviour.displacement_direction": [
+"str",
+""
+],
+"behaviour.displacement_magnitude_atr": [
+"float",
+"0.0"
+],
+"behaviour.expansion_state": [
+"str",
+"NEUTRAL"
+],
+"behaviour.momentum_direction": [
+"str",
+"NEUTRAL"
+],
+"behaviour.momentum_strength": [
+"float",
+"0.0"
+],
+"behaviour.observations": [
+"list[str]",
+"['Regime: RANGING']"
+],
+"behaviour.regime": [
+"str",
+"RANGING"
+],
+"behaviour.regime_confidence": [
+"float",
+"0.5"
+],
+"behaviour.volatility_level": [
+"float",
+"0.5"
+],
+"behaviour.volatility_state": [
+"str",
+"NEUTRAL"
+],
+"htf_structure.authority_timeframe": [
+"str",
+"M15"
+],
+"htf_structure.bos_active": [
+"bool",
+"False"
+],
+"htf_structure.bos_direction": [
+"str",
+""
+],
+"htf_structure.choch_active": [
+"bool",
+"False"
+],
+"htf_structure.choch_direction": [
+"str",
+""
+],
+"htf_structure.confidence": [
+"float",
+"0.6"
+],
+"htf_structure.dominant_structure": [
+"str",
+"HH_HL"
+],
+"htf_structure.macro_bias": [
+"str",
+"BULLISH"
+],
+"htf_structure.macro_bias_strength": [
+"float",
+"0.2773"
+],
+"htf_structure.observations": [
+"list[empty]/list[str]",
+"[]"
+],
+"htf_structure.phase_alignment": [
+"str",
+"NEUTRAL"
+],
+"htf_structure.structure_alignment": [
+"float",
+"0.5"
+],
+"location.confidence": [
+"float",
+"1.0"
+],
+"location.demand_zones_nearby": [
+"int",
+"1"
+],
+"location.fvg_zones_nearby": [
+"int",
+"0"
+],
+"location.inside_institutional_zone": [
+"bool",
+"True"
+],
+"location.institutional_alignment": [
+"str",
+"BEARISH"
+],
+"location.liquidity_above": [
+"bool",
+"True"
+],
+"location.liquidity_below": [
+"bool",
+"True"
+],
+"location.location_type": [
+"str",
+"SUPPLY_OB"
+],
+"location.nearest_liquidity_direction": [
+"str",
+"ABOVE"
+],
+"location.nearest_liquidity_distance_pips": [
+"float",
+"0.0"
+],
+"location.observations": [
+"list[str]",
+"['Inside: SUPPLY_OB', 'Position: PREMIUM (0.88)', 'Instituti"
+],
+"location.premium_discount": [
+"str",
+"PREMIUM"
+],
+"location.range_position": [
+"float",
+"0.8837"
+],
+"location.supply_zones_nearby": [
+"int",
+"0"
+],
+"location.zone_mitigated": [
+"bool",
+"False"
+],
+"location.zone_quality": [
+"float",
+"0.7"
+],
+"observations": [
+"list[str]",
+"['[LOC] Inside: SUPPLY_OB', '[LOC] Position: PREMIUM (0.88)'"
+],
+"overall_confidence": [
+"float",
+"0.7667"
+],
+"schema_version": [
+"str",
+"v3_market_context_v1"
+],
+"symbol": [
+"str",
+"NZDUSD"
+],
+"timestamp_utc": [
+"float",
+"1787889000.0"
+]
+}
+},
+"v3_shadow/market_understanding": {
+"records_sampled": 23,
+"fields": {
+"confidence": [
+"float",
+"1.0"
+],
+"h1.active_demand_ob_high": [
+"float",
+"0.0"
+],
+"h1.active_demand_ob_low": [
+"float",
+"0.0"
+],
+"h1.active_supply_ob_high": [
+"float",
+"0.0"
+],
+"h1.active_supply_ob_low": [
+"float",
+"0.0"
+],
+"h1.bos_confirmed": [
+"bool",
+"False"
+],
+"h1.bos_direction": [
+"str",
+""
+],
+"h1.bos_level": [
+"float",
+"0.0"
+],
+"h1.choch_detected": [
+"bool",
+"False"
+],
+"h1.choch_direction": [
+"str",
+""
+],
+"h1.dominant_trend": [
+"str",
+"BULLISH"
+],
+"h1.equal_highs_level": [
+"float",
+"0.59564571"
+],
+"h1.equal_lows_level": [
+"float",
+"0.59537"
+],
+"h1.nearest_fvg_above": [
+"float",
+"0.0"
+],
+"h1.nearest_fvg_below": [
+"float",
+"0.0"
+],
+"h1.session_high": [
+"float",
+"0.59535"
+],
+"h1.session_low": [
+"float",
+"0.59455"
+],
+"h1.structural_clarity": [
+"float",
+"0.3962"
+],
+"h1.structure_type": [
+"str",
+"HH_HL"
+],
+"h1.swing_high": [
+"float",
+"0.59572"
+],
+"h1.swing_low": [
+"float",
+"0.59451"
+],
+"h4.atr": [
+"float",
+"0.0"
+],
+"h4.atr_percentile": [
+"float",
+"0.0"
+],
+"h4.last_bos_direction": [
+"str",
+""
+],
+"h4.major_liquidity_above": [
+"float",
+"0.0"
+],
+"h4.major_liquidity_below": [
+"float",
+"0.0"
+],
+"h4.market_phase": [
+"str",
+"PULLBACK"
+],
+"h4.structure_type": [
+"str",
+""
+],
+"h4.swing_high": [
+"float",
+"0.0"
+],
+"h4.swing_low": [
+"float",
+"0.0"
+],
+"h4.trend": [
+"str",
+"NEUTRAL"
+],
+"h4.trend_strength": [
+"float",
+"0.0"
+],
+"h4.volatility_state": [
+"str",
+"NEUTRAL"
+],
+"m1.candle_velocity": [
+"float",
+"0.0484"
+],
+"m1.micro_bos": [
+"bool",
+"False"
+],
+"m1.micro_bos_direction": [
+"str",
+""
+],
+"m1.micro_displacement": [
+"bool",
+"False"
+],
+"m1.micro_range_pips": [
+"float",
+"2.2"
+],
+"m1.micro_rejection": [
+"bool",
+"False"
+],
+"m1.recent_high": [
+"float",
+"0.59574"
+],
+"m1.recent_low": [
+"float",
+"0.59552"
+],
+"m1.spread_at_observation": [
+"float",
+"2.0000000000020002e-05"
+],
+"m1.spread_vs_session_avg": [
+"float",
+"0.0"
+],
+"m15.displacement_magnitude_atr": [
+"float",
+"0.0"
+],
+"m15.displacement_present": [
+"bool",
+"False"
+],
+"m15.expected_direction": [
+"str",
+""
+],
+"m15.internal_bos": [
+"bool",
+"False"
+],
+"m15.internal_bos_direction": [
+"str",
+""
+],
+"m15.internal_choch": [
+"bool",
+"False"
+],
+"m15.nearest_fvg": [
+"float",
+"0.0"
+],
+"m15.pullback_active": [
+"bool",
+"True"
+],
+"m15.pullback_depth_atr": [
+"float",
+"0.8869"
+],
+"m15.range_position": [
+"float",
+"0.8837"
+],
+"m15.refined_demand_ob_high": [
+"float",
+"0.594695"
+],
+"m15.refined_demand_ob_low": [
+"float",
+"0.0"
+],
+"m15.refined_supply_ob_high": [
+"float",
+"0.0"
+],
+"m15.refined_supply_ob_low": [
+"float",
+"0.0"
+],
+"m15.retracement_pct": [
+"float",
+"0.56"
+],
+"m15.swing_high": [
+"float",
+"0.59566"
+],
+"m15.swing_low": [
+"float",
+"0.59523"
+],
+"m5.at_institutional_zone": [
+"bool",
+"True"
+],
+"m5.atr": [
+"float",
+"0.00015785714285714608"
+],
+"m5.confirmation_candle": [
+"bool",
+"False"
+],
+"m5.local_bos": [
+"bool",
+"False"
+],
+"m5.local_bos_direction": [
+"str",
+""
+],
+"m5.momentum_direction": [
+"str",
+"NEUTRAL"
+],
+"m5.momentum_strength": [
+"float",
+"0.0"
+],
+"m5.rejection_direction": [
+"str",
+""
+],
+"m5.rejection_present": [
+"bool",
+"False"
+],
+"m5.rejection_strength_atr": [
+"float",
+"0.0"
+],
+"m5.spread": [
+"float",
+"2.0000000000020002e-05"
+],
+"m5.spread_atr_ratio": [
+"float",
+"0.126697"
+],
+"m5.zone_type": [
+"str",
+"SUPPLY_OB"
+],
+"observations": [
+"list[str]",
+"['H4: NEUTRAL (NEUTRAL)', 'H1: trend=BULLISH', 'M15: pullbac"
+],
+"schema_version": [
+"str",
+"market_understanding_v1"
+],
+"symbol": [
+"str",
+"NZDUSD"
+],
+"timestamp_utc": [
+"float",
+"1787889000.0"
+]
+}
+}
+}

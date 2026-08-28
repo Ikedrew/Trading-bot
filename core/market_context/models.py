@@ -194,6 +194,15 @@ class MarketContext:
     is_material_change: bool = False
     change_reason: str = ""
 
+    # ─── OBSERVATION LINEAGE (Phase 1/5 identity enrichment) ──────────
+    # Deterministic observation-level identity attached at build time from
+    # real runtime context (symbol + closed-bar epoch). Never fabricated.
+    # correlation_id / canonical_opportunity_id are NOT present here by
+    # design: correlation is minted later by the cycle context builder, and
+    # the canonical opportunity may not yet exist pre-engine.
+    entity_id: str = ""
+    bar_time: float = 0.0
+
     def to_dict(self) -> dict[str, Any]:
         """Serialize to flat dict for JSONL persistence."""
         return {
@@ -201,6 +210,8 @@ class MarketContext:
             "symbol": self.symbol,
             "cycle_id": self.cycle_id,
             "timestamp_utc": self.timestamp_utc,
+            "entity_id": self.entity_id,
+            "bar_time": self.bar_time,
             "direction": self.direction.value,
             "direction_confidence": round(self.direction_confidence, 4),
             "regime": self.regime.value,

@@ -163,17 +163,33 @@ class MarketContextBuilder:
 
         ctx = replace(ctx, is_material_change=is_material, change_reason=change_reason)
 
+        # ─── OBSERVATION LINEAGE (Phase 1/5) ─────────────────────────────
+        # Attach deterministic observation-level identity from real runtime
+        # context (symbol + closed-bar epoch). correlation_id is NOT known at
+        # this pre-engine stage (minted later by the cycle context builder) and
+        # canonical_opportunity_id may not yet exist — both are left empty
+        # rather than fabricated.
+        _identity_ctx = replace(
+            ctx,
+            entity_id=f"{self._symbol}_{int(current_time_s)}" if current_time_s else ctx.entity_id,
+            bar_time=float(current_time_s) if current_time_s else ctx.bar_time,
+        )
+
         # Persist on material change
         if is_material:
             try:
                 from core import config as _cfg
                 if getattr(_cfg, "MARKET_CONTEXT_PERSISTENCE_ENABLED", True):
-                    self._persistence.persist(ctx.to_dict())
+                    self._persistence.persist(
+                        _identity_ctx.to_dict(),
+                        bar_time=_identity_ctx.bar_time,
+                        entity_id=_identity_ctx.entity_id,
+                    )
             except Exception:
                 pass  # Persistence failure must never affect runtime
 
-        self._previous = ctx
-        return ctx
+        self._previous = _identity_ctx
+        return _identity_ctx
 
     # ─── EXTRACTION HELPERS ───────────────────────────────────────────────────
 

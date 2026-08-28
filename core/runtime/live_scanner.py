@@ -674,11 +674,37 @@ def run_live_scanner(
                     _canonical_opp_id = ""
                     try:
                         from core.identity.canonical import make_canonical_opportunity_id
-                        _canonical_opp_id = make_canonical_opportunity_id(
+                        # Mint into a throwaway local first: _canonical_opp_id
+                        # itself is only bound AFTER the whole mint+fallback
+                        # sequence succeeds, so no read of the scoped variable
+                        # can ever precede the except-branch freshness reset.
+                        _minted_canonical_id = make_canonical_opportunity_id(
                             symbol=sym_state.symbol,
                             bar_time=closed_time,
                             pattern=str(_new_result.get("pattern", "") or ""),
                         )
+                        # ── Population-B provenance fallback ──────────────
+                        # The V10 decision result's `pattern` is the STRATEGY
+                        # FAMILY, which is empty when no strategy matched even
+                        # though a genuine pattern WAS detected at the
+                        # opportunity layer (same cycle / same symbol / same
+                        # bar — no cross-symbol or cross-bar exposure). Propagate
+                        # the primary detected signal's canonical root (same
+                        # approved authority, same inputs create_opportunity
+                        # uses) so detected-but-rejected opportunities retain
+                        # their decision-level lineage. Never fires for
+                        # Population A (no detected signal → _raw_patterns
+                        # empty → root stays "").
+                        if not _minted_canonical_id and _raw_patterns:
+                            _prim_sig = _raw_patterns[0]
+                            _prim_pattern = str(getattr(_prim_sig, "pattern", "") or "")
+                            if _prim_pattern:
+                                _minted_canonical_id = make_canonical_opportunity_id(
+                                    symbol=sym_state.symbol,
+                                    bar_time=getattr(_prim_sig, "bar_time", None) or closed_time,
+                                    pattern=_prim_pattern,
+                                )
+                        _canonical_opp_id = _minted_canonical_id
                     except Exception:
                         _canonical_opp_id = ""
                     if _canonical_opp_id:
@@ -1385,6 +1411,7 @@ def run_live_scanner(
                         closed_i=closed_i, runtime_mode="LIVE",
                         entity_id=_new_result.get("entity_id", "") if _new_result else "",
                         observation_id=_observation_id_cycle,
+                        canonical_opportunity_id=_canonical_opp_id,
                         strategy_ts_utc_ms=_new_result.get("strategy_ts_utc_ms", 0) if _new_result else 0,
                     )
                 else:
