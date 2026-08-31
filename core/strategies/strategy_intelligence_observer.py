@@ -62,6 +62,7 @@ def _do_observe(ctx: Any) -> None:
         build_observation_record,
         persist_strategy_observation,
     )
+    from core.identity.canonical import mint_observation_id
 
     # ─── 1. EXTRACT CONTEXT ───────────────────────────────────────────
     engine_result = ctx.engine_result or {}
@@ -234,7 +235,12 @@ def _do_observe(ctx: Any) -> None:
         _strategy_family = "UNKNOWN"
 
     record = build_observation_record(
-        observation_id=f"{ctx.symbol}_{ctx.cycle_id}_{int(ctx.bar_time)}",
+        # Canonical observation identity (root source of observation_id for
+        # this dataset): deterministic from symbol + timeframe + bar_time.
+        # No UUID/hash/fabricated ID — see core.identity.canonical.
+        observation_id=mint_observation_id(
+            symbol=ctx.symbol, bar_time=ctx.bar_time, timeframe="M5",
+        ),
         timestamp_utc=ctx.bar_time,
         symbol=ctx.symbol,
         cycle_id=ctx.cycle_id,

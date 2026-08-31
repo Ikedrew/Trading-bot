@@ -1,0 +1,64 @@
+{
+  "started_at_utc": "2026-08-28T16:12:19.553858+00:00",
+  "finished_at_utc": "2026-08-28T16:18:34.853066+00:00",
+  "projector_version": "1.0.0",
+  "backfill": true,
+  "areas": {
+    "live/observation": {
+      "records_projected": 0,
+      "records_skipped_existing": 18998,
+      "records_skipped_unidentifiable": 0
+    },
+    "live/opportunity": {
+      "records_projected": 29537,
+      "records_skipped_existing": 8096,
+      "records_skipped_unidentifiable": 0
+    },
+    "live/decision": {
+      "records_projected": 38167,
+      "records_skipped_existing": 1,
+      "records_skipped_unidentifiable": 0
+    },
+    "live/execution": {
+      "records_projected": 38652,
+      "records_skipped_existing": 0,
+      "records_skipped_unidentifiable": 0
+    },
+    "live/outcome": {
+      "records_projected": 731,
+      "records_skipped_existing": 6036,
+      "records_skipped_unidentifiable": 0
+    },
+    "market_context": {
+      "records_projected": 18285,
+      "records_skipped_existing": 1842,
+      "records_skipped_unidentifiable": 0
+    },
+    "shadow/plan": {
+      "records_projected": 19,
+      "records_skipped_existing": 0,
+      "records_skipped_unidentifiable": 0
+    },
+    "shadow/open": {
+      "records_projected": 19,
+      "records_skipped_existing": 0,
+      "records_skipped_unidentifiable": 0
+    },
+    "shadow/close": {
+      "records_projected": 19,
+      "records_skipped_existing": 0,
+      "records_skipped_unidentifiable": 0
+    },
+    "shadow/progress": {
+      "records_projected": 2,
+      "records_skipped_existing": 0,
+      "records_skipped_unidentifiable": 0
+    }
+  },
+  "sources": {
+    "files_scanned": 1279,
+    "files_with_new_data": 1279,
+    "files_reset": 0
+  },
+  "anomalies": []
+}

@@ -41,6 +41,13 @@ class _SltpRetryEntry:
     tp: float
     retry_count: int = 0
     last_attempt_time: float = 0.0
+    # Observational lineage preserved for execution_attempts persistence
+    decision_id: str = ""
+    correlation_id: str = ""
+    cycle_id: int = 0
+    canonical_opportunity_id: str = ""
+    observation_id: str = ""
+    trade_id: str = ""
 
 
 @dataclass
@@ -52,9 +59,78 @@ class _CloseRetryEntry:
     volume: float | None  # None = full close; float = partial close
     kind: "TradeLifecycleEvent"
     prices: tuple[float, float]
-    detail: dict
+    detail: dict[str, Any]
     retry_count: int = 0
     last_attempt_time: float = 0.0
+    # Observational lineage preserved for execution_attempts persistence
+    decision_id: str = ""
+    correlation_id: str = ""
+    cycle_id: int = 0
+    canonical_opportunity_id: str = ""
+    observation_id: str = ""
+    trade_id: str = ""
+
+
+def _lineage_from_pos(pos: "Position") -> dict:
+    """Extract observational lineage for a Position.
+
+    Returns the identity-linkage fields for execution_attempts persistence
+    (decision/correlation/cycle/opportunity/observation) plus the canonical
+    trade identity ``pos.position_id`` (``pos_{deal}``), which is the SAME
+    trade_id used downstream by the trade journal / trade-truth lifecycle.
+    Lineage fields fall back to empty when no trade_identity is available
+    (e.g. recovered positions); ``trade_id`` itself is always available from
+    the position.
+    """
+    ti = getattr(pos, "trade_identity", None)
+    lineage: dict[str, Any] = {"trade_id": getattr(pos, "position_id", "") or ""}
+    if ti is not None:
+        lineage.update({
+            "decision_id": ti.decision_id or "",
+            "correlation_id": ti.correlation_id or "",
+            "cycle_id": int(ti.cycle_id) if ti.cycle_id else 0,
+            "canonical_opportunity_id": ti.canonical_opportunity_id or "",
+            "observation_id": ti.observation_id or "",
+        })
+    return lineage
+
+
+def _persist_management_action(
+    *,
+    action_type: str,
+    action_reason: str,
+    symbol: str,
+    requested_sl: float | None = None,
+    requested_tp: float | None = None,
+    requested_volume: float | None = None,
+    lineage: dict[str, Any] | None = None,
+) -> None:
+    """Fire-and-forget persistence of one initiated management action.
+
+    PURELY OBSERVATIONAL — a persistence failure must never prevent or alter
+    the underlying management action. Lineage fields are propagated verbatim
+    from the caller (position identity / retry entry); nothing is invented.
+    """
+    try:
+        from core.persistence.management_actions_writer import persist_management_action
+        _lineage = lineage or {}
+        persist_management_action(
+            management_action_id=str(uuid.uuid4()),
+            trade_id=str(_lineage.get("trade_id", "") or ""),
+            decision_id=str(_lineage.get("decision_id", "") or ""),
+            canonical_opportunity_id=str(_lineage.get("canonical_opportunity_id", "") or ""),
+            observation_id=str(_lineage.get("observation_id", "") or ""),
+            correlation_id=str(_lineage.get("correlation_id", "") or ""),
+            cycle_id=int(_lineage.get("cycle_id", 0) or 0),
+            symbol=symbol,
+            action_type=action_type,
+            action_reason=action_reason,
+            requested_sl=requested_sl,
+            requested_tp=requested_tp,
+            requested_volume=requested_volume,
+        )
+    except Exception:
+        pass
 
 
 class TradeStateManager:
@@ -222,15 +298,26 @@ class TradeStateManager:
                 pass  # Event emission must never affect trade management
         # ─── END UNIFIED EVENT STREAM ─────────────────────────────────
 
-    def _push_stops_to_server_if_possible(self, pos: Position) -> None:
+    def _push_stops_to_server_if_possible(self, pos: Position, action_reason: str = "") -> None:
         if self._execution is None or pos.mt5_ticket is None or pos.mt5_ticket <= 0:
             return
         ticket = int(pos.mt5_ticket)
+        # Observational: persist the initiated management action BEFORE the
+        # broker call, so a rejected/failed modify still leaves a record.
+        _persist_management_action(
+            action_type="SLTP_MODIFY",
+            action_reason=action_reason,
+            symbol=pos.symbol,
+            requested_sl=pos.stop_loss,
+            requested_tp=pos.take_profit,
+            lineage=_lineage_from_pos(pos),
+        )
         result = self._execution.position_modify_sl_tp(
             symbol=pos.symbol,
             position_ticket=ticket,
             sl=pos.stop_loss,
             tp=pos.take_profit,
+            **_lineage_from_pos(pos),
         )
         if result.ok:
             # Success — remove from retry queue if previously queued
@@ -244,6 +331,7 @@ class TradeStateManager:
                 tp=pos.take_profit,
                 retry_count=0,
                 last_attempt_time=time.time(),
+                **_lineage_from_pos(pos),
             )
             self._sltp_retry_queue[ticket] = entry
             logger.info(
@@ -261,11 +349,33 @@ class TradeStateManager:
 
         completed: list[int] = []
         for ticket, entry in list(self._sltp_retry_queue.items()):
+            # Observational: each retried SLTP modify is its own management action.
+            _persist_management_action(
+                action_type="SLTP_MODIFY",
+                action_reason="SLTP_RETRY",
+                symbol=entry.symbol,
+                requested_sl=entry.sl,
+                requested_tp=entry.tp,
+                lineage={
+                    "trade_id": entry.trade_id,
+                    "decision_id": entry.decision_id,
+                    "correlation_id": entry.correlation_id,
+                    "cycle_id": entry.cycle_id,
+                    "canonical_opportunity_id": entry.canonical_opportunity_id,
+                    "observation_id": entry.observation_id,
+                },
+            )
             result = self._execution.position_modify_sl_tp(
                 symbol=entry.symbol,
                 position_ticket=entry.position_ticket,
                 sl=entry.sl,
                 tp=entry.tp,
+                decision_id=entry.decision_id,
+                correlation_id=entry.correlation_id,
+                cycle_id=entry.cycle_id,
+                canonical_opportunity_id=entry.canonical_opportunity_id,
+                observation_id=entry.observation_id,
+                trade_id=entry.trade_id,
             )
             if result.ok:
                 completed.append(ticket)
@@ -347,7 +457,7 @@ class TradeStateManager:
         if new_sl is not None and new_sl != pos.stop_loss:
             _old_sl = pos.stop_loss
             pos.stop_loss = new_sl
-            self._push_stops_to_server_if_possible(pos)
+            self._push_stops_to_server_if_possible(pos, action_reason="SL_MOVED_BREAKEVEN")
             # ─── TRADE_MANAGEMENT: break-even SL move ─────────────────
             try:
                 from core.event_stream import emit_trade_management
@@ -377,7 +487,7 @@ class TradeStateManager:
         if trail is not None and trail != pos.stop_loss:
             _old_sl = pos.stop_loss
             pos.stop_loss = trail
-            self._push_stops_to_server_if_possible(pos)
+            self._push_stops_to_server_if_possible(pos, action_reason="SL_MOVED_TRAILING")
             # ─── TRADE_MANAGEMENT: trailing SL move ───────────────────
             try:
                 from core.event_stream import emit_trade_management
@@ -439,10 +549,20 @@ class TradeStateManager:
 
         # ─── BROKER PARTIAL CLOSE ─────────────────────────────────────
         if self._execution is not None and pos.mt5_ticket is not None and pos.mt5_ticket > 0:
+            # Observational: persist the initiated management action BEFORE the
+            # broker call, so a rejected/failed partial close still leaves a record.
+            _persist_management_action(
+                action_type="PARTIAL_CLOSE",
+                action_reason="PARTIAL_TP",
+                symbol=pos.symbol,
+                requested_volume=close_vol,
+                lineage=_lineage_from_pos(pos),
+            )
             result = self._execution.close_position(
                 symbol=pos.symbol,
                 position_ticket=int(pos.mt5_ticket),
                 volume=close_vol,
+                **_lineage_from_pos(pos),
             )
             if not result.ok:
                 # Broker partial close failed — queue for retry, do NOT modify local state
@@ -480,10 +600,24 @@ class TradeStateManager:
         """
         # ─── BROKER CLOSE ─────────────────────────────────────────────
         if self._execution is not None and pos.mt5_ticket is not None and pos.mt5_ticket > 0:
+            # Observational: persist the initiated management action BEFORE the
+            # broker call, so a rejected/failed close still leaves a record.
+            _close_action_reason = {
+                TradeLifecycleEvent.ON_STOP_LOSS_HIT: "stop_loss",
+                TradeLifecycleEvent.ON_TAKE_PROFIT_HIT: "take_profit",
+                TradeLifecycleEvent.ON_MANAGEMENT_EXIT: "management_exit",
+            }.get(kind, "")
+            _persist_management_action(
+                action_type="CLOSE",
+                action_reason=_close_action_reason,
+                symbol=pos.symbol,
+                lineage=_lineage_from_pos(pos),
+            )
             result = self._execution.close_position(
                 symbol=pos.symbol,
                 position_ticket=int(pos.mt5_ticket),
                 volume=None,  # Full close
+                **_lineage_from_pos(pos),
             )
             if not result.ok:
                 # POSITION_NOT_FOUND means broker already closed it (server-side SL/TP/manual)
@@ -648,6 +782,7 @@ class TradeStateManager:
             detail=dict(detail),
             retry_count=0,
             last_attempt_time=time.time(),
+            **_lineage_from_pos(pos),
         )
         self._close_retry_queue[pos.position_id] = entry
         action = "PARTIAL_CLOSE" if volume is not None else "CLOSE"
@@ -676,10 +811,32 @@ class TradeStateManager:
                 )
                 continue
 
+            # Observational: each retried close is its own management action
+            # (never collapsed with the originally initiated action).
+            _persist_management_action(
+                action_type="PARTIAL_CLOSE" if entry.volume is not None else "CLOSE",
+                action_reason="RETRY",
+                symbol=entry.symbol,
+                requested_volume=entry.volume,
+                lineage={
+                    "trade_id": entry.trade_id,
+                    "decision_id": entry.decision_id,
+                    "correlation_id": entry.correlation_id,
+                    "cycle_id": entry.cycle_id,
+                    "canonical_opportunity_id": entry.canonical_opportunity_id,
+                    "observation_id": entry.observation_id,
+                },
+            )
             result = self._execution.close_position(
                 symbol=entry.symbol,
                 position_ticket=entry.position_ticket,
                 volume=entry.volume,
+                decision_id=entry.decision_id,
+                correlation_id=entry.correlation_id,
+                cycle_id=entry.cycle_id,
+                canonical_opportunity_id=entry.canonical_opportunity_id,
+                observation_id=entry.observation_id,
+                trade_id=entry.trade_id,
             )
 
             if result.ok:

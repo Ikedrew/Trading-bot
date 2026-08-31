@@ -423,7 +423,22 @@ def run_live_scanner(
                 # engine selects the primary pattern; never persisted as a
                 # separate competing identity.
                 _observation_id_cycle = ""
+                try:
+                    from core.identity.canonical import mint_observation_id
+                    _observation_id_cycle = mint_observation_id(
+                        symbol=sym_state.symbol,
+                        bar_time=closed_time,
+                        timeframe="M5",
+                    )
+                except Exception:
+                    _observation_id_cycle = ""
                 _entity_id_cycle = f"{sym_state.symbol}_{int(closed_time)}"
+                _decision_id_cycle = ""
+                try:
+                    import uuid as _uuid_mod
+                    _decision_id_cycle = _uuid_mod.uuid4().hex
+                except Exception:
+                    _decision_id_cycle = ""
                 # Canonical lineage freshness guard (Phase 1 data-capture):
                 # reset per symbol/bar BEFORE any downstream consumer. Without
                 # this, "_canonical_opp_id" stays bound from a previous
@@ -440,7 +455,11 @@ def run_live_scanner(
                     context_snapshot_id=_cor_id_cycle,
                     drawdown_pct=getattr(_dd_result, "current_drawdown_pct", 0.0) or 0.0,
                     daily_loss_pct=getattr(_dl_result, "current_loss_pct", 0.0) or 0.0,
+                    observation_id=_observation_id_cycle,
+                    decision_id=_decision_id_cycle,
                 )
+                _cycle_decision["correlation_id"] = _cor_id_cycle
+                _cycle_decision["decision_id"] = _decision_id_cycle
 
                 def _finalize_decision() -> None:
                     """Delegate to DecisionRecorder.finalize(). Idempotent."""
@@ -673,7 +692,10 @@ def run_live_scanner(
                     # i.e. lineage not established (pre-engine blocks).
                     _canonical_opp_id = ""
                     try:
-                        from core.identity.canonical import make_canonical_opportunity_id
+                        from core.identity.canonical import (
+                            make_canonical_opportunity_id,
+                            mint_observation_id,
+                        )
                         # Mint into a throwaway local first: _canonical_opp_id
                         # itself is only bound AFTER the whole mint+fallback
                         # sequence succeeds, so no read of the scoped variable
@@ -707,12 +729,22 @@ def run_live_scanner(
                         _canonical_opp_id = _minted_canonical_id
                     except Exception:
                         _canonical_opp_id = ""
+                    try:
+                        _observation_id_cycle = mint_observation_id(
+                            symbol=sym_state.symbol,
+                            bar_time=closed_time,
+                            timeframe="M5",
+                        )
+                    except Exception:
+                        _observation_id_cycle = ""
+                    if _observation_id_cycle:
+                        _cycle_decision["observation_id"] = _observation_id_cycle
+                        _new_result["observation_id"] = _observation_id_cycle
                     if _canonical_opp_id:
                         _cycle_decision["canonical_opportunity_id"] = _canonical_opp_id
-                    # Retire the composite observation id: every downstream
-                    # identity slot now carries THE canonical lineage root.
-                    _observation_id_cycle = _canonical_opp_id
                     _new_result["canonical_opportunity_id"] = _canonical_opp_id
+                    _new_result["correlation_id"] = _cor_id_cycle
+                    _new_result["decision_id"] = _decision_id_cycle
                     # V10 research payload travels inside the authoritative
                     # DecisionRecorder ledger row — never a second row.
                     if not _cycle_decision.get("v10"):
@@ -756,6 +788,47 @@ def run_live_scanner(
                             pattern=_new_result.get("pattern", "") or "",
                             direction=_new_result.get("side", "") or "",
                         )
+
+                        # ─── HORIZON CANDIDATES PERSISTENCE (observational only) ──
+                        # Persist ALL evaluated horizons (eligible AND ineligible)
+                        # as independent records BEFORE the result is consumed.
+                        # The complete candidate set exists only here.
+                        # Failure never affects trading.
+                        try:
+                            from core.persistence.horizon_candidates_writer import (
+                                build_horizon_candidate_records,
+                                persist_horizon_candidates,
+                            )
+                            # Extract the V10 selected horizon from the pipeline
+                            # result (existing runtime state — no re-selection)
+                            _v10_selected_hz = ""
+                            try:
+                                _v10_pr_hz = _new_result.get("v10_pipeline_result")
+                                if _v10_pr_hz is not None:
+                                    _v10_selected_hz = str(
+                                        getattr(_v10_pr_hz.horizon, "horizon_type", "") or ""
+                                    )
+                            except Exception:
+                                _v10_selected_hz = ""
+
+                            _hz_cand_records = build_horizon_candidate_records(
+                                assessments=_horizon_result.assessments,
+                                selected_horizon=_v10_selected_hz,
+                                symbol=sym_state.symbol,
+                                bar_time=float(closed_time),
+                                lineage={
+                                    "canonical_opportunity_id": _canonical_opp_id,
+                                    "observation_id": _observation_id_cycle,
+                                    "correlation_id": _cor_id_cycle,
+                                    "cycle_id": cycle_id,
+                                    "entity_id": _entity_id_cycle,
+                                },
+                            )
+                            persist_horizon_candidates(candidates=_hz_cand_records)
+                        except Exception:
+                            pass  # Horizon candidates persistence must NEVER affect trading
+                        # ─── END HORIZON CANDIDATES PERSISTENCE ───────────────────────────────
+
                         # Attach horizon data to assessment BEFORE persistence
                         if _assessment_record is not None:
                             _assessment_record.evidence_contributions.append({
@@ -808,6 +881,7 @@ def run_live_scanner(
                                 horizon_result=_horizon_result if "_horizon_result" in dir() else None,
                                 canonical_opportunity_id=_canonical_opp_id,
                                 entity_id=_new_result.get("entity_id", ""),
+                                observation_id=_observation_id_cycle,
                                 # Phase 3 Step 10-B: forward upstream regime/
                                 # phase facts from this cycle's assessment when
                                 # produced, else engine payload. Empty = absent.
@@ -973,6 +1047,53 @@ def run_live_scanner(
                                 _v10_obs_id = _v10_pr.opportunity.observation_id or ""
                         except Exception:
                             pass
+                        try:
+                            import uuid as _uuid_mod
+                            _decision_id = str(
+                                _new_result.get("decision_id", "")
+                                or _cycle_decision.get("decision_id", "")
+                                or _uuid_mod.uuid4().hex
+                            )
+                        except Exception:
+                            _decision_id = str(
+                                _new_result.get("decision_id", "")
+                                or _cycle_decision.get("decision_id", "")
+                                or ""
+                            )
+                        if _decision_id:
+                            _new_result["decision_id"] = _decision_id
+                            _cycle_decision["decision_id"] = _decision_id
+
+                        # ─── OPPORTUNITY PERSISTENCE (Phase 1 — independent of downstream outcome) ───
+                        # Persist a research-grade opportunity record for the primary opportunity
+                        # at detection time, BEFORE the EXECUTE/NO_TRADE branch. This ensures the
+                        # opportunity dataset captures ALL evaluated opportunities regardless of
+                        # whether the pipeline eventually trades.
+                        try:
+                            from core.persistence.opportunity_writer import persist_opportunity
+                            persist_opportunity(
+                                canonical_opportunity_id=_canonical_opp_id,
+                                observation_id=_observation_id_cycle,
+                                trigger_observation_id=_observation_id_cycle,
+                                symbol=sym_state.symbol,
+                                bar_time=float(closed_time),
+                                pattern=_engine_pattern,
+                                directional_bias=_new_result.get("side", "") or "",
+                                opportunity_type=_new_result.get("pattern", "") or "",
+                                quality_location_score=float((_engine_components or {}).get("location_score", 0.0)),
+                                quality_structure_score=float((_engine_components or {}).get("structure_score", 0.0)),
+                                quality_behaviour_score=float((_engine_components or {}).get("behaviour_score", 0.0)),
+                                quality_formation_score=float((_engine_components or {}).get("formation_score", 0.0)),
+                                quality_overall=float(_engine_score),
+                                bid_at_detection=bid if bid > 0 else 0.0,
+                                ask_at_detection=ask if ask > 0 else 0.0,
+                                engine="LEGACY" if _engine_mode != "V10" else "V10",
+                                cycle_id=cycle_id,
+                                entity_id=_entity_id_cycle,
+                            )
+                        except Exception:
+                            pass  # Opportunity persistence must never affect trading
+                        # ─── END OPPORTUNITY PERSISTENCE ───────────────────────────────────────────
 
                         _updated_opps = []
                         # V10 evaluates the BAR as a unit (not per-pattern).
@@ -1152,7 +1273,7 @@ def run_live_scanner(
                         from core.runtime.execution_trace import log_execution_attempt
                         log_execution_attempt(
                             symbol=sym_state.symbol,
-                            correlation_id=_new_result.get("correlation_id", "") or f"v10_{sym_state.symbol}_{closed_time}",
+                            correlation_id=_cor_id_cycle,
                             direction=_new_result.get("side", ""),
                             volume=_new_result.get("volume", 0.0),
                             entry_price=_new_result.get("entry_price", 0.0),
@@ -1183,10 +1304,16 @@ def run_live_scanner(
                         dl_result=_dl_result,
                         runtime_session_id=_runtime_session_id,
                         config=config,
+                        observation_id=_observation_id_cycle,
+                        decision_id=_decision_id_cycle,
                     )
                     _new_engine_intent = _exec_prep.intent
                     _cor_id = _exec_prep.correlation_id
-                    _decision_id = _exec_prep.decision_id
+                    if _exec_prep.decision_id:
+                        _decision_id = _exec_prep.decision_id
+                    if _decision_id:
+                        _new_result["decision_id"] = _decision_id
+                        _cycle_decision["decision_id"] = _decision_id
 
                     # ─── SHADOW RANKING: Collect candidate for post-cycle analysis ─
                     # Observational only. Does NOT defer or block execution.
@@ -1405,7 +1532,7 @@ def run_live_scanner(
 
                 # Decision audit — persist before execution
                 if _eval_unified is not None:
-                    _decision_id = persist_decision_audit(
+                    _audit_decision_id = persist_decision_audit(
                         symbol=sym_state.symbol, cycle_id=cycle_id, decision=_eval_unified,
                         engine_state=sym_state.engine_state, candles=candles,
                         closed_i=closed_i, runtime_mode="LIVE",
@@ -1414,8 +1541,14 @@ def run_live_scanner(
                         canonical_opportunity_id=_canonical_opp_id,
                         strategy_ts_utc_ms=_new_result.get("strategy_ts_utc_ms", 0) if _new_result else 0,
                     )
-                else:
+                    if _audit_decision_id and not (_new_result and _new_result.get("decision_id")):
+                        _decision_id = _audit_decision_id
+                elif "_decision_id" not in dir():
                     _decision_id = ""
+                if _decision_id:
+                    _cycle_decision["decision_id"] = _decision_id
+                    if _new_result:
+                        _new_result["decision_id"] = _decision_id
 
                 _cycle_had_trade = True
                 _filter_hits["trades_executed"] += 1
@@ -1755,7 +1888,7 @@ def run_live_scanner(
                                 correlation_id=_cor_id if "_cor_id" in dir() else "",
                                 decision_id=_decision_id if "_decision_id" in dir() else "",
                                 canonical_opportunity_id=_canonical_opp_id,
-                                observation_id="",
+                                observation_id=_observation_id_cycle,
                                 cycle_id=cycle_id,
                                 strategy=_new_result.get("strategy", "") if "_new_result" in dir() else "",
                                 pattern=decision.intent.pattern,
@@ -1811,7 +1944,7 @@ def run_live_scanner(
                                     decision_id=_decision_id if "_decision_id" in dir() else "",
                                     correlation_id=_cor_id if "_cor_id" in dir() else "",
                                     entity_id=_new_result.get("entity_id", "") if "_new_result" in dir() else "",
-                                    observation_id="",
+                                    observation_id=_observation_id_cycle,
                                     canonical_opportunity_id=_canonical_opp_id,
                                     requested_sl=_prot_result.requested_sl,
                                     broker_confirmed_sl=_prot_result.broker_confirmed_sl,

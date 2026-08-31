@@ -1,0 +1,208 @@
+{
+  "manifest_version": "1.0.0",
+  "generated_at_utc": "2026-08-28T16:18:34.860071+00:00",
+  "source_root": "C:\\Users\\ikues\\Trading bot build\\logs",
+  "research_root": "research_data",
+  "source_datasets": {
+    "strategy_observations": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/strategy_observations",
+      "layout": "symbol_date",
+      "read_only": true
+    },
+    "opportunities": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/opportunities",
+      "layout": "symbol_date",
+      "read_only": true
+    },
+    "decision_ledger": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/decision_ledger",
+      "layout": "symbol_date",
+      "read_only": true
+    },
+    "decision_trace": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/decision_trace",
+      "layout": "symbol_date",
+      "read_only": true
+    },
+    "decision_audit": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/decision_audit",
+      "layout": "symbol_date_flatname",
+      "read_only": true
+    },
+    "assessments": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/assessments",
+      "layout": "symbol_date",
+      "read_only": true
+    },
+    "execution_context": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/execution_context",
+      "layout": "symbol_date",
+      "read_only": true
+    },
+    "execution_results": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/execution_results",
+      "layout": "symbol_date",
+      "read_only": true
+    },
+    "trade_truth": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/trade_truth",
+      "layout": "symbol_date",
+      "read_only": true
+    },
+    "trade_journal": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/trade_journal",
+      "layout": "flat_date",
+      "read_only": true
+    },
+    "risk_deviation": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/risk_deviation",
+      "layout": "symbol_date",
+      "read_only": true
+    },
+    "shadow_runtime_v1": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/shadow_runtime_v1",
+      "layout": "symbol_date",
+      "read_only": true
+    },
+    "v3_market_context": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/v3_shadow/market_context",
+      "layout": "symbol_date",
+      "read_only": true
+    },
+    "market_context": {
+      "path": "C:\\Users\\ikues\\Trading bot build\\logs/market_context",
+      "layout": "symbol_date",
+      "read_only": true
+    }
+  },
+  "research_areas": {
+    "live/observation": {
+      "schema": "research_observation_v1",
+      "output_path": "research_data/live/observation/<SYMBOL>/<YYYY-MM-DD>.jsonl",
+      "sources": [
+        "strategy_observations"
+      ],
+      "ownership": {
+        "owner": "logs/strategy_observations",
+        "grain": "symbol x cycle"
+      }
+    },
+    "live/opportunity": {
+      "schema": "research_opportunity_v1",
+      "output_path": "research_data/live/opportunity/<SYMBOL>/<YYYY-MM-DD>.jsonl",
+      "sources": [
+        "opportunities"
+      ],
+      "ownership": {
+        "owner": "logs/opportunities",
+        "grain": "canonical_opportunity_id (state upserts)"
+      }
+    },
+    "live/decision": {
+      "schema": "research_decision_v1",
+      "output_path": "research_data/live/decision/<SYMBOL>/<YYYY-MM-DD>.jsonl",
+      "sources": [
+        "decision_ledger",
+        "decision_trace",
+        "decision_audit",
+        "assessments"
+      ],
+      "ownership": {
+        "owner": "logs/decision_ledger (spine) + logs/decision_trace (stage detail) + logs/decision_audit (gate flags) + logs/assessments (EV block)",
+        "grain": "symbol x cycle"
+      }
+    },
+    "live/execution": {
+      "schema": "research_execution_v1",
+      "output_path": "research_data/live/execution/<SYMBOL>/<YYYY-MM-DD>.jsonl",
+      "sources": [
+        "execution_context",
+        "execution_results"
+      ],
+      "ownership": {
+        "owner": "logs/execution_context (pre-trade) + logs/execution_results (fills)",
+        "grain": "correlation_id (order)",
+        "boundary": "outcome fields forbidden"
+      }
+    },
+    "live/outcome": {
+      "schema": "research_outcome_v1",
+      "output_path": "research_data/live/outcome/<SYMBOL>/<YYYY-MM-DD>.jsonl",
+      "sources": [
+        "trade_truth",
+        "trade_journal",
+        "risk_deviation"
+      ],
+      "ownership": {
+        "owner": "logs/trade_truth (canonical outcome) + logs/trade_journal (exclusive enrichment) + logs/risk_deviation (plan-vs-actual risk)",
+        "grain": "trade_id"
+      }
+    },
+    "market_context": {
+      "schema": "research_market_context_v1",
+      "output_path": "research_data/market_context/<SYMBOL>/<YYYY-MM-DD>.jsonl",
+      "sources": [
+        "v3_market_context",
+        "market_context"
+      ],
+      "ownership": {
+        "owner": "logs/v3_shadow/market_context (primary); logs/market_context (fallback)",
+        "grain": "symbol x bar_time",
+        "note": "single canonical market-understanding dataset; entity_id/cycle_id reconciled from same-bar observation rows when absent"
+      }
+    },
+    "shadow/plan": {
+      "schema": "research_shadow_plan_v1",
+      "output_path": "research_data/shadow/plan/<SYMBOL>/<YYYY-MM-DD>.jsonl",
+      "sources": [
+        "shadow_runtime_v1"
+      ],
+      "ownership": {
+        "owner": "logs/shadow_runtime_v1 split by event_type",
+        "grain": "shadow_trade_id x event"
+      }
+    },
+    "shadow/open": {
+      "schema": "research_shadow_open_v1",
+      "output_path": "research_data/shadow/open/<SYMBOL>/<YYYY-MM-DD>.jsonl",
+      "sources": [
+        "shadow_runtime_v1"
+      ],
+      "ownership": {
+        "owner": "logs/shadow_runtime_v1 split by event_type",
+        "grain": "shadow_trade_id x event"
+      }
+    },
+    "shadow/progress": {
+      "schema": "research_shadow_progress_v1",
+      "output_path": "research_data/shadow/progress/<SYMBOL>/<YYYY-MM-DD>.jsonl",
+      "sources": [
+        "shadow_runtime_v1"
+      ],
+      "ownership": {
+        "owner": "logs/shadow_runtime_v1 split by event_type",
+        "grain": "shadow_trade_id x event"
+      }
+    },
+    "shadow/close": {
+      "schema": "research_shadow_close_v1",
+      "output_path": "research_data/shadow/close/<SYMBOL>/<YYYY-MM-DD>.jsonl",
+      "sources": [
+        "shadow_runtime_v1"
+      ],
+      "ownership": {
+        "owner": "logs/shadow_runtime_v1 split by event_type",
+        "grain": "shadow_trade_id x event"
+      }
+    }
+  },
+  "shadow_event_routing": {
+    "source": "C:\\Users\\ikues\\Trading bot build\\logs/shadow_runtime_v1",
+    "event_type_to_area": {
+      "PLAN": "research_data/shadow/plan",
+      "OPEN": "research_data/shadow/open",
+      "PROGRESS": "research_data/shadow/progress",
+      "CLOSE": "research_data/shadow/close"
+    }
+  }
+}

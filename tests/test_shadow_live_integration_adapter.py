@@ -42,9 +42,13 @@ from core.shadow.integration import (
     ShadowV2Handled,
     handle_live_opportunity_shadow,
 )
+from core.identity.canonical import mint_observation_id
 
 SYMBOL = "EURUSD"
 ROOT_ID = "EURUSD*1784800000*TWEEZER_TOP"
+OBSERVATION_ID = mint_observation_id(
+    symbol="EURUSD", bar_time=1_784_800_000, timeframe="M5"
+)
 ENTITY_ID = "EURUSD_1784800000"
 CYCLE_ID = 42
 BAR_TIME_RAW = 1_784_800_000
@@ -173,6 +177,7 @@ def _invoke(runtime_calls: _RecordingRuntime, **overrides) -> None:
         horizon_result=_horizon_result(),
         canonical_opportunity_id=ROOT_ID,
         entity_id=ENTITY_ID,
+        observation_id=OBSERVATION_ID,
     )
     kwargs.update(overrides)
     handle_live_opportunity_shadow(**kwargs)
@@ -215,6 +220,7 @@ def test_full_context_assembly_mapped_to_runtime(recorded):
     # Identity / timing
     assert ctx["symbol"] == SYMBOL
     assert ctx["canonical_opportunity_id"] == ROOT_ID
+    assert ctx["observation_id"] == OBSERVATION_ID
     assert ctx["entity_id"] == ENTITY_ID
     assert ctx["cycle_id"] == CYCLE_ID
     assert ctx["bar_time_raw"] == BAR_TIME_RAW
@@ -276,6 +282,19 @@ def test_direction_taken_from_assessment_object_first(recorded):
     assert recorded.calls[0]["direction"] == "BUY"
 
 
+def test_rejected_direction_taken_from_v10_opportunity_bias(recorded):
+    nr = _new_result(action="NO_TRADE", side="")
+    nr["assessment"] = None
+    nr["v10_pipeline_result"] = SimpleNamespace(
+        opportunity=SimpleNamespace(directional_bias="BEARISH"),
+        horizon=SimpleNamespace(horizon_type=""),
+        rejection_stage="risk",
+    )
+    _invoke(recorded, new_result=nr)
+    assert recorded.calls[0]["direction"] == "SELL"
+    assert recorded.calls[0]["v10_action"] == "NO_TRADE"
+
+
 # ─── 2. CANONICAL IDENTITY PRESERVATION ───────────────────────────────────────
 
 def test_canonical_identity_passed_verbatim(recorded):
@@ -334,14 +353,16 @@ def test_none_like_empty_canonical_root_creates_no_record(recorded):
     assert recorded.calls == []
 
 
-def test_invalid_direction_creates_no_record(recorded):
+def test_missing_direction_is_not_fabricated(recorded):
     _invoke(recorded, new_result=_new_result(side=""))
-    assert recorded.calls == []
+    assert len(recorded.calls) == 1
+    assert recorded.calls[0]["direction"] == ""
 
 
-def test_unknown_direction_value_creates_no_record(recorded):
+def test_unknown_direction_value_is_not_fabricated(recorded):
     _invoke(recorded, new_result=_new_result(side="FLAT"))
-    assert recorded.calls == []
+    assert len(recorded.calls) == 1
+    assert recorded.calls[0]["direction"] == ""
 
 
 # ─── 5. SHADOW_V2_HANDLED SENTINEL CONTRACT ───────────────────────────────────

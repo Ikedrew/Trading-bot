@@ -1,0 +1,366 @@
+{
+  "manifest_version": "1.0.0",
+  "projector_version": "1.0.0",
+  "schema_prefix": "research_",
+  "generated_at_utc": "2026-08-28T16:18:34.853066+00:00",
+  "canonical_root_field": "canonical_opportunity_id",
+  "schemas": {
+    "research_observation_v1": {
+      "research_area": "live/observation",
+      "version": 1,
+      "research_id_prefix": "robs",
+      "grain": "symbol x cycle",
+      "sources": [
+        {
+          "dataset": "strategy_observations",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/strategy_observations"
+        }
+      ],
+      "lineage_fields": [
+        "observation_id",
+        "entity_id",
+        "symbol",
+        "cycle_id"
+      ],
+      "join_rule": "none (self-contained record)",
+      "envelope_keys": [
+        "research_id",
+        "research_schema",
+        "research_area",
+        "projector_version",
+        "projected_at_utc",
+        "source_schema",
+        "research_source",
+        "research_lineage",
+        "research_reconciliation (present only when a reconciliation event occurred)"
+      ]
+    },
+    "research_opportunity_v1": {
+      "research_area": "live/opportunity",
+      "version": 1,
+      "research_id_prefix": "ropp",
+      "grain": "canonical_opportunity_id (state upserts retained)",
+      "sources": [
+        {
+          "dataset": "opportunities",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/opportunities"
+        }
+      ],
+      "lineage_fields": [
+        "canonical_opportunity_id",
+        "opportunity_id",
+        "entity_id",
+        "correlation_id",
+        "decision_id",
+        "symbol",
+        "cycle_id"
+      ],
+      "join_rule": "none (identities preserved verbatim; opportunity_id retained as source identity slot per ownership registry)",
+      "envelope_keys": [
+        "research_id",
+        "research_schema",
+        "research_area",
+        "projector_version",
+        "projected_at_utc",
+        "source_schema",
+        "research_source",
+        "research_lineage",
+        "research_reconciliation (present only when a reconciliation event occurred)"
+      ]
+    },
+    "research_decision_v1": {
+      "research_area": "live/decision",
+      "version": 1,
+      "research_id_prefix": "rdec",
+      "grain": "symbol x cycle (ledger spine)",
+      "sources": [
+        {
+          "dataset": "decision_ledger",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/decision_ledger"
+        },
+        {
+          "dataset": "decision_trace",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/decision_trace"
+        },
+        {
+          "dataset": "decision_audit",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/decision_audit"
+        },
+        {
+          "dataset": "assessments",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/assessments"
+        }
+      ],
+      "lineage_fields": [
+        "canonical_opportunity_id",
+        "entity_id",
+        "correlation_id",
+        "context_snapshot_id",
+        "decision_id",
+        "trace_id",
+        "symbol",
+        "cycle_id"
+      ],
+      "join_rule": "exact-match enrichment: trace/audit by entity_id (fallback correlation/decision ids); assessments contribute EV block only. No timestamp-proximity joining. Unmatched -> link_status=unresolved.",
+      "envelope_keys": [
+        "research_id",
+        "research_schema",
+        "research_area",
+        "projector_version",
+        "projected_at_utc",
+        "source_schema",
+        "research_source",
+        "research_lineage",
+        "research_reconciliation (present only when a reconciliation event occurred)"
+      ]
+    },
+    "research_execution_v1": {
+      "research_area": "live/execution",
+      "version": 1,
+      "research_id_prefix": "rexe",
+      "grain": "correlation_id (order)",
+      "sources": [
+        {
+          "dataset": "execution_context",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/execution_context"
+        },
+        {
+          "dataset": "execution_results",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/execution_results"
+        }
+      ],
+      "lineage_fields": [
+        "canonical_opportunity_id",
+        "correlation_id",
+        "entity_id",
+        "decision_id",
+        "observation_id",
+        "symbol",
+        "cycle_id"
+      ],
+      "join_rule": "exact correlation_id match; context is the pre-trade owner, results contribute fill fields. Unmatched results are emitted as owner='execution_results_only' with link_status=unresolved. Outcome fields forbidden (outcome boundary).",
+      "envelope_keys": [
+        "research_id",
+        "research_schema",
+        "research_area",
+        "projector_version",
+        "projected_at_utc",
+        "source_schema",
+        "research_source",
+        "research_lineage",
+        "research_reconciliation (present only when a reconciliation event occurred)"
+      ]
+    },
+    "research_outcome_v1": {
+      "research_area": "live/outcome",
+      "version": 1,
+      "research_id_prefix": "rout",
+      "grain": "trade_id",
+      "sources": [
+        {
+          "dataset": "trade_truth",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/trade_truth"
+        },
+        {
+          "dataset": "trade_journal",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/trade_journal"
+        },
+        {
+          "dataset": "risk_deviation",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/risk_deviation"
+        }
+      ],
+      "lineage_fields": [
+        "canonical_opportunity_id",
+        "trade_id",
+        "correlation_id",
+        "symbol"
+      ],
+      "join_rule": "exact trade_id match; trade_truth is the canonical outcome owner, journal/risk_deviation contribute keep-list fields only.",
+      "envelope_keys": [
+        "research_id",
+        "research_schema",
+        "research_area",
+        "projector_version",
+        "projected_at_utc",
+        "source_schema",
+        "research_source",
+        "research_lineage",
+        "research_reconciliation (present only when a reconciliation event occurred)"
+      ]
+    },
+    "research_market_context_v1": {
+      "research_area": "market_context",
+      "version": 1,
+      "research_id_prefix": "rmcx",
+      "grain": "symbol x bar_time",
+      "sources": [
+        {
+          "dataset": "v3_market_context",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/v3_shadow/market_context"
+        },
+        {
+          "dataset": "market_context",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/market_context"
+        }
+      ],
+      "lineage_fields": [
+        "entity_id",
+        "symbol",
+        "cycle_id",
+        "timestamp_utc"
+      ],
+      "join_rule": "v3_shadow/market_context is primary; logs/market_context is the fallback for symbol/dates absent from v3. cycle_id/entity_id reconciled ONLY from exact same-bar (symbol, bar_time) observation rows, with the reconciliation recorded.",
+      "envelope_keys": [
+        "research_id",
+        "research_schema",
+        "research_area",
+        "projector_version",
+        "projected_at_utc",
+        "source_schema",
+        "research_source",
+        "research_lineage",
+        "research_reconciliation (present only when a reconciliation event occurred)"
+      ]
+    },
+    "research_shadow_plan_v1": {
+      "research_area": "shadow/plan",
+      "version": 1,
+      "research_id_prefix": "rshp",
+      "grain": "shadow_trade_id x event (plan rows carry plan_id only)",
+      "sources": [
+        {
+          "dataset": "shadow_runtime_v1",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/shadow_runtime_v1"
+        }
+      ],
+      "lineage_fields": [
+        "canonical_opportunity_id",
+        "plan_id",
+        "shadow_trade_id",
+        "entity_id",
+        "symbol",
+        "cycle_id"
+      ],
+      "join_rule": "none (event stream projected verbatim per event_type)",
+      "envelope_keys": [
+        "research_id",
+        "research_schema",
+        "research_area",
+        "projector_version",
+        "projected_at_utc",
+        "source_schema",
+        "research_source",
+        "research_lineage",
+        "research_reconciliation (present only when a reconciliation event occurred)"
+      ]
+    },
+    "research_shadow_open_v1": {
+      "research_area": "shadow/open",
+      "version": 1,
+      "research_id_prefix": "rsho",
+      "grain": "shadow_trade_id x event",
+      "sources": [
+        {
+          "dataset": "shadow_runtime_v1",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/shadow_runtime_v1"
+        }
+      ],
+      "lineage_fields": [
+        "canonical_opportunity_id",
+        "plan_id",
+        "shadow_trade_id",
+        "entity_id",
+        "symbol",
+        "cycle_id"
+      ],
+      "join_rule": "none (event stream projected verbatim per event_type)",
+      "envelope_keys": [
+        "research_id",
+        "research_schema",
+        "research_area",
+        "projector_version",
+        "projected_at_utc",
+        "source_schema",
+        "research_source",
+        "research_lineage",
+        "research_reconciliation (present only when a reconciliation event occurred)"
+      ]
+    },
+    "research_shadow_progress_v1": {
+      "research_area": "shadow/progress",
+      "version": 1,
+      "research_id_prefix": "rshg",
+      "grain": "shadow_trade_id x event",
+      "sources": [
+        {
+          "dataset": "shadow_runtime_v1",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/shadow_runtime_v1"
+        }
+      ],
+      "lineage_fields": [
+        "canonical_opportunity_id",
+        "plan_id",
+        "shadow_trade_id",
+        "entity_id",
+        "symbol",
+        "cycle_id"
+      ],
+      "join_rule": "none (event stream projected verbatim per event_type)",
+      "envelope_keys": [
+        "research_id",
+        "research_schema",
+        "research_area",
+        "projector_version",
+        "projected_at_utc",
+        "source_schema",
+        "research_source",
+        "research_lineage",
+        "research_reconciliation (present only when a reconciliation event occurred)"
+      ]
+    },
+    "research_shadow_close_v1": {
+      "research_area": "shadow/close",
+      "version": 1,
+      "research_id_prefix": "rshc",
+      "grain": "shadow_trade_id x event",
+      "sources": [
+        {
+          "dataset": "shadow_runtime_v1",
+          "path": "C:\\Users\\ikues\\Trading bot build\\logs/shadow_runtime_v1"
+        }
+      ],
+      "lineage_fields": [
+        "canonical_opportunity_id",
+        "plan_id",
+        "shadow_trade_id",
+        "entity_id",
+        "symbol",
+        "cycle_id"
+      ],
+      "join_rule": "none (event stream projected verbatim per event_type)",
+      "envelope_keys": [
+        "research_id",
+        "research_schema",
+        "research_area",
+        "projector_version",
+        "projected_at_utc",
+        "source_schema",
+        "research_source",
+        "research_lineage",
+        "research_reconciliation (present only when a reconciliation event occurred)"
+      ]
+    }
+  },
+  "lineage_rules": {
+    "canonical_root": "canonical_opportunity_id is preserved verbatim; an empty canonical root stays empty (no fabrication). Format must be SYMBOL*BAR_TIME*PATTERN when non-empty.",
+    "identifier_semantics": "observation_id, entity_id, correlation_id, decision_id, execution ids, plan_id and shadow_trade_id have DIFFERENT semantics and are never treated as interchangeable or merged.",
+    "joining": "Records are joined only on exact identifier matches (entity_id / decision_id / correlation_id / trade_id / same-bar (symbol, bar_time)). Timestamp proximity, symbol, price or similar-looking ids never create lineage.",
+    "link_status": "resolved = joined to at least one contributor; unresolved = join attempted, no partner found; self_only = self-contained record (no join attempted).",
+    "live_shadow_separation": "LIVE records live under live/; SHADOW records under shadow/ (split by event_type). They are never merged into one dataset.",
+    "outcome_boundary": "Outcome fields (pnl, exit facts) are forbidden in live/execution records; violations are stripped and recorded in research_reconciliation.",
+    "reconciliation": "When a contributor field collides with an owner field and the values disagree, the owner value is retained and the disagreement is recorded in research_reconciliation -- never silently overwritten.",
+    "idempotency": "A research record's identity is hash(dataset, source path, source fingerprint). Re-running over unchanged source bytes emits nothing. A changed source record yields a NEW fingerprint (change is detectable; the previous record is retained).",
+    "source_readonly": "logs/ is opened read-only. The projector never creates, modifies, moves or deletes anything under logs/."
+  }
+}

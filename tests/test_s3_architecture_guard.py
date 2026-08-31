@@ -48,6 +48,7 @@ ALLOWED_S3_WRITERS = {
     ROOT / "core" / "learning" / "store.py",
     ROOT / "core" / "persistence" / "opportunity_assessment_writer.py",
     ROOT / "core" / "persistence" / "execution_result_writer.py",
+    ROOT / "core" / "persistence" / "management_actions_writer.py",
     ROOT / "core" / "market_context" / "persistence.py",
     ROOT / "core" / "research_assessment" / "research_shadow_engine.py",
     ROOT / "core" / "opportunity" / "persistence.py",

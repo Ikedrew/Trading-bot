@@ -24,9 +24,13 @@ sys.path.insert(0, str(ROOT))
 
 from core.shadow.persistence import ShadowEventWriter, load_events
 from core.shadow.runtime import ShadowRuntime
+from core.identity.canonical import mint_observation_id
 
 SYMBOL = "EURUSD"
 ROOT_ID = "EURUSD*1784800000*TWEEZER_TOP"
+OBSERVATION_ID = mint_observation_id(
+    symbol=SYMBOL, bar_time=1_784_800_000, timeframe="M5"
+)
 
 
 def _ctx(
@@ -50,6 +54,7 @@ def _ctx(
     }
     return {
         "canonical_opportunity_id": ROOT_ID,
+        "observation_id": OBSERVATION_ID,
         "entity_id": f"{SYMBOL}_1784800000",
         "symbol": SYMBOL,
         "cycle_id": cycle_id,
@@ -101,6 +106,7 @@ def test_every_event_carries_canonical_root_and_unique_shadow_ids(env):
     assert events, "no events written"
     for ev in events:
         assert ev["canonical_opportunity_id"] == ROOT_ID
+        assert ev["observation_id"] == OBSERVATION_ID
     opens = [e for e in events if e["event_type"] == "OPEN"]
     tids = {e["shadow_trade_id"] for e in opens}
     assert len(tids) == len(opens) and tids
@@ -135,6 +141,8 @@ def test_plan_lists_all_three_horizons_even_when_zero_constructible(env):
     plans = [e for e in env.events() if e["event_type"] == "PLAN"]
     assert len(plans) == 1
     plan = plans[0]
+    assert plan["canonical_opportunity_id"] == ROOT_ID
+    assert plan["observation_id"] == OBSERVATION_ID
     states = {h["horizon"]: h["state"] for h in plan["horizons"]}
     assert set(states) == {"SCALP", "INTRADAY", "EXTENDED"}
     assert all(s == "NOT_ELIGIBLE" for s in states.values())
@@ -157,6 +165,8 @@ def test_unconstructible_horizon_recorded_with_missing_dependency(env):
 def test_open_preserves_full_construction_provenance(env):
     env.rt.handle_opportunity(_ctx())
     open_ev = [e for e in env.events() if e["event_type"] == "OPEN"][0]
+    assert open_ev["canonical_opportunity_id"] == ROOT_ID
+    assert open_ev["observation_id"] == OBSERVATION_ID
     c = open_ev["construction"]
     assert c["sl_source"] == "M15_STRUCTURE"
     assert isinstance(c["reasoning"], list) and len(c["reasoning"]) >= 2
@@ -282,6 +292,8 @@ def test_recovery_reopens_active_and_continues_without_duplicate(env):
     rt2 = ShadowRuntime(writer=env.writer)   # "restart": recover from stream only
     assert tid in rt2.active_ids()
     snap = rt2.snapshot(tid)
+    assert snap["canonical_opportunity_id"] == ROOT_ID
+    assert snap["observation_id"] == OBSERVATION_ID
     assert snap["lifecycle"]["bars_elapsed"] == 12
     assert snap["lifecycle"]["last_evaluated_bar_time"] == t0 + 3600
 
@@ -298,6 +310,38 @@ def test_recovery_reopens_active_and_continues_without_duplicate(env):
     assert closes[0]["bars_held"] == 13
     rt3 = ShadowRuntime(writer=env.writer)
     assert rt3.active_ids() == []            # CLOSE terminates recovery
+
+
+def test_recovered_open_progress_and_close_preserve_original_observation_id(env):
+    env.rt.handle_opportunity(_ctx())
+    tid = f"nshadow_42_{SYMBOL}_INTRADAY"
+    t0 = _ctx()["bar_time_raw"]
+
+    rt2 = ShadowRuntime(writer=env.writer)
+    assert rt2.snapshot(tid)["observation_id"] == OBSERVATION_ID
+
+    for bt, hi, lo, cl in _bars_after(t0, 12, 1.10010, 1.09990, 1.10000):
+        rt2.evaluate_bar(
+            symbol=SYMBOL,
+            bar_time=bt,
+            bar_high=hi,
+            bar_low=lo,
+            bar_close=cl,
+        )
+    progress = [e for e in env.events() if e["event_type"] == "PROGRESS"][-1]
+    assert progress["observation_id"] == OBSERVATION_ID
+    assert progress["canonical_opportunity_id"] == ROOT_ID
+
+    rt2.evaluate_bar(
+        symbol=SYMBOL,
+        bar_time=t0 + 3900,
+        bar_high=1.10010,
+        bar_low=1.09600,
+        bar_close=1.09750,
+    )
+    close = [e for e in env.events() if e["event_type"] == "CLOSE"][-1]
+    assert close["observation_id"] == OBSERVATION_ID
+    assert close["canonical_opportunity_id"] == ROOT_ID
 
 
 def test_legacy_shadow_data_is_never_read(tmp_path):
@@ -352,8 +396,39 @@ def test_full_lifecycle_plan_open_progress_close(env):
     assert kinds.count("OPEN") == 1
     assert kinds.count("PROGRESS") >= 1                  # checkpoint at bar 12
     prog = [e for e in env.events() if e["event_type"] == "PROGRESS"][-1]
+    assert prog["canonical_opportunity_id"] == ROOT_ID
+    assert prog["observation_id"] == OBSERVATION_ID
     assert prog["lifecycle"]["bars_elapsed"] == 12
     assert prog["lifecycle"]["last_evaluated_bar_time"] == t0 + 3600
+
+
+def test_close_preserves_observation_id(env):
+    env.rt.handle_opportunity(_ctx())
+    cons = [e for e in env.events() if e["event_type"] == "OPEN"][0]["construction"]
+    env.rt.evaluate_bar(
+        symbol=SYMBOL,
+        bar_time=_ctx()["bar_time_raw"] + 300,
+        bar_high=cons["stop_loss"] + 0.001,
+        bar_low=cons["take_profit"] - 0.001,
+        bar_close=cons["stop_loss"],
+    )
+    close = [e for e in env.events() if e["event_type"] == "CLOSE"][0]
+    assert close["canonical_opportunity_id"] == ROOT_ID
+    assert close["observation_id"] == OBSERVATION_ID
+
+
+def test_missing_direction_records_plan_without_open(env):
+    ctx = _ctx(direction="", eligible=("SCALP",))
+    env.rt.handle_opportunity(ctx)
+    events = env.events()
+    plan = [e for e in events if e["event_type"] == "PLAN"][0]
+    assert plan["direction"] == ""
+    assert plan["entry_price_basis"] == ""
+    assert plan["constructed_count"] == 0
+    assert not [e for e in events if e["event_type"] == "OPEN"]
+    scalp = [h for h in plan["horizons"] if h["horizon"] == "SCALP"][0]
+    assert scalp["state"] == "ELIGIBLE_BUT_UNCONSTRUCTIBLE"
+    assert scalp["missing_structure"] == ["direction"]
 
 
 def test_duplicate_plan_suppressed_per_root(env):

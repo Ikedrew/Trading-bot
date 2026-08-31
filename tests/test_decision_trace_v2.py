@@ -477,7 +477,8 @@ class TestV10FieldsPopulated:
             runtime_session_id="test_session",
             v10_pipeline_result=_MockPipelineResult(),
         )
-        assert trace.observation_id == "abc123def4567890"
+        assert trace.observation_id == ""
+        assert trace.v10_observation_id == "abc123def4567890"
 
     def test_correlation_id_generated(self):
         trace = build_decision_trace(
@@ -485,7 +486,8 @@ class TestV10FieldsPopulated:
             runtime_session_id="test_session",
             v10_pipeline_result=_MockPipelineResult(),
         )
-        assert trace.correlation_id.startswith("v10_EURUSD_")
+        assert trace.correlation_id == ""
+        assert trace.v10_correlation_id.startswith("v10_EURUSD_")
 
     def test_market_state_populated(self):
         trace = build_decision_trace(
@@ -752,8 +754,9 @@ class TestEntityIdPresent:
         )
         # entity_id from engine_result
         assert trace.entity_id == "EURUSD_1785400000"
-        # correlation_id from V10 pipeline extraction
-        assert trace.correlation_id.startswith("v10_EURUSD_")
+        # V10-local correlation remains diagnostic, not canonical runtime lineage.
+        assert trace.correlation_id == ""
+        assert trace.v10_correlation_id.startswith("v10_EURUSD_")
 
     def test_entity_id_format(self):
         """entity_id must be {symbol}_{bar_time} format."""

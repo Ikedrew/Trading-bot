@@ -119,6 +119,22 @@ class V10Pipeline:
 
         # ─── LAYER 2: Opportunity Assessment ──────────────────
         opportunity = assess_opportunity(market_state)
+
+        # Persist opportunity at detection boundary — BEFORE any downstream
+        # strategy/horizon/entry/risk/execution decisions. Ensures the
+        # opportunity record exists regardless of whether the pipeline
+        # eventually results in EXECUTE or NO_TRADE.
+        try:
+            from core.persistence.opportunity_writer import persist_opportunity_from_v10
+            persist_opportunity_from_v10(
+                opportunity=opportunity,
+                market_state=market_state,
+                bid=0.0,   # bid/ask not available in pure V10 pipeline path;
+                ask=0.0,   # they are only available when called from live_scanner
+            )
+        except Exception:
+            pass  # Opportunity persistence must never block the pipeline
+
         ctx = ctx.with_opportunity(opportunity)
         events.observation_id = opportunity.observation_id
         events.emit("V10_OPPORTUNITY_COMPLETE", 
@@ -126,7 +142,33 @@ class V10Pipeline:
                     payload={"state": opportunity.opportunity_state})
 
         # ─── LAYER 3: Strategy Selection ──────────────────────
-        strategy = select_strategy(market_state, opportunity)
+        # Build lineage context for strategy candidate persistence.
+        # The canonical_opportunity_id is computed consistently with the
+        # opportunity dataset (opportunity_type as pattern). This is
+        # observational only — never affects selection.
+        _strategy_lineage: dict | None = None
+        try:
+            from core.identity.canonical import (
+                make_canonical_opportunity_id,
+                mint_observation_id,
+            )
+            _v10_pattern = opportunity.opportunity_type or "NONE"
+            _strategy_lineage = {
+                "canonical_opportunity_id": make_canonical_opportunity_id(
+                    symbol=market_state.symbol,
+                    bar_time=market_state.timestamp_utc,
+                    pattern=_v10_pattern,
+                ),
+                "observation_id": mint_observation_id(
+                    symbol=market_state.symbol,
+                    bar_time=market_state.timestamp_utc,
+                    timeframe="M5",
+                ),
+            }
+        except Exception:
+            _strategy_lineage = None
+
+        strategy = select_strategy(market_state, opportunity, lineage=_strategy_lineage)
         ctx = ctx.with_strategy(strategy)
         events.emit("V10_STRATEGY_COMPLETE",
                     status="COMPLETE" if strategy.strategy_family != StrategyFamily.NONE.value else "REJECTED",

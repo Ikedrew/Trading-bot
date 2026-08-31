@@ -14,6 +14,8 @@ Does NOT:
 
 from __future__ import annotations
 
+from typing import Any
+
 from core.v10.market_state import V10MarketState
 from core.v10.opportunity_assessment import OpportunityAssessment
 from core.v10.strategy_family import (
@@ -24,12 +26,21 @@ from core.v10.strategy_family import (
 def select_strategy(
     state: V10MarketState,
     opportunity: OpportunityAssessment,
+    lineage: dict[str, Any] | None = None,
 ) -> StrategyDecision:
     """
     Select the best-fitting strategy family for the given opportunity.
 
     Only operates on VALID or WATCHING opportunities.
     Returns NONE for INVALID opportunities.
+
+    Args:
+        lineage: OPTIONAL persistence context (never affects selection).
+            Recognised keys: canonical_opportunity_id, observation_id,
+            decision_id, correlation_id, cycle_id, entity_id.
+            When absent, canonical IDs are computed from state/opportunity.
+            This parameter is observational only — it does NOT alter
+            evaluation, sorting, or winner selection in any way.
     """
     if opportunity.opportunity_state == "INVALID":
         return StrategyDecision(
@@ -98,6 +109,27 @@ def select_strategy(
 
     candidates.sort(key=sort_key)
     winner, confidence, reasoning, conditions = candidates[0]
+
+    # ─── PERSIST ALL CANDIDATES (observational only) ──────────────
+    # Persist the complete post-sort candidate set BEFORE returning the
+    # winner. The list order IS the rank — no re-ranking occurs here.
+    # Persistence failure never affects the returned StrategyDecision.
+    try:
+        from core.persistence.strategy_candidates_writer import (
+            build_candidate_records,
+            persist_strategy_candidates,
+        )
+        _cand_records = build_candidate_records(
+            candidates=candidates,
+            winner_family=winner.value,
+            symbol=state.symbol,
+            bar_time=state.timestamp_utc,
+            lineage=lineage,
+        )
+        persist_strategy_candidates(candidates=_cand_records)
+    except Exception:
+        pass  # Candidate persistence must NEVER affect strategy selection
+    # ─── END CANDIDATE PERSISTENCE ────────────────────────────────
 
     return StrategyDecision(
         opportunity_id=opportunity.observation_id,

@@ -106,6 +106,7 @@ class TestFullCloseBrokerSuccess:
             symbol="EURUSD",
             position_ticket=12345,
             volume=None,
+            trade_id="pos_001",
         )
 
     def test_broker_close_success_no_retry_queued(self):
@@ -191,6 +192,7 @@ class TestPartialCloseBrokerSuccess:
             symbol="EURUSD",
             position_ticket=12345,
             volume=pytest.approx(0.05, abs=1e-8),
+            trade_id="pos_001",
         )
 
     def test_partial_close_success_no_retry(self):

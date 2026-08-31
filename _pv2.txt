@@ -1,0 +1,229 @@
+0001 |     *,
+0002 |     symbol: str,
+0003 |     position_ticket: int,
+0004 |     requested_sl: float,
+0005 |     requested_tp: float,
+0006 |     correlation_id: str = "",
+0007 |     execution_module: Any = None,
+0008 | ) -> ProtectionVerificationResult:
+0009 |     """
+0010 |     Verify that broker-side SL/TP protection exists on a filled position.
+0011 | 
+0012 |     Called immediately after order fill. Queries MT5 for the actual position
+0013 |     state and compares against requested values.
+0014 | 
+0015 |     If SL/TP are missing or mismatched:
+0016 |         1. Logs CRITICAL event
+0017 |         2. Attempts correction via position_modify_sl_tp
+0018 |         3. Re-verifies after correction
+0019 | 
+0020 |     Args:
+0021 |         symbol: Trading pair
+0022 |         position_ticket: MT5 position ticket (deal ID from fill)
+0023 |         requested_sl: The SL we sent in order_send
+0024 |         requested_tp: The TP we sent in order_send
+0025 |         correlation_id: For forensic linking
+0026 |         execution_module: MT5Execution instance for correction attempts
+0027 | 
+0028 |     Returns:
+0029 |         ProtectionVerificationResult with full audit trail
+0030 |     """
+0031 |     t0 = time.perf_counter()
+0032 |     now = datetime.now(timezone.utc)
+0033 | 
+0034 |     # Default result (will be overwritten on success)
+0035 |     result = ProtectionVerificationResult(
+0036 |         symbol=symbol,
+0037 |         position_ticket=position_ticket,
+0038 |         correlation_id=correlation_id,
+0039 |         requested_sl=requested_sl,
+0040 |         requested_tp=requested_tp,
+0041 |         broker_confirmed_sl=0.0,
+0042 |         broker_confirmed_tp=0.0,
+0043 |         protection_status=ProtectionStatus.VERIFICATION_ERROR.value,
+0044 |         protection_failure_reason="",
+0045 |         verification_timestamp_utc=now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+0046 |         verification_latency_ms=0,
+0047 |         attempts=0,
+0048 |         correction_attempted=False,
+0049 |         correction_success=False,
+0050 |         correction_detail="",
+0051 |     )
+0052 | 
+0053 |     try:
+0054 |         # ─── QUERY BROKER FOR POSITION STATE ──────────────────────────
+0055 |         broker_sl, broker_tp, found, attempts, match_method = _query_broker_position(
+0056 |             position_ticket=position_ticket,
+0057 |             symbol=symbol,
+0058 |         )
+0059 |         result.attempts = attempts
+0060 | 
+0061 |         if not found:
+0062 |             result.protection_status = ProtectionStatus.POSITION_NOT_FOUND.value
+0063 |             result.protection_failure_reason = (
+0064 |                 f"Position ticket={position_ticket} not found on broker after {attempts} attempts"
+0065 |             )
+0066 |             logger.critical(
+0067 |                 "[PROTECTION_CRITICAL] %s ticket=%d — POSITION NOT FOUND on broker",
+0068 |                 symbol, position_ticket,
+0069 |             )
+0070 |             _persist_result(result, symbol)
+0071 |             return result
+0072 | 
+0073 |         result.broker_confirmed_sl = broker_sl
+0074 |         result.broker_confirmed_tp = broker_tp
+0075 | 
+0076 |         # ─── CHECK SL PROTECTION ─────────────────────────────────────
+0077 |         sl_ok = _values_match(broker_sl, requested_sl, _SL_TP_TOLERANCE)
+0078 |         tp_ok = _values_match(broker_tp, requested_tp, _SL_TP_TOLERANCE)
+0079 |         sl_missing = broker_sl == 0.0 and requested_sl != 0.0
+0080 |         tp_missing = broker_tp == 0.0 and requested_tp != 0.0
+0081 |         sl_mismatch = not sl_ok and not sl_missing and requested_sl != 0.0
+0082 |         tp_mismatch = not tp_ok and not tp_missing and requested_tp != 0.0
+0083 | 
+0084 |         if sl_ok and tp_ok:
+0085 |             # ─── PROTECTION VERIFIED ──────────────────────────────────
+0086 |             result.protection_status = ProtectionStatus.VERIFIED.value
+0087 |             result.verification_latency_ms = int((time.perf_counter() - t0) * 1000)
+0088 |             logger.info(
+0089 |                 "[PROTECTION_VERIFIED] %s ticket=%d sl=%.5f tp=%.5f",
+0090 |                 symbol, position_ticket, broker_sl, broker_tp,
+0091 |             )
+0092 |             _persist_result(result, symbol)
+0093 |             return result
+0094 | 
+0095 |         # ─── PROTECTION PROBLEM DETECTED ─────────────────────────────
+0096 |         if sl_missing or tp_missing:
+0097 |             problem = "SL_MISSING" if sl_missing else ""
+0098 |             if tp_missing:
+0099 |                 problem = f"{problem}+TP_MISSING" if problem else "TP_MISSING"
+0100 |             logger.critical(
+0101 |                 "[PROTECTION_CRITICAL] %s ticket=%d — %s | "
+0102 |                 "requested_sl=%.5f broker_sl=%.5f requested_tp=%.5f broker_tp=%.5f",
+0103 |                 symbol, position_ticket, problem,
+0104 |                 requested_sl, broker_sl, requested_tp, broker_tp,
+0105 |             )
+0106 |         elif sl_mismatch or tp_mismatch:
+0107 |             problem = "SL_MISMATCH" if sl_mismatch else ""
+0108 |             if tp_mismatch:
+0109 |                 problem = f"{problem}+TP_MISMATCH" if problem else "TP_MISMATCH"
+0110 |             logger.warning(
+0111 |                 "[PROTECTION_MISMATCH] %s ticket=%d — %s | "
+0112 |                 "requested_sl=%.5f broker_sl=%.5f requested_tp=%.5f broker_tp=%.5f",
+0113 |                 symbol, position_ticket, problem,
+0114 |                 requested_sl, broker_sl, requested_tp, broker_tp,
+0115 |             )
+0116 | 
+0117 |         # ─── ATTEMPT CORRECTION ──────────────────────────────────────
+0118 |         result.correction_attempted = True
+0119 |         correction_ok = _attempt_correction(
+0120 |             symbol=symbol,
+0121 |             position_ticket=position_ticket,
+0122 |             target_sl=requested_sl,
+0123 |             target_tp=requested_tp,
+0124 |             execution_module=execution_module,
+0125 |         )
+0126 |         result.correction_success = correction_ok
+0127 | 
+0128 |         if correction_ok:
+0129 |             # Re-verify after correction
+0130 |             broker_sl2, broker_tp2, found2, _, _ = _query_broker_position(
+0131 |                 position_ticket=position_ticket,
+0132 |                 symbol=symbol,
+0133 |             )
+0134 |             if found2:
+0135 |                 result.broker_confirmed_sl = broker_sl2
+0136 |                 result.broker_confirmed_tp = broker_tp2
+0137 | 
+0138 |             if sl_missing or tp_missing:
+0139 |                 result.protection_status = ProtectionStatus.CORRECTED.value
+0140 |                 result.correction_detail = f"Protection restored: sl={broker_sl2:.5f} tp={broker_tp2:.5f}"
+0141 |             else:
+0142 |                 result.protection_status = ProtectionStatus.MISMATCH_CORRECTED.value
+0143 |                 result.correction_detail = f"Mismatch corrected: sl={broker_sl2:.5f} tp={broker_tp2:.5f}"
+0144 | 
+0145 |             logger.info(
+0146 |                 "[PROTECTION_CORRECTED] %s ticket=%d — sl=%.5f tp=%.5f",
+0147 |                 symbol, position_ticket, broker_sl2, broker_tp2,
+0148 |             )
+0149 |         else:
+0150 |             # Correction failed — position remains at risk
+0151 |             if sl_missing or tp_missing:
+0152 |                 result.protection_status = ProtectionStatus.FAILED_UNPROTECTED.value
+0153 |                 result.protection_failure_reason = (
+0154 |                     f"SL/TP missing on broker AND correction failed. "
+0155 |                     f"broker_sl={broker_sl} broker_tp={broker_tp}"
+0156 |                 )
+0157 |             else:
+0158 |                 result.protection_status = ProtectionStatus.FAILED_MISMATCH.value
+0159 |                 result.protection_failure_reason = (
+0160 |                     f"SL/TP mismatch AND correction failed. "
+0161 |                     f"requested_sl={requested_sl} broker_sl={broker_sl} "
+0162 |                     f"requested_tp={requested_tp} broker_tp={broker_tp}"
+0163 |                 )
+0164 | 
+0165 |             logger.critical(
+0166 |                 "[PROTECTION_FAILED] %s ticket=%d — POSITION MAY BE UNPROTECTED | %s",
+0167 |                 symbol, position_ticket, result.protection_failure_reason,
+0168 |             )
+0169 | 
+0170 |             # ─── EMERGENCY: attempt to close unprotected position ─────
+0171 |             if sl_missing and execution_module is not None:
+0172 |                 logger.critical(
+0173 |                     "[PROTECTION_EMERGENCY] %s ticket=%d — SL missing, correction failed. "
+0174 |                     "Position at unlimited risk.",
+0175 |                     symbol, position_ticket,
+0176 |                 )
+0177 |                 # Note: We do NOT auto-close here. That would be a strategy decision.
+0178 |                 # Instead we escalate via Discord and leave the position for manual review.
+0179 |                 _emit_discord_alert(symbol, position_ticket, result)
+0180 | 
+0181 |     except Exception as exc:
+0182 |         result.protection_status = ProtectionStatus.VERIFICATION_ERROR.value
+0183 |         result.protection_failure_reason = f"Exception during verification: {type(exc).__name__}: {str(exc)[:200]}"
+0184 |         logger.error(
+0185 |             "[PROTECTION_ERROR] %s ticket=%d — verification exception: %s",
+0186 |             symbol, position_ticket, exc,
+0187 |         )
+0188 | 
+0189 |     result.verification_latency_ms = int((time.perf_counter() - t0) * 1000)
+0190 |     _persist_result(result, symbol)
+0191 |     return result
+0192 | 
+0193 | 
+0194 | # ═══════════════════════════════════════════════════════════════════════════════
+0195 | # INTERNAL HELPERS
+0196 | # ═══════════════════════════════════════════════════════════════════════════════
+0197 | 
+0198 | def _query_broker_position(
+0199 |     *,
+0200 |     position_ticket: int,
+0201 |     symbol: str,
+0202 |     volume: float = 0.0,
+0203 |     magic: int = 0,
+0204 | ) -> tuple[float, float, bool, int, str]:
+0205 |     """
+0206 |     Query MT5 for position SL/TP state with multi-method matching.
+0207 | 
+0208 |     Matching strategy:
+0209 |         1. Exact ticket match (mt5.positions_get(ticket=))
+0210 |         2. Symbol scan + ticket match
+0211 |         3. Symbol + volume + magic fallback (for ticket mismatch scenarios)
+0212 | 
+0213 |     Retry timing: 0ms, 500ms, 1500ms, 3000ms (progressive backoff).
+0214 | 
+0215 |     Returns: (broker_sl, broker_tp, found, attempts, match_method)
+0216 |         match_method: "ticket_match" | "symbol_ticket_match" | "symbol_volume_match" | "not_found"
+0217 |     """
+0218 |     _RETRY_DELAYS = [0.0, 0.5, 1.5, 3.0]  # Progressive backoff
+0219 |     max_attempts = len(_RETRY_DELAYS)
+0220 | 
+0221 |     for attempt in range(max_attempts):
+0222 |         if attempt > 0:
+0223 |             time.sleep(_RETRY_DELAYS[attempt])
+0224 | 
+0225 |         # Method 1: Exact ticket lookup
+0226 |         positions = mt5_call(mt5.positions_get, ticket=position_ticket)
+0227 |         if positions is not None and len(positions) > 0:
+0228 |             pos = positions[0]
+0229 |             logger.info(

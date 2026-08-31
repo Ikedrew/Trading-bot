@@ -75,3 +75,9 @@ class TestLearningSchema:
     def test_schema_version_constant(self):
         from core.learning.store import _SCHEMA_VERSION
         assert _SCHEMA_VERSION == "learning_v1"
+
+
+class TestManagementActionsSchema:
+    def test_schema_version_constant(self):
+        from core.persistence.management_actions_writer import _SCHEMA_VERSION
+        assert _SCHEMA_VERSION == "management_actions_v1"

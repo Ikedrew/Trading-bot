@@ -13,6 +13,7 @@ from core.v10.broker_context import BrokerContext
 from core.v10.pipeline import V10Pipeline, PipelineResult
 from core.v10.strategy_family import StrategyFamily
 from core.v10.entry_model import EntryStatus
+from core.identity.canonical import make_canonical_opportunity_id, mint_observation_id
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -149,6 +150,52 @@ class TestFullPipelineApproved:
         if result.approved:
             assert result.execution.order_details.symbol == "EURUSD"
             assert result.execution.order_details.volume > 0
+
+    def test_strategy_lineage_uses_parent_opportunity_canonical_id(
+        self, monkeypatch, tmp_path
+    ):
+        import core.persistence.opportunity_writer as opportunity_writer
+        import core.persistence.strategy_candidates_writer as candidates_writer
+        import core.v10.pipeline as pipeline_module
+
+        monkeypatch.setattr(candidates_writer, "_LOCAL_DIR", str(tmp_path))
+        monkeypatch.setattr(
+            opportunity_writer,
+            "persist_opportunity_from_v10",
+            lambda **kwargs: True,
+        )
+
+        captured = {}
+        original_select_strategy = pipeline_module.select_strategy
+
+        def _capture_lineage(market_state, opportunity, lineage=None):
+            captured["market_state"] = market_state
+            captured["opportunity"] = opportunity
+            captured["lineage"] = lineage
+            return original_select_strategy(
+                market_state, opportunity, lineage=lineage
+            )
+
+        monkeypatch.setattr(pipeline_module, "select_strategy", _capture_lineage)
+
+        result = V10Pipeline().process(
+            _strong_understanding(), _strong_context(), _good_account(), _good_broker()
+        )
+
+        expected_opportunity_id = make_canonical_opportunity_id(
+            symbol=result.market_state.symbol,
+            bar_time=result.market_state.timestamp_utc,
+            pattern=result.opportunity.opportunity_type or "NONE",
+        )
+        expected_observation_id = mint_observation_id(
+            symbol=result.market_state.symbol,
+            bar_time=result.market_state.timestamp_utc,
+            timeframe="M5",
+        )
+
+        assert captured["lineage"]["canonical_opportunity_id"] == expected_opportunity_id
+        assert captured["lineage"]["observation_id"] == expected_observation_id
+        assert captured["lineage"]["canonical_opportunity_id"] != expected_observation_id
 
 
 class TestPipelineStopsAtInvalidOpportunity:

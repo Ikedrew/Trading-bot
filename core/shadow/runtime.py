@@ -84,6 +84,7 @@ class ShadowRuntime:
         market_time_raw: int,
         broker_offset: int,
         canonical_opportunity_id: str = "",
+        observation_id: str = "",
         shadow_trade_id: str = "",
     ) -> dict[str, Any]:
         ev: dict[str, Any] = {
@@ -92,6 +93,7 @@ class ShadowRuntime:
             "construction_model_version": CONSTRUCTION_MODEL_VERSION,
             "simulation_model_version": SIMULATION_MODEL_VERSION,
             "canonical_opportunity_id": canonical_opportunity_id,
+            "observation_id": observation_id,
             "shadow_trade_id": shadow_trade_id,
             "symbol": symbol,
             "broker_offset_seconds": int(broker_offset),
@@ -128,6 +130,7 @@ class ShadowRuntime:
         root = str(ctx.get("canonical_opportunity_id", "") or "")
         if not root:
             return  # rule: no simulation without a canonical root
+        observation_id = str(ctx.get("observation_id", "") or "")
         if root in self._planned_roots:
             return  # one PLAN per opportunity-cycle
 
@@ -135,7 +138,8 @@ class ShadowRuntime:
         bar_time_raw = int(ctx.get("bar_time_raw", 0))
         off = get_broker_offset_seconds()
         direction = str(ctx.get("direction", "") or "").upper()
-        if direction not in ("BUY", "SELL") or not symbol or bar_time_raw <= 0:
+        has_direction = direction in ("BUY", "SELL")
+        if not symbol or bar_time_raw <= 0:
             return
 
         eligible = set(ctx.get("eligible_horizons", []) or [])
@@ -157,6 +161,16 @@ class ShadowRuntime:
                         "state": "NOT_ELIGIBLE",
                         "confidence": a.get("confidence"),
                         "reasoning": a.get("reasoning", ""),
+                    }
+                )
+                continue
+
+            if not has_direction:
+                entries.append(
+                    {
+                        "horizon": hz,
+                        "state": "ELIGIBLE_BUT_UNCONSTRUCTIBLE",
+                        "missing_structure": ["direction"],
                     }
                 )
                 continue
@@ -207,6 +221,7 @@ class ShadowRuntime:
             market_time_raw=bar_time_raw,
             broker_offset=off,
             canonical_opportunity_id=root,
+            observation_id=observation_id,
         )
         plan_ev.update(
             {
@@ -214,7 +229,11 @@ class ShadowRuntime:
                 "cycle_id": ctx.get("cycle_id", 0),
                 "entity_id": ctx.get("entity_id", ""),
                 "direction": direction,
-                "entry_price_basis": "ASK" if direction == "BUY" else "BID",
+                "entry_price_basis": (
+                    "ASK" if direction == "BUY"
+                    else "BID" if direction == "SELL"
+                    else ""
+                ),
                 "horizons": entries,
                 "constructed_count": len(constructed),
             }
@@ -229,6 +248,7 @@ class ShadowRuntime:
             direction=direction,
             plan_id=plan_id,
             constructed=constructed,
+            observation_id=observation_id,
         )
 
     def _open_constructed(
@@ -241,6 +261,7 @@ class ShadowRuntime:
         direction: str,
         plan_id: str,
         constructed: list[dict[str, Any]],
+        observation_id: str,
     ) -> None:
         """Write one immutable OPEN per constructed horizon and activate it."""
         pip = 0.01 if "JPY" in symbol.upper() else 0.0001
@@ -269,6 +290,7 @@ class ShadowRuntime:
                 market_time_raw=bar_time_raw,
                 broker_offset=off,
                 canonical_opportunity_id=root,
+                observation_id=observation_id,
                 shadow_trade_id=trade_id,
             )
             ev.update(
@@ -346,6 +368,7 @@ class ShadowRuntime:
             self._active[trade_id] = {
                 "trade_id": trade_id,
                 "canonical_opportunity_id": root,
+                "observation_id": observation_id,
                 "definition": ev,
                 "lifecycle": lifecycle,
                 "timeout_bars": assumptions["timeout_bars"],
@@ -455,6 +478,7 @@ class ShadowRuntime:
             market_time_raw=sim["lifecycle"].last_evaluated_bar_time,
             broker_offset=get_broker_offset_seconds(),
             canonical_opportunity_id=sim["canonical_opportunity_id"],
+            observation_id=sim.get("observation_id", ""),
             shadow_trade_id=sim["trade_id"],
         )
         ev.update({"lifecycle": sim["lifecycle"].to_dict()})
@@ -502,6 +526,7 @@ class ShadowRuntime:
             market_time_raw=exit_market_time,
             broker_offset=off,
             canonical_opportunity_id=sim["canonical_opportunity_id"],
+            observation_id=sim.get("observation_id", ""),
             shadow_trade_id=sim["trade_id"],
         )
         ev.update(market_block("exit_market_time", exit_market_time, off))
@@ -563,6 +588,7 @@ class ShadowRuntime:
                 self._active[tid] = {
                     "trade_id": tid,
                     "canonical_opportunity_id": ev.get("canonical_opportunity_id", ""),
+                    "observation_id": ev.get("observation_id", ""),
                     "definition": ev,
                     "lifecycle": init,
                     "timeout_bars": int(assumptions.get("timeout_bars", 60)),
@@ -599,6 +625,7 @@ class ShadowRuntime:
         return {
             "trade_id": sim["trade_id"],
             "canonical_opportunity_id": sim["canonical_opportunity_id"],
+            "observation_id": sim.get("observation_id", ""),
             "lifecycle": sim["lifecycle"].to_dict(),
             "timeout_bars": sim["timeout_bars"],
             "direction": sim["direction"],

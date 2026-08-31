@@ -1,0 +1,50 @@
+0001 | 
+0002 | 
+0003 | 
+0004 | def persist_execution_attempt(
+0005 |     *,
+0006 |     attempt_id: str,
+0007 |     decision_id: str = "",
+0008 |     canonical_opportunity_id: str = "",
+0009 |     observation_id: str = "",
+0010 |     correlation_id: str = "",
+0011 |     trade_id: str = "",
+0012 |     symbol: str = "",
+0013 |     cycle_id: int = 0,
+0014 |     action_type: str = "",
+0015 |     attempt_number: int = 1,
+0016 |     retry_reason: str | None = None,
+0017 |     timestamp_utc: str = "",
+0018 |     timestamp_unix: float = 0.0,
+0019 |     side: str = "",
+0020 |     volume: float = 0.0,
+0021 |     entry_reference: float = 0.0,
+0022 |     requested_sl: float = 0.0,
+0023 |     requested_tp: float = 0.0,
+0024 |     bid_at_attempt: float = 0.0,
+0025 |     ask_at_attempt: float = 0.0,
+0026 |     broker_ok: bool = False,
+0027 |     retcode: int = 0,
+0028 |     deal: int = 0,
+0029 |     order_ticket: int = 0,
+0030 |     comment: str = "",
+0031 |     fill_price: float | None = None,
+0032 |     slippage: float | None = None,
+0033 |     protection_status: str | None = None,
+0034 |     broker_confirmed_sl: float | None = None,
+0035 |     broker_confirmed_tp: float | None = None,
+0036 |     engine: str = "V10",
+0037 | ) -> bool:
+0038 |     """Persist one execution attempt to local JSONL + S3 mirror."""
+0039 |     try:
+0040 |         if not timestamp_utc:
+0041 |             now = datetime.now(timezone.utc)
+0042 |             timestamp_utc = now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+0043 |             timestamp_unix = round(now.timestamp(), 3)
+0044 |         else:
+0045 |             now = datetime.now(timezone.utc)
+0046 | 
+0047 |         date_str = now.strftime("%Y-%m-%d")
+0048 | 
+0049 |         spread_at_attempt = None
+0050 |         if bid_at_attempt > 0 and ask_at_attempt > 0:

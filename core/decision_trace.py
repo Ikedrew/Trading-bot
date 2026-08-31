@@ -309,6 +309,8 @@ class DecisionTrace:
     decision_id: str = ""
     correlation_id: str = ""
     canonical_opportunity_id: str = ""
+    v10_observation_id: str = ""
+    v10_correlation_id: str = ""
     engine_version: str = ""
 
     # V10 Market Understanding (multi-timeframe state at decision time)
@@ -396,6 +398,8 @@ class DecisionTrace:
             "decision_id": self.decision_id,
             "correlation_id": self.correlation_id,
             "canonical_opportunity_id": self.canonical_opportunity_id,
+            "v10_observation_id": self.v10_observation_id,
+            "v10_correlation_id": self.v10_correlation_id,
             "engine_version": self.engine_version,
             "v10_market_state": self.v10_market_state,
             "v10_opportunity": self.v10_opportunity,
@@ -419,6 +423,9 @@ def build_decision_trace(
     runtime_session_id: str = "",
     pattern_count: int = 0,
     v10_pipeline_result: Any = None,
+    observation_id: str = "",
+    decision_id: str = "",
+    correlation_id: str = "",
 ) -> DecisionTrace:
     """
     Build a DecisionTrace from a run_new_engine() result dict.
@@ -430,7 +437,15 @@ def build_decision_trace(
     Never raises — returns minimal trace on error.
     """
     try:
-        return _build_trace(engine_result, runtime_session_id, pattern_count, v10_pipeline_result)
+        return _build_trace(
+            engine_result,
+            runtime_session_id,
+            pattern_count,
+            v10_pipeline_result,
+            observation_id=observation_id,
+            decision_id=decision_id,
+            correlation_id=correlation_id,
+        )
     except Exception:
         return DecisionTrace(
             entity_id=engine_result.get("entity_id", ""),
@@ -441,6 +456,10 @@ def build_decision_trace(
             terminal_stage="error",
             terminal_reason="trace_build_failed",
             metadata={"error": True},
+            observation_id=str(observation_id or engine_result.get("observation_id", "") or ""),
+            decision_id=str(decision_id or engine_result.get("decision_id", "") or ""),
+            correlation_id=str(correlation_id or engine_result.get("correlation_id", "") or ""),
+            canonical_opportunity_id=str(engine_result.get("canonical_opportunity_id", "") or ""),
         )
 
 
@@ -449,6 +468,10 @@ def _build_trace(
     runtime_session_id: str,
     pattern_count: int,
     v10_pipeline_result: Any = None,
+    *,
+    observation_id: str = "",
+    decision_id: str = "",
+    correlation_id: str = "",
 ) -> DecisionTrace:
     """Internal trace construction — may raise."""
     action = engine_result.get("action", "NO_TRADE")
@@ -540,10 +563,12 @@ def _build_trace(
     policy_reasoning = engine_result.get("policy_reasoning", "")
 
     # ─── V10 PIPELINE EXTRACTION ─────────────────────────────────────
-    _obs_id = ""
-    _decision_id = ""
-    _correlation_id = ""
+    _obs_id = str(observation_id or engine_result.get("observation_id", "") or "")
+    _decision_id = str(decision_id or engine_result.get("decision_id", "") or "")
+    _correlation_id = str(correlation_id or engine_result.get("correlation_id", "") or "")
     _canonical_opp_id = str(engine_result.get("canonical_opportunity_id", "") or "")
+    _v10_obs_id = ""
+    _v10_correlation_id = ""
     _engine_version = ""
     _v10_market_state: dict[str, Any] = {}
     _v10_opportunity: dict[str, Any] = {}
@@ -559,10 +584,10 @@ def _build_trace(
         _engine_version = "V10"
         _pr = v10_pipeline_result
 
-        # Observation/decision IDs
-        _obs_id = getattr(_pr.opportunity, "observation_id", "") or ""
-        _decision_id = _obs_id
-        _correlation_id = f"v10_{getattr(_pr.market_state, 'symbol', '')}_{int(getattr(_pr.market_state, 'timestamp_utc', 0))}_{cycle_id}"
+        # V10-local diagnostic IDs. Runtime callers pass canonical IDs above;
+        # missing canonical runtime IDs stay empty rather than borrowing them.
+        _v10_obs_id = getattr(_pr.opportunity, "observation_id", "") or ""
+        _v10_correlation_id = f"v10_{getattr(_pr.market_state, 'symbol', '')}_{int(getattr(_pr.market_state, 'timestamp_utc', 0))}_{cycle_id}"
 
         # Market State (full multi-timeframe snapshot)
         try:
@@ -789,6 +814,8 @@ def _build_trace(
         decision_id=_decision_id,
         correlation_id=_correlation_id,
         canonical_opportunity_id=_canonical_opp_id,
+        v10_observation_id=_v10_obs_id,
+        v10_correlation_id=_v10_correlation_id,
         engine_version=_engine_version,
         v10_market_state=_v10_market_state,
         v10_opportunity=_v10_opportunity,

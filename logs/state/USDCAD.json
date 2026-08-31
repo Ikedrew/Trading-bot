@@ -1,8 +1,8 @@
 {
   "_meta": {
     "symbol": "USDCAD",
-    "saved_at_utc": "2026-08-28T01:08:47.416801+00:00",
-    "saved_at_unix": 1787879327.4168012
+    "saved_at_utc": "2026-08-31T01:55:08.952097+00:00",
+    "saved_at_unix": 1788141308.952098
   },
   "current_bias": null,
   "bias_phase": "EXPIRED",
@@ -14,7 +14,7 @@
   "last_strong_impulse_direction": null,
   "regime_state": "RANGING",
   "volatility_filter": 0.0,
-  "last_successful_open_mono": 1787754600.0,
+  "last_successful_open_mono": 1788151500.0,
   "structure_score": 0.0,
   "structure_regime": "WEAK",
   "last_failed_setups": []

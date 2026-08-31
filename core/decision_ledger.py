@@ -231,6 +231,7 @@ def build_ledger_entry(
     # Linkage
     context_snapshot_id: str = "",
     correlation_id: str = "",
+    decision_id: str = "",
     entity_id: str = "",
     observation_id: str = "",
     # Canonical lineage (remediation) — THE authoritative lineage root
@@ -278,6 +279,7 @@ def build_ledger_entry(
         "dual_ev": dual_ev,
         "context_snapshot_id": context_snapshot_id,
         "correlation_id": correlation_id,
+        "decision_id": decision_id,
         "entity_id": entity_id,
         "observation_id": observation_id,
         "canonical_opportunity_id": canonical_opportunity_id,

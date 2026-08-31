@@ -98,6 +98,9 @@ class ExecutionResult:
 
 import hashlib
 
+import hashlib
+import uuid
+
 _INTENT_WINDOW_SECONDS = 30.0
 _recent_intents: dict[str, float] = {}
 
@@ -203,6 +206,106 @@ def log_execution_metrics_snapshot() -> None:
 
 # ─── END EXECUTION METRICS ────────────────────────────────────────────────────
 
+
+
+# ─── EXECUTION ATTEMPTS PERSISTENCE ───────────────────────────────────────────
+
+def _persist_attempt(
+    *,
+    symbol: str,
+    side: str,
+    volume: float,
+    entry_reference: float,
+    sl: float,
+    tp: float,
+    bid: float,
+    ask: float,
+    broker_ok: bool,
+    retcode: int,
+    deal: int,
+    order_ticket: int,
+    comment: str,
+    fill_price: float | None,
+    attempt_number: int,
+    retry_reason: str | None,
+    action_type: str = "",
+    cycle_id: int = 0,
+    canonical_opportunity_id: str = "",
+    observation_id: str = "",
+    decision_id: str = "",
+    correlation_id: str = "",
+    trade_id: str = "",
+    protection_status: str | None = None,
+    broker_confirmed_sl: float | None = None,
+    broker_confirmed_tp: float | None = None,
+) -> None:
+    """Persist one execution attempt. Observational only — never raises.
+
+    ``trade_id`` uses the SAME identity as the existing execution/outcome
+    lifecycle.  It is propagated verbatim from the caller when it genuinely
+    exists at the attempt stage (e.g. CLOSE / SLTP_MODIFY attempts carry the
+    open position's ``pos_{deal}`` trade identity from TradeStateManager).
+    For ENTRY attempts no broker-side trade identity exists yet — the ``pos_``
+    ID is only materialised downstream (Position registration, Trade Journal)
+    after a successful fill — so ``trade_id`` stays empty (→ null in the
+    record).  It is **never fabricated** here.
+
+    ``protection_status`` / ``broker_confirmed_sl`` / ``broker_confirmed_tp``
+    carry ONLY genuine broker-side confirmation of SL/TP.  The MT5
+    ``order_send`` result does not echo confirmed SL/TP prices (it carries
+    only ``retcode``/``deal``/``order``/``comment``), so at the attempt point
+    no authoritative confirmation exists and these fields are left null.
+    The requested ``sl``/``tp`` are recorded separately as ``requested_sl``/
+    ``requested_tp`` and are NEVER labelled as broker-confirmed.  Authoritative
+    confirmation lives in the post-fill ``verify_protection()`` audit
+    (protection_audit dataset) and is never inferred here.
+    """
+    try:
+        from core.persistence.execution_attempts_writer import persist_execution_attempt
+        slippage = None
+        # Guard against fill_price == 0.0 which the MT5 API uses to signal
+        # "no fill" — must not produce a spurious slippage measurement.
+        _effective_fill = (
+            float(fill_price)
+            if fill_price is not None and fill_price != 0
+            else None
+        )
+        if _effective_fill is not None and entry_reference > 0:
+            slippage = round(abs(_effective_fill - entry_reference), 6)
+        persist_execution_attempt(
+            attempt_id=str(uuid.uuid4()),
+            symbol=symbol,
+            side=side,
+            volume=volume,
+            entry_reference=entry_reference,
+            requested_sl=sl,
+            requested_tp=tp,
+            bid_at_attempt=bid,
+            ask_at_attempt=ask,
+            broker_ok=broker_ok,
+            retcode=retcode,
+            deal=deal,
+            order_ticket=order_ticket,
+            comment=comment,
+            fill_price=_effective_fill,
+            slippage=slippage,
+            attempt_number=attempt_number,
+            retry_reason=retry_reason,
+            action_type=action_type,
+            cycle_id=cycle_id,
+            canonical_opportunity_id=canonical_opportunity_id,
+            observation_id=observation_id,
+            decision_id=decision_id,
+            correlation_id=correlation_id,
+            trade_id=trade_id,
+            protection_status=protection_status,
+            broker_confirmed_sl=broker_confirmed_sl,
+            broker_confirmed_tp=broker_confirmed_tp,
+        )
+    except Exception:
+        pass
+
+# ─── END EXECUTION ATTEMPTS PERSISTENCE ───────────────────────────────────────
 
 # MQL5 SYMBOL_FILLING_* bitmask (not always exposed on Python mt5 module)
 _FILL_FOK = 1
@@ -349,6 +452,10 @@ class MT5Execution:
         decision_ts_utc_ms: int = 0,
         decision_id: str = "",
         correlation_id: str = "",
+        cycle_id: int = 0,
+        canonical_opportunity_id: str = "",
+        observation_id: str = "",
+        action_type: str = "ENTRY",
     ) -> ExecutionResult:
         """
         Execute an approved order instruction.
@@ -368,17 +475,30 @@ class MT5Execution:
             decision_ts_utc_ms: Timestamp for causal chain linkage (observability)
             decision_id: Correlation ID for audit trail (observability)
             correlation_id: Decision spine ID for lifecycle linkage (observability)
+            cycle_id: Cycle number for execution grouping (observability)
+            canonical_opportunity_id: Canonical opportunity lineage (observability)
+            observation_id: Observation lineage (observability)
+            action_type: Execution action type — ENTRY, PARTIAL_CLOSE, FULL_CLOSE, SLTP_MODIFY
 
         Returns:
             ExecutionResult with ok/retcode/deal/order/comment/fill_price
         """
-        return self.place_market(order_intent, decision_ts_utc_ms=decision_ts_utc_ms, decision_id=decision_id, correlation_id=correlation_id)
+        return self.place_market(
+            order_intent,
+            decision_ts_utc_ms=decision_ts_utc_ms,
+            decision_id=decision_id,
+            correlation_id=correlation_id,
+            cycle_id=cycle_id,
+            canonical_opportunity_id=canonical_opportunity_id,
+            observation_id=observation_id,
+            action_type=action_type,
+        )
 
     # ═══════════════════════════════════════════════════════════════════
     # IMPLEMENTATION (place_market — shared by execute() and legacy callers)
     # ═══════════════════════════════════════════════════════════════════
 
-    def place_market(self, intent: OrderIntent, *, decision_ts_utc_ms: int = 0, decision_id: str = "", correlation_id: str = "") -> ExecutionResult:
+    def place_market(self, intent: OrderIntent, *, decision_ts_utc_ms: int = 0, decision_id: str = "", correlation_id: str = "", cycle_id: int = 0, canonical_opportunity_id: str = "", observation_id: str = "", action_type: str = "ENTRY") -> ExecutionResult:
         # ─── EXECUTION_ENABLED GATE ───────────────────────────────────
         if not getattr(_cfg, "EXECUTION_ENABLED", True):
             _safe_log(logging.INFO, f"[EXECUTION_DISABLED] symbol={intent.symbol} — EXECUTION_ENABLED=False")
@@ -538,6 +658,7 @@ class MT5Execution:
         # ─── END PRE-SUBMIT OBSERVABILITY ─────────────────────────────
 
         t0 = _time.perf_counter()
+        _attempt_number = 1
         mt5_result = mt5_call(mt5.order_send, request)
         latency_ms = int((_time.perf_counter() - t0) * 1000)
 
@@ -548,12 +669,66 @@ class MT5Execution:
                 False, -1, "ORDER_SEND_NONE", 0, 0, result.comment,
                 intent.symbol, intent.volume, latency_ms,
             ))
+            _persist_attempt(
+                symbol=intent.symbol,
+                side=intent.side.name,
+                volume=intent.volume,
+                entry_reference=intent.entry_reference,
+                sl=intent.sl,
+                tp=intent.tp,
+                bid=_bid,
+                ask=_ask,
+                broker_ok=False,
+                retcode=-1,
+                deal=0,
+                order_ticket=0,
+                comment=result.comment,
+                fill_price=None,
+                attempt_number=_attempt_number,
+                retry_reason=None,
+                action_type=action_type,
+                cycle_id=cycle_id,
+                canonical_opportunity_id=canonical_opportunity_id,
+                observation_id=observation_id,
+                decision_id=decision_id,
+                correlation_id=correlation_id,
+            )
             return result
 
-        # ─── C4: EXECUTION RETRY (REQUOTES/TIMEOUTS) ──────────────────
+                # ─── C4: EXECUTION RETRY (REQUOTES/TIMEOUTS) ──────────────────
         retcode = int(mt5_result.retcode)
         _RETCODE_REQUOTE = 10004
         _RETCODE_TIMEOUT = 10006
+
+        # Initialise retry state at function scope so it is always defined
+        # for downstream persistence (replaces fragile 'vars()' lookup).
+        retry_reason: str | None = None
+
+        # Persist attempt 1 (initial broker call) before any retry logic
+        _persist_attempt(
+            symbol=intent.symbol,
+            side=intent.side.name,
+            volume=intent.volume,
+            entry_reference=intent.entry_reference,
+            sl=intent.sl,
+            tp=intent.tp,
+            bid=_bid,
+            ask=_ask,
+            broker_ok=(retcode == mt5.TRADE_RETCODE_DONE),
+            retcode=retcode,
+            deal=int(getattr(mt5_result, "deal", 0)),
+            order_ticket=int(getattr(mt5_result, "order", 0)),
+            comment=str(getattr(mt5_result, "comment", "")),
+            fill_price=(float(getattr(mt5_result, "price", 0)) if getattr(mt5_result, "price", None) is not None else None),
+            attempt_number=_attempt_number,
+            retry_reason=None,
+            action_type=action_type,
+            cycle_id=cycle_id,
+            canonical_opportunity_id=canonical_opportunity_id,
+            observation_id=observation_id,
+            decision_id=decision_id,
+            correlation_id=correlation_id,
+        )
 
         if retcode in (_RETCODE_REQUOTE, _RETCODE_TIMEOUT) and retcode != mt5.TRADE_RETCODE_DONE:
             # Determine retry type
@@ -586,9 +761,15 @@ class MT5Execution:
                     else:
                         request["price"] = float(retry_tick.bid)
 
+            # Market snapshot for the retry attempt — from the fresh retry tick
+            # (Issue B fix: attempt #2 must record the retry tick, not the original)
+            _bid_retry = float(retry_tick.bid) if retry_tick is not None else _bid
+            _ask_retry = float(retry_tick.ask) if retry_tick is not None else _ask
+
             _execution_metrics["total_retries"] += 1
 
             # Single retry attempt
+            _attempt_number = 2
             t1 = _time.perf_counter()
             mt5_result = mt5_call(mt5.order_send, request)
             latency_ms = int((_time.perf_counter() - t1) * 1000)
@@ -599,6 +780,30 @@ class MT5Execution:
                 _safe_log(logging.WARNING,
                     f"[EXECUTION_FAILED] Retries exhausted (max 1) "
                     f"Reason: {retry_reason} Symbol: {intent.symbol}")
+                _persist_attempt(
+                    symbol=intent.symbol,
+                    side=intent.side.name,
+                    volume=intent.volume,
+                    entry_reference=intent.entry_reference,
+                    sl=intent.sl,
+                    tp=intent.tp,
+                    bid=_bid_retry,
+                    ask=_ask_retry,
+                    broker_ok=False,
+                    retcode=-1,
+                    deal=0,
+                    order_ticket=0,
+                    comment=result.comment,
+                    fill_price=None,
+                    attempt_number=_attempt_number,
+                    retry_reason=retry_reason,
+                    action_type=action_type,
+                    cycle_id=cycle_id,
+                    canonical_opportunity_id=canonical_opportunity_id,
+                    observation_id=observation_id,
+                    decision_id=decision_id,
+                    correlation_id=correlation_id,
+                )
                 return result
 
             retcode = int(mt5_result.retcode)
@@ -607,6 +812,33 @@ class MT5Execution:
                     f"[EXECUTION_FAILED] Retries exhausted (max 1) "
                     f"Retcode: {retcode} Reason: {retry_reason} Symbol: {intent.symbol}")
         # ─── END C4 RETRY ─────────────────────────────────────────────
+
+        # Persist attempt 2 if a retry occurred
+        if _attempt_number == 2 and mt5_result is not None:
+            _persist_attempt(
+                symbol=intent.symbol,
+                side=intent.side.name,
+                volume=intent.volume,
+                entry_reference=intent.entry_reference,
+                sl=intent.sl,
+                tp=intent.tp,
+                bid=_bid_retry,
+                ask=_ask_retry,
+                broker_ok=(int(mt5_result.retcode) == mt5.TRADE_RETCODE_DONE),
+                retcode=int(mt5_result.retcode),
+                deal=int(getattr(mt5_result, "deal", 0)),
+                order_ticket=int(getattr(mt5_result, "order", 0)),
+                comment=str(getattr(mt5_result, "comment", "")),
+                fill_price=(float(getattr(mt5_result, "price", 0)) if getattr(mt5_result, "price", None) is not None else None),
+                attempt_number=_attempt_number,
+                retry_reason=retry_reason,
+                action_type=action_type,
+                cycle_id=cycle_id,
+                canonical_opportunity_id=canonical_opportunity_id,
+                observation_id=observation_id,
+                decision_id=decision_id,
+                correlation_id=correlation_id,
+            )
 
         ok = int(mt5_result.retcode) == mt5.TRADE_RETCODE_DONE
         fill_price = getattr(mt5_result, "price", None)
@@ -679,6 +911,13 @@ class MT5Execution:
         position_ticket: int,
         sl: float,
         tp: float,
+        # — Observational lineage (optional, propagated when available) —
+        decision_id: str = "",
+        correlation_id: str = "",
+        cycle_id: int = 0,
+        canonical_opportunity_id: str = "",
+        observation_id: str = "",
+        trade_id: str = "",
     ) -> ExecutionResult:
         """
         Update SL/TP on an open position (e.g. trailing / break-even).
@@ -724,6 +963,12 @@ class MT5Execution:
             ))
             return result
 
+        # Market snapshot for this attempt (observational only — does not
+        # alter the broker request or execution behaviour).
+        _mod_tick = mt5_call(mt5.symbol_info_tick, symbol)
+        _mod_bid = float(_mod_tick.bid) if _mod_tick is not None else 0.0
+        _mod_ask = float(_mod_tick.ask) if _mod_tick is not None else 0.0
+
         request = {
             "action": mt5.TRADE_ACTION_SLTP,
             "symbol": symbol,
@@ -738,6 +983,31 @@ class MT5Execution:
 
         if mt5_result is None:
             result = ExecutionResult(False, -1, 0, 0, f"modify_none:{mt5.last_error()}")
+            _persist_attempt(
+                symbol=symbol,
+                side="",
+                volume=0.0,
+                entry_reference=0.0,
+                sl=sl,
+                tp=tp,
+                bid=_mod_bid,
+                ask=_mod_ask,
+                broker_ok=False,
+                retcode=-1,
+                deal=0,
+                order_ticket=0,
+                comment=result.comment,
+                fill_price=None,
+                attempt_number=1,
+                retry_reason=None,
+                action_type="SLTP_MODIFY",
+                cycle_id=cycle_id,
+                canonical_opportunity_id=canonical_opportunity_id,
+                observation_id=observation_id,
+                decision_id=decision_id,
+                correlation_id=correlation_id,
+                trade_id=trade_id,
+            )
             _safe_log(logging.WARNING, _fmt_result(
                 False, -1, "ORDER_SEND_NONE", 0, 0, result.comment,
                 symbol, 0.0, latency_ms, action="MODIFY",
@@ -751,6 +1021,32 @@ class MT5Execution:
             int(mt5_result.deal),
             int(mt5_result.order),
             str(mt5_result.comment),
+        )
+
+        _persist_attempt(
+            symbol=symbol,
+            side="",
+            volume=0.0,
+            entry_reference=0.0,
+            sl=sl,
+            tp=tp,
+            bid=_mod_bid,
+            ask=_mod_ask,
+            broker_ok=ok,
+            retcode=result.retcode,
+            deal=result.deal,
+            order_ticket=result.order,
+            comment=result.comment,
+            fill_price=None,
+            attempt_number=1,
+            retry_reason=None,
+            action_type="SLTP_MODIFY",
+            cycle_id=cycle_id,
+            canonical_opportunity_id=canonical_opportunity_id,
+            observation_id=observation_id,
+            decision_id=decision_id,
+            correlation_id=correlation_id,
+            trade_id=trade_id,
         )
 
         _safe_log(
@@ -768,6 +1064,13 @@ class MT5Execution:
         symbol: str,
         position_ticket: int,
         volume: float | None = None,
+        # — Observational lineage (optional, propagated when available) —
+        decision_id: str = "",
+        correlation_id: str = "",
+        cycle_id: int = 0,
+        canonical_opportunity_id: str = "",
+        observation_id: str = "",
+        trade_id: str = "",
     ) -> ExecutionResult:
         """
         Close (or partially close) an open position by ticket.
@@ -858,6 +1161,12 @@ class MT5Execution:
             ))
             return result
 
+        # Observational lineage helpers for attempt persistence
+        _close_action_type = "PARTIAL_CLOSE" if volume is not None else "CLOSE"
+        _close_side = pos.side.name if hasattr(pos, "side") else ""
+        _close_bid = float(tick.bid) if tick else 0.0
+        _close_ask = float(tick.ask) if tick else 0.0
+
         if self.DRY_RUN:
             result = ExecutionResult(True, 0, 0, 0, "dry_run_close")
             _safe_log(logging.INFO, _fmt_result(
@@ -886,6 +1195,31 @@ class MT5Execution:
 
         if mt5_result is None:
             result = ExecutionResult(False, -1, 0, 0, f"close_send_none:{mt5.last_error()}")
+            _persist_attempt(
+                symbol=symbol,
+                side=_close_side,
+                volume=close_volume,
+                entry_reference=0.0,
+                sl=0.0,
+                tp=0.0,
+                bid=_close_bid,
+                ask=_close_ask,
+                broker_ok=False,
+                retcode=-1,
+                deal=0,
+                order_ticket=0,
+                comment=result.comment,
+                fill_price=None,
+                attempt_number=1,
+                retry_reason=None,
+                action_type=_close_action_type,
+                cycle_id=cycle_id,
+                canonical_opportunity_id=canonical_opportunity_id,
+                observation_id=observation_id,
+                decision_id=decision_id,
+                correlation_id=correlation_id,
+                trade_id=trade_id,
+            )
             _safe_log(logging.WARNING, _fmt_result(
                 False, -1, "ORDER_SEND_NONE", 0, 0, result.comment,
                 symbol, close_volume, latency_ms, action="CLOSE",
@@ -901,6 +1235,32 @@ class MT5Execution:
             int(mt5_result.order),
             str(mt5_result.comment),
             fill_price=float(fill_price) if fill_price is not None else None,
+        )
+
+        _persist_attempt(
+            symbol=symbol,
+            side=_close_side,
+            volume=close_volume,
+            entry_reference=0.0,
+            sl=0.0,
+            tp=0.0,
+            bid=_close_bid,
+            ask=_close_ask,
+            broker_ok=ok,
+            retcode=result.retcode,
+            deal=result.deal,
+            order_ticket=result.order,
+            comment=result.comment,
+            fill_price=result.fill_price,
+            attempt_number=1,
+            retry_reason=None,
+            action_type=_close_action_type,
+            cycle_id=cycle_id,
+            canonical_opportunity_id=canonical_opportunity_id,
+            observation_id=observation_id,
+            decision_id=decision_id,
+            correlation_id=correlation_id,
+            trade_id=trade_id,
         )
 
         _safe_log(

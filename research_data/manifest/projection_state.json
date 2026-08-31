@@ -1,0 +1,5190 @@
+{
+  "cursors": {
+    "strategy_observations/AUDUSD/2026-07-28.jsonl": {
+      "offset": 74416,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-07-29.jsonl": {
+      "offset": 181917,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-07-30.jsonl": {
+      "offset": 155372,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-07-31.jsonl": {
+      "offset": 185104,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-03.jsonl": {
+      "offset": 191070,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-04.jsonl": {
+      "offset": 205496,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-05.jsonl": {
+      "offset": 243515,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-06.jsonl": {
+      "offset": 212324,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-07.jsonl": {
+      "offset": 211984,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-10.jsonl": {
+      "offset": 253749,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-11.jsonl": {
+      "offset": 224360,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-12.jsonl": {
+      "offset": 277082,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-13.jsonl": {
+      "offset": 231035,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-14.jsonl": {
+      "offset": 231624,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-19.jsonl": {
+      "offset": 21876,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-21.jsonl": {
+      "offset": 19356,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-26.jsonl": {
+      "offset": 71753,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-27.jsonl": {
+      "offset": 31050,
+      "records_projected": 0
+    },
+    "strategy_observations/AUDUSD/2026-08-28.jsonl": {
+      "offset": 17833,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2023-11-14.jsonl": {
+      "offset": 780827,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2024-06-21.jsonl": {
+      "offset": 983438,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-07-28.jsonl": {
+      "offset": 50500,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-07-29.jsonl": {
+      "offset": 135421,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-07-30.jsonl": {
+      "offset": 138733,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-07-31.jsonl": {
+      "offset": 163860,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-03.jsonl": {
+      "offset": 155614,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-04.jsonl": {
+      "offset": 184346,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-05.jsonl": {
+      "offset": 182685,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-06.jsonl": {
+      "offset": 187132,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-07.jsonl": {
+      "offset": 181033,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-10.jsonl": {
+      "offset": 195451,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-11.jsonl": {
+      "offset": 172981,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-12.jsonl": {
+      "offset": 207286,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-13.jsonl": {
+      "offset": 165646,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-14.jsonl": {
+      "offset": 201437,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-19.jsonl": {
+      "offset": 16487,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-21.jsonl": {
+      "offset": 10982,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-26.jsonl": {
+      "offset": 48493,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-27.jsonl": {
+      "offset": 23433,
+      "records_projected": 0
+    },
+    "strategy_observations/EURUSD/2026-08-28.jsonl": {
+      "offset": 14870,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2024-06-21.jsonl": {
+      "offset": 65547,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-07-28.jsonl": {
+      "offset": 69401,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-07-29.jsonl": {
+      "offset": 152652,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-07-30.jsonl": {
+      "offset": 152995,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-07-31.jsonl": {
+      "offset": 169843,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-03.jsonl": {
+      "offset": 167683,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-04.jsonl": {
+      "offset": 197530,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-05.jsonl": {
+      "offset": 219362,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-06.jsonl": {
+      "offset": 201169,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-07.jsonl": {
+      "offset": 210979,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-10.jsonl": {
+      "offset": 243908,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-11.jsonl": {
+      "offset": 244977,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-12.jsonl": {
+      "offset": 224510,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-13.jsonl": {
+      "offset": 221321,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-14.jsonl": {
+      "offset": 217760,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-19.jsonl": {
+      "offset": 15287,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-21.jsonl": {
+      "offset": 15068,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-26.jsonl": {
+      "offset": 57907,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-27.jsonl": {
+      "offset": 33176,
+      "records_projected": 0
+    },
+    "strategy_observations/GBPUSD/2026-08-28.jsonl": {
+      "offset": 16360,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-07-29.jsonl": {
+      "offset": 55959,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-07-30.jsonl": {
+      "offset": 104248,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-07-31.jsonl": {
+      "offset": 122501,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-03.jsonl": {
+      "offset": 122571,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-04.jsonl": {
+      "offset": 153746,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-05.jsonl": {
+      "offset": 161227,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-06.jsonl": {
+      "offset": 168108,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-07.jsonl": {
+      "offset": 150109,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-10.jsonl": {
+      "offset": 168139,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-11.jsonl": {
+      "offset": 170788,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-12.jsonl": {
+      "offset": 144587,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-13.jsonl": {
+      "offset": 162863,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-14.jsonl": {
+      "offset": 149502,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-19.jsonl": {
+      "offset": 9614,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-21.jsonl": {
+      "offset": 9807,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-26.jsonl": {
+      "offset": 45337,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-27.jsonl": {
+      "offset": 10914,
+      "records_projected": 0
+    },
+    "strategy_observations/NAS100/2026-08-28.jsonl": {
+      "offset": 10069,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-07-28.jsonl": {
+      "offset": 81772,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-07-29.jsonl": {
+      "offset": 182220,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-07-30.jsonl": {
+      "offset": 146197,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-07-31.jsonl": {
+      "offset": 171240,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-03.jsonl": {
+      "offset": 180824,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-04.jsonl": {
+      "offset": 214537,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-05.jsonl": {
+      "offset": 246892,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-06.jsonl": {
+      "offset": 225066,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-07.jsonl": {
+      "offset": 208570,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-10.jsonl": {
+      "offset": 260931,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-11.jsonl": {
+      "offset": 228674,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-12.jsonl": {
+      "offset": 263460,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-13.jsonl": {
+      "offset": 225532,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-14.jsonl": {
+      "offset": 236242,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-19.jsonl": {
+      "offset": 19157,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-21.jsonl": {
+      "offset": 19562,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-26.jsonl": {
+      "offset": 85289,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-27.jsonl": {
+      "offset": 28057,
+      "records_projected": 0
+    },
+    "strategy_observations/NZDUSD/2026-08-28.jsonl": {
+      "offset": 20065,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-07-29.jsonl": {
+      "offset": 62136,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-07-30.jsonl": {
+      "offset": 88084,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-07-31.jsonl": {
+      "offset": 107384,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-03.jsonl": {
+      "offset": 97773,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-04.jsonl": {
+      "offset": 124554,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-05.jsonl": {
+      "offset": 132972,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-06.jsonl": {
+      "offset": 119351,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-07.jsonl": {
+      "offset": 140848,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-10.jsonl": {
+      "offset": 149119,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-11.jsonl": {
+      "offset": 139841,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-12.jsonl": {
+      "offset": 134356,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-13.jsonl": {
+      "offset": 118396,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-14.jsonl": {
+      "offset": 113311,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-19.jsonl": {
+      "offset": 9739,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-21.jsonl": {
+      "offset": 6980,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-26.jsonl": {
+      "offset": 41674,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-27.jsonl": {
+      "offset": 11106,
+      "records_projected": 0
+    },
+    "strategy_observations/US500/2026-08-28.jsonl": {
+      "offset": 4367,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-07-28.jsonl": {
+      "offset": 74054,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-07-29.jsonl": {
+      "offset": 177609,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-07-30.jsonl": {
+      "offset": 137921,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-07-31.jsonl": {
+      "offset": 166754,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-03.jsonl": {
+      "offset": 162945,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-04.jsonl": {
+      "offset": 211800,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-05.jsonl": {
+      "offset": 227429,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-06.jsonl": {
+      "offset": 182280,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-07.jsonl": {
+      "offset": 223205,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-10.jsonl": {
+      "offset": 262374,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-11.jsonl": {
+      "offset": 227214,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-12.jsonl": {
+      "offset": 235160,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-13.jsonl": {
+      "offset": 228291,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-14.jsonl": {
+      "offset": 232415,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-19.jsonl": {
+      "offset": 24390,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-21.jsonl": {
+      "offset": 16770,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-26.jsonl": {
+      "offset": 76407,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-27.jsonl": {
+      "offset": 19460,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCAD/2026-08-28.jsonl": {
+      "offset": 11555,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-07-28.jsonl": {
+      "offset": 72687,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-07-29.jsonl": {
+      "offset": 163973,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-07-30.jsonl": {
+      "offset": 159175,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-07-31.jsonl": {
+      "offset": 154541,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-03.jsonl": {
+      "offset": 169062,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-04.jsonl": {
+      "offset": 204468,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-05.jsonl": {
+      "offset": 227757,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-06.jsonl": {
+      "offset": 216679,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-07.jsonl": {
+      "offset": 204860,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-10.jsonl": {
+      "offset": 231650,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-11.jsonl": {
+      "offset": 220278,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-12.jsonl": {
+      "offset": 227488,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-13.jsonl": {
+      "offset": 219113,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-14.jsonl": {
+      "offset": 215138,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-19.jsonl": {
+      "offset": 21715,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-21.jsonl": {
+      "offset": 13850,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-26.jsonl": {
+      "offset": 68359,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-27.jsonl": {
+      "offset": 27354,
+      "records_projected": 0
+    },
+    "strategy_observations/USDCHF/2026-08-28.jsonl": {
+      "offset": 14307,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-07-28.jsonl": {
+      "offset": 48077,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-07-29.jsonl": {
+      "offset": 89889,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-07-30.jsonl": {
+      "offset": 97382,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-07-31.jsonl": {
+      "offset": 108911,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-03.jsonl": {
+      "offset": 91513,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-04.jsonl": {
+      "offset": 119217,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-05.jsonl": {
+      "offset": 143043,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-06.jsonl": {
+      "offset": 105898,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-07.jsonl": {
+      "offset": 105175,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-10.jsonl": {
+      "offset": 134864,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-11.jsonl": {
+      "offset": 133705,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-12.jsonl": {
+      "offset": 125780,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-13.jsonl": {
+      "offset": 123513,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-14.jsonl": {
+      "offset": 141914,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-19.jsonl": {
+      "offset": 16217,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-21.jsonl": {
+      "offset": 4061,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-26.jsonl": {
+      "offset": 37343,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-27.jsonl": {
+      "offset": 13973,
+      "records_projected": 0
+    },
+    "strategy_observations/USDJPY/2026-08-28.jsonl": {
+      "offset": 5826,
+      "records_projected": 0
+    },
+    "strategy_observations/X/2026-07-27.jsonl": {
+      "offset": 110,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-07-29.jsonl": {
+      "offset": 73148,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-07-30.jsonl": {
+      "offset": 99098,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-07-31.jsonl": {
+      "offset": 116477,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-03.jsonl": {
+      "offset": 124362,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-04.jsonl": {
+      "offset": 151516,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-05.jsonl": {
+      "offset": 165124,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-06.jsonl": {
+      "offset": 180609,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-07.jsonl": {
+      "offset": 181404,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-10.jsonl": {
+      "offset": 157197,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-11.jsonl": {
+      "offset": 168211,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-12.jsonl": {
+      "offset": 189409,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-13.jsonl": {
+      "offset": 158040,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-14.jsonl": {
+      "offset": 173483,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-19.jsonl": {
+      "offset": 10947,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-21.jsonl": {
+      "offset": 15127,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-26.jsonl": {
+      "offset": 55417,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-27.jsonl": {
+      "offset": 9682,
+      "records_projected": 0
+    },
+    "strategy_observations/XAUUSD/2026-08-28.jsonl": {
+      "offset": 17367,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-07-24.jsonl": {
+      "offset": 184037,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-07-27.jsonl": {
+      "offset": 242164,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-07-28.jsonl": {
+      "offset": 147118,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-07-29.jsonl": {
+      "offset": 368314,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-07-30.jsonl": {
+      "offset": 254860,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-07-31.jsonl": {
+      "offset": 258245,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-03.jsonl": {
+      "offset": 346059,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-04.jsonl": {
+      "offset": 335586,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-05.jsonl": {
+      "offset": 400559,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-06.jsonl": {
+      "offset": 347405,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-07.jsonl": {
+      "offset": 328311,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-09.jsonl": {
+      "offset": 31456,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-10.jsonl": {
+      "offset": 424892,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-11.jsonl": {
+      "offset": 375500,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-12.jsonl": {
+      "offset": 445279,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-13.jsonl": {
+      "offset": 391698,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-14.jsonl": {
+      "offset": 352852,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-19.jsonl": {
+      "offset": 42715,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-21.jsonl": {
+      "offset": 32576,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-26.jsonl": {
+      "offset": 171244,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-27.jsonl": {
+      "offset": 17095,
+      "records_projected": 0
+    },
+    "opportunities/AUDUSD/2026-08-28.jsonl": {
+      "offset": 14739,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-07-24.jsonl": {
+      "offset": 141448,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-07-27.jsonl": {
+      "offset": 190095,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-07-28.jsonl": {
+      "offset": 98872,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-07-29.jsonl": {
+      "offset": 294897,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-07-30.jsonl": {
+      "offset": 218265,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-07-31.jsonl": {
+      "offset": 227546,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-03.jsonl": {
+      "offset": 293913,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-04.jsonl": {
+      "offset": 295049,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-05.jsonl": {
+      "offset": 295019,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-06.jsonl": {
+      "offset": 315108,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-07.jsonl": {
+      "offset": 270176,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-09.jsonl": {
+      "offset": 40464,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-10.jsonl": {
+      "offset": 300545,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-11.jsonl": {
+      "offset": 300740,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-12.jsonl": {
+      "offset": 332818,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-13.jsonl": {
+      "offset": 282295,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-14.jsonl": {
+      "offset": 324541,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-19.jsonl": {
+      "offset": 35564,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-21.jsonl": {
+      "offset": 18088,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-26.jsonl": {
+      "offset": 127970,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-27.jsonl": {
+      "offset": 12332,
+      "records_projected": 0
+    },
+    "opportunities/EURUSD/2026-08-28.jsonl": {
+      "offset": 12080,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-07-24.jsonl": {
+      "offset": 147809,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-07-27.jsonl": {
+      "offset": 222835,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-07-28.jsonl": {
+      "offset": 132853,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-07-29.jsonl": {
+      "offset": 309764,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-07-30.jsonl": {
+      "offset": 255194,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-07-31.jsonl": {
+      "offset": 228568,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-03.jsonl": {
+      "offset": 312219,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-04.jsonl": {
+      "offset": 323079,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-05.jsonl": {
+      "offset": 351431,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-06.jsonl": {
+      "offset": 335234,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-07.jsonl": {
+      "offset": 319777,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-09.jsonl": {
+      "offset": 39669,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-10.jsonl": {
+      "offset": 404699,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-11.jsonl": {
+      "offset": 405217,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-12.jsonl": {
+      "offset": 375406,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-13.jsonl": {
+      "offset": 361820,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-14.jsonl": {
+      "offset": 349658,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-19.jsonl": {
+      "offset": 25582,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-21.jsonl": {
+      "offset": 25037,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-26.jsonl": {
+      "offset": 161840,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-27.jsonl": {
+      "offset": 14510,
+      "records_projected": 0
+    },
+    "opportunities/GBPUSD/2026-08-28.jsonl": {
+      "offset": 12349,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-07-29.jsonl": {
+      "offset": 127258,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-07-30.jsonl": {
+      "offset": 178269,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-07-31.jsonl": {
+      "offset": 169738,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-03.jsonl": {
+      "offset": 215664,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-04.jsonl": {
+      "offset": 244928,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-05.jsonl": {
+      "offset": 273541,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-06.jsonl": {
+      "offset": 281536,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-07.jsonl": {
+      "offset": 227377,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-09.jsonl": {
+      "offset": 26661,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-10.jsonl": {
+      "offset": 283594,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-11.jsonl": {
+      "offset": 287054,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-12.jsonl": {
+      "offset": 232152,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-13.jsonl": {
+      "offset": 274001,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-14.jsonl": {
+      "offset": 228528,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-19.jsonl": {
+      "offset": 16232,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-21.jsonl": {
+      "offset": 15544,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-26.jsonl": {
+      "offset": 95945,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-27.jsonl": {
+      "offset": 12153,
+      "records_projected": 0
+    },
+    "opportunities/NAS100/2026-08-28.jsonl": {
+      "offset": 4848,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-07-24.jsonl": {
+      "offset": 159427,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-07-27.jsonl": {
+      "offset": 254453,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-07-28.jsonl": {
+      "offset": 162311,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-07-29.jsonl": {
+      "offset": 358795,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-07-30.jsonl": {
+      "offset": 245244,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-07-31.jsonl": {
+      "offset": 239432,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-03.jsonl": {
+      "offset": 331783,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-04.jsonl": {
+      "offset": 350935,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-05.jsonl": {
+      "offset": 408603,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-06.jsonl": {
+      "offset": 358570,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-07.jsonl": {
+      "offset": 326848,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-09.jsonl": {
+      "offset": 35530,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-10.jsonl": {
+      "offset": 439395,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-11.jsonl": {
+      "offset": 363106,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-12.jsonl": {
+      "offset": 431754,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-13.jsonl": {
+      "offset": 369517,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-14.jsonl": {
+      "offset": 390967,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-19.jsonl": {
+      "offset": 35852,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-21.jsonl": {
+      "offset": 32854,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-26.jsonl": {
+      "offset": 189980,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-27.jsonl": {
+      "offset": 24251,
+      "records_projected": 0
+    },
+    "opportunities/NZDUSD/2026-08-28.jsonl": {
+      "offset": 12195,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-07-29.jsonl": {
+      "offset": 134620,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-07-30.jsonl": {
+      "offset": 134733,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-07-31.jsonl": {
+      "offset": 160861,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-03.jsonl": {
+      "offset": 169959,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-04.jsonl": {
+      "offset": 199354,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-05.jsonl": {
+      "offset": 225146,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-06.jsonl": {
+      "offset": 199638,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-07.jsonl": {
+      "offset": 212156,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-09.jsonl": {
+      "offset": 13221,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-10.jsonl": {
+      "offset": 237923,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-11.jsonl": {
+      "offset": 237240,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-12.jsonl": {
+      "offset": 213526,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-13.jsonl": {
+      "offset": 203397,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-14.jsonl": {
+      "offset": 173734,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-19.jsonl": {
+      "offset": 18552,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-21.jsonl": {
+      "offset": 10915,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-26.jsonl": {
+      "offset": 88258,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-27.jsonl": {
+      "offset": 2401,
+      "records_projected": 0
+    },
+    "opportunities/US500/2026-08-28.jsonl": {
+      "offset": 4804,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-07-24.jsonl": {
+      "offset": 177675,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-07-27.jsonl": {
+      "offset": 224458,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-07-28.jsonl": {
+      "offset": 155088,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-07-29.jsonl": {
+      "offset": 337152,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-07-30.jsonl": {
+      "offset": 240645,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-07-31.jsonl": {
+      "offset": 231996,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-03.jsonl": {
+      "offset": 296481,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-04.jsonl": {
+      "offset": 350209,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-05.jsonl": {
+      "offset": 380947,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-06.jsonl": {
+      "offset": 287202,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-07.jsonl": {
+      "offset": 355900,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-09.jsonl": {
+      "offset": 36580,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-10.jsonl": {
+      "offset": 431019,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-11.jsonl": {
+      "offset": 357728,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-12.jsonl": {
+      "offset": 403163,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-13.jsonl": {
+      "offset": 375992,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-14.jsonl": {
+      "offset": 364265,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-19.jsonl": {
+      "offset": 42659,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-21.jsonl": {
+      "offset": 27560,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-26.jsonl": {
+      "offset": 164322,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-27.jsonl": {
+      "offset": 14640,
+      "records_projected": 0
+    },
+    "opportunities/USDCAD/2026-08-28.jsonl": {
+      "offset": 7342,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-07-24.jsonl": {
+      "offset": 158603,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-07-27.jsonl": {
+      "offset": 203019,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-07-28.jsonl": {
+      "offset": 138855,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-07-29.jsonl": {
+      "offset": 325746,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-07-30.jsonl": {
+      "offset": 274694,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-07-31.jsonl": {
+      "offset": 204972,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-03.jsonl": {
+      "offset": 315776,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-04.jsonl": {
+      "offset": 324937,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-05.jsonl": {
+      "offset": 370495,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-06.jsonl": {
+      "offset": 353806,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-07.jsonl": {
+      "offset": 312822,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-09.jsonl": {
+      "offset": 29723,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-10.jsonl": {
+      "offset": 396316,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-11.jsonl": {
+      "offset": 355283,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-12.jsonl": {
+      "offset": 392777,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-13.jsonl": {
+      "offset": 345189,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-14.jsonl": {
+      "offset": 340584,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-19.jsonl": {
+      "offset": 37874,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-21.jsonl": {
+      "offset": 22393,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-26.jsonl": {
+      "offset": 164255,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-27.jsonl": {
+      "offset": 15868,
+      "records_projected": 0
+    },
+    "opportunities/USDCHF/2026-08-28.jsonl": {
+      "offset": 9729,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-07-24.jsonl": {
+      "offset": 106079,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-07-27.jsonl": {
+      "offset": 124064,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-07-28.jsonl": {
+      "offset": 95160,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-07-29.jsonl": {
+      "offset": 183769,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-07-30.jsonl": {
+      "offset": 162367,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-07-31.jsonl": {
+      "offset": 146046,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-03.jsonl": {
+      "offset": 173633,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-04.jsonl": {
+      "offset": 191192,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-05.jsonl": {
+      "offset": 227288,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-06.jsonl": {
+      "offset": 168701,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-07.jsonl": {
+      "offset": 165342,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-09.jsonl": {
+      "offset": 18514,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-10.jsonl": {
+      "offset": 233680,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-11.jsonl": {
+      "offset": 215993,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-12.jsonl": {
+      "offset": 206433,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-13.jsonl": {
+      "offset": 203614,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-14.jsonl": {
+      "offset": 227001,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-19.jsonl": {
+      "offset": 28078,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-21.jsonl": {
+      "offset": 6697,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-26.jsonl": {
+      "offset": 86406,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-27.jsonl": {
+      "offset": 4848,
+      "records_projected": 0
+    },
+    "opportunities/USDJPY/2026-08-28.jsonl": {
+      "offset": 4974,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-07-29.jsonl": {
+      "offset": 167730,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-07-30.jsonl": {
+      "offset": 157778,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-07-31.jsonl": {
+      "offset": 163433,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-03.jsonl": {
+      "offset": 226098,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-04.jsonl": {
+      "offset": 250683,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-05.jsonl": {
+      "offset": 282901,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-06.jsonl": {
+      "offset": 294405,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-07.jsonl": {
+      "offset": 288697,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-09.jsonl": {
+      "offset": 18019,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-10.jsonl": {
+      "offset": 270026,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-11.jsonl": {
+      "offset": 280122,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-12.jsonl": {
+      "offset": 312880,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-13.jsonl": {
+      "offset": 247447,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-14.jsonl": {
+      "offset": 275775,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-19.jsonl": {
+      "offset": 19082,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-21.jsonl": {
+      "offset": 25022,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-26.jsonl": {
+      "offset": 117256,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-27.jsonl": {
+      "offset": 22114,
+      "records_projected": 0
+    },
+    "opportunities/XAUUSD/2026-08-28.jsonl": {
+      "offset": 7259,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-07-22.jsonl": {
+      "offset": 95385,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-07-23.jsonl": {
+      "offset": 448417,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-07-24.jsonl": {
+      "offset": 241872,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-07-27.jsonl": {
+      "offset": 225747,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-07-28.jsonl": {
+      "offset": 195823,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-07-29.jsonl": {
+      "offset": 465980,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-07-30.jsonl": {
+      "offset": 144383,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-07-31.jsonl": {
+      "offset": 117529,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-03.jsonl": {
+      "offset": 174645,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-04.jsonl": {
+      "offset": 183328,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-05.jsonl": {
+      "offset": 208944,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-06.jsonl": {
+      "offset": 212287,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-07.jsonl": {
+      "offset": 189182,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-09.jsonl": {
+      "offset": 25798,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-10.jsonl": {
+      "offset": 218343,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-11.jsonl": {
+      "offset": 217319,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-12.jsonl": {
+      "offset": 218618,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-13.jsonl": {
+      "offset": 218902,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-14.jsonl": {
+      "offset": 189981,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-19.jsonl": {
+      "offset": 15100,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-21.jsonl": {
+      "offset": 27208,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-26.jsonl": {
+      "offset": 122002,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-27.jsonl": {
+      "offset": 11690,
+      "records_projected": 0
+    },
+    "decision_ledger/AUDUSD/2026-08-28.jsonl": {
+      "offset": 7346,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-07-22.jsonl": {
+      "offset": 83334,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-07-23.jsonl": {
+      "offset": 397225,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-07-24.jsonl": {
+      "offset": 188827,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-07-27.jsonl": {
+      "offset": 276338,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-07-28.jsonl": {
+      "offset": 167005,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-07-29.jsonl": {
+      "offset": 416441,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-07-30.jsonl": {
+      "offset": 149969,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-07-31.jsonl": {
+      "offset": 119080,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-03.jsonl": {
+      "offset": 173372,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-04.jsonl": {
+      "offset": 181344,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-05.jsonl": {
+      "offset": 205463,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-06.jsonl": {
+      "offset": 212014,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-07.jsonl": {
+      "offset": 186845,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-09.jsonl": {
+      "offset": 26128,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-10.jsonl": {
+      "offset": 214552,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-11.jsonl": {
+      "offset": 214878,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-12.jsonl": {
+      "offset": 214779,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-13.jsonl": {
+      "offset": 213431,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-14.jsonl": {
+      "offset": 188875,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-19.jsonl": {
+      "offset": 15595,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-21.jsonl": {
+      "offset": 20439,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-26.jsonl": {
+      "offset": 117518,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-27.jsonl": {
+      "offset": 10074,
+      "records_projected": 0
+    },
+    "decision_ledger/EURUSD/2026-08-28.jsonl": {
+      "offset": 6891,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-07-22.jsonl": {
+      "offset": 89731,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-07-23.jsonl": {
+      "offset": 419659,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-07-24.jsonl": {
+      "offset": 190043,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-07-27.jsonl": {
+      "offset": 281790,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-07-28.jsonl": {
+      "offset": 184841,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-07-29.jsonl": {
+      "offset": 416625,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-07-30.jsonl": {
+      "offset": 137558,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-07-31.jsonl": {
+      "offset": 118694,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-03.jsonl": {
+      "offset": 173255,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-04.jsonl": {
+      "offset": 183203,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-05.jsonl": {
+      "offset": 207140,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-06.jsonl": {
+      "offset": 211093,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-07.jsonl": {
+      "offset": 188812,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-09.jsonl": {
+      "offset": 25964,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-10.jsonl": {
+      "offset": 217956,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-11.jsonl": {
+      "offset": 217941,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-12.jsonl": {
+      "offset": 215855,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-13.jsonl": {
+      "offset": 217623,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-14.jsonl": {
+      "offset": 189748,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-19.jsonl": {
+      "offset": 14562,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-21.jsonl": {
+      "offset": 23428,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-26.jsonl": {
+      "offset": 123413,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-27.jsonl": {
+      "offset": 10545,
+      "records_projected": 0
+    },
+    "decision_ledger/GBPUSD/2026-08-28.jsonl": {
+      "offset": 6903,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-07-29.jsonl": {
+      "offset": 216893,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-07-30.jsonl": {
+      "offset": 129113,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-07-31.jsonl": {
+      "offset": 114927,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-03.jsonl": {
+      "offset": 162037,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-04.jsonl": {
+      "offset": 171960,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-05.jsonl": {
+      "offset": 193331,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-06.jsonl": {
+      "offset": 202051,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-07.jsonl": {
+      "offset": 186030,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-09.jsonl": {
+      "offset": 17930,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-10.jsonl": {
+      "offset": 205513,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-11.jsonl": {
+      "offset": 205400,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-12.jsonl": {
+      "offset": 202874,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-13.jsonl": {
+      "offset": 205034,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-14.jsonl": {
+      "offset": 186264,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-19.jsonl": {
+      "offset": 14326,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-21.jsonl": {
+      "offset": 20273,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-26.jsonl": {
+      "offset": 99785,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-27.jsonl": {
+      "offset": 11662,
+      "records_projected": 0
+    },
+    "decision_ledger/NAS100/2026-08-28.jsonl": {
+      "offset": 4845,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-07-22.jsonl": {
+      "offset": 90738,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-07-23.jsonl": {
+      "offset": 503555,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-07-24.jsonl": {
+      "offset": 216042,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-07-27.jsonl": {
+      "offset": 317205,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-07-28.jsonl": {
+      "offset": 219425,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-07-29.jsonl": {
+      "offset": 463441,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-07-30.jsonl": {
+      "offset": 135980,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-07-31.jsonl": {
+      "offset": 117101,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-03.jsonl": {
+      "offset": 172761,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-04.jsonl": {
+      "offset": 182458,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-05.jsonl": {
+      "offset": 208278,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-06.jsonl": {
+      "offset": 212160,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-07.jsonl": {
+      "offset": 188842,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-09.jsonl": {
+      "offset": 25298,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-10.jsonl": {
+      "offset": 218507,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-11.jsonl": {
+      "offset": 216067,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-12.jsonl": {
+      "offset": 217169,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-13.jsonl": {
+      "offset": 216008,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-14.jsonl": {
+      "offset": 191087,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-19.jsonl": {
+      "offset": 14965,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-21.jsonl": {
+      "offset": 27231,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-26.jsonl": {
+      "offset": 124822,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-27.jsonl": {
+      "offset": 13820,
+      "records_projected": 0
+    },
+    "decision_ledger/NZDUSD/2026-08-28.jsonl": {
+      "offset": 6896,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-07-29.jsonl": {
+      "offset": 226508,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-07-30.jsonl": {
+      "offset": 115844,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-07-31.jsonl": {
+      "offset": 113694,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-03.jsonl": {
+      "offset": 160630,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-04.jsonl": {
+      "offset": 170743,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-05.jsonl": {
+      "offset": 191833,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-06.jsonl": {
+      "offset": 198588,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-07.jsonl": {
+      "offset": 184900,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-09.jsonl": {
+      "offset": 17427,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-10.jsonl": {
+      "offset": 203720,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-11.jsonl": {
+      "offset": 203431,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-12.jsonl": {
+      "offset": 202248,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-13.jsonl": {
+      "offset": 202368,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-14.jsonl": {
+      "offset": 183713,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-19.jsonl": {
+      "offset": 14289,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-21.jsonl": {
+      "offset": 18175,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-26.jsonl": {
+      "offset": 97942,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-27.jsonl": {
+      "offset": 9931,
+      "records_projected": 0
+    },
+    "decision_ledger/US500/2026-08-28.jsonl": {
+      "offset": 4818,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-07-22.jsonl": {
+      "offset": 80592,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-07-23.jsonl": {
+      "offset": 394210,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-07-24.jsonl": {
+      "offset": 224987,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-07-27.jsonl": {
+      "offset": 293236,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-07-28.jsonl": {
+      "offset": 177412,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-07-29.jsonl": {
+      "offset": 415875,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-07-30.jsonl": {
+      "offset": 159019,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-07-31.jsonl": {
+      "offset": 117421,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-03.jsonl": {
+      "offset": 173247,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-04.jsonl": {
+      "offset": 182734,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-05.jsonl": {
+      "offset": 207826,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-06.jsonl": {
+      "offset": 210379,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-07.jsonl": {
+      "offset": 189454,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-09.jsonl": {
+      "offset": 25907,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-10.jsonl": {
+      "offset": 218531,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-11.jsonl": {
+      "offset": 216576,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-12.jsonl": {
+      "offset": 216528,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-13.jsonl": {
+      "offset": 216806,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-14.jsonl": {
+      "offset": 190054,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-19.jsonl": {
+      "offset": 15102,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-21.jsonl": {
+      "offset": 25221,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-26.jsonl": {
+      "offset": 121342,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-27.jsonl": {
+      "offset": 11261,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCAD/2026-08-28.jsonl": {
+      "offset": 6042,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-07-22.jsonl": {
+      "offset": 105494,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-07-23.jsonl": {
+      "offset": 424380,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-07-24.jsonl": {
+      "offset": 223389,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-07-27.jsonl": {
+      "offset": 271214,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-07-28.jsonl": {
+      "offset": 201813,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-07-29.jsonl": {
+      "offset": 450605,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-07-30.jsonl": {
+      "offset": 158172,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-07-31.jsonl": {
+      "offset": 117508,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-03.jsonl": {
+      "offset": 173532,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-04.jsonl": {
+      "offset": 181512,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-05.jsonl": {
+      "offset": 206481,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-06.jsonl": {
+      "offset": 212343,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-07.jsonl": {
+      "offset": 188484,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-09.jsonl": {
+      "offset": 24275,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-10.jsonl": {
+      "offset": 216783,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-11.jsonl": {
+      "offset": 215972,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-12.jsonl": {
+      "offset": 215990,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-13.jsonl": {
+      "offset": 215035,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-14.jsonl": {
+      "offset": 189417,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-19.jsonl": {
+      "offset": 14998,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-21.jsonl": {
+      "offset": 23256,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-26.jsonl": {
+      "offset": 120575,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-27.jsonl": {
+      "offset": 11684,
+      "records_projected": 0
+    },
+    "decision_ledger/USDCHF/2026-08-28.jsonl": {
+      "offset": 6483,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-07-22.jsonl": {
+      "offset": 76236,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-07-23.jsonl": {
+      "offset": 316396,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-07-24.jsonl": {
+      "offset": 134324,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-07-27.jsonl": {
+      "offset": 209529,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-07-28.jsonl": {
+      "offset": 159931,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-07-29.jsonl": {
+      "offset": 344786,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-07-30.jsonl": {
+      "offset": 142959,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-07-31.jsonl": {
+      "offset": 116162,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-03.jsonl": {
+      "offset": 170369,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-04.jsonl": {
+      "offset": 178506,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-05.jsonl": {
+      "offset": 203645,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-06.jsonl": {
+      "offset": 206366,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-07.jsonl": {
+      "offset": 183818,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-09.jsonl": {
+      "offset": 25320,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-10.jsonl": {
+      "offset": 212395,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-11.jsonl": {
+      "offset": 212146,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-12.jsonl": {
+      "offset": 210422,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-13.jsonl": {
+      "offset": 211393,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-14.jsonl": {
+      "offset": 185881,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-19.jsonl": {
+      "offset": 14695,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-21.jsonl": {
+      "offset": 16235,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-26.jsonl": {
+      "offset": 109105,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-27.jsonl": {
+      "offset": 10386,
+      "records_projected": 0
+    },
+    "decision_ledger/USDJPY/2026-08-28.jsonl": {
+      "offset": 5617,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-07-29.jsonl": {
+      "offset": 252190,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-07-30.jsonl": {
+      "offset": 119967,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-07-31.jsonl": {
+      "offset": 114170,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-03.jsonl": {
+      "offset": 162499,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-04.jsonl": {
+      "offset": 171583,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-05.jsonl": {
+      "offset": 193771,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-06.jsonl": {
+      "offset": 202500,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-07.jsonl": {
+      "offset": 187998,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-09.jsonl": {
+      "offset": 17632,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-10.jsonl": {
+      "offset": 204864,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-11.jsonl": {
+      "offset": 205391,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-12.jsonl": {
+      "offset": 206072,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-13.jsonl": {
+      "offset": 204367,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-14.jsonl": {
+      "offset": 187304,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-19.jsonl": {
+      "offset": 14480,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-21.jsonl": {
+      "offset": 24271,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-26.jsonl": {
+      "offset": 102924,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-27.jsonl": {
+      "offset": 12176,
+      "records_projected": 0
+    },
+    "decision_ledger/XAUUSD/2026-08-28.jsonl": {
+      "offset": 5249,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-07-22.jsonl": {
+      "offset": 34134,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-07-23.jsonl": {
+      "offset": 118154,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-07-24.jsonl": {
+      "offset": 55672,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-07-27.jsonl": {
+      "offset": 71289,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-07-28.jsonl": {
+      "offset": 47460,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-07-29.jsonl": {
+      "offset": 110500,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-07-30.jsonl": {
+      "offset": 86679,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-07-31.jsonl": {
+      "offset": 101241,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-03.jsonl": {
+      "offset": 106102,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-04.jsonl": {
+      "offset": 128511,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-05.jsonl": {
+      "offset": 147826,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-06.jsonl": {
+      "offset": 151350,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-07.jsonl": {
+      "offset": 149360,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-10.jsonl": {
+      "offset": 151666,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-11.jsonl": {
+      "offset": 151838,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-12.jsonl": {
+      "offset": 151918,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-13.jsonl": {
+      "offset": 153076,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-14.jsonl": {
+      "offset": 155913,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-19.jsonl": {
+      "offset": 12182,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-21.jsonl": {
+      "offset": 8897,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-26.jsonl": {
+      "offset": 45328,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-27.jsonl": {
+      "offset": 20299,
+      "records_projected": 0
+    },
+    "execution_context/AUDUSD/2026-08-28.jsonl": {
+      "offset": 9918,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-07-22.jsonl": {
+      "offset": 36945,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-07-23.jsonl": {
+      "offset": 117159,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-07-24.jsonl": {
+      "offset": 54420,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-07-27.jsonl": {
+      "offset": 70970,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-07-28.jsonl": {
+      "offset": 45710,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-07-29.jsonl": {
+      "offset": 109301,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-07-30.jsonl": {
+      "offset": 86799,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-07-31.jsonl": {
+      "offset": 103297,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-03.jsonl": {
+      "offset": 105718,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-04.jsonl": {
+      "offset": 125936,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-05.jsonl": {
+      "offset": 143425,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-06.jsonl": {
+      "offset": 151928,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-07.jsonl": {
+      "offset": 150924,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-10.jsonl": {
+      "offset": 151164,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-11.jsonl": {
+      "offset": 151808,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-12.jsonl": {
+      "offset": 151538,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-13.jsonl": {
+      "offset": 150205,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-14.jsonl": {
+      "offset": 157838,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-19.jsonl": {
+      "offset": 14219,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-21.jsonl": {
+      "offset": 8335,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-26.jsonl": {
+      "offset": 45651,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-27.jsonl": {
+      "offset": 21423,
+      "records_projected": 0
+    },
+    "execution_context/EURUSD/2026-08-28.jsonl": {
+      "offset": 9890,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-07-22.jsonl": {
+      "offset": 38560,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-07-23.jsonl": {
+      "offset": 116994,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-07-24.jsonl": {
+      "offset": 54325,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-07-27.jsonl": {
+      "offset": 70468,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-07-28.jsonl": {
+      "offset": 45362,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-07-29.jsonl": {
+      "offset": 108126,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-07-30.jsonl": {
+      "offset": 86542,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-07-31.jsonl": {
+      "offset": 102516,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-03.jsonl": {
+      "offset": 106509,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-04.jsonl": {
+      "offset": 126867,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-05.jsonl": {
+      "offset": 146068,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-06.jsonl": {
+      "offset": 151206,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-07.jsonl": {
+      "offset": 149205,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-10.jsonl": {
+      "offset": 152345,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-11.jsonl": {
+      "offset": 152242,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-12.jsonl": {
+      "offset": 152911,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-13.jsonl": {
+      "offset": 152091,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-14.jsonl": {
+      "offset": 161525,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-19.jsonl": {
+      "offset": 10090,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-21.jsonl": {
+      "offset": 8424,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-26.jsonl": {
+      "offset": 46054,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-27.jsonl": {
+      "offset": 21613,
+      "records_projected": 0
+    },
+    "execution_context/GBPUSD/2026-08-28.jsonl": {
+      "offset": 9981,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-07-29.jsonl": {
+      "offset": 49048,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-07-30.jsonl": {
+      "offset": 79633,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-07-31.jsonl": {
+      "offset": 94187,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-03.jsonl": {
+      "offset": 104819,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-04.jsonl": {
+      "offset": 129262,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-05.jsonl": {
+      "offset": 138458,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-06.jsonl": {
+      "offset": 144708,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-07.jsonl": {
+      "offset": 142644,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-10.jsonl": {
+      "offset": 148679,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-11.jsonl": {
+      "offset": 145136,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-12.jsonl": {
+      "offset": 147826,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-13.jsonl": {
+      "offset": 144251,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-14.jsonl": {
+      "offset": 147071,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-19.jsonl": {
+      "offset": 10043,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-21.jsonl": {
+      "offset": 8871,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-26.jsonl": {
+      "offset": 45268,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-27.jsonl": {
+      "offset": 13572,
+      "records_projected": 0
+    },
+    "execution_context/NAS100/2026-08-28.jsonl": {
+      "offset": 9916,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-07-22.jsonl": {
+      "offset": 33213,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-07-23.jsonl": {
+      "offset": 119265,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-07-24.jsonl": {
+      "offset": 54782,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-07-27.jsonl": {
+      "offset": 74022,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-07-28.jsonl": {
+      "offset": 48534,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-07-29.jsonl": {
+      "offset": 111132,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-07-30.jsonl": {
+      "offset": 85666,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-07-31.jsonl": {
+      "offset": 100321,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-03.jsonl": {
+      "offset": 106302,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-04.jsonl": {
+      "offset": 127107,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-05.jsonl": {
+      "offset": 145855,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-06.jsonl": {
+      "offset": 151016,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-07.jsonl": {
+      "offset": 148495,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-10.jsonl": {
+      "offset": 150778,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-11.jsonl": {
+      "offset": 151486,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-12.jsonl": {
+      "offset": 153670,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-13.jsonl": {
+      "offset": 150648,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-14.jsonl": {
+      "offset": 161366,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-19.jsonl": {
+      "offset": 11664,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-21.jsonl": {
+      "offset": 8896,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-26.jsonl": {
+      "offset": 45937,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-27.jsonl": {
+      "offset": 19753,
+      "records_projected": 0
+    },
+    "execution_context/NZDUSD/2026-08-28.jsonl": {
+      "offset": 10555,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-07-29.jsonl": {
+      "offset": 48699,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-07-30.jsonl": {
+      "offset": 78018,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-07-31.jsonl": {
+      "offset": 92978,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-03.jsonl": {
+      "offset": 107258,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-04.jsonl": {
+      "offset": 126770,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-05.jsonl": {
+      "offset": 140661,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-06.jsonl": {
+      "offset": 143688,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-07.jsonl": {
+      "offset": 141151,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-10.jsonl": {
+      "offset": 145502,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-11.jsonl": {
+      "offset": 144108,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-12.jsonl": {
+      "offset": 145190,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-13.jsonl": {
+      "offset": 148019,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-14.jsonl": {
+      "offset": 143499,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-19.jsonl": {
+      "offset": 11016,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-21.jsonl": {
+      "offset": 8803,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-26.jsonl": {
+      "offset": 44927,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-27.jsonl": {
+      "offset": 13474,
+      "records_projected": 0
+    },
+    "execution_context/US500/2026-08-28.jsonl": {
+      "offset": 9832,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-07-22.jsonl": {
+      "offset": 33386,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-07-23.jsonl": {
+      "offset": 119492,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-07-24.jsonl": {
+      "offset": 57542,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-07-27.jsonl": {
+      "offset": 75880,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-07-28.jsonl": {
+      "offset": 49461,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-07-29.jsonl": {
+      "offset": 108594,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-07-30.jsonl": {
+      "offset": 86655,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-07-31.jsonl": {
+      "offset": 101985,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-03.jsonl": {
+      "offset": 106154,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-04.jsonl": {
+      "offset": 127197,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-05.jsonl": {
+      "offset": 147126,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-06.jsonl": {
+      "offset": 152704,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-07.jsonl": {
+      "offset": 150729,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-10.jsonl": {
+      "offset": 152028,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-11.jsonl": {
+      "offset": 152793,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-12.jsonl": {
+      "offset": 152712,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-13.jsonl": {
+      "offset": 151584,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-14.jsonl": {
+      "offset": 152596,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-19.jsonl": {
+      "offset": 10127,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-21.jsonl": {
+      "offset": 8952,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-26.jsonl": {
+      "offset": 46148,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-27.jsonl": {
+      "offset": 20365,
+      "records_projected": 0
+    },
+    "execution_context/USDCAD/2026-08-28.jsonl": {
+      "offset": 9958,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-07-22.jsonl": {
+      "offset": 37554,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-07-23.jsonl": {
+      "offset": 118138,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-07-24.jsonl": {
+      "offset": 55672,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-07-27.jsonl": {
+      "offset": 70711,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-07-28.jsonl": {
+      "offset": 46887,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-07-29.jsonl": {
+      "offset": 108274,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-07-30.jsonl": {
+      "offset": 86657,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-07-31.jsonl": {
+      "offset": 99159,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-03.jsonl": {
+      "offset": 105594,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-04.jsonl": {
+      "offset": 125874,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-05.jsonl": {
+      "offset": 145618,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-06.jsonl": {
+      "offset": 151303,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-07.jsonl": {
+      "offset": 149308,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-10.jsonl": {
+      "offset": 150037,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-11.jsonl": {
+      "offset": 151835,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-12.jsonl": {
+      "offset": 151365,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-13.jsonl": {
+      "offset": 151968,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-14.jsonl": {
+      "offset": 152161,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-19.jsonl": {
+      "offset": 10065,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-21.jsonl": {
+      "offset": 8892,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-26.jsonl": {
+      "offset": 45875,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-27.jsonl": {
+      "offset": 19747,
+      "records_projected": 0
+    },
+    "execution_context/USDCHF/2026-08-28.jsonl": {
+      "offset": 9928,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-07-22.jsonl": {
+      "offset": 29691,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-07-23.jsonl": {
+      "offset": 116541,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-07-24.jsonl": {
+      "offset": 53687,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-07-27.jsonl": {
+      "offset": 69665,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-07-28.jsonl": {
+      "offset": 45799,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-07-29.jsonl": {
+      "offset": 106551,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-07-30.jsonl": {
+      "offset": 85573,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-07-31.jsonl": {
+      "offset": 101168,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-03.jsonl": {
+      "offset": 105580,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-04.jsonl": {
+      "offset": 126900,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-05.jsonl": {
+      "offset": 144467,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-06.jsonl": {
+      "offset": 153371,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-07.jsonl": {
+      "offset": 149223,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-10.jsonl": {
+      "offset": 156887,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-11.jsonl": {
+      "offset": 151758,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-12.jsonl": {
+      "offset": 151842,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-13.jsonl": {
+      "offset": 150878,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-14.jsonl": {
+      "offset": 152076,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-19.jsonl": {
+      "offset": 10063,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-21.jsonl": {
+      "offset": 8888,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-26.jsonl": {
+      "offset": 45886,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-27.jsonl": {
+      "offset": 20268,
+      "records_projected": 0
+    },
+    "execution_context/USDJPY/2026-08-28.jsonl": {
+      "offset": 10539,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-07-29.jsonl": {
+      "offset": 50178,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-07-30.jsonl": {
+      "offset": 78711,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-07-31.jsonl": {
+      "offset": 93805,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-03.jsonl": {
+      "offset": 104958,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-04.jsonl": {
+      "offset": 119972,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-05.jsonl": {
+      "offset": 140265,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-06.jsonl": {
+      "offset": 149145,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-07.jsonl": {
+      "offset": 144972,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-10.jsonl": {
+      "offset": 145202,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-11.jsonl": {
+      "offset": 145867,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-12.jsonl": {
+      "offset": 147529,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-13.jsonl": {
+      "offset": 144510,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-14.jsonl": {
+      "offset": 144694,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-19.jsonl": {
+      "offset": 10048,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-21.jsonl": {
+      "offset": 8885,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-26.jsonl": {
+      "offset": 45325,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-27.jsonl": {
+      "offset": 13602,
+      "records_projected": 0
+    },
+    "execution_context/XAUUSD/2026-08-28.jsonl": {
+      "offset": 9931,
+      "records_projected": 0
+    },
+    "execution_results/AUDUSD/2026-07-22.jsonl": {
+      "offset": 2925,
+      "records_projected": 0
+    },
+    "execution_results/AUDUSD/2026-07-23.jsonl": {
+      "offset": 500,
+      "records_projected": 0
+    },
+    "execution_results/AUDUSD/2026-07-24.jsonl": {
+      "offset": 2719,
+      "records_projected": 0
+    },
+    "execution_results/AUDUSD/2026-07-27.jsonl": {
+      "offset": 2887,
+      "records_projected": 0
+    },
+    "execution_results/AUDUSD/2026-07-28.jsonl": {
+      "offset": 3534,
+      "records_projected": 0
+    },
+    "execution_results/AUDUSD/2026-07-29.jsonl": {
+      "offset": 5814,
+      "records_projected": 0
+    },
+    "execution_results/AUDUSD/2026-07-30.jsonl": {
+      "offset": 1492,
+      "records_projected": 0
+    },
+    "execution_results/AUDUSD/2026-08-03.jsonl": {
+      "offset": 1417,
+      "records_projected": 0
+    },
+    "execution_results/AUDUSD/2026-08-04.jsonl": {
+      "offset": 7807,
+      "records_projected": 0
+    },
+    "execution_results/AUDUSD/2026-08-05.jsonl": {
+      "offset": 1500,
+      "records_projected": 0
+    },
+    "execution_results/AUDUSD/2026-08-13.jsonl": {
+      "offset": 3092,
+      "records_projected": 0
+    },
+    "execution_results/AUDUSD/2026-08-14.jsonl": {
+      "offset": 3730,
+      "records_projected": 0
+    },
+    "execution_results/AUDUSD/2026-08-26.jsonl": {
+      "offset": 1490,
+      "records_projected": 0
+    },
+    "execution_results/EURUSD/2026-07-22.jsonl": {
+      "offset": 2967,
+      "records_projected": 0
+    },
+    "execution_results/EURUSD/2026-07-24.jsonl": {
+      "offset": 2673,
+      "records_projected": 0
+    },
+    "execution_results/EURUSD/2026-07-27.jsonl": {
+      "offset": 2925,
+      "records_projected": 0
+    },
+    "execution_results/EURUSD/2026-07-28.jsonl": {
+      "offset": 1443,
+      "records_projected": 0
+    },
+    "execution_results/EURUSD/2026-07-29.jsonl": {
+      "offset": 5773,
+      "records_projected": 0
+    },
+    "execution_results/EURUSD/2026-08-06.jsonl": {
+      "offset": 1591,
+      "records_projected": 0
+    },
+    "execution_results/EURUSD/2026-08-10.jsonl": {
+      "offset": 1543,
+      "records_projected": 0
+    },
+    "execution_results/EURUSD/2026-08-11.jsonl": {
+      "offset": 1403,
+      "records_projected": 0
+    },
+    "execution_results/EURUSD/2026-08-14.jsonl": {
+      "offset": 8153,
+      "records_projected": 0
+    },
+    "execution_results/EURUSD/2026-08-19.jsonl": {
+      "offset": 1609,
+      "records_projected": 0
+    },
+    "execution_results/EURUSD/2026-08-26.jsonl": {
+      "offset": 9775,
+      "records_projected": 0
+    },
+    "execution_results/EURUSD/2026-08-27.jsonl": {
+      "offset": 1544,
+      "records_projected": 0
+    },
+    "execution_results/GBPUSD/2026-07-22.jsonl": {
+      "offset": 2457,
+      "records_projected": 0
+    },
+    "execution_results/GBPUSD/2026-07-23.jsonl": {
+      "offset": 489,
+      "records_projected": 0
+    },
+    "execution_results/GBPUSD/2026-07-24.jsonl": {
+      "offset": 1396,
+      "records_projected": 0
+    },
+    "execution_results/GBPUSD/2026-07-27.jsonl": {
+      "offset": 1477,
+      "records_projected": 0
+    },
+    "execution_results/GBPUSD/2026-07-28.jsonl": {
+      "offset": 1423,
+      "records_projected": 0
+    },
+    "execution_results/GBPUSD/2026-07-29.jsonl": {
+      "offset": 2880,
+      "records_projected": 0
+    },
+    "execution_results/GBPUSD/2026-07-30.jsonl": {
+      "offset": 1481,
+      "records_projected": 0
+    },
+    "execution_results/GBPUSD/2026-08-03.jsonl": {
+      "offset": 1416,
+      "records_projected": 0
+    },
+    "execution_results/GBPUSD/2026-08-05.jsonl": {
+      "offset": 659,
+      "records_projected": 0
+    },
+    "execution_results/GBPUSD/2026-08-10.jsonl": {
+      "offset": 1553,
+      "records_projected": 0
+    },
+    "execution_results/GBPUSD/2026-08-12.jsonl": {
+      "offset": 667,
+      "records_projected": 0
+    },
+    "execution_results/GBPUSD/2026-08-14.jsonl": {
+      "offset": 8906,
+      "records_projected": 0
+    },
+    "execution_results/GBPUSD/2026-08-26.jsonl": {
+      "offset": 3424,
+      "records_projected": 0
+    },
+    "execution_results/NAS100/2026-07-30.jsonl": {
+      "offset": 687,
+      "records_projected": 0
+    },
+    "execution_results/NAS100/2026-08-04.jsonl": {
+      "offset": 1465,
+      "records_projected": 0
+    },
+    "execution_results/NAS100/2026-08-12.jsonl": {
+      "offset": 1322,
+      "records_projected": 0
+    },
+    "execution_results/NAS100/2026-08-14.jsonl": {
+      "offset": 3766,
+      "records_projected": 0
+    },
+    "execution_results/NAS100/2026-08-26.jsonl": {
+      "offset": 4464,
+      "records_projected": 0
+    },
+    "execution_results/NZDUSD/2026-07-22.jsonl": {
+      "offset": 1955,
+      "records_projected": 0
+    },
+    "execution_results/NZDUSD/2026-07-23.jsonl": {
+      "offset": 2511,
+      "records_projected": 0
+    },
+    "execution_results/NZDUSD/2026-07-24.jsonl": {
+      "offset": 2716,
+      "records_projected": 0
+    },
+    "execution_results/NZDUSD/2026-07-27.jsonl": {
+      "offset": 7284,
+      "records_projected": 0
+    },
+    "execution_results/NZDUSD/2026-07-28.jsonl": {
+      "offset": 4350,
+      "records_projected": 0
+    },
+    "execution_results/NZDUSD/2026-07-29.jsonl": {
+      "offset": 7223,
+      "records_projected": 0
+    },
+    "execution_results/NZDUSD/2026-07-30.jsonl": {
+      "offset": 1459,
+      "records_projected": 0
+    },
+    "execution_results/NZDUSD/2026-08-04.jsonl": {
+      "offset": 1461,
+      "records_projected": 0
+    },
+    "execution_results/NZDUSD/2026-08-05.jsonl": {
+      "offset": 2929,
+      "records_projected": 0
+    },
+    "execution_results/NZDUSD/2026-08-12.jsonl": {
+      "offset": 4476,
+      "records_projected": 0
+    },
+    "execution_results/NZDUSD/2026-08-14.jsonl": {
+      "offset": 11474,
+      "records_projected": 0
+    },
+    "execution_results/NZDUSD/2026-08-19.jsonl": {
+      "offset": 677,
+      "records_projected": 0
+    },
+    "execution_results/US500/2026-08-03.jsonl": {
+      "offset": 4088,
+      "records_projected": 0
+    },
+    "execution_results/US500/2026-08-04.jsonl": {
+      "offset": 5731,
+      "records_projected": 0
+    },
+    "execution_results/US500/2026-08-05.jsonl": {
+      "offset": 2973,
+      "records_projected": 0
+    },
+    "execution_results/US500/2026-08-10.jsonl": {
+      "offset": 3682,
+      "records_projected": 0
+    },
+    "execution_results/US500/2026-08-12.jsonl": {
+      "offset": 2981,
+      "records_projected": 0
+    },
+    "execution_results/US500/2026-08-13.jsonl": {
+      "offset": 7639,
+      "records_projected": 0
+    },
+    "execution_results/USDCAD/2026-07-22.jsonl": {
+      "offset": 2974,
+      "records_projected": 0
+    },
+    "execution_results/USDCAD/2026-07-23.jsonl": {
+      "offset": 1471,
+      "records_projected": 0
+    },
+    "execution_results/USDCAD/2026-07-24.jsonl": {
+      "offset": 4052,
+      "records_projected": 0
+    },
+    "execution_results/USDCAD/2026-07-27.jsonl": {
+      "offset": 7280,
+      "records_projected": 0
+    },
+    "execution_results/USDCAD/2026-07-28.jsonl": {
+      "offset": 7206,
+      "records_projected": 0
+    },
+    "execution_results/USDCAD/2026-07-29.jsonl": {
+      "offset": 2914,
+      "records_projected": 0
+    },
+    "execution_results/USDCAD/2026-07-30.jsonl": {
+      "offset": 1477,
+      "records_projected": 0
+    },
+    "execution_results/USDCAD/2026-08-05.jsonl": {
+      "offset": 666,
+      "records_projected": 0
+    },
+    "execution_results/USDCAD/2026-08-06.jsonl": {
+      "offset": 1543,
+      "records_projected": 0
+    },
+    "execution_results/USDCAD/2026-08-26.jsonl": {
+      "offset": 1693,
+      "records_projected": 0
+    },
+    "execution_results/USDCHF/2026-07-22.jsonl": {
+      "offset": 3988,
+      "records_projected": 0
+    },
+    "execution_results/USDCHF/2026-07-23.jsonl": {
+      "offset": 1006,
+      "records_projected": 0
+    },
+    "execution_results/USDCHF/2026-07-24.jsonl": {
+      "offset": 5404,
+      "records_projected": 0
+    },
+    "execution_results/USDCHF/2026-07-27.jsonl": {
+      "offset": 2943,
+      "records_projected": 0
+    },
+    "execution_results/USDCHF/2026-07-28.jsonl": {
+      "offset": 5053,
+      "records_projected": 0
+    },
+    "execution_results/USDCHF/2026-07-29.jsonl": {
+      "offset": 2864,
+      "records_projected": 0
+    },
+    "execution_results/USDCHF/2026-07-30.jsonl": {
+      "offset": 2942,
+      "records_projected": 0
+    },
+    "execution_results/USDCHF/2026-08-11.jsonl": {
+      "offset": 666,
+      "records_projected": 0
+    },
+    "execution_results/USDCHF/2026-08-13.jsonl": {
+      "offset": 1529,
+      "records_projected": 0
+    },
+    "execution_results/USDCHF/2026-08-14.jsonl": {
+      "offset": 2938,
+      "records_projected": 0
+    },
+    "execution_results/USDJPY/2026-07-22.jsonl": {
+      "offset": 988,
+      "records_projected": 0
+    },
+    "execution_results/USDJPY/2026-07-28.jsonl": {
+      "offset": 1455,
+      "records_projected": 0
+    },
+    "execution_results/USDJPY/2026-08-04.jsonl": {
+      "offset": 659,
+      "records_projected": 0
+    },
+    "execution_results/USDJPY/2026-08-06.jsonl": {
+      "offset": 3332,
+      "records_projected": 0
+    },
+    "execution_results/USDJPY/2026-08-10.jsonl": {
+      "offset": 9338,
+      "records_projected": 0
+    },
+    "execution_results/USDJPY/2026-08-14.jsonl": {
+      "offset": 1531,
+      "records_projected": 0
+    },
+    "execution_results/XAUUSD/2026-07-29.jsonl": {
+      "offset": 1437,
+      "records_projected": 0
+    },
+    "execution_results/XAUUSD/2026-08-05.jsonl": {
+      "offset": 1497,
+      "records_projected": 0
+    },
+    "execution_results/XAUUSD/2026-08-06.jsonl": {
+      "offset": 5337,
+      "records_projected": 0
+    },
+    "execution_results/XAUUSD/2026-08-07.jsonl": {
+      "offset": 4478,
+      "records_projected": 0
+    },
+    "execution_results/XAUUSD/2026-08-11.jsonl": {
+      "offset": 1527,
+      "records_projected": 0
+    },
+    "execution_results/XAUUSD/2026-08-12.jsonl": {
+      "offset": 4352,
+      "records_projected": 0
+    },
+    "execution_results/XAUUSD/2026-08-26.jsonl": {
+      "offset": 3389,
+      "records_projected": 0
+    },
+    "trade_truth/AUDUSD/2026-07-22.jsonl": {
+      "offset": 1217,
+      "records_projected": 0
+    },
+    "trade_truth/AUDUSD/2026-07-23.jsonl": {
+      "offset": 610,
+      "records_projected": 0
+    },
+    "trade_truth/AUDUSD/2026-07-24.jsonl": {
+      "offset": 610,
+      "records_projected": 0
+    },
+    "trade_truth/AUDUSD/2026-07-27.jsonl": {
+      "offset": 1221,
+      "records_projected": 0
+    },
+    "trade_truth/AUDUSD/2026-07-28.jsonl": {
+      "offset": 1207,
+      "records_projected": 0
+    },
+    "trade_truth/AUDUSD/2026-07-29.jsonl": {
+      "offset": 2443,
+      "records_projected": 0
+    },
+    "trade_truth/AUDUSD/2026-07-30.jsonl": {
+      "offset": 612,
+      "records_projected": 0
+    },
+    "trade_truth/AUDUSD/2026-08-03.jsonl": {
+      "offset": 608,
+      "records_projected": 0
+    },
+    "trade_truth/AUDUSD/2026-08-04.jsonl": {
+      "offset": 2447,
+      "records_projected": 0
+    },
+    "trade_truth/AUDUSD/2026-08-05.jsonl": {
+      "offset": 603,
+      "records_projected": 0
+    },
+    "trade_truth/AUDUSD/2026-08-13.jsonl": {
+      "offset": 1234,
+      "records_projected": 0
+    },
+    "trade_truth/AUDUSD/2026-08-14.jsonl": {
+      "offset": 1230,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/1970-01-01.jsonl": {
+      "offset": 58446,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2024-06-03.jsonl": {
+      "offset": 3123627,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2024-06-04.jsonl": {
+      "offset": 104310,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2024-07-19.jsonl": {
+      "offset": 581,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-07-22.jsonl": {
+      "offset": 14752,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-07-23.jsonl": {
+      "offset": 8887,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-07-24.jsonl": {
+      "offset": 55700,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-07-25.jsonl": {
+      "offset": 81761,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-07-26.jsonl": {
+      "offset": 31987,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-07-27.jsonl": {
+      "offset": 52763,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-07-28.jsonl": {
+      "offset": 43257,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-07-29.jsonl": {
+      "offset": 19605,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-07-30.jsonl": {
+      "offset": 1778,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-07-31.jsonl": {
+      "offset": 1778,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-08-03.jsonl": {
+      "offset": 1778,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-08-05.jsonl": {
+      "offset": 8890,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-08-06.jsonl": {
+      "offset": 615,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-08-09.jsonl": {
+      "offset": 3556,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-08-10.jsonl": {
+      "offset": 615,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-08-11.jsonl": {
+      "offset": 615,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-08-14.jsonl": {
+      "offset": 8412,
+      "records_projected": 0
+    },
+    "trade_truth/EURUSD/2026-08-26.jsonl": {
+      "offset": 1356,
+      "records_projected": 0
+    },
+    "trade_truth/GBPUSD/2024-06-03.jsonl": {
+      "offset": 103578,
+      "records_projected": 0
+    },
+    "trade_truth/GBPUSD/2026-07-22.jsonl": {
+      "offset": 1217,
+      "records_projected": 0
+    },
+    "trade_truth/GBPUSD/2026-07-23.jsonl": {
+      "offset": 611,
+      "records_projected": 0
+    },
+    "trade_truth/GBPUSD/2026-07-24.jsonl": {
+      "offset": 609,
+      "records_projected": 0
+    },
+    "trade_truth/GBPUSD/2026-07-29.jsonl": {
+      "offset": 1224,
+      "records_projected": 0
+    },
+    "trade_truth/GBPUSD/2026-07-30.jsonl": {
+      "offset": 611,
+      "records_projected": 0
+    },
+    "trade_truth/GBPUSD/2026-08-03.jsonl": {
+      "offset": 608,
+      "records_projected": 0
+    },
+    "trade_truth/GBPUSD/2026-08-10.jsonl": {
+      "offset": 614,
+      "records_projected": 0
+    },
+    "trade_truth/GBPUSD/2026-08-14.jsonl": {
+      "offset": 2464,
+      "records_projected": 0
+    },
+    "trade_truth/NAS100/2026-08-05.jsonl": {
+      "offset": 617,
+      "records_projected": 0
+    },
+    "trade_truth/NAS100/2026-08-14.jsonl": {
+      "offset": 1227,
+      "records_projected": 0
+    },
+    "trade_truth/NZDUSD/2026-07-22.jsonl": {
+      "offset": 606,
+      "records_projected": 0
+    },
+    "trade_truth/NZDUSD/2026-07-23.jsonl": {
+      "offset": 2443,
+      "records_projected": 0
+    },
+    "trade_truth/NZDUSD/2026-07-24.jsonl": {
+      "offset": 1223,
+      "records_projected": 0
+    },
+    "trade_truth/NZDUSD/2026-07-27.jsonl": {
+      "offset": 3049,
+      "records_projected": 0
+    },
+    "trade_truth/NZDUSD/2026-07-28.jsonl": {
+      "offset": 607,
+      "records_projected": 0
+    },
+    "trade_truth/NZDUSD/2026-07-29.jsonl": {
+      "offset": 3054,
+      "records_projected": 0
+    },
+    "trade_truth/NZDUSD/2026-07-30.jsonl": {
+      "offset": 606,
+      "records_projected": 0
+    },
+    "trade_truth/NZDUSD/2026-08-04.jsonl": {
+      "offset": 606,
+      "records_projected": 0
+    },
+    "trade_truth/NZDUSD/2026-08-05.jsonl": {
+      "offset": 1225,
+      "records_projected": 0
+    },
+    "trade_truth/NZDUSD/2026-08-12.jsonl": {
+      "offset": 1848,
+      "records_projected": 0
+    },
+    "trade_truth/NZDUSD/2026-08-14.jsonl": {
+      "offset": 2464,
+      "records_projected": 0
+    },
+    "trade_truth/US500/2026-08-04.jsonl": {
+      "offset": 2470,
+      "records_projected": 0
+    },
+    "trade_truth/US500/2026-08-05.jsonl": {
+      "offset": 1230,
+      "records_projected": 0
+    },
+    "trade_truth/US500/2026-08-10.jsonl": {
+      "offset": 1227,
+      "records_projected": 0
+    },
+    "trade_truth/US500/2026-08-12.jsonl": {
+      "offset": 1227,
+      "records_projected": 0
+    },
+    "trade_truth/US500/2026-08-13.jsonl": {
+      "offset": 1226,
+      "records_projected": 0
+    },
+    "trade_truth/USDCAD/2026-07-22.jsonl": {
+      "offset": 1213,
+      "records_projected": 0
+    },
+    "trade_truth/USDCAD/2026-07-23.jsonl": {
+      "offset": 1224,
+      "records_projected": 0
+    },
+    "trade_truth/USDCAD/2026-07-24.jsonl": {
+      "offset": 1225,
+      "records_projected": 0
+    },
+    "trade_truth/USDCAD/2026-07-27.jsonl": {
+      "offset": 3057,
+      "records_projected": 0
+    },
+    "trade_truth/USDCAD/2026-07-28.jsonl": {
+      "offset": 2422,
+      "records_projected": 0
+    },
+    "trade_truth/USDCAD/2026-07-29.jsonl": {
+      "offset": 1218,
+      "records_projected": 0
+    },
+    "trade_truth/USDCAD/2026-07-30.jsonl": {
+      "offset": 609,
+      "records_projected": 0
+    },
+    "trade_truth/USDCAD/2026-08-06.jsonl": {
+      "offset": 613,
+      "records_projected": 0
+    },
+    "trade_truth/USDCAD/2026-08-26.jsonl": {
+      "offset": 675,
+      "records_projected": 0
+    },
+    "trade_truth/USDCHF/2026-07-22.jsonl": {
+      "offset": 2442,
+      "records_projected": 0
+    },
+    "trade_truth/USDCHF/2026-07-23.jsonl": {
+      "offset": 1218,
+      "records_projected": 0
+    },
+    "trade_truth/USDCHF/2026-07-24.jsonl": {
+      "offset": 611,
+      "records_projected": 0
+    },
+    "trade_truth/USDCHF/2026-07-27.jsonl": {
+      "offset": 1223,
+      "records_projected": 0
+    },
+    "trade_truth/USDCHF/2026-07-28.jsonl": {
+      "offset": 1824,
+      "records_projected": 0
+    },
+    "trade_truth/USDCHF/2026-07-29.jsonl": {
+      "offset": 1218,
+      "records_projected": 0
+    },
+    "trade_truth/USDCHF/2026-07-30.jsonl": {
+      "offset": 610,
+      "records_projected": 0
+    },
+    "trade_truth/USDCHF/2026-08-13.jsonl": {
+      "offset": 616,
+      "records_projected": 0
+    },
+    "trade_truth/USDCHF/2026-08-14.jsonl": {
+      "offset": 1232,
+      "records_projected": 0
+    },
+    "trade_truth/USDJPY/1970-01-01.jsonl": {
+      "offset": 59160,
+      "records_projected": 0
+    },
+    "trade_truth/USDJPY/2026-07-22.jsonl": {
+      "offset": 607,
+      "records_projected": 0
+    },
+    "trade_truth/USDJPY/2026-07-28.jsonl": {
+      "offset": 606,
+      "records_projected": 0
+    },
+    "trade_truth/USDJPY/2026-08-10.jsonl": {
+      "offset": 1232,
+      "records_projected": 0
+    },
+    "trade_truth/USDJPY/2026-08-11.jsonl": {
+      "offset": 617,
+      "records_projected": 0
+    },
+    "trade_truth/USDJPY/2026-08-14.jsonl": {
+      "offset": 615,
+      "records_projected": 0
+    },
+    "trade_truth/XAUUSD/2026-07-29.jsonl": {
+      "offset": 615,
+      "records_projected": 0
+    },
+    "trade_truth/XAUUSD/2026-08-06.jsonl": {
+      "offset": 2445,
+      "records_projected": 0
+    },
+    "trade_truth/XAUUSD/2026-08-10.jsonl": {
+      "offset": 1224,
+      "records_projected": 0
+    },
+    "trade_truth/XAUUSD/2026-08-11.jsonl": {
+      "offset": 617,
+      "records_projected": 0
+    },
+    "trade_truth/XAUUSD/2026-08-12.jsonl": {
+      "offset": 1231,
+      "records_projected": 0
+    },
+    "trade_truth/XAUUSD/2026-08-26.jsonl": {
+      "offset": 1353,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-07-29.jsonl": {
+      "offset": 184022,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-07-30.jsonl": {
+      "offset": 169101,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-07-31.jsonl": {
+      "offset": 197070,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-03.jsonl": {
+      "offset": 205013,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-04.jsonl": {
+      "offset": 218197,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-05.jsonl": {
+      "offset": 268801,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-06.jsonl": {
+      "offset": 227293,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-07.jsonl": {
+      "offset": 230521,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-10.jsonl": {
+      "offset": 271688,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-11.jsonl": {
+      "offset": 237264,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-12.jsonl": {
+      "offset": 291844,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-13.jsonl": {
+      "offset": 248168,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-14.jsonl": {
+      "offset": 246331,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-19.jsonl": {
+      "offset": 23444,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-21.jsonl": {
+      "offset": 21677,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-26.jsonl": {
+      "offset": 77631,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-27.jsonl": {
+      "offset": 33075,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/AUDUSD/2026-08-28.jsonl": {
+      "offset": 17912,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2023-11-14.jsonl": {
+      "offset": 444440,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2025-07-27.jsonl": {
+      "offset": 146042,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-07-29.jsonl": {
+      "offset": 132678,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-07-30.jsonl": {
+      "offset": 147905,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-07-31.jsonl": {
+      "offset": 175302,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-03.jsonl": {
+      "offset": 168459,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-04.jsonl": {
+      "offset": 192240,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-05.jsonl": {
+      "offset": 201092,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-06.jsonl": {
+      "offset": 201816,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-07.jsonl": {
+      "offset": 190546,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-10.jsonl": {
+      "offset": 205457,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-11.jsonl": {
+      "offset": 183133,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-12.jsonl": {
+      "offset": 215339,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-13.jsonl": {
+      "offset": 174382,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-14.jsonl": {
+      "offset": 217784,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-19.jsonl": {
+      "offset": 18173,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-21.jsonl": {
+      "offset": 11834,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-26.jsonl": {
+      "offset": 52485,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-27.jsonl": {
+      "offset": 24964,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/EURUSD/2026-08-28.jsonl": {
+      "offset": 14382,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-07-29.jsonl": {
+      "offset": 148339,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-07-30.jsonl": {
+      "offset": 161272,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-07-31.jsonl": {
+      "offset": 182045,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-03.jsonl": {
+      "offset": 179982,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-04.jsonl": {
+      "offset": 208397,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-05.jsonl": {
+      "offset": 228861,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-06.jsonl": {
+      "offset": 209800,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-07.jsonl": {
+      "offset": 224247,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-10.jsonl": {
+      "offset": 267836,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-11.jsonl": {
+      "offset": 264054,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-12.jsonl": {
+      "offset": 243780,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-13.jsonl": {
+      "offset": 240208,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-14.jsonl": {
+      "offset": 232136,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-19.jsonl": {
+      "offset": 15987,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-21.jsonl": {
+      "offset": 16319,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-26.jsonl": {
+      "offset": 63592,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-27.jsonl": {
+      "offset": 35279,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/GBPUSD/2026-08-28.jsonl": {
+      "offset": 15339,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-07-29.jsonl": {
+      "offset": 56353,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-07-30.jsonl": {
+      "offset": 112721,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-07-31.jsonl": {
+      "offset": 134453,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-03.jsonl": {
+      "offset": 135434,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-04.jsonl": {
+      "offset": 166051,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-05.jsonl": {
+      "offset": 175800,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-06.jsonl": {
+      "offset": 179285,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-07.jsonl": {
+      "offset": 161702,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-10.jsonl": {
+      "offset": 183935,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-11.jsonl": {
+      "offset": 182438,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-12.jsonl": {
+      "offset": 156365,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-13.jsonl": {
+      "offset": 174205,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-14.jsonl": {
+      "offset": 159880,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-19.jsonl": {
+      "offset": 9987,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-21.jsonl": {
+      "offset": 10448,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-26.jsonl": {
+      "offset": 48137,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-27.jsonl": {
+      "offset": 11826,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NAS100/2026-08-28.jsonl": {
+      "offset": 10377,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-07-29.jsonl": {
+      "offset": 181601,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-07-30.jsonl": {
+      "offset": 159359,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-07-31.jsonl": {
+      "offset": 183358,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-03.jsonl": {
+      "offset": 194344,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-04.jsonl": {
+      "offset": 230285,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-05.jsonl": {
+      "offset": 267630,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-06.jsonl": {
+      "offset": 237890,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-07.jsonl": {
+      "offset": 225710,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-10.jsonl": {
+      "offset": 276981,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-11.jsonl": {
+      "offset": 236460,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-12.jsonl": {
+      "offset": 280080,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-13.jsonl": {
+      "offset": 240684,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-14.jsonl": {
+      "offset": 252606,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-19.jsonl": {
+      "offset": 20879,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-21.jsonl": {
+      "offset": 20626,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-26.jsonl": {
+      "offset": 89858,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-27.jsonl": {
+      "offset": 29717,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/NZDUSD/2026-08-28.jsonl": {
+      "offset": 21085,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-07-29.jsonl": {
+      "offset": 63754,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-07-30.jsonl": {
+      "offset": 93850,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-07-31.jsonl": {
+      "offset": 117311,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-03.jsonl": {
+      "offset": 105287,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-04.jsonl": {
+      "offset": 135846,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-05.jsonl": {
+      "offset": 146303,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-06.jsonl": {
+      "offset": 128399,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-07.jsonl": {
+      "offset": 150618,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-10.jsonl": {
+      "offset": 158199,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-11.jsonl": {
+      "offset": 147864,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-12.jsonl": {
+      "offset": 145149,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-13.jsonl": {
+      "offset": 130839,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-14.jsonl": {
+      "offset": 122772,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-19.jsonl": {
+      "offset": 10339,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-21.jsonl": {
+      "offset": 7490,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-26.jsonl": {
+      "offset": 42901,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-27.jsonl": {
+      "offset": 12153,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/US500/2026-08-28.jsonl": {
+      "offset": 4593,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-07-29.jsonl": {
+      "offset": 175800,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-07-30.jsonl": {
+      "offset": 146936,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-07-31.jsonl": {
+      "offset": 178423,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-03.jsonl": {
+      "offset": 172208,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-04.jsonl": {
+      "offset": 224495,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-05.jsonl": {
+      "offset": 241049,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-06.jsonl": {
+      "offset": 193817,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-07.jsonl": {
+      "offset": 236690,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-10.jsonl": {
+      "offset": 280741,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-11.jsonl": {
+      "offset": 240517,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-12.jsonl": {
+      "offset": 250505,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-13.jsonl": {
+      "offset": 240727,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-14.jsonl": {
+      "offset": 250298,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-19.jsonl": {
+      "offset": 25507,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-21.jsonl": {
+      "offset": 18332,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-26.jsonl": {
+      "offset": 85485,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-27.jsonl": {
+      "offset": 21211,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCAD/2026-08-28.jsonl": {
+      "offset": 11883,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-07-29.jsonl": {
+      "offset": 163944,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-07-30.jsonl": {
+      "offset": 169075,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-07-31.jsonl": {
+      "offset": 165758,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-03.jsonl": {
+      "offset": 179257,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-04.jsonl": {
+      "offset": 218819,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-05.jsonl": {
+      "offset": 240394,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-06.jsonl": {
+      "offset": 227982,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-07.jsonl": {
+      "offset": 218940,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-10.jsonl": {
+      "offset": 246546,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-11.jsonl": {
+      "offset": 235172,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-12.jsonl": {
+      "offset": 242677,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-13.jsonl": {
+      "offset": 233613,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-14.jsonl": {
+      "offset": 229203,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-19.jsonl": {
+      "offset": 23125,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-21.jsonl": {
+      "offset": 14676,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-26.jsonl": {
+      "offset": 73608,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-27.jsonl": {
+      "offset": 30824,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDCHF/2026-08-28.jsonl": {
+      "offset": 14207,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-07-29.jsonl": {
+      "offset": 88785,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-07-30.jsonl": {
+      "offset": 104824,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-07-31.jsonl": {
+      "offset": 120711,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-03.jsonl": {
+      "offset": 97692,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-04.jsonl": {
+      "offset": 130054,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-05.jsonl": {
+      "offset": 157139,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-06.jsonl": {
+      "offset": 111859,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-07.jsonl": {
+      "offset": 113110,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-10.jsonl": {
+      "offset": 146224,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-11.jsonl": {
+      "offset": 147700,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-12.jsonl": {
+      "offset": 136780,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-13.jsonl": {
+      "offset": 131446,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-14.jsonl": {
+      "offset": 154631,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-19.jsonl": {
+      "offset": 17966,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-21.jsonl": {
+      "offset": 4242,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-26.jsonl": {
+      "offset": 39898,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-27.jsonl": {
+      "offset": 14587,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/USDJPY/2026-08-28.jsonl": {
+      "offset": 5683,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-07-29.jsonl": {
+      "offset": 74800,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-07-30.jsonl": {
+      "offset": 106350,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-07-31.jsonl": {
+      "offset": 125490,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-03.jsonl": {
+      "offset": 133032,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-04.jsonl": {
+      "offset": 162913,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-05.jsonl": {
+      "offset": 180360,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-06.jsonl": {
+      "offset": 195687,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-07.jsonl": {
+      "offset": 195645,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-10.jsonl": {
+      "offset": 165370,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-11.jsonl": {
+      "offset": 180158,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-12.jsonl": {
+      "offset": 202671,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-13.jsonl": {
+      "offset": 166146,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-14.jsonl": {
+      "offset": 184345,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-19.jsonl": {
+      "offset": 11819,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-21.jsonl": {
+      "offset": 16511,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-26.jsonl": {
+      "offset": 61870,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-27.jsonl": {
+      "offset": 10402,
+      "records_projected": 0
+    },
+    "v3_shadow/market_context/XAUUSD/2026-08-28.jsonl": {
+      "offset": 17549,
+      "records_projected": 0
+    },
+    "market_context/AUDUSD/2026-07-22.jsonl": {
+      "offset": 12532,
+      "records_projected": 0
+    },
+    "market_context/AUDUSD/2026-07-23.jsonl": {
+      "offset": 12806,
+      "records_projected": 0
+    },
+    "market_context/AUDUSD/2026-07-24.jsonl": {
+      "offset": 12659,
+      "records_projected": 0
+    },
+    "market_context/AUDUSD/2026-07-27.jsonl": {
+      "offset": 9029,
+      "records_projected": 0
+    },
+    "market_context/AUDUSD/2026-07-28.jsonl": {
+      "offset": 10758,
+      "records_projected": 0
+    },
+    "market_context/AUDUSD/2026-08-09.jsonl": {
+      "offset": 2849,
+      "records_projected": 0
+    },
+    "market_context/EURUSD/2026-07-22.jsonl": {
+      "offset": 127127,
+      "records_projected": 0
+    },
+    "market_context/EURUSD/2026-07-23.jsonl": {
+      "offset": 41189,
+      "records_projected": 0
+    },
+    "market_context/EURUSD/2026-07-24.jsonl": {
+      "offset": 28487,
+      "records_projected": 0
+    },
+    "market_context/EURUSD/2026-07-25.jsonl": {
+      "offset": 268537,
+      "records_projected": 0
+    },
+    "market_context/EURUSD/2026-07-26.jsonl": {
+      "offset": 123300,
+      "records_projected": 0
+    },
+    "market_context/EURUSD/2026-07-27.jsonl": {
+      "offset": 219577,
+      "records_projected": 0
+    },
+    "market_context/EURUSD/2026-07-28.jsonl": {
+      "offset": 260567,
+      "records_projected": 0
+    },
+    "market_context/EURUSD/2026-08-08.jsonl": {
+      "offset": 9397,
+      "records_projected": 0
+    },
+    "market_context/EURUSD/2026-08-09.jsonl": {
+      "offset": 33466,
+      "records_projected": 0
+    },
+    "market_context/GBPUSD/2026-07-22.jsonl": {
+      "offset": 20412,
+      "records_projected": 0
+    },
+    "market_context/GBPUSD/2026-07-23.jsonl": {
+      "offset": 9916,
+      "records_projected": 0
+    },
+    "market_context/GBPUSD/2026-07-24.jsonl": {
+      "offset": 21554,
+      "records_projected": 0
+    },
+    "market_context/GBPUSD/2026-07-27.jsonl": {
+      "offset": 18120,
+      "records_projected": 0
+    },
+    "market_context/GBPUSD/2026-07-28.jsonl": {
+      "offset": 20494,
+      "records_projected": 0
+    },
+    "market_context/GBPUSD/2026-08-09.jsonl": {
+      "offset": 5800,
+      "records_projected": 0
+    },
+    "market_context/NAS100/2026-08-09.jsonl": {
+      "offset": 1441,
+      "records_projected": 0
+    },
+    "market_context/NZDUSD/2026-07-22.jsonl": {
+      "offset": 11451,
+      "records_projected": 0
+    },
+    "market_context/NZDUSD/2026-07-23.jsonl": {
+      "offset": 20785,
+      "records_projected": 0
+    },
+    "market_context/NZDUSD/2026-07-24.jsonl": {
+      "offset": 9709,
+      "records_projected": 0
+    },
+    "market_context/NZDUSD/2026-07-27.jsonl": {
+      "offset": 23215,
+      "records_projected": 0
+    },
+    "market_context/NZDUSD/2026-07-28.jsonl": {
+      "offset": 14031,
+      "records_projected": 0
+    },
+    "market_context/NZDUSD/2026-08-09.jsonl": {
+      "offset": 2845,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-07-22.jsonl": {
+      "offset": 79183,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-07-23.jsonl": {
+      "offset": 13974,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-07-24.jsonl": {
+      "offset": 9316,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-07-25.jsonl": {
+      "offset": 191718,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-07-26.jsonl": {
+      "offset": 87174,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-07-27.jsonl": {
+      "offset": 145290,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-07-28.jsonl": {
+      "offset": 119346,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-07-29.jsonl": {
+      "offset": 51890,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-07-30.jsonl": {
+      "offset": 5189,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-07-31.jsonl": {
+      "offset": 6219,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-08-03.jsonl": {
+      "offset": 6674,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-08-07.jsonl": {
+      "offset": 6674,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-08-08.jsonl": {
+      "offset": 6674,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-08-09.jsonl": {
+      "offset": 6674,
+      "records_projected": 0
+    },
+    "market_context/TEST/2026-08-14.jsonl": {
+      "offset": 20022,
+      "records_projected": 0
+    },
+    "market_context/US500/2026-08-09.jsonl": {
+      "offset": 1434,
+      "records_projected": 0
+    },
+    "market_context/USDCAD/2026-07-22.jsonl": {
+      "offset": 9569,
+      "records_projected": 0
+    },
+    "market_context/USDCAD/2026-07-23.jsonl": {
+      "offset": 8728,
+      "records_projected": 0
+    },
+    "market_context/USDCAD/2026-07-24.jsonl": {
+      "offset": 18447,
+      "records_projected": 0
+    },
+    "market_context/USDCAD/2026-07-27.jsonl": {
+      "offset": 13138,
+      "records_projected": 0
+    },
+    "market_context/USDCAD/2026-07-28.jsonl": {
+      "offset": 9509,
+      "records_projected": 0
+    },
+    "market_context/USDCAD/2026-08-09.jsonl": {
+      "offset": 2858,
+      "records_projected": 0
+    },
+    "market_context/USDCHF/2026-07-22.jsonl": {
+      "offset": 18511,
+      "records_projected": 0
+    },
+    "market_context/USDCHF/2026-07-23.jsonl": {
+      "offset": 24471,
+      "records_projected": 0
+    },
+    "market_context/USDCHF/2026-07-24.jsonl": {
+      "offset": 12658,
+      "records_projected": 0
+    },
+    "market_context/USDCHF/2026-07-27.jsonl": {
+      "offset": 13172,
+      "records_projected": 0
+    },
+    "market_context/USDCHF/2026-07-28.jsonl": {
+      "offset": 16203,
+      "records_projected": 0
+    },
+    "market_context/USDCHF/2026-08-09.jsonl": {
+      "offset": 4317,
+      "records_projected": 0
+    },
+    "market_context/USDJPY/2026-07-22.jsonl": {
+      "offset": 11640,
+      "records_projected": 0
+    },
+    "market_context/USDJPY/2026-07-23.jsonl": {
+      "offset": 10906,
+      "records_projected": 0
+    },
+    "market_context/USDJPY/2026-07-24.jsonl": {
+      "offset": 12682,
+      "records_projected": 0
+    },
+    "market_context/USDJPY/2026-07-27.jsonl": {
+      "offset": 16129,
+      "records_projected": 0
+    },
+    "market_context/USDJPY/2026-07-28.jsonl": {
+      "offset": 14140,
+      "records_projected": 0
+    },
+    "market_context/USDJPY/2026-08-09.jsonl": {
+      "offset": 2858,
+      "records_projected": 0
+    },
+    "market_context/XAUUSD/2026-08-09.jsonl": {
+      "offset": 1435,
+      "records_projected": 0
+    },
+    "shadow_runtime_v1/AUDUSD/2026-08-26.jsonl": {
+      "offset": 9320,
+      "records_projected": 0
+    },
+    "shadow_runtime_v1/EURUSD/2026-08-26.jsonl": {
+      "offset": 14016,
+      "records_projected": 0
+    },
+    "shadow_runtime_v1/GBPUSD/2026-08-26.jsonl": {
+      "offset": 9646,
+      "records_projected": 0
+    },
+    "shadow_runtime_v1/NAS100/2026-08-26.jsonl": {
+      "offset": 29171,
+      "records_projected": 0
+    },
+    "shadow_runtime_v1/USDCAD/2026-08-26.jsonl": {
+      "offset": 9559,
+      "records_projected": 0
+    },
+    "shadow_runtime_v1/USDCHF/2026-08-26.jsonl": {
+      "offset": 5905,
+      "records_projected": 0
+    },
+    "shadow_runtime_v1/XAUUSD/2026-08-26.jsonl": {
+      "offset": 13883,
+      "records_projected": 0
+    }
+  },
+  "runs": [
+    {
+      "started_at_utc": "2026-08-28T16:12:19.553858+00:00",
+      "finished_at_utc": "2026-08-28T16:18:34.853066+00:00",
+      "projector_version": "1.0.0",
+      "backfill": true,
+      "areas": {
+        "live/observation": {
+          "records_projected": 0,
+          "records_skipped_existing": 18998,
+          "records_skipped_unidentifiable": 0
+        },
+        "live/opportunity": {
+          "records_projected": 29537,
+          "records_skipped_existing": 8096,
+          "records_skipped_unidentifiable": 0
+        },
+        "live/decision": {
+          "records_projected": 38167,
+          "records_skipped_existing": 1,
+          "records_skipped_unidentifiable": 0
+        },
+        "live/execution": {
+          "records_projected": 38652,
+          "records_skipped_existing": 0,
+          "records_skipped_unidentifiable": 0
+        },
+        "live/outcome": {
+          "records_projected": 731,
+          "records_skipped_existing": 6036,
+          "records_skipped_unidentifiable": 0
+        },
+        "market_context": {
+          "records_projected": 18285,
+          "records_skipped_existing": 1842,
+          "records_skipped_unidentifiable": 0
+        },
+        "shadow/plan": {
+          "records_projected": 19,
+          "records_skipped_existing": 0,
+          "records_skipped_unidentifiable": 0
+        },
+        "shadow/open": {
+          "records_projected": 19,
+          "records_skipped_existing": 0,
+          "records_skipped_unidentifiable": 0
+        },
+        "shadow/close": {
+          "records_projected": 19,
+          "records_skipped_existing": 0,
+          "records_skipped_unidentifiable": 0
+        },
+        "shadow/progress": {
+          "records_projected": 2,
+          "records_skipped_existing": 0,
+          "records_skipped_unidentifiable": 0
+        }
+      },
+      "sources": {
+        "files_scanned": 1279,
+        "files_with_new_data": 1279,
+        "files_reset": 0
+      },
+      "anomaly_count": 0
+    }
+  ],
+  "projector_version": "1.0.0",
+  "manifest_version": "1.0.0",
+  "last_run_utc": "2026-08-28T16:18:34.853066+00:00",
+  "run_count": 1
+}

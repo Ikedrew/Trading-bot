@@ -99,7 +99,50 @@ def canonical_opportunity_id_from_parts(
     return make_canonical_opportunity_id(symbol=symbol, bar_time=bar_time, pattern=pattern)
 
 
+def mint_observation_id(
+    *,
+    symbol: str,
+    bar_time,
+    timeframe: str,
+) -> str:
+    """
+    Mint the canonical observation identity.
+
+    This is NOT the canonical lineage root — that role belongs to
+    canonical_opportunity_id. The observation_id is a bar-level identifier
+    used for tracing and debugging.
+
+    Args:
+        symbol: Trading symbol (e.g. "EURUSD").
+        bar_time: Bar close timestamp, int or float (normalised to int seconds).
+        timeframe: Timeframe string (e.g. "M5", "H1", "D1").
+
+    Returns:
+        Observation ID string, e.g. "EURUSD*1784800000*M5".
+
+        Empty string if symbol or timeframe is empty.
+    """
+    sym = _normalize_symbol(symbol)
+    tf = str(timeframe or "").strip().upper()
+    if not sym or not tf:
+        return ""
+    bt = _normalize_bar_time(bar_time)
+    return f"{sym}.{tf}.{bt}"
+
+
+def observation_id_from_bar(
+    *,
+    symbol: str,
+    bar_time,
+    timeframe: str,
+) -> str:
+    """Alias of :func:`mint_observation_id` (readable call sites)."""
+    return mint_observation_id(symbol=symbol, bar_time=bar_time, timeframe=timeframe)
+
+
 __all__ = [
     "make_canonical_opportunity_id",
     "canonical_opportunity_id_from_parts",
+    "mint_observation_id",
+    "observation_id_from_bar",
 ]

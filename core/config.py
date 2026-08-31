@@ -72,7 +72,7 @@ DECISION_AUDIT_ENABLED = True       # Enables/disables decision audit trail pers
 # Gated integration: when False, the legacy horizon-shadow branch runs unchanged.
 # When True, the pre-verdict shadow branch and BarProvider closed-bar routing
 # are handled by core/shadow/runtime.py (NEW lineage, own event stream).
-SHADOW_RUNTIME_V2_ENABLED = False  # Phase 1 data-capture: gate MUST be OFF for gated trials (LIVE_SHADOW_DATA_CAPTURE_CONTRACT.md F10)
+SHADOW_RUNTIME_V2_ENABLED = True  # Phase 1 data-capture: gate MUST be OFF for gated trials (LIVE_SHADOW_DATA_CAPTURE_CONTRACT.md F10)
 # PROVISIONAL physical location of the NEW Shadow dataset (isolated behind
 # core/shadow/persistence.py). Final production name/location is a pending
 # architecture decision — legacy logs/shadow_trades/ is never reused.

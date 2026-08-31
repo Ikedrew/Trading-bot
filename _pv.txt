@@ -1,0 +1,79 @@
+0001 | # PROTECTION STATUS
+0002 | # ═══════════════════════════════════════════════════════════════════════════════
+0003 | 
+0004 | class ProtectionStatus(str, Enum):
+0005 |     """Outcome of post-fill protection verification."""
+0006 |     VERIFIED = "VERIFIED"                   # SL/TP confirmed on broker
+0007 |     CORRECTED = "CORRECTED"                 # SL/TP was missing, successfully applied
+0008 |     MISMATCH_CORRECTED = "MISMATCH_CORRECTED"  # SL/TP differed, successfully corrected
+0009 |     FAILED_UNPROTECTED = "FAILED_UNPROTECTED"  # SL/TP missing AND correction failed
+0010 |     FAILED_MISMATCH = "FAILED_MISMATCH"    # SL/TP mismatch AND correction failed
+0011 |     POSITION_NOT_FOUND = "POSITION_NOT_FOUND"  # Could not locate position on broker
+0012 |     VERIFICATION_ERROR = "VERIFICATION_ERROR"  # Exception during verification
+0013 | 
+0014 | 
+0015 | # ═══════════════════════════════════════════════════════════════════════════════
+0016 | # VERIFICATION RESULT
+0017 | # ═══════════════════════════════════════════════════════════════════════════════
+0018 | 
+0019 | @dataclass
+0020 | class ProtectionVerificationResult:
+0021 |     """Complete record of one protection verification attempt."""
+0022 | 
+0023 |     # Identity
+0024 |     symbol: str
+0025 |     position_ticket: int
+0026 |     correlation_id: str
+0027 | 
+0028 |     # What we requested
+0029 |     requested_sl: float
+0030 |     requested_tp: float
+0031 | 
+0032 |     # What broker has
+0033 |     broker_confirmed_sl: float
+0034 |     broker_confirmed_tp: float
+0035 | 
+0036 |     # Outcome
+0037 |     protection_status: str
+0038 |     protection_failure_reason: str
+0039 | 
+0040 |     # Timing
+0041 |     verification_timestamp_utc: str
+0042 |     verification_latency_ms: int
+0043 |     attempts: int
+0044 | 
+0045 |     # Correction (if attempted)
+0046 |     correction_attempted: bool
+0047 |     correction_success: bool
+0048 |     correction_detail: str
+0049 | 
+0050 |     def to_dict(self) -> dict[str, Any]:
+0051 |         return asdict(self)
+0052 | 
+0053 | 
+0054 | # ═══════════════════════════════════════════════════════════════════════════════
+0055 | # CORE VERIFICATION FUNCTION
+0056 | # ═══════════════════════════════════════════════════════════════════════════════
+0057 | 
+0058 | def verify_protection(
+0059 |     *,
+0060 |     symbol: str,
+0061 |     position_ticket: int,
+0062 |     requested_sl: float,
+0063 |     requested_tp: float,
+0064 |     correlation_id: str = "",
+0065 |     execution_module: Any = None,
+0066 | ) -> ProtectionVerificationResult:
+0067 |     """
+0068 |     Verify that broker-side SL/TP protection exists on a filled position.
+0069 | 
+0070 |     Called immediately after order fill. Queries MT5 for the actual position
+0071 |     state and compares against requested values.
+0072 | 
+0073 |     If SL/TP are missing or mismatched:
+0074 |         1. Logs CRITICAL event
+0075 |         2. Attempts correction via position_modify_sl_tp
+0076 |         3. Re-verifies after correction
+0077 | 
+0078 |     Args:
+0079 |         symbol: Trading pair

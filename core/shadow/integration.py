@@ -29,9 +29,33 @@ class ShadowV2Handled(Exception):
     """
 
 
+def _normalise_direction(value: Any) -> str:
+    if value is None:
+        return ""
+    if hasattr(value, "value"):
+        value = value.value
+    text = str(value or "").upper()
+    if "." in text:
+        text = text.rsplit(".", 1)[-1]
+    if text in ("BUY", "BULLISH", "LONG"):
+        return "BUY"
+    if text in ("SELL", "BEARISH", "SHORT"):
+        return "SELL"
+    return ""
+
+
 def _extract_direction(new_result: dict[str, Any], assessment_obj: Any) -> str:
-    side = getattr(assessment_obj, "side", "") if assessment_obj else ""
-    return str(side or new_result.get("side", "") or "").upper()
+    for raw in (
+        getattr(assessment_obj, "side", "") if assessment_obj else "",
+        new_result.get("side", ""),
+    ):
+        direction = _normalise_direction(raw)
+        if direction:
+            return direction
+
+    pipeline_result = new_result.get("v10_pipeline_result")
+    opportunity = getattr(pipeline_result, "opportunity", None)
+    return _normalise_direction(getattr(opportunity, "directional_bias", ""))
 
 
 def _h1_bias_str(htf_context: Any) -> str:
@@ -61,6 +85,7 @@ def handle_live_opportunity_shadow(
     horizon_result: Any,
     canonical_opportunity_id: str,
     entity_id: str,
+    observation_id: str = "",
     regime: str = "",
     h4_regime: str = "",
     market_phase: str = "",
@@ -79,8 +104,6 @@ def handle_live_opportunity_shadow(
         return  # rule 17: every simulation must have a canonical root
 
     direction = _extract_direction(new_result, new_result.get("assessment"))
-    if direction not in ("BUY", "SELL"):
-        return
 
     # Structure inputs actually consumed by construction (mirrors legacy
     # extraction; values frozen verbatim into the OPEN definition).
@@ -126,6 +149,7 @@ def handle_live_opportunity_shadow(
 
     ctx = {
         "canonical_opportunity_id": canonical_opportunity_id,
+        "observation_id": observation_id,
         "entity_id": entity_id,
         "symbol": symbol,
         "cycle_id": cycle_id,

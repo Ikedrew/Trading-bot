@@ -59,6 +59,9 @@ class ObserverContext:
     runtime_session_id: str
     decision_funnel: Any
     market_context: Any = None  # MarketContext object (optional, preferred over htf_context)
+    observation_id: str = ""
+    decision_id: str = ""
+    correlation_id: str = ""
 
 
 # ─── OBSERVER REGISTRY ────────────────────────────────────────────────────────
@@ -169,6 +172,9 @@ class ObserverRegistry:
                 runtime_session_id=ctx.runtime_session_id,
                 pattern_count=len(ctx.detected_patterns),
                 v10_pipeline_result=ctx.engine_result.get("v10_pipeline_result"),
+                observation_id=ctx.observation_id,
+                decision_id=ctx.decision_id,
+                correlation_id=ctx.correlation_id,
             )
             persist_decision_trace(_trace)
             ctx.decision_funnel.record_trace(_trace)

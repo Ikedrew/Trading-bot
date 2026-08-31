@@ -141,6 +141,10 @@ class ExecutionOrchestrator:
                 decision_ts_utc_ms=_decision_ts,
                 decision_id=decision_id,
                 correlation_id=correlation_id,
+                cycle_id=cycle_id,
+                canonical_opportunity_id=canonical_opportunity_id,
+                observation_id=observation_id,
+                action_type="ENTRY",
             )
         except Exception as exc:
             log_runtime_exception(exc, "EXECUTION", mt5_state)

@@ -201,6 +201,10 @@ class TestAllObserversNotified:
             engine_result=ctx.engine_result,
             runtime_session_id="abc123",
             pattern_count=1,
+            v10_pipeline_result=None,
+            observation_id="",
+            decision_id="",
+            correlation_id="",
         )
         mock_trace_persist.assert_called_once_with({"trace": "data"})
         ctx.decision_funnel.record_trace.assert_called_once_with({"trace": "data"})
