@@ -10,7 +10,7 @@ The execution_attempts records represent each individual broker interaction.
 
 Storage:
     Local: logs/execution_attempts/{SYMBOL}/{YYYY-MM-DD}.jsonl
-    S3:    s3://v10-engine/execution_attempts/schema_version=execution_attempts_v1/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
+    S3:    s3://trading-bot-v10-data/execution_attempts/schema_version=execution_attempts_v1/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
 
 SCHEMA: execution_attempts_v1
 
@@ -61,7 +61,9 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/execution_attempts"
-_S3_BUCKET = "v10-engine"
+from core.config import NEW_RUNTIME_S3_BUCKET
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
 _S3_PREFIX = "execution_attempts"
 _SCHEMA_VERSION = "execution_attempts_v1"
 

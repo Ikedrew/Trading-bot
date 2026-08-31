@@ -33,7 +33,9 @@ logger = logging.getLogger(__name__)
 # ─── CONFIGURATION ───────────────────────────────────────────────────────────
 
 _JOURNAL_DIR = "logs/trade_journal"
-_S3_BUCKET = "v10-engine"
+from core.config import NEW_RUNTIME_S3_BUCKET
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
 _S3_PREFIX = "trade_journal"
 _SCHEMA_VERSION = "trade_journal_v1"
 
@@ -517,7 +519,7 @@ def persist_trade(record: TradeRecord) -> bool:
                 event_window_end_ts=record.exit_time,
                 decision_to_execution_lag_ms=0.0,
                 execution_to_exit_lag_ms=(record.exit_time - record.entry_time) * 1000,
-                trade_truth_ref=f"s3://v10-engine/trades/schema_version=trade_truth_v3/symbol={record.symbol}/date={_graph_date}/part-000.jsonl",
+                trade_truth_ref=f"s3://{NEW_RUNTIME_S3_BUCKET}/trades/schema_version=trade_truth_v3/symbol={record.symbol}/date={_graph_date}/part-000.jsonl",
                 execution_context_ref=record.correlation_id or "",
             )
             persist_graph_node(_graph_node)

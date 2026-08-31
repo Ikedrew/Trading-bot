@@ -51,7 +51,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_S3_BUCKET = "v10-engine"
+from core.config import NEW_RUNTIME_S3_BUCKET
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
 _S3_TRADES_PREFIX = "trades"
 _SCHEMA_VERSION = "trade_truth_v3"
 

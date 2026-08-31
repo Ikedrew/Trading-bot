@@ -64,7 +64,9 @@ class DecisionOutcome(str, Enum):
 # CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-_S3_BUCKET = "v10-engine"
+from core.config import NEW_RUNTIME_S3_BUCKET
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
 _S3_PREFIX = "decision_ledger"
 _LOCAL_DIR = "logs/decision_ledger"
 _SCHEMA_VERSION = "decision_ledger_v1"

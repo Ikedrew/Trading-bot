@@ -401,8 +401,8 @@ class TestSchemaVersion:
     def test_s3_prefix_is_decision_trace(self):
         assert _S3_PREFIX == "decision_trace"
 
-    def test_s3_bucket_is_v10_engine(self):
-        assert _S3_BUCKET == "v10-engine"
+    def test_s3_bucket_is_new_runtime_bucket(self):
+        assert _S3_BUCKET == "trading-bot-v10-data"
 
 
 class TestV1FieldsPreserved:

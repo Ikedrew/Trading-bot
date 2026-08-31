@@ -66,6 +66,7 @@ VALIDATION_MODE = True              # When True, enables runtime safety + consis
 # --- Event persistence ---
 EVENT_STREAM_ENABLED = True         # Enables/disables local JSONL event logging (events/*.jsonl)
 EVENT_STREAM_S3_MIRROR = True       # Enables/disables S3 batch event persistence
+NEW_RUNTIME_S3_BUCKET = "trading-bot-v10-data"  # Current NEW live + shadow dataset writers
 DECISION_AUDIT_ENABLED = True       # Enables/disables decision audit trail persistence
 
 # --- NEW Shadow Runtime (per-opportunity horizon shadows) ---

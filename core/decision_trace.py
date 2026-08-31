@@ -19,7 +19,7 @@ It ONLY:
 
 Persistence:
     Local: logs/decision_trace/{SYMBOL}/{YYYY-MM-DD}.jsonl
-    S3:    s3://v10-engine/decision_trace/schema_version=decision_trace_v2/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
+    S3:    s3://trading-bot-v10-data/decision_trace/schema_version=decision_trace_v2/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
 
 Usage:
     from core.decision_trace import build_decision_trace, persist_decision_trace
@@ -45,7 +45,9 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/decision_trace"
-_S3_BUCKET = "v10-engine"
+from core.config import NEW_RUNTIME_S3_BUCKET
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
 _S3_PREFIX = "decision_trace"
 _SCHEMA_VERSION = "decision_trace_v2"
 

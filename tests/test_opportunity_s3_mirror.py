@@ -163,4 +163,4 @@ class TestS3KeyFormat:
         assert _S3_PREFIX == "opportunities"
 
     def test_s3_bucket_constant(self):
-        assert _S3_BUCKET == "v10-engine"
+        assert _S3_BUCKET == "trading-bot-v10-data"

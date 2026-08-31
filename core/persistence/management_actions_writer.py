@@ -15,7 +15,7 @@ management-action record. This dataset supplements (not replaces) the existing
 
 Storage:
     Local: logs/management_actions/{SYMBOL}/{YYYY-MM-DD}.jsonl
-    S3:    s3://v10-engine/management_actions/schema_version=management_actions_v1/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
+    S3:    s3://trading-bot-v10-data/management_actions/schema_version=management_actions_v1/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
 
 SCHEMA: management_actions_v1
 
@@ -59,7 +59,9 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/management_actions"
-_S3_BUCKET = "v10-engine"
+from core.config import NEW_RUNTIME_S3_BUCKET
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
 _S3_PREFIX = "management_actions"
 _SCHEMA_VERSION = "management_actions_v1"
 

@@ -11,7 +11,7 @@ the complete candidate search space for research questions such as:
 
 Storage:
     Local: logs/horizon_candidates/{SYMBOL}/{YYYY-MM-DD}.jsonl
-    S3:    s3://v10-engine/horizon_candidates/schema_version=horizon_candidates_v1/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
+    S3:    s3://trading-bot-v10-data/horizon_candidates/schema_version=horizon_candidates_v1/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
 
 SCHEMA: horizon_candidates_v1
 
@@ -41,7 +41,9 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/horizon_candidates"
-_S3_BUCKET = "v10-engine"
+from core.config import NEW_RUNTIME_S3_BUCKET
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
 _S3_PREFIX = "horizon_candidates"
 _SCHEMA_VERSION = "horizon_candidates_v1"
 

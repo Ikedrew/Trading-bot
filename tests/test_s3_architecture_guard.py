@@ -59,6 +59,17 @@ ALLOWED_S3_WRITERS = {
     ROOT / "core" / "shadow" / "persistence.py",
 }
 
+NEW_RUNTIME_S3_WRITERS = {
+    ROOT / "core" / "trade_truth.py",
+    ROOT / "core" / "trade_journal.py",
+    ROOT / "core" / "decision_ledger.py",
+    ROOT / "core" / "decision_trace.py",
+    ROOT / "core" / "persistence" / "execution_result_writer.py",
+    ROOT / "core" / "persistence" / "management_actions_writer.py",
+    ROOT / "core" / "opportunity" / "persistence.py",
+    ROOT / "core" / "shadow" / "persistence.py",
+}
+
 # Modules allowed to import boto3 (includes non-writers like aws_glue_setup)
 ALLOWED_BOTO3_IMPORTERS = ALLOWED_S3_WRITERS | {
     ROOT / "data_pipeline" / "aws_glue_setup.py",
@@ -198,15 +209,16 @@ class TestLayerPrefixOwnership:
         assert '_S3_PREFIX = "execution_context"' in source
 
     def test_all_writers_use_canonical_bucket(self):
-        """Every S3 writer must target v10-engine only."""
+        """Current NEW writers use their bucket; unscoped writers retain legacy sink."""
         for writer_path in ALLOWED_S3_WRITERS:
             if not writer_path.exists():
                 continue
             source = writer_path.read_text(encoding="utf-8")
             if "_S3_BUCKET" in source:
-                assert 'v10-engine' in source, (
-                    f"{writer_path.name} does not use canonical bucket"
-                )
+                if writer_path in NEW_RUNTIME_S3_WRITERS:
+                    assert "NEW_RUNTIME_S3_BUCKET" in source
+                else:
+                    assert "v10-engine" in source
 
 
 # -------------------------------------------------------------------------------

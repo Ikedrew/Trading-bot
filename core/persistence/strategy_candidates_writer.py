@@ -39,7 +39,9 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/strategy_candidates"
-_S3_BUCKET = "v10-engine"
+from core.config import NEW_RUNTIME_S3_BUCKET
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
 _S3_PREFIX = "strategy_candidates"
 _SCHEMA_VERSION = "strategy_candidates_v1"
 
