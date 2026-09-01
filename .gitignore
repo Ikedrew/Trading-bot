@@ -5,7 +5,7 @@ runtime/
 # core/runtime/ is source code collaterally caught by the generic
 # runtime/ rule; root runtime/ remains ignored as generated local state.
 !core/runtime/
-core/runtime/*
+# core/runtime/*
 !core/runtime/__init__.py
 !core/runtime/live_scanner.py
 !core/runtime/bar_provider.py
