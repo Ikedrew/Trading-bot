@@ -160,7 +160,8 @@ class TestS3KeyFormat:
         assert _SCHEMA_VERSION == "opportunities_v1"
 
     def test_s3_prefix_constant(self):
-        assert _S3_PREFIX == "opportunities"
+        from core.production_data_contract import s3_base_prefix
+        assert _S3_PREFIX == s3_base_prefix("opportunities")  # "core/opportunities"
 
     def test_s3_bucket_constant(self):
         assert _S3_BUCKET == "trading-bot-v10-data"

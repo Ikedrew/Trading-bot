@@ -1,6 +1,6 @@
 # Candidate Evaluation Dashboard
 
-Generated: 2026-09-01T13:48:36.792946+00:00
+Generated: 2026-09-01T20:40:21.349326+00:00
 Total candidates: 3
 Active: 3
 

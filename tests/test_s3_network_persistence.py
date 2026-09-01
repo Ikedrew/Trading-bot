@@ -96,9 +96,10 @@ class TestExecutionContextIsolation:
         assert not (local_dir / "trade_truth").exists()
 
     def test_s3_prefix_is_execution_context(self):
-        """The S3 prefix constant must be 'execution_context'."""
+        """The S3 prefix constant must be the role-qualified Production V1 prefix."""
         from core.execution_context import _S3_PREFIX
-        assert _S3_PREFIX == "execution_context"
+        from core.production_data_contract import s3_base_prefix
+        assert _S3_PREFIX == s3_base_prefix("execution_context")  # "supporting/execution_context"
 
     def test_s3_bucket_is_canonical(self):
         """Must write to the canonical runtime bucket only."""
@@ -393,19 +394,27 @@ class TestDeterministicOutput:
 # -------------------------------------------------------------------------------
 
 class TestCrossLayerPrefixIsolation:
-    """No module writes to another layer's prefix."""
+    """No module writes to another layer's prefix.
+
+    Production V1 writers resolve their prefix via s3_base_prefix() from the
+    central contract.  Legacy research writers (edge_*, strategy_compiler) retain
+    their flat constants on the v10-engine bucket.
+    """
 
     def test_shadow_trades_prefix(self):
         from core.shadow_trades import _S3_PREFIX
-        assert _S3_PREFIX == "shadow_trades"
+        from core.production_data_contract import s3_base_prefix
+        assert _S3_PREFIX == s3_base_prefix("shadow_trades")  # "supporting/shadow_trades"
 
     def test_trade_truth_prefix(self):
         from core.trade_truth import _S3_TRADES_PREFIX
-        assert _S3_TRADES_PREFIX == "trades"
+        from core.production_data_contract import s3_base_prefix
+        assert _S3_TRADES_PREFIX == s3_base_prefix("trade_truth")  # "core/trade_truth"
 
     def test_trade_truth_graph_prefix(self):
         from core.trade_truth_graph import _S3_PREFIX
-        assert _S3_PREFIX == "trade_truth_graph"
+        from core.production_data_contract import s3_base_prefix
+        assert _S3_PREFIX == s3_base_prefix("trade_truth_graph")  # "projections/trade_truth_graph"
 
     def test_edge_attribution_prefix(self):
         from core.edge_attribution import _S3_PREFIX
@@ -421,7 +430,8 @@ class TestCrossLayerPrefixIsolation:
 
     def test_execution_context_prefix(self):
         from core.execution_context import _S3_PREFIX
-        assert _S3_PREFIX == "execution_context"
+        from core.production_data_contract import s3_base_prefix
+        assert _S3_PREFIX == s3_base_prefix("execution_context")  # "supporting/execution_context"
 
     def test_all_use_same_bucket(self):
         """Runtime layers migrate; offline derivation layers retain their research sink."""

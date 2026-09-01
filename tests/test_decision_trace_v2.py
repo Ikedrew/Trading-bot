@@ -399,7 +399,8 @@ class TestSchemaVersion:
         assert _SCHEMA_VERSION == "decision_trace_v1"
 
     def test_s3_prefix_is_decision_trace(self):
-        assert _S3_PREFIX == "decision_trace"
+        from core.production_data_contract import s3_base_prefix
+        assert _S3_PREFIX == s3_base_prefix("decision_trace")  # "supporting/decision_trace"
 
     def test_s3_bucket_is_new_runtime_bucket(self):
         assert _S3_BUCKET == "trading-bot-v10-data"
