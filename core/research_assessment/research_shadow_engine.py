@@ -22,8 +22,11 @@ from core.shadow_trades import ShadowTradeEngine
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/research_shadow_trades"
-_S3_BUCKET = "v10-engine"
-_S3_PREFIX = "research_shadow_trades"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("research_shadow_trades")
 _SCHEMA_VERSION = "research_shadow_trades_v1"
 _engine: ShadowTradeEngine | None = None
 

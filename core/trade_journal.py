@@ -34,9 +34,11 @@ logger = logging.getLogger(__name__)
 
 _JOURNAL_DIR = "logs/trade_journal"
 from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+from core.production_data_contract import current_schema
 
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
-_S3_PREFIX = "trade_journal"
+_S3_PREFIX = s3_base_prefix("trade_journal")
 _SCHEMA_VERSION = "trade_journal_v1"
 
 
@@ -460,10 +462,10 @@ def persist_trade(record: TradeRecord) -> bool:
                 exit_fill_price=record.exit_price,
                 volume_executed=record.final_volume,
                 order_type="market",
-                slippage_entry=0.0,
-                slippage_exit=0.0,
-                spread_at_entry=0.0,
-                spread_at_exit=0.0,
+                slippage_entry=None,
+                slippage_exit=None,
+                spread_at_entry=None,
+                spread_at_exit=None,
                 entry_timestamp_broker=record.entry_time,
                 exit_timestamp_broker=record.exit_time,
                 pnl_realised=record.realised_pnl,
@@ -472,6 +474,18 @@ def persist_trade(record: TradeRecord) -> bool:
                 swap=record.swap,
                 net_profit=record.net_pnl,
                 exit_reason=_exit_reason,
+                field_provenance={
+                    "entry_fill_price": "broker_position_lifecycle",
+                    "exit_fill_price": "broker_deal_lifecycle",
+                    "volume_executed": "broker_position_lifecycle",
+                    "entry_timestamp_broker": "broker_position_lifecycle",
+                    "exit_timestamp_broker": "broker_deal_lifecycle",
+                    "pnl_realised": "broker_deal_lifecycle",
+                    "r_multiple_realised": "calculated_from_broker_prices",
+                    "commission": "broker_deal_lifecycle",
+                    "swap": "broker_deal_lifecycle",
+                    "net_profit": "calculated_from_broker_outcome",
+                },
             )
 
             persist_trade_truth(_truth_record)
@@ -519,7 +533,7 @@ def persist_trade(record: TradeRecord) -> bool:
                 event_window_end_ts=record.exit_time,
                 decision_to_execution_lag_ms=0.0,
                 execution_to_exit_lag_ms=(record.exit_time - record.entry_time) * 1000,
-                trade_truth_ref=f"s3://{NEW_RUNTIME_S3_BUCKET}/trades/schema_version=trade_truth_v3/symbol={record.symbol}/date={_graph_date}/part-000.jsonl",
+                trade_truth_ref=f"s3://{NEW_RUNTIME_S3_BUCKET}/{s3_base_prefix('trade_truth')}/schema_version={current_schema('trade_truth')}/symbol={record.symbol}/date={_graph_date}/part-000.jsonl",
                 execution_context_ref=record.correlation_id or "",
             )
             persist_graph_node(_graph_node)

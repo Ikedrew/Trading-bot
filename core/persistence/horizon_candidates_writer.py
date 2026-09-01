@@ -42,9 +42,10 @@ logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/horizon_candidates"
 from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
 
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
-_S3_PREFIX = "horizon_candidates"
+_S3_PREFIX = s3_base_prefix("horizon_candidates")
 _SCHEMA_VERSION = "horizon_candidates_v1"
 
 
@@ -155,14 +156,18 @@ def build_horizon_candidate_records(
         lineage: Optional dict with canonical IDs. Recognised keys:
             canonical_opportunity_id, observation_id, decision_id,
             correlation_id, cycle_id, entity_id.
-            When absent, canonical IDs are computed from symbol+bar_time.
+            When observation_id is absent it is computed from symbol+bar_time.
+            canonical_opportunity_id is never reconstructed here: it remains
+            null unless supplied by the upstream opportunity lineage.
 
     Returns:
         List of candidate record dicts — one per evaluated horizon.
     """
     lin = lineage or {}
 
-    # Compute fallback canonical IDs when not provided
+    # Observation identity exists before an opportunity and may be derived from
+    # the observed bar.  Opportunity identity, however, belongs to the upstream
+    # opportunity and must never be substituted or reconstructed downstream.
     canonical_opp_id = str(lin.get("canonical_opportunity_id", "") or "")
     observation_id = str(lin.get("observation_id", "") or "")
     if not observation_id:
@@ -173,8 +178,6 @@ def build_horizon_candidate_records(
             )
         except Exception:
             observation_id = ""
-    if not canonical_opp_id:
-        canonical_opp_id = observation_id
 
     decision_id = str(lin.get("decision_id", "") or "")
     correlation_id = str(lin.get("correlation_id", "") or "")

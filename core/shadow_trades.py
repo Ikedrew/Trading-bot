@@ -35,8 +35,16 @@ from core.trade_truth import compute_r_multiple, compute_mfe_r, compute_mae_r
 
 logger = logging.getLogger(__name__)
 
-_S3_BUCKET = "v10-engine"
-_S3_PREFIX = "shadow_trades"
+from core.production_data_contract import current_schema, supported_schemas
+
+_SCHEMA_VERSION = current_schema("shadow_trades")
+_SUPPORTED_SCHEMA_VERSIONS = supported_schemas("shadow_trades")
+
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("shadow_trades")
 _LOCAL_DIR = "logs/shadow_trades"
 _MAX_BARS_DEFAULT = 60  # 5h at M5
 
@@ -481,7 +489,7 @@ class ShadowTradeEngine:
         )
 
         return {
-            "schema_version": "shadow_trades_v2",
+            "schema_version": _SCHEMA_VERSION,
             "source": "shadow_trade_engine",
             # Remediation Stage 7: explicit lifecycle event type.
             # Historical records without this field are interpreted as CLOSE.
@@ -669,7 +677,7 @@ def _build_shadow_open_record(trade: "ShadowTrade") -> dict[str, Any]:
     risk_dist = abs(trade.entry_price - trade.stop_loss)
     pip_size = 0.01 if "JPY" in trade.symbol.upper() else 0.0001
     return {
-        "schema_version": "shadow_trades_v2",
+        "schema_version": _SCHEMA_VERSION,
         "source": "shadow_trade_engine",
         "event_type": _SHADOW_EVENT_OPEN,
         "identity": {
@@ -775,7 +783,7 @@ def _s3_append(symbol: str, date_str: str, line: str) -> None:
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
             region_name=os.getenv("AWS_REGION", "eu-west-2"),
         )
-        key = f"{_S3_PREFIX}/schema_version=shadow_trades_v2/symbol={symbol}/date={date_str}/part-000.jsonl"
+        key = f"{_S3_PREFIX}/schema_version={_SCHEMA_VERSION}/symbol={symbol}/date={date_str}/part-000.jsonl"
 
         # Read-append-write (safe for low-volume shadow trades)
         try:

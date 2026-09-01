@@ -28,8 +28,11 @@ logger = logging.getLogger(__name__)
 
 # ─── S3 MIRROR CONFIGURATION ─────────────────────────────────────────────────
 
-_S3_BUCKET = "v10-engine"
-_S3_PREFIX = "decision_audit"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("decision_audit")
 _SCHEMA_VERSION = "decision_audit_v1"
 
 
@@ -402,7 +405,19 @@ def persist_new_engine_decision_audit(
 
     try:
         _ts_ms = utc_ms()
-        action = engine_result.get("action", "NO_TRADE")
+        pipeline_result = engine_result.get("v10_pipeline_result")
+        if pipeline_result is not None:
+            action = "EXECUTE" if pipeline_result.approved else "NO_TRADE"
+            rejection_stage = pipeline_result.rejection_stage or None
+            try:
+                from core.v10.persistence_adapter import _get_rejection_reason
+                terminal_reason = _get_rejection_reason(pipeline_result)
+            except Exception:
+                terminal_reason = engine_result.get("reason", "")
+        else:
+            action = engine_result.get("action", "NO_TRADE")
+            rejection_stage = engine_result.get("rejection_stage")
+            terminal_reason = engine_result.get("reason", "")
         intent = engine_result.get("intent")
         assessment = engine_result.get("assessment")
 
@@ -428,10 +443,15 @@ def persist_new_engine_decision_audit(
             "cycle_id": cycle_id,
             "timeframe": getattr(config, "TIMEFRAME", None),
             "engine_version": "V10",
+            "record_role": "immutable_audit_projection",
+            "authority": "projection_of_canonical_decision",
+            "execution_mode": "LIVE",
 
             # Decision snapshot
             "should_trade": action == "EXECUTE",
-            "reason": engine_result.get("reason", "") if action != "EXECUTE" else "all_gates_passed",
+            "action": action,
+            "reason": terminal_reason if action != "EXECUTE" else "all_gates_passed",
+            "rejection_stage": rejection_stage,
             "side": engine_result.get("side") or (assessment.side if assessment else None),
             "score": engine_result.get("score", 0.0),
             "score_neutral": engine_result.get("score_neutral", 0.0),

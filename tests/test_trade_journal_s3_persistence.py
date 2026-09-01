@@ -53,15 +53,15 @@ class TestS3PathGeneration:
 
         assert mock_s3.put_object.called
         call_kwargs = mock_s3.put_object.call_args[1]
-        expected_key = "trade_journal/schema_version=trade_journal_v1/symbol=EURUSD/date=2026-07-25/part-000.jsonl"
+        expected_key = "projections/trade_journal/schema_version=trade_journal_v1/symbol=EURUSD/date=2026-07-25/part-000.jsonl"
         assert call_kwargs["Key"] == expected_key
-        assert call_kwargs["Bucket"] == "trading-bot-data-mk1"
+        assert call_kwargs["Bucket"] == "trading-bot-v10-data"
 
     def test_s3_bucket_correct(self):
-        assert _S3_BUCKET == "trading-bot-data-mk1"
+        assert _S3_BUCKET == "trading-bot-v10-data"
 
     def test_s3_prefix_correct(self):
-        assert _S3_PREFIX == "trade_journal"
+        assert _S3_PREFIX == "projections/trade_journal"
 
     def test_schema_version_value(self):
         assert _SCHEMA_VERSION == "trade_journal_v1"

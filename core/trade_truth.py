@@ -52,10 +52,13 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
 
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
-_S3_TRADES_PREFIX = "trades"
-_SCHEMA_VERSION = "trade_truth_v3"
+_S3_TRADES_PREFIX = s3_base_prefix("trade_truth")
+from core.production_data_contract import current_schema
+
+_SCHEMA_VERSION = current_schema("trade_truth")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FORBIDDEN FIELDS (reject at write time if present)
@@ -104,23 +107,24 @@ def build_trade_truth(
     exit_fill_price: float,
     volume_executed: float,
     order_type: str = "market",
-    slippage_entry: float = 0.0,
-    slippage_exit: float = 0.0,
-    spread_at_entry: float = 0.0,
-    spread_at_exit: float = 0.0,
+    slippage_entry: float | None = None,
+    slippage_exit: float | None = None,
+    spread_at_entry: float | None = None,
+    spread_at_exit: float | None = None,
     # Timestamps (real broker times)
     entry_timestamp_broker: float = 0.0,
     exit_timestamp_broker: float = 0.0,
     # Outcome (realised)
-    pnl_realised: float = 0.0,
-    r_multiple_realised: float = 0.0,
-    commission: float = 0.0,
-    swap: float = 0.0,
-    net_profit: float = 0.0,
+    pnl_realised: float | None = None,
+    r_multiple_realised: float | None = None,
+    commission: float | None = None,
+    swap: float | None = None,
+    net_profit: float | None = None,
     # Exit classification
     exit_reason: str = "system_close",
     # Canonical lineage (remediation)
     canonical_opportunity_id: str = "",
+    field_provenance: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """
     Build a Pure Execution Reality record.
@@ -128,6 +132,9 @@ def build_trade_truth(
     Every field MUST come from real broker execution data.
     No simulation, no prediction, no intent.
     """
+    def _rounded(value: float | None, digits: int) -> float | None:
+        return round(value, digits) if value is not None else None
+
     duration = exit_timestamp_broker - entry_timestamp_broker if (
         entry_timestamp_broker > 0 and exit_timestamp_broker > 0
     ) else 0.0
@@ -149,10 +156,10 @@ def build_trade_truth(
             "exit_fill_price": round(exit_fill_price, 8),
             "volume_executed": round(volume_executed, 4),
             "order_type": order_type,
-            "slippage_entry": round(slippage_entry, 8),
-            "slippage_exit": round(slippage_exit, 8),
-            "spread_at_entry": round(spread_at_entry, 8),
-            "spread_at_exit": round(spread_at_exit, 8),
+            "slippage_entry": _rounded(slippage_entry, 8),
+            "slippage_exit": _rounded(slippage_exit, 8),
+            "spread_at_entry": _rounded(spread_at_entry, 8),
+            "spread_at_exit": _rounded(spread_at_exit, 8),
         },
 
         # Domain 3: Timestamps (real world only)
@@ -164,16 +171,23 @@ def build_trade_truth(
 
         # Domain 4: Outcome (realised only)
         "outcome": {
-            "pnl_realised": round(pnl_realised, 4),
-            "r_multiple_realised": round(r_multiple_realised, 4),
-            "commission": round(commission, 4),
-            "swap": round(swap, 4),
-            "net_profit": round(net_profit, 4),
+            "pnl_realised": _rounded(pnl_realised, 4),
+            "r_multiple_realised": _rounded(r_multiple_realised, 4),
+            "commission": _rounded(commission, 4),
+            "swap": _rounded(swap, 4),
+            "net_profit": _rounded(net_profit, 4),
         },
 
         # Domain 5: Exit classification (observed only)
         "exit": {
             "exit_reason": exit_reason,
+        },
+        # Presence in trade_truth does not manufacture broker provenance.
+        # Values not listed by a caller remain explicitly unknown.
+        "provenance": {
+            "authority": "realized_outcome",
+            "population": "LIVE",
+            "fields": dict(field_provenance or {}),
         },
     }
 
@@ -413,7 +427,7 @@ def _s3_persist(symbol: str, date_str: str, line: str) -> None:
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
             region_name=os.getenv("AWS_REGION", "eu-west-2"),
         )
-        key = f"{_S3_TRADES_PREFIX}/schema_version=trade_truth_v3/symbol={symbol}/date={date_str}/part-000.jsonl"
+        key = f"{_S3_TRADES_PREFIX}/schema_version={_SCHEMA_VERSION}/symbol={symbol}/date={date_str}/part-000.jsonl"
         try:
             existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
             body = existing["Body"].read().decode("utf-8") + line

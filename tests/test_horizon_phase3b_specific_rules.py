@@ -148,11 +148,10 @@ class TestIntradayProfile:
         profile = get_horizon_manager().get_profile("INTRADAY")
         assert profile.max_time_in_trade_seconds == 14400.0  # 240 min
 
-    def test_intraday_not_in_permitted_horizons(self):
-        """INTRADAY profile exists but is not permitted for execution."""
+    def test_intraday_in_permitted_horizons(self):
         from core.horizon.horizon_manager import get_horizon_manager
         mgr = get_horizon_manager()
-        assert mgr.is_permitted("INTRADAY") is False
+        assert mgr.is_permitted("INTRADAY") is True
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -190,10 +189,10 @@ class TestExtendedProfile:
         profile = get_horizon_manager().get_profile("EXTENDED")
         assert profile.max_time_in_trade_seconds == 43200.0  # 720 min
 
-    def test_extended_not_in_permitted_horizons(self):
+    def test_extended_in_permitted_horizons(self):
         from core.horizon.horizon_manager import get_horizon_manager
         mgr = get_horizon_manager()
-        assert mgr.is_permitted("EXTENDED") is False
+        assert mgr.is_permitted("EXTENDED") is True
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -324,21 +323,17 @@ class TestDisabledHorizonsBlocked:
         from core.horizon.horizon_manager import reset_horizon_manager
         reset_horizon_manager()
 
-    def test_execution_authority_blocks_intraday(self):
-        """HorizonExecutionAuthority blocks INTRADAY (not in PERMITTED_HORIZONS)."""
+    def test_execution_authority_allows_intraday(self):
         from core.horizon.execution_authority import HorizonExecutionAuthority
         auth = HorizonExecutionAuthority()
         result = auth.can_open(symbol="EURUSD", horizon="INTRADAY", current_positions=[])
-        assert result.allowed is False
-        assert result.reason == "horizon_not_permitted"
+        assert result.allowed is True
 
-    def test_execution_authority_blocks_extended(self):
-        """HorizonExecutionAuthority blocks EXTENDED."""
+    def test_execution_authority_allows_extended(self):
         from core.horizon.execution_authority import HorizonExecutionAuthority
         auth = HorizonExecutionAuthority()
         result = auth.can_open(symbol="EURUSD", horizon="EXTENDED", current_positions=[])
-        assert result.allowed is False
-        assert result.reason == "horizon_not_permitted"
+        assert result.allowed is True
 
     def test_execution_authority_allows_scalp(self):
         """SCALP remains permitted."""

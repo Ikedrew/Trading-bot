@@ -42,8 +42,11 @@ from core.mt5_timeout import mt5_call
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/protection_audit"
-_S3_BUCKET = "v10-engine"
-_S3_PREFIX = "protection_audit"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("protection_audit")
 _SCHEMA_VERSION = "protection_audit_v1"
 _MAX_VERIFY_ATTEMPTS = 3
 _VERIFY_RETRY_DELAY_S = 0.5

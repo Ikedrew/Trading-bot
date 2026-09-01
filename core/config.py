@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os as _os
 
+from core.production_data_contract import DATA_CONTRACT_VERSION
+
 # Load .env file (project root) for secrets/configuration.
 # python-dotenv reads .env without affecting system environment.
 try:
@@ -66,7 +68,7 @@ VALIDATION_MODE = True              # When True, enables runtime safety + consis
 # --- Event persistence ---
 EVENT_STREAM_ENABLED = True         # Enables/disables local JSONL event logging (events/*.jsonl)
 EVENT_STREAM_S3_MIRROR = True       # Enables/disables S3 batch event persistence
-NEW_RUNTIME_S3_BUCKET = "trading-bot-v10-data"  # Current NEW live + shadow dataset writers
+NEW_RUNTIME_S3_BUCKET = _os.getenv("AWS_S3_BUCKET", "trading-bot-v10-data")  # Canonical live + shadow sink
 DECISION_AUDIT_ENABLED = True       # Enables/disables decision audit trail persistence
 
 # --- NEW Shadow Runtime (per-opportunity horizon shadows) ---

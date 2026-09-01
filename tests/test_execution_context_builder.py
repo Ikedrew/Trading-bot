@@ -74,7 +74,12 @@ class TestBuildCycleContext:
         )
 
         assert result == "cor_abc123"
-        mock_persist.assert_called_once_with({"context": "data"})
+        mock_persist.assert_called_once_with({
+            "context": "data",
+            "bar_time": 1700000000,
+            "entity_id": "EURUSD_1700000000",
+            "cycle_id": 5,
+        })
 
     @patch("core.runtime.execution_context_builder.persist_execution_context")
     @patch("core.runtime.execution_context_builder.build_execution_context")

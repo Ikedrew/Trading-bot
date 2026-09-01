@@ -65,9 +65,10 @@ class DecisionOutcome(str, Enum):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
 
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
-_S3_PREFIX = "decision_ledger"
+_S3_PREFIX = s3_base_prefix("decision_ledger")
 _LOCAL_DIR = "logs/decision_ledger"
 _SCHEMA_VERSION = "decision_ledger_v1"
 _FLUSH_INTERVAL_SECONDS = 30.0
@@ -210,6 +211,9 @@ def build_ledger_entry(
     reason: str = "",
     # Signal state
     signal_score: float = 0.0,
+    signal_score_semantic: str = "unknown_legacy_projection",
+    assessment_strategy_weighted_score: float | None = None,
+    opportunity_overall_quality_score: float | None = None,
     signal_type: str | None = None,
     pattern_state: str = "none",
     # Market context
@@ -264,7 +268,18 @@ def build_ledger_entry(
         "reason": reason,
         "regime": regime,
         "session_state": session_state,
+        # Compatibility projection only.  Consumers must use the qualified
+        # score fields below for analytical authority.
         "signal_score": round(signal_score, 4),
+        "signal_score_semantic": signal_score_semantic,
+        "assessment_strategy_weighted_score": (
+            round(assessment_strategy_weighted_score, 4)
+            if assessment_strategy_weighted_score is not None else None
+        ),
+        "opportunity_overall_quality_score": (
+            round(opportunity_overall_quality_score, 4)
+            if opportunity_overall_quality_score is not None else None
+        ),
         "signal_type": signal_type,
         "pattern_state": pattern_state,
         "last_stage": last_stage,

@@ -35,9 +35,10 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
 
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
-_S3_PREFIX = "shadow_runtime"
+_S3_PREFIX = s3_base_prefix("shadow_runtime")
 _DEFAULT_BASE_DIR = "logs/shadow_runtime_v1"  # PROVISIONAL
 
 

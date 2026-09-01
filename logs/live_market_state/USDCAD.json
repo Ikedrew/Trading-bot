@@ -1,17 +1,17 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "USDCAD",
-  "cycle_id": 1,
-  "bar_time": 1788151500,
-  "updated_at": "2026-08-31T01:48:56.491Z",
-  "updated_at_unix": 1788140936.491,
-  "action": "EXECUTE",
-  "score": 0.47,
-  "reason": "V10: MEAN_REVERSION \u2192 SCALP",
+  "cycle_id": 601,
+  "bar_time": 1788237600,
+  "updated_at": "2026-09-01T01:40:15.919Z",
+  "updated_at_unix": 1788226815.919,
+  "action": "NO_TRADE",
+  "score": 0.425,
+  "reason": "V10 [risk]: Risk: R:R 1.00 below minimum 1.5",
   "identity": {
-    "entity_id": "USDCAD_1788151500",
-    "observation_id": "be7b62eabad8cd9a",
-    "cycle_id": 1,
+    "entity_id": "USDCAD_1788237600",
+    "observation_id": "eb7b4830b00b539e",
+    "cycle_id": 601,
     "correlation_id": "",
     "trade_id": ""
   },
@@ -20,37 +20,37 @@
     "regime_confidence": 0.5,
     "volatility_state": "NEUTRAL",
     "h4_trend": "NEUTRAL",
-    "h4_trend_strength": 0.2,
-    "h4_phase": "REVERSAL",
-    "h1_bos_direction": "BEARISH",
-    "h1_structural_clarity": 0.528,
-    "h1_dominant_trend": "BULLISH",
+    "h4_trend_strength": 0.0,
+    "h4_phase": "PULLBACK",
+    "h1_bos_direction": "",
+    "h1_structural_clarity": 0.7093,
+    "h1_dominant_trend": "BEARISH",
     "m15_pullback_active": true,
     "m15_displacement": false,
-    "m15_range_position": 0.75,
-    "m5_momentum": "BEARISH",
-    "m5_momentum_strength": 0.8,
+    "m15_range_position": 0.7935,
+    "m5_momentum": "BULLISH",
+    "m5_momentum_strength": 0.6,
     "m5_rejection": false,
     "m5_confirmation": false,
-    "m5_local_bos": true,
+    "m5_local_bos": false,
     "location_type": "OPEN_SPACE",
     "inside_zone": false,
     "zone_quality": 0.0,
-    "range_position": 0.75,
+    "range_position": 0.7935,
     "premium_discount": "PREMIUM",
-    "htf_macro_bias": "BULLISH",
-    "htf_structure_alignment": 0.8
+    "htf_macro_bias": "BEARISH",
+    "htf_structure_alignment": 0.5
   },
   "opportunity": {
     "state": "WATCHING",
     "directional_bias": "BEARISH",
     "opportunity_type": "ZONE_REACTION",
-    "overall_quality": 0.47,
+    "overall_quality": 0.425,
     "location_score": 0.4,
-    "structure_score": 0.5,
+    "structure_score": 0.35,
     "behaviour_score": 0.7999999999999999,
     "formation_score": 0.3,
-    "observation_id": "be7b62eabad8cd9a"
+    "observation_id": "eb7b4830b00b539e"
   },
   "strategy": {
     "family": "MEAN_REVERSION",
@@ -64,29 +64,29 @@
     "duration_minutes": 30
   },
   "entry": {
-    "status": "READY",
+    "status": "WAITING",
     "method": "CONFIRMATION_ENTRY",
     "direction": "SELL",
-    "price": 1.3905150000000002,
-    "stop": 1.3898392857142856,
-    "target": 1.38814,
-    "risk_distance": 0.000675714285714557,
-    "reward_distance": 0.002375000000000238,
-    "expected_rr": 3.51
+    "price": 1.3853499999999999,
+    "stop": 1.3858592857142857,
+    "target": 1.38586,
+    "risk_distance": 0.0005092857142858787,
+    "reward_distance": 0.0005100000000002325,
+    "expected_rr": 1.0
   },
   "risk": {
-    "approved": true,
-    "rejection_reason": "",
-    "risk_percentage": 0.0025,
-    "position_size": 3.7,
-    "max_loss": 133.0318
+    "approved": false,
+    "rejection_reason": "R:R 1.00 below minimum 1.5",
+    "risk_percentage": 0.0,
+    "position_size": 0.0,
+    "max_loss": 0.0
   },
   "execution": {
-    "approved": true,
-    "rejection_reason": "",
-    "order_type": "MARKET",
-    "volume": 3.7
+    "approved": false,
+    "rejection_reason": "Risk rejected: R:R 1.00 below minimum 1.5",
+    "order_type": "",
+    "volume": 0.0
   },
-  "rejection_stage": "",
-  "approved": true
+  "rejection_stage": "risk",
+  "approved": false
 }

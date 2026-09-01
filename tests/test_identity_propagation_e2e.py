@@ -358,7 +358,7 @@ class TestTradeTruthOutput:
 
         assert parsed["identity"]["correlation_id"] == _TEST_CORRELATION_ID
         assert parsed["identity"]["trade_id"] == pos.position_id
-        assert parsed["schema_version"] == "trade_truth_v3"
+        assert parsed["schema_version"] == "trade_truth_v1"
 
     def test_trade_truth_validates_with_correlation(self):
         """Trade Truth passes validation when correlation_id is present."""

@@ -289,7 +289,7 @@ class ResearchExecutionOrchestrator:
         return builder.records
 
     def _build_universes(self) -> dict[Universe, Any]:
-        """Build all six universes from default paths, then enrich with outcomes."""
+        """Build all active universes from authoritative sources."""
         from research_engine.v10.universes import (
             ExecutionUniverseBuilder,
             DecisionUniverseBuilder,
@@ -297,6 +297,7 @@ class ResearchExecutionOrchestrator:
             StrategyUniverseBuilder,
             RiskUniverseBuilder,
             OutcomeUniverseBuilder,
+            ShadowOutcomeUniverseBuilder,
         )
         from research_engine.v10.universes.outcome_enrichment import OutcomeEnrichment
 
@@ -328,6 +329,16 @@ class ResearchExecutionOrchestrator:
                 builders[Universe.OUTCOME] = outcome_builder
             except Exception as e:
                 logger.warning(f"[ORCHESTRATOR] Failed to build OUTCOME: {e}")
+
+        # Counterfactual outcomes remain separate from realised outcomes. This
+        # maps the existing authoritative shadow_trades_v2 dataset; it does not
+        # create a duplicate shadow dataset.
+        try:
+            shadow_builder = ShadowOutcomeUniverseBuilder()
+            shadow_builder.build()
+            builders[Universe.SHADOW_OUTCOME] = shadow_builder
+        except Exception as e:
+            logger.warning(f"[ORCHESTRATOR] Failed to build SHADOW_OUTCOME: {e}")
 
         # Shadow Reality universe — RETIRED with V10_PRIMARY (Phase 1I-C).
         # The legacy bridge joined V10_PRIMARY EXECUTE shadows to the trade

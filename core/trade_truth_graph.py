@@ -51,10 +51,15 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_S3_BUCKET = "v10-engine"
-_S3_PREFIX = "trade_truth_graph"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("trade_truth_graph")
 _LOCAL_DIR = "logs/trade_truth_graph"
-_SCHEMA_VERSION = "trade_truth_graph_v2"
+from core.production_data_contract import current_schema
+
+_SCHEMA_VERSION = current_schema("trade_truth_graph")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -440,7 +445,11 @@ def build_graph_from_shadow_trade(
     # Build S3 references
     if not shadow_trade_ref and symbol and decision_ts > 0:
         date = datetime.fromtimestamp(decision_ts, tz=timezone.utc).strftime("%Y-%m-%d")
-        shadow_trade_ref = f"s3://{_S3_BUCKET}/shadow_trades/{symbol}/{date}.jsonl"
+        shadow_trade_ref = (
+            f"s3://{_S3_BUCKET}/{s3_base_prefix('shadow_trades')}/"
+            f"schema_version={current_schema('shadow_trades')}/symbol={symbol}/"
+            f"date={date}/part-000.jsonl"
+        )
 
     if not execution_context_ref and correlation_id:
         execution_context_ref = correlation_id  # Joinable via correlation_id
@@ -448,7 +457,7 @@ def build_graph_from_shadow_trade(
     events_ref = ""
     if decision_ts > 0:
         date = datetime.fromtimestamp(decision_ts, tz=timezone.utc).strftime("%Y-%m-%d")
-        events_ref = f"s3://{_S3_BUCKET}/events/symbol={symbol}/date={date}/"
+        events_ref = f"s3://{_S3_BUCKET}/{s3_base_prefix('events')}/symbol={symbol}/date={date}/"
 
     return build_graph_node(
         trade_id=identity.get("trade_id", ""),

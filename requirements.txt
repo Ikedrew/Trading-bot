@@ -2,6 +2,7 @@
 # For dev/test tools, see requirements-dev.txt
 # For exact reproducible builds, see requirements.lock
 
-MetaTrader5==5.0.5735
+MetaTrader5==5.0.6147
 python-dotenv==1.0.1
 boto3==1.43.84
+requests==2.34.2

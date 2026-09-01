@@ -120,8 +120,8 @@ SCHEMA_FIELDS = {
 
 S3_DATASETS = {
     "decisions": {
-        "path": "decision_trace/schema_version=decision_trace_v2/symbol={symbol}/date={date}/",
-        "contains": "Every V10 evaluation (EXECUTE and NO_TRADE) — merged into decision_trace_v2",
+        "path": "supporting/decision_trace/schema_version=decision_trace_v1/symbol={symbol}/date={date}/",
+        "contains": "Every V10 evaluation (EXECUTE and NO_TRADE) — production V1 decision trace",
         "join_key": "observation_id",
     },
 }

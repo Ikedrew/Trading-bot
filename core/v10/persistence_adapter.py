@@ -72,6 +72,8 @@ def build_v10_decision_record(result: PipelineResult, cycle_id: int = 0) -> dict
         "final_action": "EXECUTE" if result.approved else "NO_TRADE",
         "rejection_stage": result.rejection_stage or None,
         "rejection_reason": _get_rejection_reason(result) or None,
+        "decision_authority": "pipeline_result",
+        "record_role": "canonical_decision",
 
         # Market state (always populated)
         "market_state": {
@@ -129,13 +131,15 @@ def build_v10_decision_record(result: PipelineResult, cycle_id: int = 0) -> dict
         "expected_rr": entry.expected_rr if entry.expected_rr > 0 else None,
 
         # Risk
-        "risk_approved": risk.approved,
+        "risk_approved": risk.approved,  # compatibility: V10 plan feasibility
+        "v10_plan_risk_approved": risk.approved,
         "risk_rejection": risk.rejection_reason or None,
         "risk_percentage": risk.risk_profile.risk_percentage if risk.approved else None,
         "position_size": risk.risk_profile.position_size if risk.approved else None,
 
         # Execution
-        "execution_approved": exe.approved,
+        "execution_approved": exe.approved,  # compatibility: V10 plan feasibility
+        "v10_plan_execution_approved": exe.approved,
         "execution_rejection": exe.rejection_reason or None,
         "order_type": exe.order_details.order_type if exe.approved else None,
         "order_volume": exe.order_details.volume if exe.approved else None,
@@ -198,6 +202,8 @@ def build_v10_ledger_entry(result: PipelineResult, cycle_id: int = 0) -> dict[st
         decision=decision,
         reason=_get_rejection_reason(result) if not result.approved else f"V10: {strat.strategy_family}",
         signal_score=opp.quality.overall_quality,
+        signal_score_semantic="opportunity_overall_quality_score",
+        opportunity_overall_quality_score=opp.quality.overall_quality,
         signal_type=strat.strategy_family if strat.strategy_family != StrategyFamily.NONE.value else None,
         regime=state.regime.regime or "unknown",
         execution_intent={
@@ -222,6 +228,7 @@ def build_v10_ledger_entry(result: PipelineResult, cycle_id: int = 0) -> dict[st
         "opportunity_state": opp.opportunity_state,
         "opportunity_type": opp.opportunity_type,
         "decision_id": opp.observation_id,
+        "opportunity_overall_quality_score": opp.quality.overall_quality,
     }
 
     return ledger_entry

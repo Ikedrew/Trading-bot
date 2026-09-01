@@ -31,7 +31,7 @@ class TestProtectionAuditS3:
              patch("boto3.client", return_value=mock_s3):
             _write_s3_protection_audit("EURUSD", "2026-07-25", '{"test":1}\n')
         key = mock_s3.put_object.call_args[1]["Key"]
-        assert key == "protection_audit/schema_version=protection_audit_v1/symbol=EURUSD/date=2026-07-25/part-000.jsonl"
+        assert key == "supporting/protection_audit/schema_version=protection_audit_v1/symbol=EURUSD/date=2026-07-25/part-000.jsonl"
 
     def test_schema_version_constant(self):
         from core.protection_verification import _SCHEMA_VERSION
@@ -69,7 +69,7 @@ class TestRiskDeviationS3:
              patch("boto3.client", return_value=mock_s3):
             _write_s3_risk_deviation("USDJPY", "2026-07-25", '{"test":1}\n')
         key = mock_s3.put_object.call_args[1]["Key"]
-        assert key == "risk_deviation/schema_version=risk_deviation_v1/symbol=USDJPY/date=2026-07-25/part-000.jsonl"
+        assert key == "supporting/risk_deviation/schema_version=risk_deviation_v1/symbol=USDJPY/date=2026-07-25/part-000.jsonl"
 
     def test_schema_version_constant(self):
         from core.risk_deviation import _SCHEMA_VERSION
@@ -107,7 +107,7 @@ class TestQuarantineS3:
              patch("boto3.client", return_value=mock_s3):
             _write_s3_quarantine("trade_truth", "2026-07-25", '{"test":1}\n')
         key = mock_s3.put_object.call_args[1]["Key"]
-        assert key == "quarantine/schema_version=quarantine_v1/layer=trade_truth/date=2026-07-25/part-000.jsonl"
+        assert key == "projections/quarantine/schema_version=quarantine_v1/layer=trade_truth/date=2026-07-25/part-000.jsonl"
 
     def test_schema_version_constant(self):
         from core.contracts.quarantine import _SCHEMA_VERSION

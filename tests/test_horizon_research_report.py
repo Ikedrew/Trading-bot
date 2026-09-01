@@ -357,6 +357,6 @@ class TestDisabledHorizonsReport:
         assert report.horizon == "INTRADAY"
         assert report.overall_status != OverallStatus.INSUFFICIENT_DATA
 
-    def test_execution_still_blocked(self):
+    def test_runtime_horizons_match_current_contract(self):
         from core import config
-        assert config.PERMITTED_HORIZONS == ["SCALP"]
+        assert config.PERMITTED_HORIZONS == ["SCALP", "INTRADAY", "EXTENDED"]

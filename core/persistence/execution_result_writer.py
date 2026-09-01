@@ -27,9 +27,10 @@ logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/execution_results"
 from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
 
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
-_S3_PREFIX = "execution_results"
+_S3_PREFIX = s3_base_prefix("execution_results")
 _SCHEMA_VERSION = "execution_results_v1"
 
 
@@ -59,6 +60,7 @@ def persist_execution_result(
     # Execution metadata
     decision_ts_utc_ms: int = 0,
     slippage: float = 0.0,
+    slippage_measured: bool = False,
     # Phase 3 Step 4: execution-moment market facts (additive; 0.0 = unknown).
     # Derived from the live feed tick at the execution boundary — never invented.
     bid_at_execution: float = 0.0,
@@ -93,7 +95,10 @@ def persist_execution_result(
             "order_ticket": order,
             "comment": comment,
             "fill_price": fill_price,
-            "slippage": round(slippage, 6) if slippage else 0.0,
+            "slippage": round(slippage, 6) if slippage_measured else None,
+            "slippage_semantic": (
+                "measured_execution_slippage" if slippage_measured else "unknown"
+            ),
             # What was attempted
             "side": side,
             "volume": volume,
@@ -117,6 +122,41 @@ def persist_execution_result(
                 ask_at_execution - bid_at_execution, 8
             ) if (ask_at_execution > 0 and bid_at_execution > 0) else None,
             "risk_distance": round(risk_distance, 8) if risk_distance else None,
+            # Stage-qualified authority.  Legacy volume/sl/tp above are aliases
+            # for requested values, never fill/protection confirmation.
+            "request": {
+                "volume": volume or None,
+                "entry_reference": entry_reference or None,
+                "sl": (requested_sl or sl) or None,
+                "tp": (requested_tp or tp) or None,
+            },
+            "submission": {
+                "volume": volume or None,
+                "sl": sl or None,
+                "tp": tp or None,
+            },
+            "response": {
+                "retcode": retcode,
+                "comment": comment,
+                "order_id": order or None,
+                "deal_id": deal or None,
+            },
+            "fill": {
+                "price": fill_price,
+                "volume": volume if result_ok and deal else None,
+                "time": None,
+            },
+            "protection_confirmation": {
+                "broker_confirmed_sl": broker_confirmed_sl or None,
+                "broker_confirmed_tp": broker_confirmed_tp or None,
+                "source": "protection_verification" if protection_status else None,
+            },
+            "legacy_field_semantics": {
+                "volume": "requested_volume",
+                "sl": "submitted_sl",
+                "tp": "submitted_tp",
+                "signal_score": "not_present",
+            },
             # Protection verification (Phase 1 hardening)
             "requested_sl": requested_sl,
             "broker_confirmed_sl": broker_confirmed_sl,

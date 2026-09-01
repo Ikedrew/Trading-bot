@@ -18,9 +18,14 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/market_context"
-_S3_BUCKET = "v10-engine"
-_S3_PREFIX = "market_context"
-_SCHEMA_VERSION = "market_context_v2"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("market_context")
+from core.production_data_contract import current_schema
+
+_SCHEMA_VERSION = current_schema("market_context")
 
 
 class MarketContextPersistence:

@@ -227,7 +227,7 @@ class TestQuestionValidatorCorrelation:
 
     def test_all_questions_validate(self):
         results = validate_all_questions(QUESTION_BANK)
-        assert len(results) == 45
+        assert len(results) == len(QUESTION_BANK)
         # No INVALID
         invalid = [r for r in results if r.status == "INVALID"]
         assert not invalid

@@ -312,6 +312,9 @@ def _validate_one_trade(
 
     # ─── Build validated record ───────────────────────────────
     return {
+        "record_role": "validation_projection",
+        "authority": "non_live_projection",
+        "may_override_live_truth": False,
         # Identity
         "trade_id": trade_id,
         "position_ticket": trade.get("position_ticket"),
@@ -346,6 +349,7 @@ def _validate_one_trade(
         "calculated_pnl": trade.get("net_pnl"),
         "final_pnl": final_pnl,
         "pnl_source": pnl_source,
+        "pnl_semantic": "validated_reconciliation_projection",
         "commission": trade.get("commission", 0),
         "swap": trade.get("swap", 0),
         "close_reason": trade.get("close_reason", ""),

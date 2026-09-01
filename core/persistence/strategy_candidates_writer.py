@@ -40,9 +40,10 @@ logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/strategy_candidates"
 from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
 
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
-_S3_PREFIX = "strategy_candidates"
+_S3_PREFIX = s3_base_prefix("strategy_candidates")
 _SCHEMA_VERSION = "strategy_candidates_v1"
 
 

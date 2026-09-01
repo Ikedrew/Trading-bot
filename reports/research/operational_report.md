@@ -1,6 +1,6 @@
 # V10 Research Operational Report
 
-Generated: 2026-08-14T13:07:27.546011+00:00
+Generated: 2026-09-01T13:48:36.792946+00:00
 
 ## Dataset
 - Status: AVAILABLE
@@ -11,8 +11,11 @@ Generated: 2026-08-14T13:07:27.546011+00:00
 - IDs: FX_OPT_V1, RISK_INVESTIGATION_V1, DECISION_QUALITY_V1, STRATEGY_REVIEW_V1
 
 ## Candidates
-- Total: 0
-- Active: 0
+- Total: 3
+- Active: 3
+  - OPT-fcf078b8
+  - OPT-441a8783
+  - OPT-3292f718
 
 ## Shadow Tests
 - Active: 0

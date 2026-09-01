@@ -93,7 +93,7 @@ def validate_canonical_event(event: dict[str, Any]) -> None:
         3. 'guard_result' is one of: APPROVED, REJECTED, UNKNOWN
         4. Core identifiers exist (ts_utc_ms, type)
         5. No immutable field is None, dict, list, or empty string
-        6. schema_version is present and is an int
+        6. schema_version is the current production dataset schema
 
     Args:
         event: The fully-resolved event dict ready for serialisation.
@@ -117,9 +117,10 @@ def validate_canonical_event(event: dict[str, Any]) -> None:
     # ─── Schema version ───────────────────────────────────────────────
     if "schema_version" not in event:
         raise SchemaViolation("[SCHEMA VIOLATION] missing required field: schema_version")
-    if not isinstance(event["schema_version"], int):
+    from core.production_data_contract import current_schema
+    if event["schema_version"] != current_schema("events"):
         raise SchemaViolation(
-            f"[SCHEMA VIOLATION] schema_version must be int, got {type(event['schema_version']).__name__}"
+            "[SCHEMA VIOLATION] schema_version must be the current events schema"
         )
 
     # ─── Immutable trading features ───────────────────────────────────

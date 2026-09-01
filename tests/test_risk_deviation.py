@@ -246,8 +246,8 @@ class TestWinningTrade:
             initial_sl=1.09950,
         )
 
-        assert result.actual_risk_R == 0.0
-        assert result.risk_deviation == 0.0
+        assert result.actual_risk_R is None
+        assert result.risk_deviation is None
         assert result.risk_classification == RiskClassification.WIN
 
 
@@ -271,8 +271,8 @@ class TestMissingData:
         )
 
         assert result.risk_classification == RiskClassification.NO_RISK_DATA
-        assert result.actual_risk_R == 0.0
-        assert result.risk_deviation == 0.0
+        assert result.actual_risk_R is None
+        assert result.risk_deviation is None
         assert result.risk_distance == 0.0
 
     def test_sl_equals_entry_returns_no_risk_data(self):
@@ -308,7 +308,7 @@ class TestMissingData:
         assert result.direction == "BUY"
         assert result.entry_price == 163.176
         assert result.exit_price == 163.165
-        assert result.planned_risk_R == -1.0
+        assert result.planned_risk_R is None
         assert result.timestamp_utc != ""
 
 

@@ -101,9 +101,9 @@ class TestExecutionContextIsolation:
         assert _S3_PREFIX == "execution_context"
 
     def test_s3_bucket_is_canonical(self):
-        """Must write to trading-bot-data-mk1 only."""
+        """Must write to the canonical runtime bucket only."""
         from core.execution_context import _S3_BUCKET
-        assert _S3_BUCKET == "trading-bot-data-mk1"
+        assert _S3_BUCKET == "trading-bot-v10-data"
 
 
 # -------------------------------------------------------------------------------
@@ -424,7 +424,7 @@ class TestCrossLayerPrefixIsolation:
         assert _S3_PREFIX == "execution_context"
 
     def test_all_use_same_bucket(self):
-        """Every layer must target the canonical bucket."""
+        """Runtime layers migrate; offline derivation layers retain their research sink."""
         from core.shadow_trades import _S3_BUCKET as st_bucket
         from core.trade_truth import _S3_BUCKET as tt_bucket
         from core.trade_truth_graph import _S3_BUCKET as ttg_bucket
@@ -433,11 +433,11 @@ class TestCrossLayerPrefixIsolation:
         from core.strategy_compiler import _S3_BUCKET as sc_bucket
         from core.execution_context import _S3_BUCKET as ec_bucket
 
-        canonical = "trading-bot-data-mk1"
+        canonical = "trading-bot-v10-data"
         assert st_bucket == canonical
         assert tt_bucket == canonical
         assert ttg_bucket == canonical
-        assert ea_bucket == canonical
-        assert eo_bucket == canonical
-        assert sc_bucket == canonical
         assert ec_bucket == canonical
+        assert ea_bucket == "v10-engine"
+        assert eo_bucket == "v10-engine"
+        assert sc_bucket == "v10-engine"

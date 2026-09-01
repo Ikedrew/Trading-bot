@@ -395,8 +395,8 @@ def _engine_result_without_v10():
 
 
 class TestSchemaVersion:
-    def test_schema_is_v2(self):
-        assert _SCHEMA_VERSION == "decision_trace_v2"
+    def test_schema_is_new_account_production_v1(self):
+        assert _SCHEMA_VERSION == "decision_trace_v1"
 
     def test_s3_prefix_is_decision_trace(self):
         assert _S3_PREFIX == "decision_trace"

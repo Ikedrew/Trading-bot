@@ -126,10 +126,10 @@ class TestHorizonManager:
         mgr = get_horizon_manager()
         assert mgr.is_permitted("SCALP") is True
 
-    def test_is_not_permitted_intraday_default(self):
+    def test_intraday_is_permitted_by_current_default(self):
         from core.horizon.horizon_manager import get_horizon_manager
         mgr = get_horizon_manager()
-        assert mgr.is_permitted("INTRADAY") is False
+        assert mgr.is_permitted("INTRADAY") is True
 
     def test_validate_horizon_valid(self):
         from core.horizon.horizon_manager import get_horizon_manager
@@ -480,10 +480,9 @@ class TestConfigPermittedHorizons:
         from core import config
         assert isinstance(config.PERMITTED_HORIZONS, list)
 
-    def test_only_scalp_permitted_phase1(self):
-        """Phase 1: Only SCALP should be in PERMITTED_HORIZONS."""
+    def test_current_runtime_permits_all_supported_horizons(self):
         from core import config
-        assert config.PERMITTED_HORIZONS == ["SCALP"]
+        assert config.PERMITTED_HORIZONS == ["SCALP", "INTRADAY", "EXTENDED"]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

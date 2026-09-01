@@ -119,35 +119,35 @@ class TestVersioning:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class TestExecutionUnchanged:
-    def test_permitted_horizons_still_scalp_only(self):
+    def test_permitted_horizons_match_current_runtime(self):
         from core import config
-        assert config.PERMITTED_HORIZONS == ["SCALP"]
+        assert config.PERMITTED_HORIZONS == ["SCALP", "INTRADAY", "EXTENDED"]
 
-    def test_intraday_not_permitted(self):
+    def test_intraday_permitted(self):
         from core.horizon.horizon_manager import get_horizon_manager, reset_horizon_manager
         reset_horizon_manager()
         mgr = get_horizon_manager()
-        assert mgr.is_permitted("INTRADAY") is False
+        assert mgr.is_permitted("INTRADAY") is True
         reset_horizon_manager()
 
-    def test_extended_not_permitted(self):
+    def test_extended_permitted(self):
         from core.horizon.horizon_manager import get_horizon_manager, reset_horizon_manager
         reset_horizon_manager()
         mgr = get_horizon_manager()
-        assert mgr.is_permitted("EXTENDED") is False
+        assert mgr.is_permitted("EXTENDED") is True
         reset_horizon_manager()
 
-    def test_execution_authority_blocks_intraday(self):
+    def test_execution_authority_allows_intraday(self):
         from core.horizon.execution_authority import HorizonExecutionAuthority
         auth = HorizonExecutionAuthority()
         result = auth.can_open(symbol="EURUSD", horizon="INTRADAY", current_positions=[])
-        assert result.allowed is False
+        assert result.allowed is True
 
-    def test_execution_authority_blocks_extended(self):
+    def test_execution_authority_allows_extended(self):
         from core.horizon.execution_authority import HorizonExecutionAuthority
         auth = HorizonExecutionAuthority()
         result = auth.can_open(symbol="EURUSD", horizon="EXTENDED", current_positions=[])
-        assert result.allowed is False
+        assert result.allowed is True
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

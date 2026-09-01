@@ -327,7 +327,7 @@ class TestPrimitiveMapping:
 
     def test_all_45_questions_mapped(self):
         mapping = build_full_mapping(QUESTION_BANK)
-        assert len(mapping) == 45
+        assert len(mapping) == len(QUESTION_BANK)
 
     def test_every_mapped_primitive_exists_in_registry(self):
         registry = build_default_registry()

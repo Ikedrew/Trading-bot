@@ -19,15 +19,15 @@ import pytest
 class TestShadowTradesHive:
     def test_s3_key_hive_format(self):
         from core.shadow_trades import _S3_PREFIX, _S3_BUCKET
-        assert _S3_PREFIX == "shadow_trades"
-        assert _S3_BUCKET == "trading-bot-data-mk1"
+        assert _S3_PREFIX == "supporting/shadow_trades"
+        assert _S3_BUCKET == "trading-bot-v10-data"
 
     def test_key_contains_schema_version(self):
         """Verify the S3 append function includes schema_version partition."""
         import inspect
         from core.shadow_trades import _s3_append
         source = inspect.getsource(_s3_append)
-        assert "schema_version=shadow_trades_v2" in source
+        assert "schema_version={_SCHEMA_VERSION}" in source
         assert "symbol=" in source
         assert "date=" in source
 
@@ -51,7 +51,7 @@ class TestTradeTruthHive:
         import inspect
         from core.trade_truth import _s3_persist
         source = inspect.getsource(_s3_persist)
-        assert "schema_version=trade_truth_v3" in source
+        assert "schema_version={_SCHEMA_VERSION}" in source
         assert "symbol=" in source
         assert "date=" in source
 

@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from core.production_data_contract import DatasetRole, s3_base_prefix
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PERSISTENCE PATHS (verified from production code)
@@ -53,43 +55,47 @@ class EventPersistencePath:
     universe_destination: str
     schema_version: str
     failure_behaviour: str  # What happens if persistence fails
+    dataset_role: DatasetRole = DatasetRole.SUPPORTING
 
 
 # Verified production persistence paths
 DECISION_TRACE_PATH = EventPersistencePath(
     event_type="decision_trace",
+    dataset_role=DatasetRole.SUPPORTING,
     source_module="core/decision_trace.py",
     persist_function="persist_decision_trace()",
     local_path_pattern="logs/decision_trace/{SYMBOL}/{YYYY-MM-DD}.jsonl",
-    s3_path_pattern="decision_trace/schema_version=decision_trace_v2/symbol={SYMBOL}/date={DATE}/part-000.jsonl",
+    s3_path_pattern=f"{s3_base_prefix('decision_trace')}/schema_version=decision_trace_v1/symbol={{SYMBOL}}/date={{DATE}}/part-000.jsonl",
     persistence_guarantee=PersistenceGuarantee.FSYNC_LOCAL_PLUS_S3_MIRROR,
     identity_fields=("entity_id", "decision_id", "observation_id"),
     correlation_fields=("entity_id", "correlation_id", "symbol", "cycle_id"),
     universe_destination="DECISION + MARKET + STRATEGY",
-    schema_version="decision_trace_v2",
+    schema_version="decision_trace_v1",
     failure_behaviour="Silent catch — trading continues. Record lost if local write fails.",
 )
 
 MARKET_CONTEXT_PATH = EventPersistencePath(
     event_type="market_context",
+    dataset_role=DatasetRole.CORE,
     source_module="core/market_context/persistence.py",
     persist_function="MarketContextPersistence.persist()",
     local_path_pattern="logs/market_context/{SYMBOL}/{YYYY-MM-DD}.jsonl",
-    s3_path_pattern="market_context/schema_version=market_context_v2/symbol={SYMBOL}/date={DATE}/part-000.jsonl",
+    s3_path_pattern=f"{s3_base_prefix('market_context')}/schema_version=market_context_v1/symbol={{SYMBOL}}/date={{DATE}}/part-000.jsonl",
     persistence_guarantee=PersistenceGuarantee.FSYNC_LOCAL_PLUS_S3_MIRROR,
     identity_fields=("symbol", "cycle_id", "timestamp_utc"),
     correlation_fields=("symbol", "cycle_id"),
     universe_destination="MARKET",
-    schema_version="market_context_v2",
+    schema_version="market_context_v1",
     failure_behaviour="Silent catch — trading continues. Persisted on material_change only.",
 )
 
 STRATEGY_OBSERVATION_PATH = EventPersistencePath(
     event_type="strategy_observation",
+    dataset_role=DatasetRole.SUPPORTING,
     source_module="core/strategies/observation_persistence.py",
     persist_function="persist_strategy_observation()",
     local_path_pattern="logs/strategy_observations/{SYMBOL}/{YYYY-MM-DD}.jsonl",
-    s3_path_pattern="strategy_observations/symbol={SYMBOL}/date={DATE}/part-000.jsonl",
+    s3_path_pattern=f"{s3_base_prefix('strategy_observations')}/symbol={{SYMBOL}}/date={{DATE}}/part-000.jsonl",
     persistence_guarantee=PersistenceGuarantee.FSYNC_LOCAL_PLUS_S3_MIRROR,
     identity_fields=("observation_id", "entity_id"),
     correlation_fields=("entity_id", "symbol", "cycle_id"),
@@ -100,10 +106,11 @@ STRATEGY_OBSERVATION_PATH = EventPersistencePath(
 
 EXECUTION_RESULT_PATH = EventPersistencePath(
     event_type="execution_result",
+    dataset_role=DatasetRole.CORE,
     source_module="core/persistence/execution_result_writer.py",
     persist_function="persist_execution_result()",
     local_path_pattern="logs/execution_results/{SYMBOL}/{YYYY-MM-DD}.jsonl",
-    s3_path_pattern="execution_results/schema_version=*/symbol={SYMBOL}/date={DATE}/part-000.jsonl",
+    s3_path_pattern=f"{s3_base_prefix('execution_results')}/schema_version=*/symbol={{SYMBOL}}/date={{DATE}}/part-000.jsonl",
     persistence_guarantee=PersistenceGuarantee.FSYNC_LOCAL_PLUS_S3_MIRROR,
     identity_fields=("entity_id", "decision_id", "deal", "order_ticket"),
     correlation_fields=("entity_id", "correlation_id", "decision_id"),
@@ -114,10 +121,11 @@ EXECUTION_RESULT_PATH = EventPersistencePath(
 
 TRADE_JOURNAL_PATH = EventPersistencePath(
     event_type="trade_journal",
+    dataset_role=DatasetRole.PROJECTION,
     source_module="core/trade_journal.py",
     persist_function="persist_trade()",
     local_path_pattern="logs/trade_journal/{YYYY-MM-DD}.jsonl",
-    s3_path_pattern="trade_journal/schema_version=trade_journal_v1/symbol={SYMBOL}/date={DATE}/part-000.jsonl",
+    s3_path_pattern=f"{s3_base_prefix('trade_journal')}/schema_version=trade_journal_v1/symbol={{SYMBOL}}/date={{DATE}}/part-000.jsonl",
     persistence_guarantee=PersistenceGuarantee.FSYNC_LOCAL_PLUS_S3_MIRROR,
     identity_fields=("trade_id", "position_ticket"),
     correlation_fields=("correlation_id",),

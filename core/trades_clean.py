@@ -190,6 +190,9 @@ def _clean_one_trade(raw: dict[str, Any], broker_profits: dict[str, float]) -> d
                     r_multiple = round(final_pnl / expected_loss, 2)
 
     return {
+        "record_role": "reconciliation_projection",
+        "authority": "projection_of_trade_truth_and_broker_reconciliation",
+        "may_override_live_truth": False,
         "symbol": symbol,
         "trade_id": trade_id,
         "entry_price": entry_price,
@@ -200,6 +203,7 @@ def _clean_one_trade(raw: dict[str, Any], broker_profits: dict[str, float]) -> d
         "broker_pnl": round(broker_pnl, 4) if broker_pnl is not None else None,
         "final_pnl": round(final_pnl, 4) if final_pnl is not None else None,
         "pnl_source": pnl_source,
+        "pnl_semantic": "reconciled_projection",
         "r_multiple_realised": r_multiple,
         "duration_seconds": duration_seconds,
         "exit_reason": exit_reason,

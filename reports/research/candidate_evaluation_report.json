@@ -1,8 +1,135 @@
 {
-  "generated_utc": "2026-08-14T13:07:28.330701+00:00",
-  "total_candidates": 0,
-  "active_candidates": 0,
-  "counts_by_status": {},
-  "candidates": [],
-  "recommended_actions": []
+  "generated_utc": "2026-09-01T13:48:36.792946+00:00",
+  "total_candidates": 3,
+  "active_candidates": 3,
+  "counts_by_status": {
+    "PROPOSED": 3
+  },
+  "candidates": [
+    {
+      "candidate_id": "OPT-fcf078b8",
+      "component": "PATTERN_SIGNAL",
+      "status": "PROPOSED",
+      "health": "WAITING_DATA",
+      "priority": "LOW",
+      "priority_score": 0.1,
+      "priority_reason": "Awaiting evidence",
+      "next_action": "Run historical validation against baseline.",
+      "risk_level": "LOW",
+      "created_from_question": "",
+      "created_from_campaign": "",
+      "baseline_id": "current_v10",
+      "change_definition": {
+        "type": "pattern_weighting",
+        "action": "adjust_pattern_confidence",
+        "rationale": "Passes all gates: p=1.0000, OOS=+3.5591, symbols=10/10, placebo=PASS",
+        "source_finding_id": "strong_MEAN_REVERSION_416",
+        "expected_impact": {
+          "delta_r_per_trade": 2.2055,
+          "confidence_interval": [
+            1.695,
+            2.7868
+          ],
+          "sample_size": 407,
+          "oos_effect": 3.5591,
+          "win_rate": 0.703,
+          "evidence_maturity": "LONG_RUN"
+        },
+        "risk_assessment": "LOW",
+        "experiment_id": "EXP-9782906b"
+      },
+      "validations_count": 0,
+      "last_validation": null,
+      "created_at": "2026-08-14T16:52:57.357412+00:00"
+    },
+    {
+      "candidate_id": "OPT-441a8783",
+      "component": "SCORE_MONOTONICITY",
+      "status": "PROPOSED",
+      "health": "WAITING_DATA",
+      "priority": "LOW",
+      "priority_score": 0.1,
+      "priority_reason": "Awaiting evidence",
+      "next_action": "Run historical validation against baseline.",
+      "risk_level": "LOW",
+      "created_from_question": "",
+      "created_from_campaign": "",
+      "baseline_id": "current_v10",
+      "change_definition": {
+        "type": "score_recalibration",
+        "action": "recalibrate_scoring",
+        "rationale": "Passes all gates: p=1.0000, OOS=+0.9325, symbols=9/10, placebo=PASS",
+        "source_finding_id": "score_mono_770_2",
+        "expected_impact": {
+          "delta_r_per_trade": 0.3475,
+          "confidence_interval": [
+            0.2561,
+            0.4442
+          ],
+          "sample_size": 2308,
+          "oos_effect": 0.9325,
+          "win_rate": 0.396,
+          "evidence_maturity": "LONG_RUN"
+        },
+        "risk_assessment": "LOW",
+        "experiment_id": "EXP-34a3977d"
+      },
+      "validations_count": 0,
+      "last_validation": null,
+      "created_at": "2026-08-14T22:43:29.126925+00:00"
+    },
+    {
+      "candidate_id": "OPT-3292f718",
+      "component": "PATTERN_SIGNAL",
+      "status": "PROPOSED",
+      "health": "WAITING_DATA",
+      "priority": "LOW",
+      "priority_score": 0.1,
+      "priority_reason": "Awaiting evidence",
+      "next_action": "Run historical validation against baseline.",
+      "risk_level": "LOW",
+      "created_from_question": "",
+      "created_from_campaign": "",
+      "baseline_id": "current_v10",
+      "change_definition": {
+        "type": "pattern_weighting",
+        "action": "adjust_pattern_confidence",
+        "rationale": "Passes all gates: p=1.0000, OOS=+2.5337, symbols=10/10, placebo=PASS",
+        "source_finding_id": "strong_MEAN_REVERSION_421",
+        "expected_impact": {
+          "delta_r_per_trade": 2.0032,
+          "confidence_interval": [
+            1.5894,
+            2.4623
+          ],
+          "sample_size": 420,
+          "oos_effect": 2.5337,
+          "win_rate": 0.707,
+          "evidence_maturity": "LONG_RUN"
+        },
+        "risk_assessment": "LOW",
+        "experiment_id": "EXP-4f5bb664"
+      },
+      "validations_count": 0,
+      "last_validation": null,
+      "created_at": "2026-08-15T15:38:47.632569+00:00"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "candidate": "OPT-fcf078b8",
+      "action": "Run validation",
+      "reason": "Awaiting evidence"
+    },
+    {
+      "candidate": "OPT-441a8783",
+      "action": "Run validation",
+      "reason": "Awaiting evidence"
+    },
+    {
+      "candidate": "OPT-3292f718",
+      "action": "Run validation",
+      "reason": "Awaiting evidence"
+    }
+  ]
 }

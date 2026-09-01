@@ -29,8 +29,11 @@ from core.contracts.violation import ContractViolation
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/quarantine"
-_S3_BUCKET = "v10-engine"
-_S3_PREFIX = "quarantine"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("quarantine")
 _SCHEMA_VERSION = "quarantine_v1"
 
 

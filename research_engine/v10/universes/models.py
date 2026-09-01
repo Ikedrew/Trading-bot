@@ -36,6 +36,16 @@ class Universe(str, Enum):
     SHADOW_REALITY = "SHADOW_REALITY"
 
 
+# SHADOW_REALITY is retained as a legacy enum value so historical reports and
+# the retired comparison builder remain readable. It is not an active V10
+# research universe: the former V10_PRIMARY/correlation-id bridge was retired
+# when canonical Horizon lineage became authoritative.
+ACTIVE_UNIVERSES: tuple[Universe, ...] = tuple(
+    universe for universe in Universe if universe is not Universe.SHADOW_REALITY
+)
+RETIRED_UNIVERSES: tuple[Universe, ...] = (Universe.SHADOW_REALITY,)
+
+
 class Population(str, Enum):
     """Named populations available across universes."""
     # Execution universe populations

@@ -1914,6 +1914,13 @@ QUESTION_BANK: tuple[NewEngineQuestion, ...] = (
     # Shadow research questions (SD-nnn) — counterfactual evidence
     SD_001, SD_002, SD_004, SD_005, SD_006, SD_007,
     # Shadow Reality questions (SR-nnn) — shadow↔reality comparison
+)
+
+# SR-001..SR-005 remain defined above for historical report readability, but
+# are intentionally excluded from the active bank. Their V10_PRIMARY/COR-*
+# comparison source was retired; presenting them as READY would claim a data
+# contract the active orchestrator explicitly cannot build.
+RETIRED_QUESTIONS: tuple[NewEngineQuestion, ...] = (
     SR_001, SR_002, SR_003, SR_004, SR_005,
 )
 

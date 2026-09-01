@@ -1,6 +1,6 @@
 # V10 Research Universe Report
 
-Generated: 2026-08-14T13:07:48.328787+00:00
+Generated: 2026-09-01T13:48:39.480343+00:00
 Source: enriched
 Governance: SKIPPED
 

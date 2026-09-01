@@ -133,10 +133,13 @@ def handle_no_trade_outcome(
         _assessment = new_result.get("assessment")
         if _assessment:
             cycle_decision["signal_score"] = _assessment.score_strategy
+            cycle_decision["signal_score_semantic"] = "assessment_strategy_weighted_score"
+            cycle_decision["assessment_strategy_weighted_score"] = _assessment.score_strategy
             cycle_decision["signal_type"] = _assessment.pattern
             cycle_decision["regime"] = _assessment.regime
         else:
             cycle_decision["signal_score"] = new_engine_score
+            cycle_decision["signal_score_semantic"] = "engine_score_legacy_projection"
             cycle_decision["signal_type"] = new_result.get("strategy", None)
         cycle_decision["pattern_state"] = "detected"
         cycle_decision["last_stage"] = new_result.get("reason", "").split(":")[0] if ":" in new_result.get("reason", "") else "V10"

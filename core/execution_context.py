@@ -20,7 +20,7 @@ NEVER CONTAINS:
     - Post-decision information of any kind
 
 STORAGE:
-    S3:    s3://trading-bot-data-mk1/execution_context/symbol={SYMBOL}/date={YYYY-MM-DD}/
+    S3:    s3://trading-bot-v10-data/execution_context/symbol={SYMBOL}/date={YYYY-MM-DD}
     Local: logs/execution_context/{SYMBOL}/{YYYY-MM-DD}.jsonl
 
 WRITING RULES:
@@ -57,8 +57,11 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_S3_BUCKET = "v10-engine"
-_S3_PREFIX = "execution_context"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("execution_context")
 _LOCAL_DIR = "logs/execution_context"
 _SCHEMA_VERSION = "execution_context_v1"
 

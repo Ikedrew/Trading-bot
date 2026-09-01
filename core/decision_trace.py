@@ -19,7 +19,7 @@ It ONLY:
 
 Persistence:
     Local: logs/decision_trace/{SYMBOL}/{YYYY-MM-DD}.jsonl
-    S3:    s3://trading-bot-v10-data/decision_trace/schema_version=decision_trace_v2/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
+    S3:    s3://trading-bot-v10-data/decision_trace/schema_version=decision_trace_v1/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
 
 Usage:
     from core.decision_trace import build_decision_trace, persist_decision_trace
@@ -46,10 +46,13 @@ logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/decision_trace"
 from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
 
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
-_S3_PREFIX = "decision_trace"
-_SCHEMA_VERSION = "decision_trace_v2"
+_S3_PREFIX = s3_base_prefix("decision_trace")
+from core.production_data_contract import current_schema
+
+_SCHEMA_VERSION = current_schema("decision_trace")
 
 # ─── SCORE THRESHOLD (must match new_engine.py — read-only reference) ─────────
 _MIN_SCORE_THRESHOLD = 0.35
@@ -345,6 +348,15 @@ class DecisionTrace:
     def to_dict(self) -> dict[str, Any]:
         """Serialize for JSONL persistence."""
         return {
+            "record_role": "immutable_diagnostic_projection",
+            "authority": "projection_of_canonical_decision",
+            "execution_mode": self.metadata.get("execution_mode", "LIVE"),
+            "population": self.metadata.get("population", "LIVE"),
+            "snapshot": {
+                "lifecycle_stage": "decision_time",
+                "as_of_time": self.timestamp_utc,
+                "source": "completed_pipeline_runtime_result",
+            },
             "entity_id": self.entity_id,
             "symbol": self.symbol,
             "cycle_id": self.cycle_id,
@@ -360,12 +372,14 @@ class DecisionTrace:
             "pattern_quality": self.pattern_quality,
             "pattern_count": self.pattern_count,
             "regime": self.regime,
+            "activation_regime": self.regime,
             "regime_confidence": round(self.regime_confidence, 4),
             "regime_source": self.regime_source,
             "regime_timeframe": self.regime_timeframe,
             "market_state": self.market_state,
             "market_state_confidence": round(self.market_state_confidence, 4),
             "market_phase": self.market_phase,
+            "h1_structural_phase": self.market_phase,
             "market_phase_confidence": round(self.market_phase_confidence, 4),
             "selected_strategy": self.selected_strategy,
             "strategy_confidence": round(self.strategy_confidence, 4),
@@ -449,6 +463,23 @@ def build_decision_trace(
             correlation_id=correlation_id,
         )
     except Exception:
+        v10_observation_id = ""
+        v10_correlation_id = ""
+        if v10_pipeline_result is not None:
+            opportunity = getattr(v10_pipeline_result, "opportunity", None)
+            market_state = getattr(v10_pipeline_result, "market_state", None)
+            v10_observation_id = str(
+                getattr(opportunity, "observation_id", "") or ""
+            )
+            v10_symbol = str(getattr(market_state, "symbol", "") or "")
+            v10_timestamp = int(
+                getattr(market_state, "timestamp_utc", 0) or 0
+            )
+            if v10_symbol and v10_timestamp:
+                v10_correlation_id = (
+                    f"v10_{v10_symbol}_{v10_timestamp}_"
+                    f"{int(engine_result.get('cycle_id', 0) or 0)}"
+                )
         return DecisionTrace(
             entity_id=engine_result.get("entity_id", ""),
             symbol=engine_result.get("symbol", "unknown"),
@@ -462,6 +493,9 @@ def build_decision_trace(
             decision_id=str(decision_id or engine_result.get("decision_id", "") or ""),
             correlation_id=str(correlation_id or engine_result.get("correlation_id", "") or ""),
             canonical_opportunity_id=str(engine_result.get("canonical_opportunity_id", "") or ""),
+            v10_observation_id=v10_observation_id,
+            v10_correlation_id=v10_correlation_id,
+            engine_version="V10" if v10_pipeline_result is not None else "",
         )
 
 
@@ -480,8 +514,24 @@ def _build_trace(
     reason = engine_result.get("reason", "")
     assessment = engine_result.get("assessment")
 
-    # Classify terminal stage
-    terminal_stage = _classify_terminal_stage(reason, action)
+    # Terminal decision authority belongs to the completed pipeline result.  The
+    # text classifier is retained only for legacy callers which have no
+    # structural result; it must never override structural V10 state.
+    if v10_pipeline_result is not None:
+        action = "EXECUTE" if bool(v10_pipeline_result.approved) else "NO_TRADE"
+        terminal_stage = (
+            "execute" if action == "EXECUTE"
+            else str(v10_pipeline_result.rejection_stage or "unknown")
+        )
+        try:
+            from core.v10.persistence_adapter import _get_rejection_reason
+            structural_reason = _get_rejection_reason(v10_pipeline_result)
+            if structural_reason:
+                reason = structural_reason
+        except Exception:
+            pass
+    else:
+        terminal_stage = _classify_terminal_stage(reason, action)
     stages_reached, stages_passed = _compute_stages_reached(terminal_stage, action)
 
     # Extract fields (None-safe for early exits)
@@ -707,11 +757,17 @@ def _build_trace(
         try:
             rsk = _pr.risk
             _v10_risk = {
-                "approved": rsk.approved,
+                "plan_risk_approved": rsk.approved,
+                "approved": rsk.approved,  # compatibility alias: plan-level only
                 "rejection_reason": rsk.rejection_reason or None,
+                "plan_approved_risk_percentage": rsk.risk_profile.risk_percentage,
                 "risk_percentage": rsk.risk_profile.risk_percentage,
+                "plan_approved_position_size": rsk.risk_profile.position_size,
                 "position_size": rsk.risk_profile.position_size,
                 "max_loss_amount": rsk.risk_profile.max_loss_amount,
+                "runtime_live_guard_approved": None,
+                "runtime_risk_block": None,
+                "semantic_stage": "v10_plan_feasibility",
             }
         except Exception:
             pass
@@ -720,10 +776,13 @@ def _build_trace(
         try:
             exe = _pr.execution
             _v10_execution = {
-                "approved": exe.approved,
+                "plan_execution_approved": exe.approved,
+                "approved": exe.approved,  # compatibility alias: plan-level only
                 "rejection_reason": exe.rejection_reason or None,
                 "order_type": exe.order_details.order_type if exe.approved else None,
+                "planned_volume": exe.order_details.volume if exe.approved else None,
                 "volume": exe.order_details.volume if exe.approved else None,
+                "semantic_stage": "plan",
             }
         except Exception:
             pass
@@ -810,7 +869,10 @@ def _build_trace(
         rr_effective=rr_effective,
         confirmation_score=confirmation_score,
         policy_reasoning=policy_reasoning,
-        metadata={},
+        metadata={
+            "execution_mode": str(engine_result.get("execution_mode", "LIVE")),
+            "population": str(engine_result.get("population", "LIVE")),
+        },
         # V10 Pipeline (decision_trace_v2)
         observation_id=_obs_id,
         decision_id=_decision_id,

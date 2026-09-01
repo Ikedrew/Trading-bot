@@ -107,6 +107,10 @@ def recover_positions_on_startup(
                 _trade_identity = TradeIdentity(
                     correlation_id=_restored_identity["correlation_id"],
                     decision_id=_restored_identity.get("decision_id", ""),
+                    canonical_opportunity_id=_restored_identity.get(
+                        "canonical_opportunity_id", ""
+                    ),
+                    observation_id=_restored_identity.get("observation_id", ""),
                     cycle_id=int(_restored_identity.get("cycle_id", 0)),
                     strategy=_restored_identity.get("strategy", ""),
                     pattern=_restored_identity.get("pattern", ""),
@@ -271,6 +275,10 @@ def _restore_identity_from_logs(
                         if record.get("order_ticket") == ticket and record.get("result_ok") is True:
                             return {
                                 "correlation_id": record.get("correlation_id", ""),
+                                "canonical_opportunity_id": record.get(
+                                    "canonical_opportunity_id", ""
+                                ),
+                                "observation_id": record.get("observation_id", ""),
                                 "pattern": record.get("pattern", ""),
                                 "decision_id": record.get("decision_id", ""),
                                 "cycle_id": record.get("cycle_id", 0),

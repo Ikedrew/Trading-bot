@@ -27,7 +27,7 @@ Guarantees:
     - Thread-safe (single writer with lock)
     - Never raises to caller (swallows failures)
 
-S3: s3://trading-bot-data-mk1/events/symbol={SYMBOL}/date={YYYY-MM-DD}/
+S3: s3://trading-bot-v10-data/core/events/symbol={SYMBOL}/date={YYYY-MM-DD}/
 Local: events/{YYYY-MM-DD}.jsonl
 
 Time Model:
@@ -385,16 +385,17 @@ def _resolve_guard_result(event: dict[str, Any]) -> str:
 # Writes batched JSONL files per (symbol, date) partition.
 
 _S3_ENABLED: bool = False
-_S3_BUCKET: str = "v10-engine"  # CANONICAL SINK — do not change
+from core.config import NEW_RUNTIME_S3_BUCKET
+
+_S3_BUCKET: str = NEW_RUNTIME_S3_BUCKET  # Canonical sink; shared with every runtime writer
 
 
 def _s3_validate_bucket() -> None:
     """Guardrail: ensure only canonical bucket is used. Raises on misconfiguration."""
-    bucket = os.getenv("AWS_S3_BUCKET", "v10-engine")
-    if bucket != "v10-engine":
+    bucket = os.getenv("AWS_S3_BUCKET", "trading-bot-v10-data")
+    if bucket != _S3_BUCKET:
         raise ValueError(
-            f"[EVENT_S3] Invalid S3 sink '{bucket}' — only 'v10-engine' allowed. "
-            f"Unset AWS_S3_BUCKET or set it to 'v10-engine'."
+            f"[EVENT_S3] Invalid S3 sink '{bucket}' — configured runtime sink is '{_S3_BUCKET}'."
         )
 
 

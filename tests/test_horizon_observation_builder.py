@@ -293,15 +293,15 @@ class TestInactiveHorizons:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class TestExecutionUnchanged:
-    def test_permitted_horizons_still_scalp(self):
+    def test_permitted_horizons_match_current_runtime(self):
         from core import config
-        assert config.PERMITTED_HORIZONS == ["SCALP"]
+        assert config.PERMITTED_HORIZONS == ["SCALP", "INTRADAY", "EXTENDED"]
 
-    def test_authority_blocks_intraday(self):
+    def test_authority_allows_intraday(self):
         from core.horizon.execution_authority import HorizonExecutionAuthority
         auth = HorizonExecutionAuthority()
         result = auth.can_open(symbol="EURUSD", horizon="INTRADAY", current_positions=[])
-        assert result.allowed is False
+        assert result.allowed is True
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

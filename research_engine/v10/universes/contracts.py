@@ -256,6 +256,25 @@ OUTCOME_CONTRACT = UniverseContract(
     lineage_fields=("entity_id", "trade_id"),
 )
 
+SHADOW_OUTCOME_CONTRACT = UniverseContract(
+    universe_id=Universe.SHADOW_OUTCOME,
+    name="Shadow Outcome Universe",
+    description=(
+        "Closed counterfactual outcomes produced by the shadow simulator. "
+        "R-multiples are simulated evidence and never realised performance."
+    ),
+    grain="One closed shadow trade with one simulated outcome",
+    identity_field="shadow_trade_id",
+    source_datasets=("logs/shadow_trades/<SYMBOL>/*.jsonl",),
+    source_schema_versions=("shadow_trades_v1", "shadow_trades_v2"),
+    join_keys=("entity_id", "correlation_id", "symbol", "cycle_id"),
+    coverage_fields=("timestamp_decision_utc", "exit_timestamp", "symbol"),
+    lineage_fields=(
+        "shadow_trade_id", "entity_id", "correlation_id", "cycle_id",
+        "v10_selected_horizon", "evaluated_horizon",
+    ),
+)
+
 UNIVERSE_CONTRACTS: dict[Universe, UniverseContract] = {
     Universe.EXECUTION: EXECUTION_CONTRACT,
     Universe.DECISION: DECISION_CONTRACT,
@@ -263,6 +282,7 @@ UNIVERSE_CONTRACTS: dict[Universe, UniverseContract] = {
     Universe.STRATEGY: STRATEGY_CONTRACT,
     Universe.RISK: RISK_CONTRACT,
     Universe.OUTCOME: OUTCOME_CONTRACT,
+    Universe.SHADOW_OUTCOME: SHADOW_OUTCOME_CONTRACT,
 }
 
 
@@ -274,6 +294,7 @@ _EXEC_GRAIN = "One validated trade"
 _DEC_GRAIN = "One decision event"
 _MKT_GRAIN = "One market-state observation"
 _STRAT_GRAIN = "One strategy evaluation"
+_SHADOW_GRAIN = "One closed shadow trade with one simulated outcome"
 
 POPULATION_CONTRACTS: dict[Population, PopulationContract] = {
     # ─── Execution Populations ────────────────────────────────────────────────
@@ -687,6 +708,37 @@ POPULATION_CONTRACTS: dict[Population, PopulationContract] = {
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Shadow populations classify the same authoritative closed-outcome records.
+# They are research views, not separately persisted datasets.
+_SHADOW_POPULATION_SPECS = {
+    Population.ALL_SHADOW_OUTCOMES: ("All Shadow Outcomes", "No filter", "", ()),
+    Population.SHADOW_WINS: ("Shadow Wins", "r_multiple > 0", "r_multiple", ()),
+    Population.SHADOW_LOSSES: ("Shadow Losses", "r_multiple <= 0", "r_multiple", ()),
+    Population.HORIZON_SCALP: ("SCALP Shadow Outcomes", "evaluated_horizon == 'SCALP'", "evaluated_horizon", ("SCALP",)),
+    Population.HORIZON_INTRADAY: ("INTRADAY Shadow Outcomes", "evaluated_horizon == 'INTRADAY'", "evaluated_horizon", ("INTRADAY",)),
+    Population.HORIZON_EXTENDED: ("EXTENDED Shadow Outcomes", "evaluated_horizon == 'EXTENDED'", "evaluated_horizon", ("EXTENDED",)),
+    Population.SHADOW_FROM_EXECUTE: ("Shadows From Execute", "v10_action == 'EXECUTE'", "v10_action", ("EXECUTE",)),
+    Population.SHADOW_FROM_NO_TRADE: ("Shadows From No Trade", "v10_action == 'NO_TRADE'", "v10_action", ("NO_TRADE",)),
+    Population.SHADOW_TP_HIT: ("Shadow Take-Profit Exits", "exit_reason == 'take_profit'", "exit_reason", ("take_profit",)),
+    Population.SHADOW_SL_HIT: ("Shadow Stop-Loss Exits", "exit_reason == 'stop_loss'", "exit_reason", ("stop_loss",)),
+    Population.SHADOW_TIMEOUT: ("Shadow Timeout Exits", "exit_reason == 'max_bars_timeout'", "exit_reason", ("max_bars_timeout",)),
+}
+for _population, (_name, _definition, _field, _values) in _SHADOW_POPULATION_SPECS.items():
+    POPULATION_CONTRACTS[_population] = PopulationContract(
+        population_id=_population,
+        universe_id=Universe.SHADOW_OUTCOME,
+        name=_name,
+        description=f"Counterfactual shadow outcome population: {_name}",
+        definition=_definition,
+        filter_field=_field,
+        filter_values=_values,
+        record_grain=_SHADOW_GRAIN,
+        required_fields=("shadow_trade_id", "r_multiple", "symbol"),
+        optional_fields=("entity_id", "correlation_id", "pattern", "regime"),
+        join_keys=("shadow_trade_id", "entity_id", "correlation_id"),
+    )
+
+
 # JOIN CONTRACTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -768,6 +820,20 @@ JOIN_CONTRACTS: tuple[JoinContract, ...] = (
         temporal_constraint="Strategy selected at the decision that led to this trade",
         expected_match_rate=0.85,
     ),
+    JoinContract(
+        join_id="SHADOW_OUTCOME_DECISION",
+        left_universe=Universe.SHADOW_OUTCOME,
+        right_universe=Universe.DECISION,
+        left_key="entity_id",
+        right_key="entity_id",
+        cardinality=Cardinality.MANY_TO_ONE,
+        description=(
+            "Many horizon counterfactuals may originate from one terminal "
+            "decision; populations remain explicitly shadow-labelled."
+        ),
+        temporal_constraint="Same canonical entity root at the decision branch point",
+        expected_match_rate=0.90,
+    ),
 )
 
 JOIN_CONTRACTS_BY_ID: dict[str, JoinContract] = {j.join_id: j for j in JOIN_CONTRACTS}
@@ -832,6 +898,17 @@ SEMANTIC_FIELD_MAPPINGS: tuple[SemanticFieldMapping, ...] = (
     SemanticFieldMapping("pattern", Universe.STRATEGY, "pattern_name || detected_pattern", FieldType.STRING, True, "candlestick pattern name", "Detected candlestick pattern"),
     SemanticFieldMapping("conditions_met", Universe.STRATEGY, "conditions_passed", FieldType.NULLABLE_FLOAT, True, ">= 0", "Number of strategy conditions met"),
     SemanticFieldMapping("reasoning", Universe.STRATEGY, "v10_strategy.reasoning", FieldType.LIST, True, "list of strings", "Strategy selection reasoning"),
+)
+
+SEMANTIC_FIELD_MAPPINGS += (
+    SemanticFieldMapping("r_multiple", Universe.SHADOW_OUTCOME, "simulated_outcome.pnl_r_multiple", FieldType.FLOAT, False, "numeric", "Counterfactual shadow R-multiple; never realised P&L"),
+    SemanticFieldMapping("direction", Universe.SHADOW_OUTCOME, "decision_snapshot.direction", FieldType.STRING, False, "BUY|SELL", "Frozen shadow direction"),
+    SemanticFieldMapping("exit_reason", Universe.SHADOW_OUTCOME, "simulated_outcome.exit_reason", FieldType.STRING, False, "non-empty", "Simulator-owned terminal reason"),
+    SemanticFieldMapping("pattern", Universe.SHADOW_OUTCOME, "decision_snapshot.pattern", FieldType.NULLABLE_STRING, True, "string", "Frozen decision-time pattern"),
+    SemanticFieldMapping("trade_horizon", Universe.SHADOW_OUTCOME, "identity.evaluated_horizon || decision_snapshot.trade_horizon", FieldType.STRING, False, "SCALP|INTRADAY|EXTENDED", "Evaluated counterfactual horizon"),
+    SemanticFieldMapping("strategy_id", Universe.SHADOW_OUTCOME, "identity.strategy_id", FieldType.NULLABLE_STRING, True, "string", "Originating strategy identity"),
+    SemanticFieldMapping("regime", Universe.SHADOW_OUTCOME, "decision_snapshot.regime", FieldType.NULLABLE_STRING, True, "string", "Frozen decision-time regime"),
+    SemanticFieldMapping("entity_id", Universe.SHADOW_OUTCOME, "identity.entity_id", FieldType.NULLABLE_STRING, True, "canonical identity", "Canonical decision-root linkage"),
 )
 
 SEMANTIC_FIELDS_BY_NAME: dict[str, list[SemanticFieldMapping]] = {}

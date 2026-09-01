@@ -28,8 +28,11 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/portfolio_shadow"
-_S3_BUCKET = "v10-engine"
-_S3_PREFIX = "portfolio_shadow"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("portfolio_shadow")
 _SCHEMA_VERSION = "portfolio_shadow_v1"
 
 

@@ -215,7 +215,7 @@ def build_dataset_fingerprint(
     dataset_id: str = "research_population",
     dataset_version: str = "v10",
     population: str = "",
-    schema_version: str = "shadow_trades_v2",
+    schema_version: str = "shadow_trades_v1",
     filters_applied: list[str] | None = None,
     time_field: str = "time",
 ) -> DatasetFingerprint:

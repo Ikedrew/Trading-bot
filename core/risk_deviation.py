@@ -45,8 +45,11 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/risk_deviation"
-_S3_BUCKET = "v10-engine"
-_S3_PREFIX = "risk_deviation"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("risk_deviation")
 _SCHEMA_VERSION = "risk_deviation_v1"
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -81,9 +84,9 @@ class RiskDeviationResult:
     correlation_id: str
 
     # Risk measurement
-    planned_risk_R: float       # Always -1.0 (intended max loss in R-units)
-    actual_risk_R: float        # Realised R-multiple (negative = loss, positive = win)
-    risk_deviation: float       # abs(actual) / abs(planned) for losses; actual for wins
+    planned_risk_R: float | None
+    actual_risk_R: float | None
+    risk_deviation: float | None
 
     # Classification
     risk_classification: str    # NORMAL / ELEVATED / CRITICAL / WIN / NO_RISK_DATA
@@ -152,9 +155,9 @@ def compute_risk_deviation(
             trade_id=trade_id,
             symbol=symbol,
             correlation_id=correlation_id,
-            planned_risk_R=-1.0,
-            actual_risk_R=0.0,
-            risk_deviation=0.0,
+            planned_risk_R=None,
+            actual_risk_R=None,
+            risk_deviation=None,
             risk_classification=RiskClassification.NO_RISK_DATA,
             entry_price=entry_price,
             exit_price=exit_price,
@@ -228,6 +231,9 @@ def persist_risk_deviation(result: RiskDeviationResult) -> None:
 
         record = result.to_dict()
         record["schema_version"] = _SCHEMA_VERSION
+        record["semantic_stage"] = "post_outcome_analysis"
+        record["authority"] = "diagnostic_projection"
+        record["pre_trade_authority"] = False
         line = json.dumps(record, separators=(",", ":"), default=str)
         fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         try:

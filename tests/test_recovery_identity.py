@@ -83,6 +83,8 @@ class TestIdentityRestoration:
             "pattern": "THREE_BLACK_CROWS",
             "correlation_id": "COR-20260722-1-NZDUSD-D2C3",
             "decision_id": "93eab925eec8",
+            "canonical_opportunity_id": "NZDUSD*1784741700*THREE_BLACK_CROWS",
+            "observation_id": "obs_NZDUSD_1784741700_M5",
             "decision_ts_utc_ms": 1784741966636,
         }
         with open(nzdusd_dir / "2026-07-22.jsonl", "w") as f:
@@ -110,6 +112,8 @@ class TestIdentityRestoration:
         assert result["pattern"] == "THREE_BLACK_CROWS"
         assert result["cycle_id"] == 1
         assert result["decision_id"] == "93eab925eec8"
+        assert result["canonical_opportunity_id"] == "NZDUSD*1784741700*THREE_BLACK_CROWS"
+        assert result["observation_id"] == "obs_NZDUSD_1784741700_M5"
 
     def test_restore_identity_not_found(self):
         """Returns empty dict when no matching execution result exists."""
@@ -178,6 +182,10 @@ class TestIdentityRestoration:
         assert pos.trade_identity is not None
         assert pos.trade_identity.correlation_id == "COR-20260722-1-NZDUSD-D2C3"
         assert pos.trade_identity.pattern == "THREE_BLACK_CROWS"
+        assert pos.trade_identity.canonical_opportunity_id == (
+            "NZDUSD*1784741700*THREE_BLACK_CROWS"
+        )
+        assert pos.trade_identity.observation_id == "obs_NZDUSD_1784741700_M5"
 
     def test_recovered_position_timestamp_is_utc(self, exec_results_dir):
         """Recovered position open_time is normalized to UTC."""

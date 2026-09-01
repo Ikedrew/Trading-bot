@@ -315,6 +315,13 @@ class TestLineage:
         for rec in records:
             assert rec["observation_id"] == "TEST.M5.1000"
 
+    def test_missing_canonical_id_is_not_fabricated_from_observation(self):
+        _persist_classification(**_trending_kwargs())
+        records = _read_records()
+        for rec in records:
+            assert rec["canonical_opportunity_id"] == ""
+            assert rec["canonical_opportunity_id"] != rec["observation_id"]
+
     def test_canonical_id_passed_via_lineage(self):
         _persist_classification(
             lineage={

@@ -1,17 +1,17 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "NAS100",
-  "cycle_id": 49,
-  "bar_time": 1788151800,
-  "updated_at": "2026-08-31T01:50:04.280Z",
-  "updated_at_unix": 1788141004.28,
+  "cycle_id": 202,
+  "bar_time": 1788237000,
+  "updated_at": "2026-09-01T01:30:40.414Z",
+  "updated_at_unix": 1788226240.415,
   "action": "NO_TRADE",
-  "score": 0.5225,
-  "reason": "V10 [execution]: Exec: Entry not ready: WAITING",
+  "score": 0.4,
+  "reason": "V10 [opportunity]: No opportunity (INVALID)",
   "identity": {
-    "entity_id": "NAS100_1788151800",
-    "observation_id": "c84708f335cdeee8",
-    "cycle_id": 49,
+    "entity_id": "NAS100_1788237000",
+    "observation_id": "0b4303a5141b0be9",
+    "cycle_id": 202,
     "correlation_id": "",
     "trade_id": ""
   },
@@ -21,41 +21,41 @@
     "volatility_state": "NEUTRAL",
     "h4_trend": "NEUTRAL",
     "h4_trend_strength": 0.0,
-    "h4_phase": "IMPULSE",
-    "h1_bos_direction": "BEARISH",
-    "h1_structural_clarity": 0.5559,
-    "h1_dominant_trend": "BEARISH",
+    "h4_phase": "PULLBACK",
+    "h1_bos_direction": "",
+    "h1_structural_clarity": 0.4306,
+    "h1_dominant_trend": "BULLISH",
     "m15_pullback_active": true,
     "m15_displacement": false,
-    "m15_range_position": 0.1853,
+    "m15_range_position": 0.8856,
     "m5_momentum": "NEUTRAL",
     "m5_momentum_strength": 0.0,
     "m5_rejection": false,
     "m5_confirmation": false,
-    "m5_local_bos": false,
+    "m5_local_bos": true,
     "location_type": "OPEN_SPACE",
     "inside_zone": false,
     "zone_quality": 0.0,
-    "range_position": 0.1853,
-    "premium_discount": "DISCOUNT",
-    "htf_macro_bias": "BEARISH",
-    "htf_structure_alignment": 1.0
+    "range_position": 0.8856,
+    "premium_discount": "PREMIUM",
+    "htf_macro_bias": "BULLISH",
+    "htf_structure_alignment": 0.5
   },
   "opportunity": {
-    "state": "WATCHING",
-    "directional_bias": "BEARISH",
+    "state": "INVALID",
+    "directional_bias": "BULLISH",
     "opportunity_type": "ZONE_REACTION",
-    "overall_quality": 0.5225,
-    "location_score": 0.55,
-    "structure_score": 0.5,
+    "overall_quality": 0.4,
+    "location_score": 0.5,
+    "structure_score": 0.15,
     "behaviour_score": 0.7999999999999999,
     "formation_score": 0.3,
-    "observation_id": "c84708f335cdeee8"
+    "observation_id": "0b4303a5141b0be9"
   },
   "strategy": {
-    "family": "MEAN_REVERSION",
-    "confidence": 0.7999999999999999,
-    "direction": "BEARISH"
+    "family": "NONE",
+    "confidence": 0.0,
+    "direction": "BULLISH"
   },
   "horizon": {
     "type": "SCALP",
@@ -64,29 +64,29 @@
     "duration_minutes": 30
   },
   "entry": {
-    "status": "WAITING",
+    "status": "INVALID",
     "method": "CONFIRMATION_ENTRY",
-    "direction": "SELL",
-    "price": 29432.15,
-    "stop": 29361.77142857143,
-    "target": 29241.2,
-    "risk_distance": 70.3785714285732,
-    "reward_distance": 190.95000000000073,
-    "expected_rr": 2.71
+    "direction": "NONE",
+    "price": 0.0,
+    "stop": 0.0,
+    "target": 0.0,
+    "risk_distance": 0.0,
+    "reward_distance": 0.0,
+    "expected_rr": 0.0
   },
   "risk": {
-    "approved": true,
-    "rejection_reason": "",
-    "risk_percentage": 0.0025,
-    "position_size": 2.5,
-    "max_loss": 133.010975
+    "approved": false,
+    "rejection_reason": "Entry is INVALID \u2014 cannot assess risk",
+    "risk_percentage": 0.0,
+    "position_size": 0.0,
+    "max_loss": 0.0
   },
   "execution": {
     "approved": false,
-    "rejection_reason": "Entry not ready: WAITING",
+    "rejection_reason": "Risk rejected: Entry is INVALID \u2014 cannot assess risk",
     "order_type": "",
     "volume": 0.0
   },
-  "rejection_stage": "execution",
+  "rejection_stage": "opportunity",
   "approved": false
 }

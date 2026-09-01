@@ -31,9 +31,10 @@ logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/opportunities"
 from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
 
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
-_S3_PREFIX = "opportunities"
+_S3_PREFIX = s3_base_prefix("opportunities")
 _SCHEMA_VERSION = "opportunities_v1"
 
 

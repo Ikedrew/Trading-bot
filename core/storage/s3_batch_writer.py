@@ -37,6 +37,9 @@ import time as _time
 from collections import defaultdict
 from typing import Any
 
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,7 +48,7 @@ class S3BatchWriter:
     Batched S3 writer with Hive-compatible partitioning.
 
     Usage:
-        writer = S3BatchWriter(bucket="v10-engine")
+        writer = S3BatchWriter(bucket=NEW_RUNTIME_S3_BUCKET)
         writer.add_event(event_dict)
         # Events auto-flush on size/time thresholds
         writer.shutdown()  # Final flush on exit
@@ -53,7 +56,7 @@ class S3BatchWriter:
 
     def __init__(
         self,
-        bucket: str = "v10-engine",
+        bucket: str = NEW_RUNTIME_S3_BUCKET,
         base_prefix: str = "events",
         flush_interval: float = 30.0,
         max_buffer_size: int = 100,
@@ -246,8 +249,8 @@ def get_batch_writer() -> S3BatchWriter:
     global _writer
     if _writer is None:
         _writer = S3BatchWriter(
-            bucket="v10-engine",
-            base_prefix="events",
+            bucket=NEW_RUNTIME_S3_BUCKET,
+            base_prefix=s3_base_prefix("events"),
             flush_interval=30.0,
             max_buffer_size=100,
         )

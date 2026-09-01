@@ -67,7 +67,8 @@ def check_universe_contracts_complete() -> ContractCheck:
     from research_engine.v10.universes.models import Universe
     try:
         from research_engine.v10.universes.contracts import UNIVERSE_CONTRACTS
-        missing = [u.value for u in Universe if u not in UNIVERSE_CONTRACTS]
+        from research_engine.v10.universes.models import ACTIVE_UNIVERSES
+        missing = [u.value for u in ACTIVE_UNIVERSES if u not in UNIVERSE_CONTRACTS]
         if not missing:
             return ContractCheck(
                 check_id="UNIVERSE_003", category="UNIVERSE", status=CheckStatus.PASS,

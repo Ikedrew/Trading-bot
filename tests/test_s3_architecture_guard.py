@@ -53,6 +53,7 @@ ALLOWED_S3_WRITERS = {
     ROOT / "core" / "research_assessment" / "research_shadow_engine.py",
     ROOT / "core" / "opportunity" / "persistence.py",
     ROOT / "core" / "portfolio_ranking" / "shadow_comparison.py",
+    ROOT / "core" / "portfolio_ranking" / "persistence.py",
     ROOT / "core" / "protection_verification.py",
     ROOT / "core" / "risk_deviation.py",
     ROOT / "core" / "contracts" / "quarantine.py",
@@ -60,13 +61,29 @@ ALLOWED_S3_WRITERS = {
 }
 
 NEW_RUNTIME_S3_WRITERS = {
+    ROOT / "core" / "event_stream.py",
+    ROOT / "core" / "storage" / "s3_batch_writer.py",
+    ROOT / "core" / "assessment" / "persistence.py",
+    ROOT / "core" / "assessment" / "persistence.py",
     ROOT / "core" / "trade_truth.py",
     ROOT / "core" / "trade_journal.py",
+    ROOT / "core" / "shadow_trades.py",
+    ROOT / "core" / "trade_truth_graph.py",
+    ROOT / "core" / "execution_context.py",
     ROOT / "core" / "decision_ledger.py",
+    ROOT / "core" / "decision_audit.py",
     ROOT / "core" / "decision_trace.py",
+    ROOT / "core" / "persistence" / "opportunity_assessment_writer.py",
     ROOT / "core" / "persistence" / "execution_result_writer.py",
     ROOT / "core" / "persistence" / "management_actions_writer.py",
+    ROOT / "core" / "market_context" / "persistence.py",
+    ROOT / "core" / "research_assessment" / "research_shadow_engine.py",
     ROOT / "core" / "opportunity" / "persistence.py",
+    ROOT / "core" / "portfolio_ranking" / "shadow_comparison.py",
+    ROOT / "core" / "portfolio_ranking" / "persistence.py",
+    ROOT / "core" / "protection_verification.py",
+    ROOT / "core" / "risk_deviation.py",
+    ROOT / "core" / "contracts" / "quarantine.py",
     ROOT / "core" / "shadow" / "persistence.py",
 }
 
@@ -172,7 +189,7 @@ class TestLayerPrefixOwnership:
         """event_stream S3 key construction must only use events/ prefix."""
         source = (ROOT / "core" / "event_stream.py").read_text(encoding="utf-8")
         # Check _S3_BUCKET reference uses canonical bucket
-        assert '_S3_BUCKET: str = "v10-engine"' in source
+        assert "_S3_BUCKET: str = NEW_RUNTIME_S3_BUCKET" in source
         # The S3 batch writer (storage/s3_batch_writer.py) handles actual S3 keys
         # event_stream.py delegates to it — no direct key construction with foreign prefixes
         # Verify no _S3_PREFIX assignment to other layers

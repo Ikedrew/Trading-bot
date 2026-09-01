@@ -70,13 +70,13 @@ class TestS3PathGeneration:
 
         assert mock_s3.put_object.called
         call_kwargs = mock_s3.put_object.call_args[1]
-        expected_key = "portfolio_shadow/schema_version=portfolio_shadow_v1/date=2026-07-25/part-000.jsonl"
+        expected_key = "projections/portfolio_shadow/schema_version=portfolio_shadow_v1/date=2026-07-25/part-000.jsonl"
         assert call_kwargs["Key"] == expected_key
-        assert call_kwargs["Bucket"] == "trading-bot-data-mk1"
+        assert call_kwargs["Bucket"] == "trading-bot-v10-data"
 
     def test_constants(self):
-        assert _S3_BUCKET == "trading-bot-data-mk1"
-        assert _S3_PREFIX == "portfolio_shadow"
+        assert _S3_BUCKET == "trading-bot-v10-data"
+        assert _S3_PREFIX == "projections/portfolio_shadow"
         assert _SCHEMA_VERSION == "portfolio_shadow_v1"
 
     def test_no_symbol_partition(self):

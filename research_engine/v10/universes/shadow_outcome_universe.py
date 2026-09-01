@@ -4,7 +4,7 @@ Shadow Outcome Universe Builder.
 Consumes runtime shadow trade data and produces the Shadow research world's
 counterfactual outcome populations.
 
-Source: logs/shadow_trades/<SYMBOL>/*.jsonl (schema: shadow_trades_v2)
+Source: logs/shadow_trades/<SYMBOL>/*.jsonl (production: shadow_trades_v1; legacy v2 readable)
 
 Grain: 1 record = 1 closed shadow trade = 1 counterfactual outcome observation.
 
@@ -49,6 +49,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from core.production_data_contract import supported_schemas
+
 from research_engine.v10.universes.base import UniverseBuilder
 from research_engine.v10.universes.models import Population, Universe
 
@@ -64,13 +66,13 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
     """
     Builds the Shadow Outcome Universe from runtime shadow trade data.
 
-    Reads all shadow_trades_v2 JSONL files, normalises into flat research
+    Reads production V1 and supported legacy shadow-trade JSONL files.
     records, and classifies into shadow populations.
 
     Excludes:
         - Records without valid R-multiple
         - Records with non-production trade_id patterns (test contamination)
-        - Records with schema version != shadow_trades_v2
+        - Records outside the explicit production/legacy schema allowlist
 
     Preserves:
         - Records with empty entity_id (usable for non-join populations)
@@ -107,7 +109,7 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
         for raw in self._raw:
             # Schema check
             schema = raw.get("schema_version", "")
-            if schema != "shadow_trades_v2":
+            if schema not in supported_schemas("shadow_trades"):
                 excluded_bad_schema += 1
                 continue
 

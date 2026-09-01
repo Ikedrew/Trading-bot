@@ -261,9 +261,14 @@ class ShadowRuntime:
         direction: str,
         plan_id: str,
         constructed: list[dict[str, Any]],
-        observation_id: str,
+        observation_id: str | None = None,
     ) -> None:
         """Write one immutable OPEN per constructed horizon and activate it."""
+        # Compatibility callers may invoke this internal branch helper with the
+        # original opportunity context only.  Recover the already-established
+        # observation identity from that context; never mint one here.
+        if observation_id is None:
+            observation_id = str(ctx.get("observation_id", "") or "")
         pip = 0.01 if "JPY" in symbol.upper() else 0.0001
         selected_hz = str(ctx.get("v10_selected_horizon", "") or "").upper()
         root = str(ctx.get("canonical_opportunity_id", "") or "")

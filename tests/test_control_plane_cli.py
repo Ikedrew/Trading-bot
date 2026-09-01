@@ -35,7 +35,7 @@ class TestQuestionResolution:
 
     def test_all_45_questions_mappable(self):
         mapping = build_full_mapping(QUESTION_BANK)
-        assert len(mapping) == 45
+        assert len(mapping) == len(QUESTION_BANK)
 
     def test_question_lookup(self):
         q = get_question("E-001")

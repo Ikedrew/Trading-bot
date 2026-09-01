@@ -32,9 +32,10 @@ logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/strategy_observations"
 from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
 
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
-_S3_PREFIX = "strategy_observations"
+_S3_PREFIX = s3_base_prefix("strategy_observations")
 _SCHEMA_VERSION = "strategy_observation_v1"
 
 
@@ -78,6 +79,8 @@ def build_observation_record(
         Flat dict suitable for JSONL serialisation.
     """
     return {
+        "record_role": "strategy_observation_projection",
+        "authority": "non_decision_projection",
         "schema_version": source_version,
         "observation_id": observation_id,
         "timestamp_utc": timestamp_utc,

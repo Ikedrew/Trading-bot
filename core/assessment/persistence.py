@@ -31,8 +31,11 @@ from core.assessment.assessment import Assessment
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/assessments"
-_S3_BUCKET = "v10-engine"
-_S3_PREFIX = "assessments"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("assessments")
 _SCHEMA_VERSION = "assessments_v1"
 
 

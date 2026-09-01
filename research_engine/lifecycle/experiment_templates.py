@@ -408,7 +408,7 @@ def _build_result(definition: ExperimentDefinition, treatment_results: list[dict
     fp = build_dataset_fingerprint(
         used_records,
         dataset_id=f"population_{definition.experiment_type.value}",
-        dataset_version="shadow_trades_v2",
+        dataset_version="shadow_trades_v1",
         population=definition.title or definition.experiment_type.value,
         filters_applied=[f"pattern={definition.population.pattern_filter}",
                          f"symbol={definition.population.symbol_filter}",

@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pathlib import Path
 from unittest.mock import patch
 
-from research_engine.v10.universes.models import Universe, Population
+from research_engine.v10.universes.models import ACTIVE_UNIVERSES, RETIRED_UNIVERSES, Universe, Population
 from research_engine.v10.universes.risk_universe import RiskUniverseBuilder
 from research_engine.v10.universes.outcome_universe import OutcomeUniverseBuilder
 from research_engine.v10.universes.execution_universe import ExecutionUniverseBuilder
@@ -45,7 +45,9 @@ class TestUniverseEnum:
         assert Universe.OUTCOME == "OUTCOME"
 
     def test_universe_count(self):
-        assert len(Universe) == 6
+        assert len(ACTIVE_UNIVERSES) == 7
+        assert Universe.SHADOW_OUTCOME in ACTIVE_UNIVERSES
+        assert RETIRED_UNIVERSES == (Universe.SHADOW_REALITY,)
 
     def test_backward_compatible_values(self):
         """Existing 4 values unchanged."""

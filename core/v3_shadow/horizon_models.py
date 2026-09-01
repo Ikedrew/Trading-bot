@@ -32,7 +32,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-_HORIZON_SCHEMA_VERSION = "v3_horizon_assessment_v2"
+from core.production_data_contract import current_schema
+
+_HORIZON_SCHEMA_VERSION = current_schema("v3_horizon_assessment")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

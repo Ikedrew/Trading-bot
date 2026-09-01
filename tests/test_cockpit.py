@@ -20,6 +20,7 @@ from research_engine.v10.cockpit.aggregator import (
     QuestionSummary,
 )
 from research_engine.v10.cockpit.generator import generate_cockpit
+from research_engine.v10.universes.question_bank import QUESTION_BANK
 
 
 class TestCockpitAggregator:
@@ -29,7 +30,7 @@ class TestCockpitAggregator:
         agg = CockpitDataAggregator()
         data = agg.aggregate()
         # Should find all 45 questions
-        assert data.total_questions == 45
+        assert data.total_questions == len(QUESTION_BANK)
         # Should have findings from the executed run
         assert data.complete >= 40
         assert data.blocked >= 1

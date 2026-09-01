@@ -30,8 +30,11 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/opportunity_assessment_log"
-_S3_BUCKET = "v10-engine"
-_S3_PREFIX = "opportunity_assessment"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("opportunity_assessment")
 _SCHEMA_VERSION = "opportunity_assessment_v1"
 
 

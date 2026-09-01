@@ -124,16 +124,16 @@ class TestPersistence:
 
 class TestPathGeneration:
     def test_s3_bucket(self):
-        assert _S3_BUCKET == "trading-bot-data-mk1"
+        assert _S3_BUCKET == "trading-bot-v10-data"
 
     def test_s3_prefix(self):
-        assert _S3_PREFIX == "strategy_observations"
+        assert _S3_PREFIX == "supporting/strategy_observations"
 
     def test_local_dir(self):
         assert _LOCAL_DIR == "logs/strategy_observations"
 
     def test_hive_partition_format(self):
-        expected = "strategy_observations/symbol=EURUSD/date=2026-07-27/part-000.jsonl"
+        expected = "supporting/strategy_observations/symbol=EURUSD/date=2026-07-27/part-000.jsonl"
         actual = f"{_S3_PREFIX}/symbol=EURUSD/date=2026-07-27/part-000.jsonl"
         assert actual == expected
 

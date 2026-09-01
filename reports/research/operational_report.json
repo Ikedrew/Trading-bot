@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-08-14T13:07:27.546011+00:00",
+  "generated_utc": "2026-09-01T13:48:36.792946+00:00",
   "dataset": {
     "status": "AVAILABLE",
     "trades": 94,
@@ -15,9 +15,13 @@
     ]
   },
   "candidates": {
-    "total": 0,
-    "active": 0,
-    "active_ids": []
+    "total": 3,
+    "active": 3,
+    "active_ids": [
+      "OPT-fcf078b8",
+      "OPT-441a8783",
+      "OPT-3292f718"
+    ]
   },
   "shadow": {
     "active_shadows": 0,

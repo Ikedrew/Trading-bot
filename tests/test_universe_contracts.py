@@ -36,7 +36,7 @@ from research_engine.v10.universes.contracts import (
     get_population_contract,
     get_universe_contract,
 )
-from research_engine.v10.universes.models import Population, Universe
+from research_engine.v10.universes.models import ACTIVE_UNIVERSES, Population, Universe
 from research_engine.v10.universes.question_bank import QUESTION_BANK
 from research_engine.v10.universes.question_validator import validate_all_questions
 from research_engine.v10.universes.resolver import (
@@ -58,7 +58,7 @@ from research_engine.v10.universes.health import (
 class TestUniverseContracts:
 
     def test_all_four_universes_have_contracts(self):
-        for u in Universe:
+        for u in ACTIVE_UNIVERSES:
             assert u in UNIVERSE_CONTRACTS, f"No contract for {u.value}"
 
     def test_every_universe_has_grain(self):
@@ -333,7 +333,7 @@ class TestQuestionReadiness:
     def test_all_questions_validate_without_error(self):
         """Validation should not raise exceptions."""
         results = validate_all_questions(QUESTION_BANK)
-        assert len(results) == 45
+        assert len(results) == len(QUESTION_BANK)
 
     def test_no_invalid_questions(self):
         """No question should be structurally INVALID against contracts."""

@@ -139,7 +139,7 @@ class TestMarketContextCapture:
         assert rec["entity_id"] == f"{SYMBOL}_{BAR_TIME}"
         assert rec["bar_time"] == BAR_TIME
         assert rec["correlation_id"] == "COR-TEST-0001"
-        assert rec["schema_version"] == "market_context_v2"
+        assert rec["schema_version"] == "market_context_v1"
 
 
 # ─── 2. canonical timing rule ─────────────────────────────────────────────────

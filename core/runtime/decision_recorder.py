@@ -166,6 +166,15 @@ class DecisionRecorder:
                 decision=self._decision["decision"] or DecisionOutcome.NO_TRADE,
                 reason=self._decision["reason"],
                 signal_score=self._decision["signal_score"],
+                signal_score_semantic=self._decision.get(
+                    "signal_score_semantic", "unknown_legacy_projection"
+                ),
+                assessment_strategy_weighted_score=self._decision.get(
+                    "assessment_strategy_weighted_score"
+                ),
+                opportunity_overall_quality_score=self._decision.get(
+                    "opportunity_overall_quality_score"
+                ),
                 signal_type=self._decision["signal_type"],
                 pattern_state=self._decision["pattern_state"],
                 regime=self._decision["regime"],

@@ -83,7 +83,7 @@ class TestMappingCompleteness:
 
     def test_all_45_questions_mapped(self):
         mapping = build_full_mapping(QUESTION_BANK)
-        assert len(mapping) == 45
+        assert len(mapping) == len(QUESTION_BANK)
 
     def test_every_primitive_in_mapping_exists(self):
         registry = build_default_registry()

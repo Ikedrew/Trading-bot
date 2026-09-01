@@ -1,6 +1,6 @@
 # V10 Research Segmentation Engine Report
 
-Generated: 2026-08-14T13:09:05.033722+00:00
+Generated: 2026-09-01T13:48:51.277636+00:00
 Total events: 94
 
 ## Instruments

@@ -98,7 +98,7 @@ class TestControlPlaneEngine:
         from research_engine.v10.universes.question_bank import QUESTION_BANK
         engine.index_questions(QUESTION_BANK)
         assert engine.state.questions_active >= 40
-        assert len(engine.state.questions) == 45
+        assert len(engine.state.questions) == len(QUESTION_BANK)
 
     def test_register_run(self, tmp_path):
         engine = ControlPlaneEngine(state_file=tmp_path / "state.json")

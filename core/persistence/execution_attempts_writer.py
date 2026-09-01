@@ -62,9 +62,10 @@ logger = logging.getLogger(__name__)
 
 _LOCAL_DIR = "logs/execution_attempts"
 from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
 
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
-_S3_PREFIX = "execution_attempts"
+_S3_PREFIX = s3_base_prefix("execution_attempts")
 _SCHEMA_VERSION = "execution_attempts_v1"
 
 

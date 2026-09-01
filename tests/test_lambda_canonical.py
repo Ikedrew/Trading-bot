@@ -167,7 +167,7 @@ class TestContextResolver:
         builders = _mock_builders()
         resolver = ResearchContextResolver(builders=builders)
         results = resolver.resolve_all(QUESTION_BANK)
-        assert len(results) == 45
+        assert len(results) == len(QUESTION_BANK)
         ready = sum(1 for r in results if r.ready)
         blocked = sum(1 for r in results if not r.ready)
         assert ready >= 40  # Most should resolve with mock data

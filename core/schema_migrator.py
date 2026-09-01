@@ -27,6 +27,7 @@ from __future__ import annotations
 from typing import Any
 
 from core.schema_registry import CURRENT_SCHEMA_VERSION
+from core.production_data_contract import current_schema
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -56,7 +57,8 @@ def stamp_schema_version(event: dict[str, Any]) -> dict[str, Any]:
     Returns:
         Same event dict with schema_version stamped.
     """
-    event["schema_version"] = CURRENT_SCHEMA_VERSION
+    event["schema_version"] = current_schema("events")
+    event["event_layout_version"] = CURRENT_SCHEMA_VERSION
     return event
 
 
@@ -79,14 +81,22 @@ def migrate_event(event: dict[str, Any]) -> dict[str, Any]:
     Returns:
         Event dict conforming to v2 schema. Original dict is mutated in-place.
     """
-    version = event.get("schema_version", 1)
+    version = event.get("event_layout_version", event.get("schema_version", 1))
 
-    if version >= CURRENT_SCHEMA_VERSION:
+    if event.get("schema_version") == current_schema("events"):
+        return event
+
+    if isinstance(version, int) and version >= CURRENT_SCHEMA_VERSION:
+        event["event_layout_version"] = version
+        event["schema_version"] = current_schema("events")
         return event
 
     # ─── v1 → v2 migration ───────────────────────────────────────────
     if version == 1:
         event = _migrate_v1_to_v2(event)
+
+    event["event_layout_version"] = CURRENT_SCHEMA_VERSION
+    event["schema_version"] = current_schema("events")
 
     return event
 
