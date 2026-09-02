@@ -1,33 +1,33 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "XAUUSD",
-  "cycle_id": 3086,
-  "bar_time": 1788311700,
-  "updated_at": "2026-09-01T22:15:34.417Z",
-  "updated_at_unix": 1788300934.417,
+  "cycle_id": 2367,
+  "bar_time": 1788373500,
+  "updated_at": "2026-09-02T15:25:35.899Z",
+  "updated_at_unix": 1788362735.9,
   "action": "NO_TRADE",
-  "score": 0.445,
-  "reason": "V10 [strategy]: No strategy matched",
+  "score": 0.21,
+  "reason": "V10 [opportunity]: No opportunity (INVALID)",
   "identity": {
-    "entity_id": "XAUUSD_1788311700",
-    "observation_id": "2b004fb7ec018610",
-    "cycle_id": 3086,
+    "entity_id": "XAUUSD_1788373500",
+    "observation_id": "c03b976e1b885e61",
+    "cycle_id": 2367,
     "correlation_id": "",
     "trade_id": ""
   },
   "market": {
-    "regime": "TRENDING",
-    "regime_confidence": 0.869,
+    "regime": "RANGING",
+    "regime_confidence": 0.5,
     "volatility_state": "NEUTRAL",
-    "h4_trend": "BEARISH",
-    "h4_trend_strength": 0.869,
-    "h4_phase": "PULLBACK",
-    "h1_bos_direction": "",
-    "h1_structural_clarity": 0.8764,
-    "h1_dominant_trend": "BEARISH",
+    "h4_trend": "NEUTRAL",
+    "h4_trend_strength": 0.2,
+    "h4_phase": "REVERSAL",
+    "h1_bos_direction": "BULLISH",
+    "h1_structural_clarity": 0.2811,
+    "h1_dominant_trend": "NEUTRAL",
     "m15_pullback_active": true,
     "m15_displacement": false,
-    "m15_range_position": 0.0374,
+    "m15_range_position": 0.5178,
     "m5_momentum": "BEARISH",
     "m5_momentum_strength": 1.0,
     "m5_rejection": false,
@@ -36,32 +36,32 @@
     "location_type": "OPEN_SPACE",
     "inside_zone": false,
     "zone_quality": 0.0,
-    "range_position": 0.0374,
-    "premium_discount": "DISCOUNT",
-    "htf_macro_bias": "BEARISH",
-    "htf_structure_alignment": 0.5
+    "range_position": 0.5178,
+    "premium_discount": "EQUILIBRIUM",
+    "htf_macro_bias": "NEUTRAL",
+    "htf_structure_alignment": 0.6
   },
   "opportunity": {
-    "state": "WATCHING",
-    "directional_bias": "BEARISH",
-    "opportunity_type": "ZONE_REACTION",
-    "overall_quality": 0.445,
-    "location_score": 0.5,
-    "structure_score": 0.35,
-    "behaviour_score": 0.7,
-    "formation_score": 0.3,
-    "observation_id": "2b004fb7ec018610"
+    "state": "INVALID",
+    "directional_bias": "BULLISH",
+    "opportunity_type": "NONE",
+    "overall_quality": 0.21,
+    "location_score": 0.0,
+    "structure_score": 0.30000000000000004,
+    "behaviour_score": 0.7999999999999999,
+    "formation_score": 0.0,
+    "observation_id": "c03b976e1b885e61"
   },
   "strategy": {
     "family": "NONE",
     "confidence": 0.0,
-    "direction": "BEARISH"
+    "direction": "BULLISH"
   },
   "horizon": {
-    "type": "INTRADAY",
-    "min_move": 1.5,
-    "max_move": 3.0,
-    "duration_minutes": 240
+    "type": "SCALP",
+    "min_move": 0.5,
+    "max_move": 1.5,
+    "duration_minutes": 30
   },
   "entry": {
     "status": "INVALID",
@@ -87,6 +87,6 @@
     "order_type": "",
     "volume": 0.0
   },
-  "rejection_stage": "strategy",
+  "rejection_stage": "opportunity",
   "approved": false
 }

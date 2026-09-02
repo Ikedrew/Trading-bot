@@ -60,9 +60,12 @@ class TestAssessmentsSchema:
         assert _SCHEMA_VERSION == "assessments_v1"
 
     def test_assessment_model_has_own_schema(self):
-        """Assessment model already carries schema_version='assessment_v1'."""
+        """Canonical V1: the Assessment model schema is sourced from the central
+        production contract (unified to 'assessments_v1' — previously the model
+        diverged with the singular 'assessment_v1')."""
         from core.assessment.assessment import SCHEMA_VERSION
-        assert SCHEMA_VERSION == "assessment_v1"
+        from core.production_data_contract import current_schema
+        assert SCHEMA_VERSION == current_schema("assessments") == "assessments_v1"
 
 
 class TestManagementActionsSchema:

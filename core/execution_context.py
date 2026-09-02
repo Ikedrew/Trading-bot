@@ -63,7 +63,8 @@ from core.production_data_contract import s3_base_prefix
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
 _S3_PREFIX = s3_base_prefix("execution_context")
 _LOCAL_DIR = "logs/execution_context"
-_SCHEMA_VERSION = "execution_context_v1"
+from core.production_data_contract import current_schema as _current_schema
+_SCHEMA_VERSION = _current_schema("execution_context")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FORBIDDEN FIELDS (hard rejection if present)
@@ -376,7 +377,8 @@ def _s3_append(symbol: str, date_str: str, line: str) -> None:
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
             region_name=os.getenv("AWS_REGION", "eu-west-2"),
         )
-        key = f"{_S3_PREFIX}/symbol={symbol}/date={date_str}/part-000.jsonl"
+        from core.production_data_contract import canonical_s3_key
+        key = canonical_s3_key("execution_context", symbol=symbol, date=date_str)
         try:
             existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
             body = existing["Body"].read().decode("utf-8") + line
@@ -387,8 +389,15 @@ def _s3_append(symbol: str, date_str: str, line: str) -> None:
             Body=body.encode("utf-8"),
             ContentType="application/x-ndjson",
         )
-    except Exception:
-        pass
+        from core.s3_write_observability import record_s3_success
+        record_s3_success("execution_context")
+    except Exception as _exc:
+        # Non-blocking: local write already succeeded; surface (not silent).
+        try:
+            from core.s3_write_observability import record_s3_failure
+            record_s3_failure("execution_context", _exc)
+        except Exception:
+            pass
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

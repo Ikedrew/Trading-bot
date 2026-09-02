@@ -37,11 +37,16 @@ from typing import Any
 # SCHEMA AND DATASET VERSION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-SCHEMA_VERSION = "assessment_v1"
-"""Record-level schema version. Increment on breaking field changes."""
+from core.production_data_contract import (
+    current_schema as _current_schema,
+    current_generation as _current_generation,
+)
 
-DATASET_VERSION = "2026.1"
-"""Dataset-level version. Increment on semantic changes to what the dataset represents."""
+SCHEMA_VERSION = _current_schema("assessments")
+"""Record-level schema version — sourced from the central production contract."""
+
+DATASET_VERSION = _current_generation("assessments")
+"""Dataset-level generation. Clean V1 baseline == 1 (was "2026.1")."""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -124,7 +129,9 @@ class Assessment:
     entity_id: str = ""              # Joins to decision_audit, trade_truth, opportunity
     canonical_opportunity_id: str = ""  # THE authoritative lineage root (remediation)
     correlation_id: str = ""         # Technical tracing only (never a join requirement)
-    decision_id: str = ""            # Joins to decision_audit
+    decision_id: str = ""            # OPTIONAL at assessment stage: the decision (and its
+                                     # decision_id) is minted downstream in decision_ledger.
+                                     # Canonical join is via entity_id / canonical_opportunity_id.
     runtime_session_id: str = ""     # Distinguishes bot sessions
 
     # ─── TIMESTAMP ────────────────────────────────────────────────────

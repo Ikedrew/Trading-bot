@@ -16,6 +16,12 @@ class DatasetRole(str, Enum):
     LEGACY = "legacy"
 
 
+class PartitionModel(str, Enum):
+    """Canonical S3 partition semantics for a dataset."""
+    SYMBOL_DATE = "symbol_date"   # {base}/schema_version={s}/symbol={SYM}/date={DATE}/
+    DATE = "date"                 # {base}/schema_version={s}/date={DATE}/  (portfolio-wide)
+
+
 @dataclass(frozen=True)
 class ProductionSchema:
     dataset: str
@@ -26,6 +32,11 @@ class ProductionSchema:
     legacy_supported_versions: tuple[str, ...]
     semantic_owner: str
     population: str
+    # Canonical generation. This is a FRESH V1 baseline: every active dataset
+    # begins at generation 1. Future genuine revisions become 2, 3, ...
+    generation: int = 1
+    # Canonical S3 partition semantics owned by the contract (not the writers).
+    partition_model: PartitionModel = PartitionModel.SYMBOL_DATE
 
 
 def _schema(
@@ -37,6 +48,7 @@ def _schema(
     role: DatasetRole,
     current: str | None = None,
     s3_name: str | None = None,
+    partition_model: PartitionModel = PartitionModel.SYMBOL_DATE,
 ) -> ProductionSchema:
     return ProductionSchema(
         dataset=dataset,
@@ -47,6 +59,8 @@ def _schema(
         legacy_supported_versions=legacy,
         semantic_owner=owner,
         population=population,
+        generation=1,
+        partition_model=partition_model,
     )
 
 
@@ -69,13 +83,13 @@ PRODUCTION_SCHEMA_REGISTRY: dict[str, ProductionSchema] = {
     "protection_audit": _schema("protection_audit", role=DatasetRole.SUPPORTING, owner="protection_verification", population="LIVE"),
     "management_actions": _schema("management_actions", role=DatasetRole.SUPPORTING, owner="trade_management", population="LIVE"),
     "risk_deviation": _schema("risk_deviation", role=DatasetRole.SUPPORTING, owner="risk_observation", population="LIVE"),
-    "portfolio_rankings": _schema("portfolio_rankings", role=DatasetRole.SUPPORTING, current="portfolio_ranking_v1", owner="portfolio_ranking", population="LIVE_AND_REPLAY"),
+    "portfolio_rankings": _schema("portfolio_rankings", role=DatasetRole.SUPPORTING, current="portfolio_ranking_v1", owner="portfolio_ranking", population="LIVE_AND_REPLAY", partition_model=PartitionModel.DATE),
     "shadow_runtime": _schema("shadow_runtime", role=DatasetRole.SUPPORTING, owner="shadow_runtime", population="SHADOW"),
     "shadow_trades": _schema("shadow_trades", role=DatasetRole.SUPPORTING, owner="shadow_trade_simulation", population="SHADOW"),
     "strategy_observations": _schema("strategy_observations", role=DatasetRole.SUPPORTING, current="strategy_observation_v1", owner="strategy_observation", population="OBSERVATIONAL"),
     "research_shadow_trades": _schema("research_shadow_trades", role=DatasetRole.SUPPORTING, owner="research_assessment", population="RESEARCH"),
     "trade_journal": _schema("trade_journal", role=DatasetRole.PROJECTION, owner="trade_journal", population="LIVE"),
-    "portfolio_shadow": _schema("portfolio_shadow", role=DatasetRole.PROJECTION, owner="portfolio_ranking", population="SHADOW"),
+    "portfolio_shadow": _schema("portfolio_shadow", role=DatasetRole.PROJECTION, owner="portfolio_ranking", population="SHADOW", partition_model=PartitionModel.DATE),
     "quarantine": _schema("quarantine", role=DatasetRole.PROJECTION, owner="contract_validation", population="LIVE_AND_REPLAY"),
 }
 
@@ -119,3 +133,60 @@ def supported_schemas(dataset: str) -> frozenset[str]:
 def s3_base_prefix(dataset: str) -> str:
     """Return the role-qualified base prefix for new Production V1 writes."""
     return PRODUCTION_SCHEMA_REGISTRY[dataset].s3_base_prefix
+
+
+def current_generation(dataset: str) -> int:
+    """Return the canonical numeric generation for a dataset (V1 baseline == 1)."""
+    return PRODUCTION_SCHEMA_REGISTRY[dataset].generation
+
+
+def partition_model(dataset: str) -> "PartitionModel":
+    """Return the canonical S3 partition semantics for a dataset."""
+    return PRODUCTION_SCHEMA_REGISTRY[dataset].partition_model
+
+
+def is_symbol_scoped(dataset: str) -> bool:
+    """True when the dataset partitions by symbol (vs portfolio/date-scoped)."""
+    return PRODUCTION_SCHEMA_REGISTRY[dataset].partition_model is PartitionModel.SYMBOL_DATE
+
+
+# ─── CANONICAL S3 PATH AUTHORITY ──────────────────────────────────────────────
+# ONE builder for both the WRITER key and the Research Engine READ prefix, so a
+# writer and the loader can never diverge on path convention. All canonical keys
+# are Hive-partitioned:
+#   symbol-scoped : {base}/schema_version={schema}/symbol={SYM}/date={DATE}/{part}
+#   date-scoped   : {base}/schema_version={schema}/date={DATE}/{part}
+
+
+def canonical_s3_schema_prefix(dataset: str, *, schema: str | None = None) -> str:
+    """`{base}/schema_version={schema}/` — the schema-version partition root."""
+    entry = PRODUCTION_SCHEMA_REGISTRY[dataset]
+    return f"{entry.s3_base_prefix}/schema_version={schema or entry.current}/"
+
+
+def canonical_s3_list_prefix(
+    dataset: str,
+    *,
+    symbol: str | None = None,
+    schema: str | None = None,
+) -> str:
+    """Read-side listing prefix. Adds symbol= for symbol-scoped datasets only."""
+    prefix = canonical_s3_schema_prefix(dataset, schema=schema)
+    if symbol and is_symbol_scoped(dataset):
+        return f"{prefix}symbol={symbol}/"
+    return prefix
+
+
+def canonical_s3_key(
+    dataset: str,
+    *,
+    symbol: str,
+    date: str,
+    part: str = "part-000.jsonl",
+    schema: str | None = None,
+) -> str:
+    """Write-side object key. symbol is ignored for date-scoped datasets."""
+    prefix = canonical_s3_schema_prefix(dataset, schema=schema)
+    if is_symbol_scoped(dataset):
+        return f"{prefix}symbol={symbol}/date={date}/{part}"
+    return f"{prefix}date={date}/{part}"

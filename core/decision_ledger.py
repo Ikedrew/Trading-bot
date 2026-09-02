@@ -70,7 +70,8 @@ from core.production_data_contract import s3_base_prefix
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
 _S3_PREFIX = s3_base_prefix("decision_ledger")
 _LOCAL_DIR = "logs/decision_ledger"
-_SCHEMA_VERSION = "decision_ledger_v1"
+from core.production_data_contract import current_schema as _current_schema
+_SCHEMA_VERSION = _current_schema("decision_ledger")
 _FLUSH_INTERVAL_SECONDS = 30.0
 _FLUSH_BATCH_SIZE = 50
 
@@ -468,7 +469,8 @@ class DecisionLedgerWriter:
                     retries={"max_attempts": 0},
                 ),
             )
-            key = f"{_S3_PREFIX}/symbol={symbol}/date={date_str}/part-000.jsonl"
+            from core.production_data_contract import canonical_s3_key
+            key = canonical_s3_key("decision_ledger", symbol=symbol, date=date_str)
             body = "".join(lines)
 
             # Read-append-write (acceptable for decision ledger volume)
@@ -483,8 +485,15 @@ class DecisionLedgerWriter:
                 Body=body.encode("utf-8"),
                 ContentType="application/x-ndjson",
             )
-        except Exception:
-            pass  # S3 failure must never affect runtime
+            from core.s3_write_observability import record_s3_success
+            record_s3_success("decision_ledger")
+        except Exception as _exc:
+            # Non-blocking: local write is authoritative; surface (not silent).
+            try:
+                from core.s3_write_observability import record_s3_failure
+                record_s3_failure("decision_ledger", _exc)
+            except Exception:
+                pass  # S3 failure must never affect runtime
 
     def stats(self) -> dict[str, Any]:
         """Return writer statistics."""

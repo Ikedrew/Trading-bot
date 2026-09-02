@@ -31,11 +31,16 @@ from typing import Any
 # SCHEMA AND DATASET VERSION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-SCHEMA_VERSION = "opportunity_v1"
-"""Record-level schema version. Increment on breaking field changes."""
+from core.production_data_contract import (
+    current_schema as _current_schema,
+    current_generation as _current_generation,
+)
 
-DATASET_VERSION = "2026.1"
-"""Dataset-level version. Increment on semantic changes to what the dataset represents."""
+SCHEMA_VERSION = _current_schema("opportunities")
+"""Record-level schema version — sourced from the central production contract."""
+
+DATASET_VERSION = _current_generation("opportunities")
+"""Dataset-level generation. Clean V1 baseline == 1 (was "2026.1")."""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

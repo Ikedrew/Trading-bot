@@ -32,13 +32,18 @@ from typing import Any
 # VERSION CONSTANTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-CURRENT_SCHEMA_VERSION: int = 3
+# CLEAN V1 BASELINE: the active canonical event layout generation starts at 1.
+# (Historical development reached generation 3; that history is NOT preserved in
+# the new canonical dataset — old data is being wiped. The current observation-only
+# structure IS the generation-1 canonical layout.)
+CURRENT_SCHEMA_VERSION: int = 1
 
-# Legacy version (pre-canonical normalisation)
+# Legacy version (pre-canonical normalisation) — retained only for read-time
+# migration of pre-wipe historical data; never emitted on the new baseline.
 SCHEMA_VERSION_LEGACY: int = 1
 
-# Current version (observation-only, decision fields removed)
-SCHEMA_VERSION_CANONICAL: int = 3
+# Current canonical generation (observation-only, decision fields removed).
+SCHEMA_VERSION_CANONICAL: int = 1
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -119,9 +124,40 @@ SCHEMA_V3: dict[str, Any] = {
     ],
 }
 
-# Registry of all known schemas (for future v3, v4, etc.)
+# ─── CANONICAL V1 (clean baseline) ────────────────────────────────────────────
+# The active canonical event layout for the fresh baseline. Structurally identical
+# to the observation-only shape (formerly generation 3) but numbered generation 1:
+# canonical generation begins here.
+SCHEMA_V1_CANONICAL: dict[str, Any] = {
+    "description": "Canonical V1 — observation-only event layout (clean baseline)",
+    "version": 1,
+    "fields": {
+        "ts_utc_ms": {"type": "int", "required": True},
+        "type": {"type": "str", "required": True},
+        "symbol": {"type": "str", "required": False},
+        "source": {"type": "str", "required": False},
+        "schema_version": {"type": "str", "required": True, "value": "events_v1"},
+        "event_layout_version": {"type": "int", "required": True, "value": 1},
+        "feature_version": {"type": "int", "required": False},
+        "payload": {"type": "dict", "required": False},
+    },
+    "guarantees": [
+        "Only observation event types reach disk (CANDLE, FEATURE_UPDATE, FEED_HEALTH, DATA_GAP, RECONNECT, SYSTEM_HEALTH, CLOCK_SYNC)",
+        "No decision/trading fields",
+        "event_layout_version = 1 (clean canonical generation)",
+        "schema_version = events_v1 always present",
+    ],
+}
+
+# Registry of schemas. Key 1 is the active canonical baseline. Keys _LEGACY2/_LEGACY3
+# retain the pre-wipe historical definitions ONLY for read-time migration of old
+# (disposable) data — they are never emitted on the new baseline.
 SCHEMA_REGISTRY: dict[int, dict[str, Any]] = {
-    1: SCHEMA_V1,
+    1: SCHEMA_V1_CANONICAL,
+}
+# Historical (pre-baseline) definitions, retained for read-time migration only.
+LEGACY_SCHEMA_DEFINITIONS: dict[int, dict[str, Any]] = {
+    1: SCHEMA_V1,   # pre-canonical legacy
     2: SCHEMA_V2,
     3: SCHEMA_V3,
 }

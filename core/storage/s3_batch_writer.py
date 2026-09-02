@@ -60,9 +60,11 @@ class S3BatchWriter:
         base_prefix: str = "events",
         flush_interval: float = 30.0,
         max_buffer_size: int = 100,
+        dataset: str = "events",
     ) -> None:
         self._bucket = bucket
         self._prefix = base_prefix
+        self._dataset = dataset
         self._flush_interval = flush_interval
         self._max_buffer = max_buffer_size
 
@@ -164,8 +166,11 @@ class S3BatchWriter:
         part_num = self._part_counters[key]
         self._last_flush[key] = _time.time()
 
-        # Build S3 key (Hive-compatible)
-        s3_key = f"{self._prefix}/symbol={symbol}/date={date_str}/part-{part_num:04d}.jsonl"
+        # Build S3 key from the central contract (schema-versioned, Hive-compatible)
+        from core.production_data_contract import canonical_s3_key
+        s3_key = canonical_s3_key(
+            self._dataset, symbol=symbol, date=date_str, part=f"part-{part_num:04d}.jsonl"
+        )
 
         # Build body (JSONL — one event per line)
         body = "\n".join(events) + "\n"
@@ -197,11 +202,21 @@ class S3BatchWriter:
                 self._total_flushed += event_count
                 self._total_batches += 1
                 logger.debug("[S3_BATCH] uploaded key=%s events=%d size=%d", key, event_count, len(body))
+                try:
+                    from core.s3_write_observability import record_s3_success
+                    record_s3_success(self._dataset)
+                except Exception:
+                    pass
                 return
             except Exception as exc:
                 if attempt == max_retries:
                     self._total_errors += 1
-                    logger.debug("[S3_BATCH] upload_failed key=%s attempts=%d error=%s", key, attempt, exc)
+                    # Final retry exhausted — surface visibly (not just debug).
+                    try:
+                        from core.s3_write_observability import record_s3_failure
+                        record_s3_failure(self._dataset, exc)
+                    except Exception:
+                        pass
                 else:
                     _time.sleep(0.5 * attempt)
 

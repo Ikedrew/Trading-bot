@@ -39,8 +39,10 @@ from core.production_data_contract import s3_base_prefix
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
 _S3_PREFIX = s3_base_prefix("portfolio_rankings")
 
-SCHEMA_VERSION = "portfolio_ranking_v1"
-DATASET_VERSION = "2026.1"
+from core.production_data_contract import current_schema as _current_schema, current_generation as _current_generation
+SCHEMA_VERSION = _current_schema("portfolio_rankings")
+# Clean V1 baseline: dataset_version starts at generation 1 (was "2026.1").
+DATASET_VERSION = _current_generation("portfolio_rankings")
 
 
 def _build_portfolio_state_dict(portfolio_context: Any) -> dict[str, Any]:
@@ -213,7 +215,8 @@ def _write_s3(date_str: str, line: str) -> None:
                 retries={"max_attempts": 0},
             ),
         )
-        key = f"{_S3_PREFIX}/date={date_str}/part-000.jsonl"
+        from core.production_data_contract import canonical_s3_key
+        key = canonical_s3_key("portfolio_rankings", symbol="", date=date_str)
         body = line + "\n"
 
         # Read-append-write
@@ -228,5 +231,11 @@ def _write_s3(date_str: str, line: str) -> None:
             Body=body.encode("utf-8"),
             ContentType="application/x-ndjson",
         )
-    except Exception:
-        pass  # S3 failure must never affect runtime
+        from core.s3_write_observability import record_s3_success
+        record_s3_success("portfolio_rankings")
+    except Exception as _exc:
+        try:
+            from core.s3_write_observability import record_s3_failure
+            record_s3_failure("portfolio_rankings", _exc)
+        except Exception:
+            pass  # S3 failure must never affect runtime

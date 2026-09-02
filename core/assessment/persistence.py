@@ -36,7 +36,8 @@ from core.production_data_contract import s3_base_prefix
 
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
 _S3_PREFIX = s3_base_prefix("assessments")
-_SCHEMA_VERSION = "assessments_v1"
+from core.production_data_contract import current_schema as _current_schema
+_SCHEMA_VERSION = _current_schema("assessments")
 
 
 def persist_assessment(assessment: Assessment) -> None:
@@ -98,7 +99,8 @@ def _write_s3(symbol: str, date_str: str, line: str) -> None:
                 retries={"max_attempts": 0},
             ),
         )
-        key = f"{_S3_PREFIX}/symbol={symbol}/date={date_str}/part-000.jsonl"
+        from core.production_data_contract import canonical_s3_key
+        key = canonical_s3_key("assessments", symbol=symbol, date=date_str)
         body = line + "\n"
 
         # Read-append-write (acceptable for assessment volume)
@@ -113,5 +115,12 @@ def _write_s3(symbol: str, date_str: str, line: str) -> None:
             Body=body.encode("utf-8"),
             ContentType="application/x-ndjson",
         )
-    except Exception:
-        pass  # S3 failure must never affect runtime
+        from core.s3_write_observability import record_s3_success
+        record_s3_success("assessments")
+    except Exception as _exc:
+        # Non-blocking: local write is authoritative; surface (not silent).
+        try:
+            from core.s3_write_observability import record_s3_failure
+            record_s3_failure("assessments", _exc)
+        except Exception:
+            pass  # S3 failure must never affect runtime

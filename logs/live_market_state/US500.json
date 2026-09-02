@@ -1,33 +1,33 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "US500",
-  "cycle_id": 2845,
-  "bar_time": 1788311400,
-  "updated_at": "2026-09-01T22:10:21.153Z",
-  "updated_at_unix": 1788300621.153,
+  "cycle_id": 2038,
+  "bar_time": 1788372600,
+  "updated_at": "2026-09-02T15:10:24.428Z",
+  "updated_at_unix": 1788361824.428,
   "action": "NO_TRADE",
-  "score": 0.385,
-  "reason": "V10 [opportunity]: No opportunity (INVALID)",
+  "score": 0.515,
+  "reason": "V10 [strategy]: No strategy matched",
   "identity": {
-    "entity_id": "US500_1788311400",
-    "observation_id": "9861632e92d92f99",
-    "cycle_id": 2845,
+    "entity_id": "US500_1788372600",
+    "observation_id": "fbe1d43612d25698",
+    "cycle_id": 2038,
     "correlation_id": "",
     "trade_id": ""
   },
   "market": {
-    "regime": "TRENDING",
-    "regime_confidence": 0.561,
+    "regime": "RANGING",
+    "regime_confidence": 0.5,
     "volatility_state": "NEUTRAL",
-    "h4_trend": "BEARISH",
-    "h4_trend_strength": 0.561,
-    "h4_phase": "PULLBACK",
-    "h1_bos_direction": "",
-    "h1_structural_clarity": 0.5076,
-    "h1_dominant_trend": "BEARISH",
+    "h4_trend": "NEUTRAL",
+    "h4_trend_strength": 0.2,
+    "h4_phase": "REVERSAL",
+    "h1_bos_direction": "BULLISH",
+    "h1_structural_clarity": 0.2766,
+    "h1_dominant_trend": "NEUTRAL",
     "m15_pullback_active": true,
     "m15_displacement": false,
-    "m15_range_position": 0.1844,
+    "m15_range_position": 0.1261,
     "m5_momentum": "BEARISH",
     "m5_momentum_strength": 0.8,
     "m5_rejection": false,
@@ -36,26 +36,26 @@
     "location_type": "OPEN_SPACE",
     "inside_zone": false,
     "zone_quality": 0.0,
-    "range_position": 0.1844,
+    "range_position": 0.1261,
     "premium_discount": "DISCOUNT",
-    "htf_macro_bias": "BEARISH",
-    "htf_structure_alignment": 0.5
+    "htf_macro_bias": "NEUTRAL",
+    "htf_structure_alignment": 0.6
   },
   "opportunity": {
-    "state": "INVALID",
-    "directional_bias": "BEARISH",
+    "state": "WATCHING",
+    "directional_bias": "BULLISH",
     "opportunity_type": "ZONE_REACTION",
-    "overall_quality": 0.385,
-    "location_score": 0.5,
-    "structure_score": 0.15,
-    "behaviour_score": 0.7,
+    "overall_quality": 0.515,
+    "location_score": 0.7000000000000001,
+    "structure_score": 0.30000000000000004,
+    "behaviour_score": 0.7999999999999999,
     "formation_score": 0.3,
-    "observation_id": "9861632e92d92f99"
+    "observation_id": "fbe1d43612d25698"
   },
   "strategy": {
     "family": "NONE",
     "confidence": 0.0,
-    "direction": "BEARISH"
+    "direction": "BULLISH"
   },
   "horizon": {
     "type": "SCALP",
@@ -87,6 +87,6 @@
     "order_type": "",
     "volume": 0.0
   },
-  "rejection_stage": "opportunity",
+  "rejection_stage": "strategy",
   "approved": false
 }

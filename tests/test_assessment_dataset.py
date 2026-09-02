@@ -114,16 +114,16 @@ class TestSchemaCompliance:
     def test_schema_version_present(self):
         result = _engine_result_execute()
         a = build_assessment(engine_result=result, symbol="GBPUSD", cycle_id=4578, bar_time=1784809820)
-        assert a.schema_version == "assessment_v1"
+        assert a.schema_version == "assessments_v1"
 
     def test_dataset_version_present(self):
         result = _engine_result_execute()
         a = build_assessment(engine_result=result, symbol="GBPUSD", cycle_id=4578, bar_time=1784809820)
-        assert a.dataset_version == "2026.1"
+        assert a.dataset_version == 1
 
     def test_constants_match(self):
-        assert SCHEMA_VERSION == "assessment_v1"
-        assert DATASET_VERSION == "2026.1"
+        assert SCHEMA_VERSION == "assessments_v1"   # canonical (unified from singular)
+        assert DATASET_VERSION == 1                  # clean V1 baseline (was "2026.1")
 
     def test_no_execution_fields(self):
         """Assessment NEVER contains SL, TP, volume, or order details."""
@@ -289,7 +289,7 @@ class TestSerialization:
         a = build_assessment(engine_result=result, symbol="GBPUSD", cycle_id=4578, bar_time=1784809820)
         d = a.to_dict()
         assert isinstance(d, dict)
-        assert d["schema_version"] == "assessment_v1"
+        assert d["schema_version"] == "assessments_v1"
         assert d["symbol"] == "GBPUSD"
 
     def test_json_serializable(self):
@@ -322,7 +322,7 @@ class TestPersistence:
         with open(files[0]) as f:
             record = json.loads(f.read().strip())
 
-        assert record["schema_version"] == "assessment_v1"
+        assert record["schema_version"] == "assessments_v1"
         assert record["symbol"] == "NZDUSD"
         assert record["score_strategy"] == 0.62
         assert record["ev"] == 0.000142
@@ -343,4 +343,4 @@ class TestPersistence:
         mock_s3.assert_called_once()
         call_args = mock_s3.call_args
         assert call_args[0][0] == "GBPUSD"  # symbol
-        assert "assessment_v1" in call_args[0][2]  # line contains schema_version
+        assert "assessments_v1" in call_args[0][2]  # line contains schema_version

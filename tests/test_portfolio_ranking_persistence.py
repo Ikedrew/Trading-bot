@@ -105,7 +105,7 @@ class TestSchemaCompliance:
         assert SCHEMA_VERSION == "portfolio_ranking_v1"
 
     def test_dataset_version_constant(self):
-        assert DATASET_VERSION == "2026.1"
+        assert DATASET_VERSION == 1  # clean V1 baseline (was "2026.1")
 
     def test_record_contains_versions(self, tmp_path):
         pool = _make_pool()
@@ -117,7 +117,7 @@ class TestSchemaCompliance:
         assert len(files) == 1
         record = json.loads(files[0].read_text().strip())
         assert record["schema_version"] == "portfolio_ranking_v1"
-        assert record["dataset_version"] == "2026.1"
+        assert record["dataset_version"] == 1
 
     def test_no_execution_fields(self, tmp_path):
         pool = _make_pool()
