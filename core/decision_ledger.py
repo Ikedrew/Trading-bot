@@ -9,7 +9,7 @@ Every cycle produces exactly one persistent record.
 
 Storage:
     Local:  logs/decision_ledger/{SYMBOL}/{YYYY-MM-DD}.jsonl
-    S3:     s3://trading-bot-data-mk1/decision_ledger/symbol={SYMBOL}/date={YYYY-MM-DD}/
+    S3:     s3://trading-bot-v10-data/decision_ledger/symbol={SYMBOL}/date={YYYY-MM-DD}/
 
 Performance:
     - Buffered writes (flush every N records or on timer)

@@ -82,7 +82,7 @@ class TestMultipleScenarios:
         """NO_TRADE decisions store observation_id directly."""
         from core.v10.persistence_adapter import build_v10_decision_record
         from core.v10.pipeline import V10Pipeline
-        from core.v3_shadow.models import MarketUnderstanding
+        from core.market_understanding.models import MarketUnderstanding
         from core.v10.risk_model import AccountContext
         from core.v10.broker_context import BrokerContext
 

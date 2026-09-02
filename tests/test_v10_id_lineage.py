@@ -8,7 +8,7 @@ from core.v10.pipeline import V10Pipeline
 from core.v10.risk_model import AccountContext
 from core.v10.broker_context import BrokerContext
 from core.v10.scanner_adapter import _build_order_intent
-from core.v3_shadow.models import (
+from core.market_understanding.models import (
     MarketUnderstanding, H1Understanding, M5Understanding,
 )
 from unittest.mock import MagicMock

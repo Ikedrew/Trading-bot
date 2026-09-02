@@ -75,6 +75,9 @@ class RiskUniverseBuilder(UniverseBuilder):
         excluded_not_reached_risk = 0
 
         for raw in self._raw:
+            # Skip RISK_REJECTION runtime-guard rejection records.
+            if raw.get("event_type") == "RISK_REJECTION":
+                continue
             entity_id = raw.get("entity_id", "")
             if not entity_id:
                 excluded_no_entity_id += 1

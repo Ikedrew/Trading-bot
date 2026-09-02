@@ -50,7 +50,7 @@ class TestLocalBos:
 
     def test_bullish_bos_detected(self):
         """When price closes above last swing high 2+ times → local_bos=True, direction=BULLISH."""
-        from core.v3_shadow.builders import build_m5_understanding
+        from core.market_understanding.builders import build_m5_understanding
 
         # Build 55 candles with clear bullish structure:
         # Create swing highs that get broken at the end
@@ -126,7 +126,7 @@ class TestLocalBos:
 
     def test_bearish_bos_detected(self):
         """When price closes below last swing low 2+ times → local_bos=True, direction=BEARISH."""
-        from core.v3_shadow.builders import build_m5_understanding
+        from core.market_understanding.builders import build_m5_understanding
 
         candles = []
         base = 1.08000
@@ -198,7 +198,7 @@ class TestLocalBos:
 
     def test_no_bos_remains_false(self):
         """Ranging/neutral candles with no BOS → local_bos=False."""
-        from core.v3_shadow.builders import build_m5_understanding
+        from core.market_understanding.builders import build_m5_understanding
 
         # 55 flat candles — no swing structure to break
         candles = _make_candles(55, base=1.08, atr=0.0005)
@@ -208,7 +208,7 @@ class TestLocalBos:
 
     def test_insufficient_candles_remains_false(self):
         """Less than 50 candles → no BOS computation → False."""
-        from core.v3_shadow.builders import build_m5_understanding
+        from core.market_understanding.builders import build_m5_understanding
 
         candles = _make_candles(30, base=1.08, atr=0.0005)
         result = build_m5_understanding(candles=candles, bid=1.08, ask=1.0802)
@@ -225,7 +225,7 @@ class TestConfirmationCandle:
 
     def test_valid_bullish_confirmation(self):
         """Large bullish body (>60% range, >1.2x prev, >0.4 ATR) → True."""
-        from core.v3_shadow.builders import build_m5_understanding
+        from core.market_understanding.builders import build_m5_understanding
 
         atr = 0.001  # 10 pips ATR
         candles = _make_candles(20, base=1.08, atr=atr)
@@ -248,7 +248,7 @@ class TestConfirmationCandle:
 
     def test_valid_bearish_confirmation(self):
         """Large bearish body (>60% range, >1.2x prev, >0.4 ATR) → True."""
-        from core.v3_shadow.builders import build_m5_understanding
+        from core.market_understanding.builders import build_m5_understanding
 
         atr = 0.001
         candles = _make_candles(20, base=1.08, atr=atr)
@@ -274,7 +274,7 @@ class TestConfirmationCandle:
 
     def test_weak_candle_rejected(self):
         """Small body candle (body < 60% range) → False."""
-        from core.v3_shadow.builders import build_m5_understanding
+        from core.market_understanding.builders import build_m5_understanding
 
         atr = 0.001
         candles = _make_candles(20, base=1.08, atr=atr)
@@ -295,7 +295,7 @@ class TestConfirmationCandle:
 
     def test_candle_not_exceeding_previous_rejected(self):
         """Body not exceeding previous body × 1.2 → False."""
-        from core.v3_shadow.builders import build_m5_understanding
+        from core.market_understanding.builders import build_m5_understanding
 
         atr = 0.001
         candles = _make_candles(20, base=1.08, atr=atr)
@@ -316,7 +316,7 @@ class TestConfirmationCandle:
 
     def test_tiny_candle_below_atr_threshold_rejected(self):
         """Body below 0.4 × ATR → False even if body/range ratio is high."""
-        from core.v3_shadow.builders import build_m5_understanding
+        from core.market_understanding.builders import build_m5_understanding
 
         atr = 0.002  # Large ATR (20 pips)
         candles = _make_candles(20, base=1.08, atr=atr)

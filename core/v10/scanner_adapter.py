@@ -102,8 +102,8 @@ def _do_v10_cycle(
     engine_state: Any,
 ) -> dict[str, Any]:
     """Internal implementation — may raise."""
-    from core.v3_shadow.builders import build_market_understanding
-    from core.v3_shadow.context_builders import build_v3_market_context
+    from core.market_understanding.builders import build_market_understanding
+    from core.market_understanding.context_builders import build_market_context_interpretation
     from core.v10.pipeline import V10Pipeline
     from core.runtime.account_provider import get_account_context, get_broker_context
 
@@ -118,8 +118,8 @@ def _do_v10_cycle(
         ask=ask,
     )
 
-    # ─── Build V3MarketContext ─────────────────────────────────
-    v3_context = build_v3_market_context(understanding)
+    # ─── Build MarketContextInterpretation ─────────────────────────────────
+    context_interpretation = build_market_context_interpretation(understanding)
 
     # ─── Live account and broker context from MT5 ──────────────
     account = get_account_context()
@@ -127,7 +127,7 @@ def _do_v10_cycle(
 
     # ─── Run V10 Pipeline ──────────────────────────────────────
     pipeline = V10Pipeline()
-    result = pipeline.process(understanding, v3_context, account, broker)
+    result = pipeline.process(understanding, context_interpretation, account, broker)
 
     # ─── Entity Identity (stable: symbol + bar_time) ──────────
     _bar_time = int(candles[closed_i].time) if candles and closed_i >= 0 else 0

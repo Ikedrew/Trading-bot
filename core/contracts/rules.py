@@ -42,7 +42,7 @@ SCHEMA_SECTION_001 = ContractRule(
     validator_id="SCHEMA_001",
     severity=Severity.ERROR,
     confidence=100,
-    documentation="trade_truth_schema_v2",
+    documentation="trade_truth_schema",
     recommendation="Ensure all required sections are populated before persistence.",
     introduced_in="Arc1",
 )
@@ -54,7 +54,7 @@ SCHEMA_SECTION_002 = ContractRule(
     validator_id="SCHEMA_001",
     severity=Severity.ERROR,
     confidence=100,
-    documentation="trade_truth_schema_v2",
+    documentation="trade_truth_schema",
     recommendation="Section must be a dict. Check serialization pipeline.",
     introduced_in="Arc1",
 )
@@ -66,7 +66,7 @@ SCHEMA_FIELD_001 = ContractRule(
     validator_id="SCHEMA_001",
     severity=Severity.ERROR,
     confidence=100,
-    documentation="trade_truth_schema_v2",
+    documentation="trade_truth_schema",
     recommendation="Populate all required fields before persistence.",
     introduced_in="Arc1",
 )
@@ -78,7 +78,7 @@ SCHEMA_TYPE_001 = ContractRule(
     validator_id="SCHEMA_001",
     severity=Severity.WARNING,
     confidence=100,
-    documentation="trade_truth_schema_v2",
+    documentation="trade_truth_schema",
     recommendation="Ensure numeric fields contain int or float values.",
     introduced_in="Arc1",
 )
@@ -90,8 +90,8 @@ SCHEMA_VERSION_001 = ContractRule(
     validator_id="SCHEMA_001",
     severity=Severity.INFO,
     confidence=100,
-    documentation="trade_truth_schema_v2",
-    recommendation="Populate schema_version before persistence. Legacy records are migrated at read-time.",
+    documentation="trade_truth_schema",
+    recommendation="Populate schema_version before persistence.",
     introduced_in="Arc1",
 )
 

@@ -56,44 +56,8 @@ class TestTradeTruthHive:
         assert "date=" in source
 
 
-class TestEdgeAttributionHive:
-    def test_schema_version_constant(self):
-        from core.edge_attribution import _SCHEMA_VERSION
-        assert _SCHEMA_VERSION == "edge_attribution_v2"
-
-    def test_key_contains_schema_version(self):
-        import inspect
-        from core.edge_attribution import _s3_append
-        source = inspect.getsource(_s3_append)
-        assert "schema_version=" in source
-        assert "symbol=" in source
-        assert "date=" in source
-
-
-class TestEdgeOptimisationHive:
-    def test_schema_version_constant(self):
-        from core.edge_optimisation import _SCHEMA_VERSION
-        assert _SCHEMA_VERSION == "edge_optimisation_v2"
-
-    def test_key_contains_schema_version(self):
-        import inspect
-        from core.edge_optimisation import persist_edge_report
-        source = inspect.getsource(persist_edge_report)
-        assert "schema_version=" in source
-        assert "date=" in source
-
-
-class TestStrategyCompilerHive:
-    def test_schema_version_constant(self):
-        from core.strategy_compiler import _SCHEMA_VERSION
-        assert _SCHEMA_VERSION == "strategy_compiler_v2"
-
-    def test_key_contains_schema_version(self):
-        import inspect
-        from core.strategy_compiler import persist_strategy
-        source = inspect.getsource(persist_strategy)
-        assert "schema_version=" in source
-        assert "date=" in source
+# NOTE (legacy v10-engine cleanup): the edge_attribution / edge_optimisation /
+# strategy_compiler Hive tests were removed — those legacy writers were deleted.
 
 
 class TestMarketContextHive:

@@ -28,55 +28,29 @@ logger = logging.getLogger(__name__)
 
 # ─── S3 MIRROR CONFIGURATION ─────────────────────────────────────────────────
 
-from core.config import NEW_RUNTIME_S3_BUCKET
-from core.production_data_contract import s3_base_prefix
+# ─── CONSOLIDATION (Production V1) ────────────────────────────────────────────
+# The `decision_audit` DATASET was retired: its unique analytical fields
+# (trigger_candle, entry_timing, confirmation detail, bias_validation_score,
+# structure_ok, stability_policy, spread, EV-experiment flags) are now captured
+# by the `decision_trace` dataset at the same decision-time cycle.
+#
+# This module is RETAINED because persist_decision_audit /
+# persist_new_engine_decision_audit MINT and RETURN the canonical `decision_id`
+# that propagates to execution and trade_identity — a runtime identity function,
+# NOT merely a projection write. The functions still return decision_id exactly
+# as before (no behaviour change); only the separate dataset JSONL/S3 write is
+# removed. `_write_s3` is now a no-op retained for signature compatibility.
 
-_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
-_S3_PREFIX = s3_base_prefix("decision_audit")
 _SCHEMA_VERSION = "decision_audit_v1"
 
 
 def _write_s3(symbol: str, date_str: str, line: str) -> None:
+    """No-op — the decision_audit dataset was consolidated into decision_trace.
+
+    Retained as a no-op so existing call sites remain valid without behaviour
+    change. The decision_id minting path is unaffected.
     """
-    Mirror a single decision audit line to S3. Fire-and-forget.
-
-    Pattern matches decision_ledger.py and execution_context.py.
-    Never raises. Never blocks runtime.
-    """
-    try:
-        if not getattr(config, "EVENT_STREAM_S3_MIRROR", False):
-            return
-
-        import boto3
-        from botocore.config import Config as BotoConfig
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION", "eu-west-2"),
-            config=BotoConfig(
-                connect_timeout=3,
-                read_timeout=5,
-                retries={"max_attempts": 0},
-            ),
-        )
-        key = f"{_S3_PREFIX}/symbol={symbol}/date={date_str}/part-000.jsonl"
-        body = line + "\n"
-
-        # Read-append-write (acceptable for decision audit volume)
-        try:
-            existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
-            body = existing["Body"].read().decode("utf-8") + body
-        except Exception:
-            pass  # New file
-
-        s3.put_object(
-            Bucket=_S3_BUCKET, Key=key,
-            Body=body.encode("utf-8"),
-            ContentType="application/x-ndjson",
-        )
-    except Exception:
-        pass  # S3 failure must never affect runtime
+    return None
 
 
 def _safe_serialize(obj: Any) -> Any:
@@ -330,25 +304,11 @@ def persist_decision_audit(
 
         record["schema_version"] = _SCHEMA_VERSION
 
-        # Determine output path
-        audit_dir = getattr(config, "DECISION_AUDIT_DIR", "logs/decision_audit")
-        date_str = utc_ms_to_date(utc_ms())
-        filename = f"{symbol}_{date_str}.jsonl"
-        filepath = Path(audit_dir) / filename
-
-        # Ensure directory exists
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-
-        # Local JSONL persistence (source of truth)
-        line = json.dumps(record, default=str, separators=(",", ":"))
-        with open(filepath, "a", encoding="utf-8") as f:
-            f.write(line + "\n")
-            if getattr(config, "DECISION_AUDIT_FLUSH_EVERY_WRITE", True):
-                f.flush()
-                os.fsync(f.fileno())
-
-        # S3 mirror (fire-and-forget durability)
-        _write_s3(symbol, date_str, line)
+        # DATASET WRITE RETIRED (Production V1 consolidation): the audit record's
+        # unique fields are now captured by decision_trace at the same cycle.
+        # The record is still built (above) for the decision_id return contract
+        # and any future in-process consumers, but no longer written to a
+        # separate decision_audit dataset. decision_id minting is unaffected.
 
     except Exception as exc:
         logger.error("[DECISION_AUDIT_ERROR] symbol=%s cycle=%d error=%s", symbol, cycle_id, exc)
@@ -515,23 +475,9 @@ def persist_new_engine_decision_audit(
 
         record["schema_version"] = _SCHEMA_VERSION
 
-        # Determine output path
-        audit_dir = getattr(config, "DECISION_AUDIT_DIR", "logs/decision_audit")
-        date_str = utc_ms_to_date(_ts_ms)
-        filename = f"{symbol}_{date_str}.jsonl"
-        filepath = Path(audit_dir) / filename
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-
-        # Local JSONL persistence (source of truth)
-        line = json.dumps(record, default=str, separators=(",", ":"))
-        with open(filepath, "a", encoding="utf-8") as f:
-            f.write(line + "\n")
-            if getattr(config, "DECISION_AUDIT_FLUSH_EVERY_WRITE", True):
-                f.flush()
-                os.fsync(f.fileno())
-
-        # S3 mirror (fire-and-forget durability)
-        _write_s3(symbol, date_str, line)
+        # DATASET WRITE RETIRED (Production V1 consolidation): audit fields are
+        # captured by decision_trace at the same cycle. Record is still built
+        # for the decision_id return contract; no separate dataset write.
 
     except Exception as exc:
         logger.error("[DECISION_AUDIT_ERROR] new_engine symbol=%s cycle=%d error=%s", symbol, cycle_id, exc)
@@ -580,12 +526,17 @@ def persist_risk_rejection(
             "metadata": metadata or {},
         }
 
-        record["schema_version"] = _SCHEMA_VERSION
+        # Consolidated into the decision_trace dataset as a RISK_REJECTION
+        # event record (append-only, decision_trace domain). Runtime guard
+        # rejections previously lived in decision_audit; the field is preserved.
+        from core.production_data_contract import current_schema as _cs
+        record["schema_version"] = _cs("decision_trace")
+        record["record_role"] = "runtime_guard_rejection"
+        record["event_type"] = "RISK_REJECTION"
 
-        audit_dir = getattr(config, "DECISION_AUDIT_DIR", "logs/decision_audit")
         date_str = utc_ms_to_date(_ts_ms)
-        filename = f"{symbol}_{date_str}.jsonl"
-        filepath = Path(audit_dir) / filename
+        trace_dir = getattr(config, "DECISION_TRACE_DIR", "logs/decision_trace")
+        filepath = Path(trace_dir) / symbol / f"{date_str}.jsonl"
         filepath.parent.mkdir(parents=True, exist_ok=True)
 
         line = json.dumps(record, default=str, separators=(",", ":"))
@@ -594,6 +545,14 @@ def persist_risk_rejection(
             if getattr(config, "DECISION_AUDIT_FLUSH_EVERY_WRITE", True):
                 f.flush()
                 os.fsync(f.fileno())
+
+        # S3 mirror via decision_trace writer path (fire-and-forget)
+        try:
+            if getattr(config, "EVENT_STREAM_S3_MIRROR", False):
+                from core.decision_trace import _write_s3 as _dt_write_s3
+                _dt_write_s3(symbol, date_str, line)
+        except Exception:
+            pass
 
     except Exception as exc:
         logger.debug("[DECISION_AUDIT_RISK_REJECT] error=%s", exc)

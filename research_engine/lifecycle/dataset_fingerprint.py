@@ -39,7 +39,7 @@ class DatasetFingerprint:
     Two datasets with different content produce different fingerprints.
     """
     dataset_id: str                     # Human-readable identifier (e.g., "V10_PRIMARY_shadows")
-    dataset_version: str                # Schema/pipeline version (e.g., "shadow_trades_v2")
+    dataset_version: str                # Schema/pipeline version (e.g., "shadow_trades_v1")
     fingerprint_algorithm: str          # "SHA-256"
     content_hash: str                   # Hex digest of canonical content hash
     observation_count: int              # Number of records in the population

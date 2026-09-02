@@ -84,7 +84,7 @@ class TestHorizonInPipelineResult:
         from core.v10.pipeline import V10Pipeline
         from core.v10.risk_model import AccountContext
         from core.v10.broker_context import BrokerContext
-        from core.v3_shadow.models import (
+        from core.market_understanding.models import (
             MarketUnderstanding, H4Understanding, H1Understanding,
             M15Understanding, M5Understanding,
         )

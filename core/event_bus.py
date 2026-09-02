@@ -431,11 +431,16 @@ class TradeLifecycleLogger:
                 # Infer from what's in the active trades record
                 close_reason = "unknown"
 
+            # Broker-measured costs: pass through when the deal provided them
+            # (including a measured 0.0); leave None (unknown) otherwise. Never
+            # coerce absence to 0.0 — that would corrupt research cost semantics.
             record = build_trade_record(
                 position=position,
                 exit_price=exit_price,
                 exit_time=ts,
                 close_reason=close_reason,
+                commission=detail.get("broker_commission"),
+                swap=detail.get("broker_swap"),
                 realised_pnl_override=detail.get("broker_profit"),
             )
             persist_trade_once(record)

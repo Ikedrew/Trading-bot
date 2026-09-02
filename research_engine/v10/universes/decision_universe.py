@@ -67,6 +67,10 @@ class DecisionUniverseBuilder(UniverseBuilder):
         excluded_missing_action = 0
 
         for raw in self._raw:
+            # Skip RISK_REJECTION event records appended into the decision_trace
+            # dataset — they are runtime-guard rejections, not full decision records.
+            if raw.get("event_type") == "RISK_REJECTION":
+                continue
             entity_id = raw.get("entity_id", "")
             action = raw.get("action", "")
             if not entity_id:

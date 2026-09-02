@@ -120,6 +120,12 @@ def build_trade_truth(
     commission: float | None = None,
     swap: float | None = None,
     net_profit: float | None = None,
+    # Excursion (observational research metrics; None = unknown, never fake 0.0)
+    max_favourable_price: float | None = None,
+    max_adverse_price: float | None = None,
+    mfe_r: float | None = None,
+    mae_r: float | None = None,
+    excursion_provenance: str = "full_lifecycle",
     # Exit classification
     exit_reason: str = "system_close",
     # Canonical lineage (remediation)
@@ -169,13 +175,22 @@ def build_trade_truth(
             "duration_seconds": round(duration, 1),
         },
 
-        # Domain 4: Outcome (realised only)
+        # Domain 4: Outcome (realised only). None = unknown (never fake 0.0);
+        # a measured 0.0 supplied by the broker is preserved as 0.0.
         "outcome": {
             "pnl_realised": _rounded(pnl_realised, 4),
             "r_multiple_realised": _rounded(r_multiple_realised, 4),
             "commission": _rounded(commission, 4),
             "swap": _rounded(swap, 4),
             "net_profit": _rounded(net_profit, 4),
+            # Excursion research metrics (trade_truth = authoritative owner).
+            "max_favourable_price": _rounded(max_favourable_price, 8),
+            "max_adverse_price": _rounded(max_adverse_price, 8),
+            "mfe_r": _rounded(mfe_r, 4),
+            "mae_r": _rounded(mae_r, 4),
+            # Provenance: full_lifecycle vs recovery_seeded (partial after a
+            # restart with no durable excursion state).
+            "excursion_provenance": excursion_provenance,
         },
 
         # Domain 5: Exit classification (observed only)

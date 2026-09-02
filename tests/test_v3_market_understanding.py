@@ -19,7 +19,7 @@ from typing import Any
 
 import pytest
 
-from core.v3_shadow.models import (
+from core.market_understanding.models import (
     MarketUnderstanding,
     H4Understanding,
     H1Understanding,
@@ -28,7 +28,7 @@ from core.v3_shadow.models import (
     M1Understanding,
     _SCHEMA_VERSION,
 )
-from core.v3_shadow.builders import (
+from core.market_understanding.builders import (
     build_h4_understanding,
     build_h1_understanding,
     build_m15_understanding,
@@ -36,7 +36,7 @@ from core.v3_shadow.builders import (
     build_m1_understanding,
     build_market_understanding,
 )
-from core.v3_shadow.observer import observe_market_understanding
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -384,59 +384,11 @@ class TestOrchestrator:
         assert restored["h1"]["bos_confirmed"] is True
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# OBSERVER TESTS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-
-class TestObserver:
-    """V3 shadow observer integration."""
-
-    def setup_method(self):
-        self.temp_dir = tempfile.mkdtemp()
-        import core.v3_shadow.observer as mod
-        self._orig = mod._LOCAL_DIR
-        mod._LOCAL_DIR = self.temp_dir
-
-    def teardown_method(self):
-        import core.v3_shadow.observer as mod
-        mod._LOCAL_DIR = self._orig
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-
-    def test_creates_record(self):
-        """Observer persists MarketUnderstanding to JSONL."""
-        ctx = MockCtx(market_context=MockMarketContext())
-        observe_market_understanding(ctx)
-        files = list(Path(self.temp_dir).rglob("*.jsonl"))
-        assert len(files) == 1
-        record = json.loads(open(files[0]).readline())
-        assert record["schema_version"] == _SCHEMA_VERSION
-        assert record["symbol"] == "EURUSD"
-
-    def test_does_not_modify_engine_result(self):
-        """Observer does not mutate engine_result."""
-        ctx = MockCtx()
-        original = dict(ctx.engine_result)
-        observe_market_understanding(ctx)
-        assert ctx.engine_result == original
-
-    def test_returns_none(self):
-        """Observer returns None."""
-        ctx = MockCtx()
-        result = observe_market_understanding(ctx)
-        assert result is None
-
-    def test_handles_missing_context(self):
-        """Works without MarketContext."""
-        ctx = MockCtx(market_context=None, htf_context=None, candles=None)
-        observe_market_understanding(ctx)  # Should not raise
-
-    def test_registered_in_observer_registry(self):
-        """Observer #10 is registered."""
-        import inspect
-        from core.pipeline.observers import ObserverRegistry
-        source = inspect.getsource(ObserverRegistry.notify_all)
-        assert "observe_market_understanding" in source
+# NOTE (Production V1 canonical cleanup): the V3 shadow observer (#10) was
+# removed along with the retired opportunity/shadow lineage. Its former
+# integration tests are deleted. The MarketUnderstanding model + builder tests
+# below remain — they cover the pure computation preserved in
+# core/market_understanding and consumed by the V10 pipeline.
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -449,14 +401,14 @@ class TestSafety:
 
     def test_models_no_forbidden_imports(self):
         import inspect
-        import core.v3_shadow.models as m
+        import core.market_understanding.models as m
         source = inspect.getsource(m)
         for forbidden in ["import MetaTrader5", "from core.pipeline", "from core.runtime"]:
             assert forbidden not in source
 
     def test_builders_no_forbidden_imports(self):
         import inspect
-        import core.v3_shadow.builders as m
+        import core.market_understanding.builders as m
         source = inspect.getsource(m)
         for forbidden in ["import MetaTrader5", "from core.runtime"]:
             assert forbidden not in source
@@ -464,7 +416,7 @@ class TestSafety:
     def test_no_buy_sell_in_model(self):
         """MarketUnderstanding does not contain trade signal fields."""
         from dataclasses import fields as dc_fields
-        import core.v3_shadow.models as m
+        import core.market_understanding.models as m
         # Check that no field name contains trade action terms
         for f in dc_fields(m.MarketUnderstanding):
             assert "execute" not in f.name.lower()

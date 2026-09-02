@@ -89,20 +89,34 @@ class TradeRecord:
     initial_volume: float
     final_volume: float
 
-    # P&L (account currency)
+    # P&L (account currency). None = UNKNOWN (broker/runtime did not prove it).
+    # A measured 0.0 is preserved as 0.0 and distinguished via *_status below.
     realised_pnl: float
-    commission: float
-    swap: float
-    net_pnl: float  # realised_pnl + swap - commission
+    commission: float | None = None
+    swap: float | None = None
+    net_pnl: float | None = None  # realised_pnl + swap - commission (None if any unknown)
+
+    # Outcome provenance status: "unknown" | "measured_zero" | "measured_nonzero".
+    commission_status: str = "unknown"
+    swap_status: str = "unknown"
+    pnl_status: str = "measured_nonzero"
 
     # Context
-    close_reason: str
-    initial_sl: float
-    initial_tp: float
-    max_favourable_price: float
+    close_reason: str = ""
+    initial_sl: float = 0.0
+    initial_tp: float = 0.0
+    max_favourable_price: float = 0.0
+
+    # Adverse excursion (observational). None = unknown (never fabricated).
+    max_adverse_price: float | None = None
+    # Excursion in R (null-aware): None when geometry/observation unavailable.
+    mfe_r: float | None = None
+    mae_r: float | None = None
+    # Excursion provenance: full_lifecycle | recovery_seeded | unknown.
+    excursion_provenance: str = "full_lifecycle"
 
     # Metadata
-    recorded_at_utc: str  # ISO format
+    recorded_at_utc: str = ""  # ISO format
 
     # Trade Identity (from Position.trade_identity — never from thread-local context)
     correlation_id: str = ""
@@ -110,6 +124,12 @@ class TradeRecord:
     # Canonical lineage (remediation) — THE authoritative opportunity root,
     # carried frozen from Position.trade_identity.
     canonical_opportunity_id: str = ""
+
+    # Full lineage identity (carried frozen from Position.trade_identity).
+    # Propagated so the close projection preserves the exact original lineage
+    # of the trade that opened the position — including across restart recovery.
+    observation_id: str = ""
+    decision_id: str = ""
 
     # Horizon Identity (from Position.trade_horizon — set at execution time)
     trade_horizon: str = "SCALP"
@@ -159,14 +179,67 @@ def _compute_pnl(
         return -price_move * volume * pip_value_per_lot
 
 
+def _cost_status(value: float | None) -> str:
+    """Classify a realised cost value for research provenance.
+
+    unknown        → value was not proven (None)
+    measured_zero  → broker/runtime explicitly reported 0.0
+    measured_nonzero → a real non-zero value
+    """
+    if value is None:
+        return "unknown"
+    return "measured_zero" if value == 0.0 else "measured_nonzero"
+
+
+def _effective_pnl(record: "TradeRecord") -> float | None:
+    """Operational P&L for aggregation.
+
+    Prefers net_pnl (realised - costs). When net_pnl is unknown (commission/swap
+    not proven), falls back to gross realised_pnl so operational daily-P&L math
+    stays meaningful. Returns None only when neither is known. This does NOT
+    weaken the persisted null semantics on the record fields themselves.
+    """
+    if record.net_pnl is not None:
+        return record.net_pnl
+    return record.realised_pnl
+
+
+def _excursion_r(
+    direction: str,
+    entry_price: float,
+    excursion_price: float | None,
+    initial_stop_price: float,
+    *,
+    favourable: bool,
+) -> float | None:
+    """Excursion (favourable=MFE / adverse=MAE) in R, or None when unprovable.
+
+    Uses the ORIGINAL initial stop distance for risk (never a later BE/trail
+    stop). Returns None when the excursion observation is unknown or the initial
+    risk geometry is invalid — NEVER a fake 0.0. A genuinely-observed trade that
+    never moved (favourably/adversely) beyond entry yields a measured 0.0.
+    """
+    if excursion_price is None or entry_price is None or initial_stop_price is None:
+        return None
+    initial_risk_distance = abs(entry_price - initial_stop_price)
+    if initial_risk_distance <= 0:
+        return None
+    is_buy = str(direction).upper() == "BUY"
+    if favourable:
+        move = (excursion_price - entry_price) if is_buy else (entry_price - excursion_price)
+    else:
+        move = (entry_price - excursion_price) if is_buy else (excursion_price - entry_price)
+    return round(max(0.0, move) / initial_risk_distance, 4)
+
+
 def build_trade_record(
     *,
     position,  # Position dataclass
     exit_price: float,
     exit_time: float,
     close_reason: str,
-    commission: float = 0.0,
-    swap: float = 0.0,
+    commission: float | None = None,
+    swap: float | None = None,
     realised_pnl_override: float | None = None,
 ) -> TradeRecord:
     """
@@ -179,9 +252,14 @@ def build_trade_record(
         exit_price: Price at which position was closed
         exit_time: Unix timestamp of close
         close_reason: Why the trade was closed (CloseReason value)
-        commission: Broker commission (positive = cost)
-        swap: Swap/rollover amount (positive = credit, negative = cost)
-        realised_pnl_override: If broker provides exact P&L, use it instead of calculating
+        commission: Broker commission (positive = cost). None = UNKNOWN (not 0).
+        swap: Swap/rollover amount (positive = credit). None = UNKNOWN (not 0).
+        realised_pnl_override: If broker provides exact P&L, use it instead of calculating.
+
+    NULL SEMANTICS: commission/swap are None when the broker/runtime did not
+    prove the value (persisted as JSON null), and preserved numerically when a
+    real value (including a measured 0.0) is supplied. net_pnl is only computed
+    when realised_pnl AND both cost inputs are known — otherwise None.
     """
     duration = exit_time - position.open_time
 
@@ -197,7 +275,20 @@ def build_trade_record(
         )
         _pnl_source = "CALCULATED"
 
-    net_pnl = realised_pnl + swap - commission
+    # net_pnl requires realised P&L AND both cost components to be known.
+    # A missing commission/swap must NOT be treated as a measured zero.
+    if commission is not None and swap is not None:
+        net_pnl = realised_pnl + swap - commission
+    else:
+        net_pnl = None
+
+    # Provenance status so research distinguishes unknown vs measured-zero vs
+    # measured-nonzero without inferring from the numeric field alone.
+    _commission_status = _cost_status(commission)
+    _swap_status = _cost_status(swap)
+    # realised P&L is always a proven value here (broker override or computed
+    # from real entry/exit/volume) — never an unknown-as-zero.
+    _pnl_status = "measured_zero" if realised_pnl == 0.0 else "measured_nonzero"
 
     # ─── PNL SOURCE LOGGING ───────────────────────────────────────
     _calc_pnl = _compute_pnl(
@@ -218,11 +309,30 @@ def build_trade_record(
     )
     # ─── END PNL SOURCE LOGGING ───────────────────────────────────
 
-    # Extract correlation_id from Position's owned trade_identity (authoritative source).
-    # Never falls back to thread-local context — identity is owned by the Position.
+    # ─── EXCURSION IN R (observational; null-aware) ───────────────
+    # Uses the ORIGINAL initial stop distance (never a later BE/trail stop).
+    # Returns None when geometry/observation is unavailable — never fake 0.0.
+    _direction = position.side.value if isinstance(position.side, Enum) else str(position.side)
+    _max_adverse_price = getattr(position, "max_adverse_price", None)
+    _mfe_r = _excursion_r(
+        _direction, position.entry_price, position.max_favourable_price,
+        position.initial_sl, favourable=True,
+    )
+    _mae_r = _excursion_r(
+        _direction, position.entry_price, _max_adverse_price,
+        position.initial_sl, favourable=False,
+    )
+
+    # Extract the full lineage from the Position's owned trade_identity
+    # (authoritative source). Never falls back to thread-local context —
+    # identity is owned by the Position and, on restart, is restored onto the
+    # Position at reconstruction time (startup_recovery). All four lineage IDs
+    # are carried through the close projection unchanged.
     _identity = getattr(position, "trade_identity", None)
     _cor_id = _identity.correlation_id if _identity is not None else ""
     _canonical_opp_id = _identity.canonical_opportunity_id if _identity is not None else ""
+    _observation_id = _identity.observation_id if _identity is not None else ""
+    _decision_id = _identity.decision_id if _identity is not None else ""
 
     return TradeRecord(
         trade_id=position.position_id,
@@ -239,16 +349,25 @@ def build_trade_record(
         initial_volume=getattr(position, "_meta", {}).get("initial_volume", position.volume),
         final_volume=position.volume,
         realised_pnl=round(realised_pnl, 4),
-        commission=round(commission, 4),
-        swap=round(swap, 4),
-        net_pnl=round(net_pnl, 4),
+        commission=round(commission, 4) if commission is not None else None,
+        swap=round(swap, 4) if swap is not None else None,
+        net_pnl=round(net_pnl, 4) if net_pnl is not None else None,
+        commission_status=_commission_status,
+        swap_status=_swap_status,
+        pnl_status=_pnl_status,
         close_reason=close_reason,
         initial_sl=position.initial_sl,
         initial_tp=position.initial_tp,
         max_favourable_price=position.max_favourable_price,
+        max_adverse_price=_max_adverse_price,
+        mfe_r=_mfe_r,
+        mae_r=_mae_r,
+        excursion_provenance=getattr(position, "excursion_provenance", "full_lifecycle"),
         recorded_at_utc=utc_ms_to_iso(utc_ms()),
         correlation_id=_cor_id,
         canonical_opportunity_id=_canonical_opp_id,
+        observation_id=_observation_id,
+        decision_id=_decision_id,
         trade_horizon=getattr(position, "trade_horizon", "SCALP"),
     )
 
@@ -359,21 +478,22 @@ def persist_trade(record: TradeRecord) -> bool:
             _exit_ms = utc_ms_from_unix(record.exit_time)
             _duration_ms = _exit_ms - _entry_ms
 
-            # Compute realised RR
+            # Compute realised RR (price-space, direction-signed). Uses realised_pnl
+            # sign (always known) rather than net_pnl (which may be None when
+            # commission/swap are unknown).
             _risk_dist = abs(record.entry_price - record.initial_sl)
             _rr_realised = 0.0
             if _risk_dist > 0:
                 _pnl_pips = abs(record.exit_price - record.entry_price)
                 _rr_realised = round(_pnl_pips / _risk_dist, 3)
-                if record.net_pnl < 0:
+                _signed = record.net_pnl if record.net_pnl is not None else record.realised_pnl
+                if _signed is not None and _signed < 0:
                     _rr_realised = -_rr_realised
 
-            # Compute MFE/MAE in R-multiples
-            _mfe_r = 0.0
-            _mae_r = 0.0
-            if _risk_dist > 0:
-                _mfe_dist = abs(record.max_favourable_price - record.entry_price)
-                _mfe_r = round(_mfe_dist / _risk_dist, 3)
+            # Authoritative MFE/MAE in R computed ONCE in build_trade_record.
+            # Project them downstream (do not recompute) — null-aware.
+            _mfe_r = record.mfe_r
+            _mae_r = record.mae_r
 
             emit_outcome(record.symbol, {
                 "trade_id": record.trade_id,
@@ -386,7 +506,11 @@ def persist_trade(record: TradeRecord) -> bool:
                 "entry_price": record.entry_price,
                 "exit_price": record.exit_price,
                 "pnl": record.net_pnl,
-                "final_r": record.net_pnl / abs(record.entry_price - record.initial_sl) if abs(record.entry_price - record.initial_sl) > 0 else 0.0,
+                "final_r": (
+                    record.net_pnl / abs(record.entry_price - record.initial_sl)
+                    if (record.net_pnl is not None and abs(record.entry_price - record.initial_sl) > 0)
+                    else None
+                ),
                 "rr_realised": _rr_realised,
                 "duration_ms": _duration_ms,
                 "exit_reason": record.close_reason,
@@ -408,7 +532,7 @@ def persist_trade(record: TradeRecord) -> bool:
                 "risk_deviation": round(
                     abs((record.exit_price - record.entry_price) / _risk_dist if record.direction == "BUY"
                         else (record.entry_price - record.exit_price) / _risk_dist), 4
-                ) if _risk_dist > 0 and record.net_pnl < 0 else 0.0,
+                ) if (_risk_dist > 0 and (record.net_pnl if record.net_pnl is not None else record.realised_pnl) < 0) else 0.0,
             }, source="trade_journal")
         except Exception:
             pass  # Event stream failure must never block journal persistence
@@ -447,11 +571,21 @@ def persist_trade(record: TradeRecord) -> bool:
 
             # Correlation ID sourced from TradeRecord (which got it from Position.trade_identity).
             # This is the authoritative, Position-owned identity — never from thread-local context.
-            # If identity was not restored during recovery, generate a synthetic ID
-            # so trade_truth validation passes (better partial record than none).
+            # On restart, startup_recovery restores the original lineage onto the
+            # Position from execution_results, so this is the ORIGINAL correlation_id.
+            # The synthetic RECOVERED-* id is a LAST RESORT used ONLY when the
+            # original lineage genuinely could not be proven from persisted state
+            # (so trade_truth validation still passes with a diagnosable record).
             _cor_id = record.correlation_id
             if not _cor_id:
                 _cor_id = f"RECOVERED-{record.trade_id}"
+                logger.warning(
+                    "[TRADE_TRUTH] lineage_unrecoverable trade_id=%s ticket=%s "
+                    "canonical=%s — original correlation_id absent from persisted "
+                    "state; using synthetic fallback (NOT the original lineage)",
+                    record.trade_id, record.position_ticket,
+                    record.canonical_opportunity_id or "-",
+                )
 
             _truth_record = build_trade_truth(
                 trade_id=record.trade_id,
@@ -474,6 +608,13 @@ def persist_trade(record: TradeRecord) -> bool:
                 swap=record.swap,
                 net_profit=record.net_pnl,
                 exit_reason=_exit_reason,
+                # Excursion metrics — trade_truth is the authoritative research
+                # owner. Computed once in build_trade_record; projected here.
+                max_favourable_price=record.max_favourable_price,
+                max_adverse_price=record.max_adverse_price,
+                mfe_r=record.mfe_r,
+                mae_r=record.mae_r,
+                excursion_provenance=getattr(record, "excursion_provenance", "full_lifecycle"),
                 field_provenance={
                     "entry_fill_price": "broker_position_lifecycle",
                     "exit_fill_price": "broker_deal_lifecycle",
@@ -485,6 +626,10 @@ def persist_trade(record: TradeRecord) -> bool:
                     "commission": "broker_deal_lifecycle",
                     "swap": "broker_deal_lifecycle",
                     "net_profit": "calculated_from_broker_outcome",
+                    "max_favourable_price": "runtime_excursion_tracker",
+                    "max_adverse_price": "runtime_excursion_tracker",
+                    "mfe_r": "calculated_from_initial_risk_geometry",
+                    "mae_r": "calculated_from_initial_risk_geometry",
                 },
             )
 
@@ -517,28 +662,12 @@ def persist_trade(record: TradeRecord) -> bool:
         # ─── END RISK DEVIATION TRACKING ──────────────────────────────
 
         # ─── TRADE TRUTH GRAPH (relationship node) ────────────────────
-        # Build a graph node linking this trade to its source datasets.
-        # Pure references only — no execution data, no P&L.
-        try:
-            from core.trade_truth_graph import build_graph_node, persist_graph_node
-            from datetime import datetime, timezone as _tz
-
-            _graph_date = datetime.fromtimestamp(record.exit_time, tz=_tz.utc).strftime("%Y-%m-%d")
-            _graph_node = build_graph_node(
-                trade_id=record.trade_id,
-                correlation_id=record.correlation_id or f"RECOVERED-{record.trade_id}",
-                symbol=record.symbol,
-                cycle_id=0,  # Not available at trade close time
-                event_window_start_ts=record.entry_time,
-                event_window_end_ts=record.exit_time,
-                decision_to_execution_lag_ms=0.0,
-                execution_to_exit_lag_ms=(record.exit_time - record.entry_time) * 1000,
-                trade_truth_ref=f"s3://{NEW_RUNTIME_S3_BUCKET}/{s3_base_prefix('trade_truth')}/schema_version={current_schema('trade_truth')}/symbol={record.symbol}/date={_graph_date}/part-000.jsonl",
-                execution_context_ref=record.correlation_id or "",
-            )
-            persist_graph_node(_graph_node)
-        except Exception:
-            pass  # Graph node failure must never block journal persistence
+        # RETIRED (Production V1 consolidation): the trade_truth_graph dataset
+        # stored only reference pointers between layers (no execution data,
+        # no outcome, no P&L). Full lineage is reconstructable via correlation_id
+        # / canonical_opportunity_id joins across trade_truth + trade_journal +
+        # decision_trace, so the separate graph projection was redundant and the
+        # fan-out write has been removed. No trading behaviour change.
         # ─── END TRADE TRUTH GRAPH ────────────────────────────────────
 
         # ─── EDGE ATTRIBUTION (deferred — requires post-processing) ───
@@ -556,9 +685,12 @@ def persist_trade(record: TradeRecord) -> bool:
             pass
         # ─── END EDGE ATTRIBUTION ─────────────────────────────────────
 
+        _log_pnl = record.net_pnl if record.net_pnl is not None else record.realised_pnl
         logger.info(
-            "[TRADE_JOURNAL] PERSISTED trade_id=%s symbol=%s pnl=%.2f reason=%s",
-            record.trade_id, record.symbol, record.net_pnl, record.close_reason,
+            "[TRADE_JOURNAL] PERSISTED trade_id=%s symbol=%s pnl=%s reason=%s",
+            record.trade_id, record.symbol,
+            f"{_log_pnl:.2f}" if _log_pnl is not None else "unknown",
+            record.close_reason,
         )
         return True
 
@@ -705,7 +837,7 @@ def get_daily_realised_pnl(target_date: date | str | None = None) -> float:
     if target_date is None:
         target_date = utc_ms_to_date(utc_ms())
     trades = get_trades_by_date(target_date)
-    return round(sum(t.net_pnl for t in trades), 4)
+    return round(sum((_effective_pnl(t) or 0.0) for t in trades), 4)
 
 
 def get_daily_trade_count(target_date: date | str | None = None) -> int:
@@ -746,9 +878,9 @@ def get_daily_summary(target_date: date | str | None = None) -> dict[str, Any]:
             "net_pnl": 0.0, "win_rate": 0.0, "avg_pnl": 0.0,
         }
 
-    wins = [t for t in trades if t.net_pnl > 0]
-    losses = [t for t in trades if t.net_pnl <= 0]
-    total_pnl = sum(t.net_pnl for t in trades)
+    wins = [t for t in trades if (_effective_pnl(t) or 0.0) > 0]
+    losses = [t for t in trades if (_effective_pnl(t) or 0.0) <= 0]
+    total_pnl = sum((_effective_pnl(t) or 0.0) for t in trades)
     avg_pnl = total_pnl / len(trades)
 
     return {

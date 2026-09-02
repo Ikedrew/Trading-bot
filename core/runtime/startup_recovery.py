@@ -120,6 +120,36 @@ def recover_positions_on_startup(
                 _trade_identity = None
         # ─── END IDENTITY RESTORATION ──────────────────────────────────
 
+        # ─── DURABLE EXCURSION RESTORE ─────────────────────────────────
+        # Restore the HISTORICAL max_favourable/adverse price for THIS exact
+        # broker ticket (persisted while the position was open) and combine with
+        # the current broker price — the current observation may extend a
+        # historical extreme but MUST NOT erase it. Falls back to the legacy
+        # current-price seed when no durable state exists (legacy positions),
+        # never fabricating history. Provenance recorded for research.
+        _price_current = float(bp.price_current)
+        _mfe_seed = _price_current
+        _mae_seed = _price_current
+        _excursion_provenance = "recovery_seeded"
+        try:
+            from core.trade_management.excursion_state import load_excursion, restore_extremes
+            _saved = load_excursion(ticket)
+            if _saved is not None:
+                _r_mfe, _r_mae = restore_extremes(
+                    side_name=side.name,
+                    saved_mfe=_saved.get("max_favourable_price"),
+                    saved_mae=_saved.get("max_adverse_price"),
+                    current_price=_price_current,
+                )
+                if _r_mfe is not None:
+                    _mfe_seed = _r_mfe
+                if _r_mae is not None:
+                    _mae_seed = _r_mae
+                _excursion_provenance = "full_lifecycle"
+        except Exception:
+            pass  # Excursion restore must NEVER block recovery
+        # ─── END DURABLE EXCURSION RESTORE ─────────────────────────────
+
         # Reconstruct Position object
         pos = Position(
             position_id=f"pos_{ticket}",
@@ -138,7 +168,12 @@ def recover_positions_on_startup(
             deal_id=0,  # Not available from positions_get
             order_id=0,
             pattern_tag=_pattern_tag,
-            max_favourable_price=float(bp.price_current),
+            # Durable-restored extremes (full_lifecycle) when a checkpoint exists;
+            # otherwise the legacy current-price seed (recovery_seeded). The
+            # current broker price only ever EXTENDS a restored extreme.
+            max_favourable_price=_mfe_seed,
+            max_adverse_price=_mae_seed,
+            excursion_provenance=_excursion_provenance,
             trade_identity=_trade_identity,
         )
 

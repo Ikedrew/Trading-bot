@@ -40,10 +40,6 @@ PERSISTENCE_MODULES = [
     ROOT / "core" / "execution_context.py",
     ROOT / "core" / "shadow_trades.py",
     ROOT / "core" / "trade_truth.py",
-    ROOT / "core" / "trade_truth_graph.py",
-    ROOT / "core" / "edge_attribution.py",
-    ROOT / "core" / "edge_optimisation.py",
-    ROOT / "core" / "strategy_compiler.py",
     ROOT / "core" / "decision_audit.py",
     ROOT / "core" / "correlation.py",
     ROOT / "core" / "trade_journal.py",
@@ -241,7 +237,9 @@ class TestDiscordDisabledPersistenceWorks:
             from core.decision_audit import persist_risk_rejection
 
             with tempfile.TemporaryDirectory() as tmpdir:
-                with patch.object(config, "DECISION_AUDIT_DIR", tmpdir):
+                # Risk rejections now persist into the decision_trace domain
+                # (Production V1 consolidation: decision_audit dataset retired).
+                with patch.object(config, "DECISION_TRACE_DIR", tmpdir, create=True):
                     persist_risk_rejection(
                         symbol="EURUSD",
                         cycle_id=42,
@@ -251,11 +249,12 @@ class TestDiscordDisabledPersistenceWorks:
                         metadata={"key": "value"},
                     )
 
-                    files = list(Path(tmpdir).glob("*.jsonl"))
+                    files = list(Path(tmpdir).rglob("*.jsonl"))
                     assert len(files) > 0, "Risk rejection must persist with Discord disabled"
                     record = json.loads(files[0].read_text(encoding="utf-8").strip())
                     assert record["guard"] == "test_guard"
                     assert record["guard_reason"] == "test_reason"
+                    assert record["event_type"] == "RISK_REJECTION"
         finally:
             config.ALERTING_ENABLED = original_alert
             config.DECISION_AUDIT_INCLUDE_REJECTIONS = original_audit
@@ -463,7 +462,8 @@ class TestNotificationFailureNeverRollsBackPersistence:
 
         try:
             with tempfile.TemporaryDirectory() as tmpdir:
-                with patch.object(config, "DECISION_AUDIT_DIR", tmpdir):
+                # Consolidated into the decision_trace domain (decision_audit retired).
+                with patch.object(config, "DECISION_TRACE_DIR", tmpdir, create=True):
                     with patch("core.discord_notifier.send_discord", side_effect=Exception("Discord dead")):
                         persist_risk_rejection(
                             symbol="USDJPY",
@@ -473,7 +473,7 @@ class TestNotificationFailureNeverRollsBackPersistence:
                             metadata={"positions": 3, "max": 3},
                         )
 
-                files = list(Path(tmpdir).glob("*.jsonl"))
+                files = list(Path(tmpdir).rglob("*.jsonl"))
                 assert len(files) == 1, "Rejection must persist even when Discord throws"
                 record = json.loads(files[0].read_text(encoding="utf-8").strip())
                 assert record["guard"] == "portfolio_exposure"

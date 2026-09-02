@@ -8,7 +8,7 @@ from core.v10.pipeline_events import (
     STAGE_ORDER, PipelineEventCollector,
     validate_timestamp, validate_record_timestamp,
 )
-from core.v3_shadow.models import MarketUnderstanding, H1Understanding, M5Understanding
+from core.market_understanding.models import MarketUnderstanding, H1Understanding, M5Understanding
 
 
 def _run():

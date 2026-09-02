@@ -29,7 +29,6 @@ from research_engine.data_access.loaders import (
     load_execution_context,
     load_protection_audit,
     load_risk_deviation,
-    load_decision_audit,
     load_shadow_trades,
     load_trade_truth,
     load_decision_ledger,
@@ -137,17 +136,6 @@ def _sample_risk_deviation() -> dict:
     }
 
 
-def _sample_decision_audit() -> dict:
-    return {
-        "decision_id": "abc123hex",
-        "entity_id": "EURUSD_1784800000",
-        "symbol": "EURUSD",
-        "should_trade": True,
-        "score": 0.62,
-        "strategy": "CONTINUATION",
-    }
-
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # TEST: LOADERS SUCCESS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -211,12 +199,9 @@ class TestLoadSuccess:
         assert len(records) == 1
         assert records[0]["risk_classification"] == "NORMAL"
 
-    def test_load_decision_audit(self, tmp_path):
-        _write_jsonl(tmp_path / "decision_audit" / "EURUSD_2026-07-23.jsonl", [_sample_decision_audit()])
-        with patch("research_engine.data_access.loaders._get_logs_dir", return_value=tmp_path):
-            records = load_decision_audit("EURUSD")
-        assert len(records) == 1
-        assert records[0]["should_trade"] is True
+# NOTE (Production V1 cleanup): test_load_decision_audit removed — the
+# decision_audit dataset and its loader are retired. Decision facts are read
+# from decision_ledger / decision_trace loaders (tested elsewhere).
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -236,7 +221,6 @@ class TestMissingAndEmpty:
             assert load_execution_context("EURUSD") == []
             assert load_protection_audit("GBPUSD") == []
             assert load_risk_deviation("NZDUSD") == []
-            assert load_decision_audit("EURUSD") == []
 
     def test_empty_file_returns_empty(self, tmp_path):
         (tmp_path / "opportunities" / "EURUSD").mkdir(parents=True)
@@ -282,19 +266,6 @@ class TestFiltering:
         assert eur[0]["symbol"] == "EURUSD"
         assert len(gbp) == 1
         assert gbp[0]["symbol"] == "GBPUSD"
-        assert len(all_records) == 2
-
-    def test_decision_audit_symbol_filter(self, tmp_path):
-        """Decision audit uses {SYMBOL}_{DATE}.jsonl naming (not subdirectory)."""
-        _write_jsonl(tmp_path / "decision_audit" / "EURUSD_2026-07-23.jsonl",
-                     [{"symbol": "EURUSD", "score": 5}])
-        _write_jsonl(tmp_path / "decision_audit" / "GBPUSD_2026-07-23.jsonl",
-                     [{"symbol": "GBPUSD", "score": 7}])
-        with patch("research_engine.data_access.loaders._get_logs_dir", return_value=tmp_path):
-            eur = load_decision_audit("EURUSD")
-            all_records = load_decision_audit()
-        assert len(eur) == 1
-        assert eur[0]["symbol"] == "EURUSD"
         assert len(all_records) == 2
 
     def test_ranking_no_symbol_filter(self, tmp_path):

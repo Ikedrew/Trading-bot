@@ -106,7 +106,7 @@ class ExpectedValueResult:
 
 def _extract_r_multiple(record: dict[str, Any]) -> float | None:
     """Extract R-multiple from a shadow trade record."""
-    # shadow_trades_v2 schema
+    # shadow_trades_v1 schema (simulated_outcome block)
     simulated = record.get("simulated_outcome", {})
     if isinstance(simulated, dict):
         r = simulated.get("pnl_r_multiple")

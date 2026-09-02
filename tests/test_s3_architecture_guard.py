@@ -16,9 +16,9 @@ This test will FAIL if:
 NOTE (Production V1 migration): all Production V1 writers now derive their
 S3 prefix via s3_base_prefix() from core.production_data_contract rather than
 holding a flat string constant.  Assertions in this file reflect that.
-Datasets not in the Production V1 registry (edge_attribution, edge_optimisation,
-strategy_compiler, learning) remain on the legacy v10-engine bucket with their
-own flat prefix constants — those are correctly excluded from the role contract.
+The legacy v10-engine research writers (edge_attribution, edge_optimisation,
+strategy_compiler, learning) have been DELETED — no writer targets any bucket
+other than the canonical trading-bot-v10-data.
 """
 
 from __future__ import annotations
@@ -39,10 +39,9 @@ from core.production_data_contract import s3_base_prefix
 # -------------------------------------------------------------------------------
 # REGISTERED S3 WRITERS (CANONICAL ALLOWLIST)
 # -------------------------------------------------------------------------------
-# Production V1 writers (trading-bot-v10-data) + legacy research writers
-# (v10-engine bucket).  lambda/ and research_engine/ are intentionally outside
-# this core allowlist — they are offline/research infrastructure, not subject
-# to the live-runtime write-exclusivity guard.
+# Production V1 writers (trading-bot-v10-data only).  lambda/ and research_engine/
+# are intentionally outside this core allowlist — they are offline/research
+# infrastructure, not subject to the live-runtime write-exclusivity guard.
 
 ALLOWED_S3_WRITERS = {
     # ── core runtime writers — Production V1 bucket ──
@@ -52,12 +51,9 @@ ALLOWED_S3_WRITERS = {
     ROOT / "core" / "trade_truth.py",
     ROOT / "core" / "trade_journal.py",
     ROOT / "core" / "shadow_trades.py",
-    ROOT / "core" / "trade_truth_graph.py",
     ROOT / "core" / "execution_context.py",
     ROOT / "core" / "decision_ledger.py",
-    ROOT / "core" / "decision_audit.py",
     ROOT / "core" / "decision_trace.py",
-    ROOT / "core" / "persistence" / "opportunity_assessment_writer.py",
     ROOT / "core" / "persistence" / "execution_result_writer.py",
     ROOT / "core" / "persistence" / "management_actions_writer.py",
     ROOT / "core" / "persistence" / "execution_attempts_writer.py",
@@ -74,11 +70,10 @@ ALLOWED_S3_WRITERS = {
     ROOT / "core" / "contracts" / "quarantine.py",
     ROOT / "core" / "shadow" / "persistence.py",
     ROOT / "core" / "strategies" / "observation_persistence.py",
-    # ── legacy research writers — v10-engine bucket (not in role contract) ──
-    ROOT / "core" / "edge_attribution.py",
-    ROOT / "core" / "edge_optimisation.py",
-    ROOT / "core" / "strategy_compiler.py",
-    ROOT / "core" / "learning" / "store.py",
+    # Durable open-position excursion checkpoint mirror. NOT a research dataset:
+    # this is runtime state backing the trade_truth_v1 outcome chain, written to
+    # the distinct runtime_state/ top-level prefix (overwrite-by-ticket).
+    ROOT / "core" / "trade_management" / "excursion_state.py",
 }
 
 NEW_RUNTIME_S3_WRITERS = {
@@ -88,12 +83,9 @@ NEW_RUNTIME_S3_WRITERS = {
     ROOT / "core" / "trade_truth.py",
     ROOT / "core" / "trade_journal.py",
     ROOT / "core" / "shadow_trades.py",
-    ROOT / "core" / "trade_truth_graph.py",
     ROOT / "core" / "execution_context.py",
     ROOT / "core" / "decision_ledger.py",
-    ROOT / "core" / "decision_audit.py",
     ROOT / "core" / "decision_trace.py",
-    ROOT / "core" / "persistence" / "opportunity_assessment_writer.py",
     ROOT / "core" / "persistence" / "execution_result_writer.py",
     ROOT / "core" / "persistence" / "management_actions_writer.py",
     ROOT / "core" / "persistence" / "execution_attempts_writer.py",
@@ -110,6 +102,7 @@ NEW_RUNTIME_S3_WRITERS = {
     ROOT / "core" / "contracts" / "quarantine.py",
     ROOT / "core" / "shadow" / "persistence.py",
     ROOT / "core" / "strategies" / "observation_persistence.py",
+    ROOT / "core" / "trade_management" / "excursion_state.py",
 }
 
 # Modules allowed to import boto3 (includes non-writers like aws_glue_setup)
@@ -129,19 +122,13 @@ _SCAN_EXCLUDE_DIRS = frozenset((
 
 # Layer prefix ownership mapping — Production V1 role-qualified prefixes.
 # Values reflect what s3_base_prefix() resolves to for each writer.
-# Legacy writers (edge_*, strategy_compiler) retain their flat v10-engine prefixes.
 LAYER_PREFIX_OWNERSHIP = {
     "core/event_stream.py":               s3_base_prefix("events") + "/",
     "core/storage/s3_batch_writer.py":    s3_base_prefix("events") + "/",
     "core/trade_truth.py":                s3_base_prefix("trade_truth") + "/",
     "core/shadow_trades.py":              s3_base_prefix("shadow_trades") + "/",
-    "core/trade_truth_graph.py":          s3_base_prefix("trade_truth_graph") + "/",
     "core/execution_context.py":          s3_base_prefix("execution_context") + "/",
     "core/shadow/persistence.py":         s3_base_prefix("shadow_runtime") + "/",
-    # Legacy research writers remain on flat prefixes on v10-engine bucket.
-    "core/edge_attribution.py":           "edge_attribution/",
-    "core/edge_optimisation.py":          "edge_optimisation/",
-    "core/strategy_compiler.py":          "strategy_compiler/",
 }
 
 
@@ -254,26 +241,19 @@ class TestLayerPrefixOwnership:
         # _S3_TRADES_PREFIX must be assigned from the contract, not a flat "trades" string
         assert '_S3_TRADES_PREFIX = s3_base_prefix("trade_truth")' in source
 
-    def test_trade_truth_graph_resolves_prefix_through_contract(self):
-        """trade_truth_graph must resolve its S3 prefix via s3_base_prefix()."""
-        source = (ROOT / "core" / "trade_truth_graph.py").read_text(encoding="utf-8")
-        assert s3_base_prefix("trade_truth_graph") == "projections/trade_truth_graph"
-        assert 's3_base_prefix("trade_truth_graph")' in source
+    def test_trade_truth_graph_dataset_retired(self):
+        """trade_truth_graph dataset was retired in the Production V1 consolidation."""
+        from core.production_data_contract import PRODUCTION_SCHEMA_REGISTRY, RETIRED_DATASETS
+        assert "trade_truth_graph" not in PRODUCTION_SCHEMA_REGISTRY
+        assert "trade_truth_graph" in RETIRED_DATASETS
+        assert not (ROOT / "core" / "trade_truth_graph.py").exists()
 
-    def test_edge_attribution_writes_to_attribution_prefix(self):
-        """edge_attribution is on the legacy v10-engine bucket with flat prefix."""
-        source = (ROOT / "core" / "edge_attribution.py").read_text(encoding="utf-8")
-        assert '_S3_PREFIX = "edge_attribution"' in source
-
-    def test_edge_optimisation_writes_to_optimisation_prefix(self):
-        """edge_optimisation is on the legacy v10-engine bucket with flat prefix."""
-        source = (ROOT / "core" / "edge_optimisation.py").read_text(encoding="utf-8")
-        assert '_S3_PREFIX = "edge_optimisation"' in source
-
-    def test_strategy_compiler_writes_to_compiler_prefix(self):
-        """strategy_compiler is on the legacy v10-engine bucket with flat prefix."""
-        source = (ROOT / "core" / "strategy_compiler.py").read_text(encoding="utf-8")
-        assert '_S3_PREFIX = "strategy_compiler"' in source
+    def test_legacy_v10_engine_writers_are_deleted(self):
+        """The legacy v10-engine research writers must not exist."""
+        assert not (ROOT / "core" / "edge_attribution.py").exists()
+        assert not (ROOT / "core" / "edge_optimisation.py").exists()
+        assert not (ROOT / "core" / "strategy_compiler.py").exists()
+        assert not (ROOT / "core" / "learning").exists()
 
     def test_execution_context_resolves_prefix_through_contract(self):
         """execution_context must resolve its S3 prefix via s3_base_prefix()."""
@@ -282,16 +262,17 @@ class TestLayerPrefixOwnership:
         assert 's3_base_prefix("execution_context")' in source
 
     def test_all_writers_use_canonical_bucket(self):
-        """Current NEW writers use their bucket; unscoped writers retain legacy sink."""
+        """Every active writer targets the canonical Production V1 bucket only.
+
+        No writer may hardcode a legacy bucket (v10-engine / trading-bot-data-mk1).
+        """
         for writer_path in ALLOWED_S3_WRITERS:
             if not writer_path.exists():
                 continue
             source = writer_path.read_text(encoding="utf-8")
             if "_S3_BUCKET" in source:
-                if writer_path in NEW_RUNTIME_S3_WRITERS:
-                    assert "NEW_RUNTIME_S3_BUCKET" in source
-                else:
-                    assert "v10-engine" in source
+                assert "NEW_RUNTIME_S3_BUCKET" in source, writer_path
+            assert "v10-engine" not in source, writer_path
 
 
 # -------------------------------------------------------------------------------

@@ -75,6 +75,9 @@ class StrategyUniverseBuilder(UniverseBuilder):
 
         # Primary: extract from decision traces
         for raw in self._raw_dt:
+            # Skip RISK_REJECTION runtime-guard rejection records.
+            if raw.get("event_type") == "RISK_REJECTION":
+                continue
             record = self._normalise_from_decision_trace(raw)
             if record:
                 records.append(record)

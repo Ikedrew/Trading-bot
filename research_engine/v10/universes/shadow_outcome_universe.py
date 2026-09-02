@@ -4,7 +4,7 @@ Shadow Outcome Universe Builder.
 Consumes runtime shadow trade data and produces the Shadow research world's
 counterfactual outcome populations.
 
-Source: logs/shadow_trades/<SYMBOL>/*.jsonl (production: shadow_trades_v1; legacy v2 readable)
+Source: logs/shadow_trades/<SYMBOL>/*.jsonl (production: shadow_trades_v1)
 
 Grain: 1 record = 1 closed shadow trade = 1 counterfactual outcome observation.
 
@@ -213,7 +213,7 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
 
     def _normalise(self, raw: dict[str, Any]) -> dict[str, Any] | None:
         """
-        Flatten a shadow_trades_v2 record into a normalised research record.
+        Flatten a shadow_trades_v1 record into a normalised research record.
 
         Produces flat dict with semantic field names compatible with
         existing research primitives (expectancy, segmentation, etc.).

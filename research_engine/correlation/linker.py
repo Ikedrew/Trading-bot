@@ -77,7 +77,7 @@ def _extract_r_multiple_shadow(record: dict[str, Any]) -> float | None:
 
 def _extract_r_multiple_live(record: dict[str, Any]) -> float | None:
     """Extract R-multiple from trade truth record."""
-    # Nested under outcome (trade_truth_v3)
+    # Nested under outcome (trade_truth_v1)
     outcome = record.get("outcome", {})
     if isinstance(outcome, dict):
         r = outcome.get("r_multiple_realised")

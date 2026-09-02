@@ -7,7 +7,7 @@ from core.v10.timeframe_context import (
 )
 from core.v10.timeframe_context_builder import build_timeframe_context
 from core.v10.market_state_builder import build_v10_from_timeframe_context
-from core.v3_shadow.models import (
+from core.market_understanding.models import (
     MarketUnderstanding, H4Understanding, H1Understanding,
     M15Understanding, M5Understanding,
 )
@@ -216,6 +216,6 @@ class TestTimeframeToMarketState:
         tf_ctx = build_timeframe_context(mu)
         state = build_v10_from_timeframe_context(tf_ctx)
 
-        # Without V3MarketContext, regime derived from H4
+        # Without MarketContextInterpretation, regime derived from H4
         assert state.regime.regime == "TRENDING"  # H4 is trending
         assert state.regime.volatility_state == "NEUTRAL"

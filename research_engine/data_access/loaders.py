@@ -295,30 +295,7 @@ def load_risk_deviation(symbol: str | None = None) -> list[dict[str, Any]]:
     return records
 
 
-def load_decision_audit(symbol: str | None = None) -> list[dict[str, Any]]:
-    """
-    Load decision audit records (full engine-path decision context).
-
-    Source: logs/decision_audit/{SYMBOL}_{DATE}.jsonl
-    Key fields: decision_id, entity_id, correlation_id, symbol, cycle_id,
-                should_trade, reason, score, strategy, regime, market_state,
-                ev, ev_positive, p_success, intent, engine_state
-    Note: File naming uses underscore ({SYMBOL}_{DATE}) not subdirectory.
-    """
-    records = []
-    base = _get_logs_dir() / "decision_audit"
-    if not base.exists():
-        logger.warning("[RESEARCH_LOADER] directory not found: %s", base)
-        return records
-
-    if symbol:
-        # Symbol-filtered: match files starting with {SYMBOL}_
-        for f in sorted(base.glob(f"{symbol}_*.jsonl")):
-            records.extend(_load_jsonl(f))
-    else:
-        # All files
-        for f in sorted(base.glob("*.jsonl")):
-            records.extend(_load_jsonl(f))
-
-    logger.info("[RESEARCH_LOADER] loaded %d decision audit records", len(records))
-    return records
+# NOTE (Production V1 cleanup): load_decision_audit() was removed. The
+# decision_audit dataset is retired; authoritative terminal decisions now come
+# from decision_ledger and diagnostic reasoning from decision_trace. Offline
+# consumers must read those retained V1 authorities directly.

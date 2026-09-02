@@ -50,20 +50,20 @@ def _schema(
     )
 
 
-# Persisted dataset names are keys.  V2/V3 in a dataset name denotes an engine
-# family/path namespace; the schema value is nevertheless production V1.
+# Persisted dataset names are keys. This is a fresh Production V1 baseline:
+# every dataset emits and reads its V1 schema only. No V2/V3 dataset generation
+# or V2/V3 schema compatibility exists. Future V2/V3 work starts from this V1 base.
 PRODUCTION_SCHEMA_REGISTRY: dict[str, ProductionSchema] = {
-    "events": _schema("events", role=DatasetRole.CORE, legacy=("1", "2", "3"), owner="observation_stream", population="LIVE_AND_REPLAY"),
-    "market_context": _schema("market_context", role=DatasetRole.CORE, legacy=("market_context_v2",), owner="market_context", population="LIVE_AND_REPLAY"),
-    "opportunities": _schema("opportunities", role=DatasetRole.CORE, legacy=("opportunities_v2",), owner="opportunity_lifecycle", population="LIVE_AND_REPLAY"),
+    "events": _schema("events", role=DatasetRole.CORE, owner="observation_stream", population="LIVE_AND_REPLAY"),
+    "market_context": _schema("market_context", role=DatasetRole.CORE, owner="market_context", population="LIVE_AND_REPLAY"),
+    "opportunities": _schema("opportunities", role=DatasetRole.CORE, owner="opportunity_lifecycle", population="LIVE_AND_REPLAY"),
     "assessments": _schema("assessments", role=DatasetRole.CORE, owner="assessment", population="LIVE_AND_REPLAY"),
     "decision_ledger": _schema("decision_ledger", role=DatasetRole.CORE, owner="decision_authority", population="LIVE_AND_REPLAY"),
     "execution_results": _schema("execution_results", role=DatasetRole.CORE, owner="execution_result", population="LIVE"),
-    "trade_truth": _schema("trade_truth", role=DatasetRole.CORE, legacy=("trade_truth_v2", "trade_truth_v3"), owner="realized_execution", population="LIVE"),
+    "trade_truth": _schema("trade_truth", role=DatasetRole.CORE, owner="realized_execution", population="LIVE"),
     "strategy_candidates": _schema("strategy_candidates", role=DatasetRole.SUPPORTING, owner="strategy_selection", population="LIVE_AND_REPLAY"),
     "horizon_candidates": _schema("horizon_candidates", role=DatasetRole.SUPPORTING, owner="horizon_selection", population="LIVE_AND_REPLAY"),
-    "opportunity_assessment": _schema("opportunity_assessment", role=DatasetRole.SUPPORTING, owner="opportunity_assessment", population="LIVE_AND_REPLAY"),
-    "decision_trace": _schema("decision_trace", role=DatasetRole.SUPPORTING, legacy=("decision_trace_v2",), owner="decision_diagnostics", population="LIVE_AND_REPLAY"),
+    "decision_trace": _schema("decision_trace", role=DatasetRole.SUPPORTING, owner="decision_diagnostics", population="LIVE_AND_REPLAY"),
     "execution_context": _schema("execution_context", role=DatasetRole.SUPPORTING, owner="execution_intent", population="LIVE"),
     "execution_attempts": _schema("execution_attempts", role=DatasetRole.SUPPORTING, owner="execution_attempt", population="LIVE"),
     "protection_audit": _schema("protection_audit", role=DatasetRole.SUPPORTING, owner="protection_verification", population="LIVE"),
@@ -71,24 +71,38 @@ PRODUCTION_SCHEMA_REGISTRY: dict[str, ProductionSchema] = {
     "risk_deviation": _schema("risk_deviation", role=DatasetRole.SUPPORTING, owner="risk_observation", population="LIVE"),
     "portfolio_rankings": _schema("portfolio_rankings", role=DatasetRole.SUPPORTING, current="portfolio_ranking_v1", owner="portfolio_ranking", population="LIVE_AND_REPLAY"),
     "shadow_runtime": _schema("shadow_runtime", role=DatasetRole.SUPPORTING, owner="shadow_runtime", population="SHADOW"),
-    "shadow_trades": _schema("shadow_trades", role=DatasetRole.SUPPORTING, legacy=("shadow_trades_v2",), owner="shadow_trade_simulation", population="SHADOW"),
-    "v2_opportunities": _schema("v2_opportunities", role=DatasetRole.SUPPORTING, current="v2_opportunity_v1", owner="v2_observer", population="OBSERVATIONAL"),
-    "v3_opportunities": _schema("v3_opportunities", role=DatasetRole.SUPPORTING, current="v3_opportunity_v1", owner="v3_observer", population="OBSERVATIONAL"),
-    "v3_market_understanding": _schema("v3_market_understanding", role=DatasetRole.SUPPORTING, current="market_understanding_v1", owner="v3_shadow", population="SHADOW"),
-    "v3_market_context": _schema("v3_market_context", role=DatasetRole.SUPPORTING, current="v3_market_context_v1", owner="v3_shadow", population="SHADOW"),
-    "v3_opportunity_assessment": _schema("v3_opportunity_assessment", role=DatasetRole.SUPPORTING, current="v3_opportunity_assessment_v1", owner="v3_shadow", population="SHADOW"),
-    "v3_horizon_assessment": _schema("v3_horizon_assessment", role=DatasetRole.SUPPORTING, current="v3_horizon_assessment_v1", legacy=("v3_horizon_assessment_v2",), owner="v3_shadow", population="SHADOW"),
-    "v3_risk_assessment": _schema("v3_risk_assessment", role=DatasetRole.SUPPORTING, current="v3_risk_assessment_v1", owner="v3_shadow", population="SHADOW"),
-    "v3_entry_assessment": _schema("v3_entry_assessment", role=DatasetRole.SUPPORTING, current="v3_entry_assessment_v1", owner="v3_shadow", population="SHADOW"),
-    "v3_execution_assessment": _schema("v3_execution_assessment", role=DatasetRole.SUPPORTING, current="v3_execution_assessment_v1", owner="v3_shadow", population="SHADOW"),
+    "shadow_trades": _schema("shadow_trades", role=DatasetRole.SUPPORTING, owner="shadow_trade_simulation", population="SHADOW"),
     "strategy_observations": _schema("strategy_observations", role=DatasetRole.SUPPORTING, current="strategy_observation_v1", owner="strategy_observation", population="OBSERVATIONAL"),
     "research_shadow_trades": _schema("research_shadow_trades", role=DatasetRole.SUPPORTING, owner="research_assessment", population="RESEARCH"),
-    "decision_audit": _schema("decision_audit", role=DatasetRole.PROJECTION, owner="decision_audit", population="LIVE_AND_REPLAY"),
-    "trade_truth_graph": _schema("trade_truth_graph", role=DatasetRole.PROJECTION, legacy=("trade_truth_graph_v2",), owner="trade_lineage", population="LIVE"),
     "trade_journal": _schema("trade_journal", role=DatasetRole.PROJECTION, owner="trade_journal", population="LIVE"),
     "portfolio_shadow": _schema("portfolio_shadow", role=DatasetRole.PROJECTION, owner="portfolio_ranking", population="SHADOW"),
     "quarantine": _schema("quarantine", role=DatasetRole.PROJECTION, owner="contract_validation", population="LIVE_AND_REPLAY"),
 }
+
+# ─── RETIRED DATASETS (Production V1 consolidation: 35 → 23) ──────────────────
+# The following 12 dataset generations were removed. Their unique fields were
+# integrated into a retained V1 owner at the field's natural runtime point
+# (no observer/runtime reordering). This tuple is the anti-regression allowlist:
+# no writer/reader/registry entry may reintroduce these dataset names.
+# The V2/V3 opportunity/shadow lineage that once produced these dataset names
+# has been DELETED (canonical V1 cleanup). This frozenset is the anti-regression
+# allowlist naming retired datasets that must NEVER return; it does not describe
+# any active route. Canonical V1 data flows only via observation_id and
+# canonical_opportunity_id.
+RETIRED_DATASETS: frozenset[str] = frozenset({
+    "opportunity_assessment",   # duplicate assessment-stage write
+    "trade_truth_graph",        # reference-only pointers; lineage via correlation_id joins
+    "v3_market_understanding",  # objective description now via core/market_understanding
+    "v2_opportunities",         # retired V2 opportunity observation lineage
+    "v3_opportunities",         # retired V3 opportunity observation lineage
+    "v3_opportunity_assessment",# retired V3 shadow assessment lineage
+    "v3_market_context",        # retired V3 shadow context lineage
+    "v3_horizon_assessment",    # retired V3 shadow assessment lineage
+    "v3_risk_assessment",       # retired V3 shadow assessment lineage
+    "v3_entry_assessment",      # retired V3 shadow assessment lineage
+    "v3_execution_assessment",  # retired V3 shadow assessment lineage
+    "decision_audit",           # consolidated into decision_trace (same-cycle engine output)
+})
 
 
 def current_schema(dataset: str) -> str:

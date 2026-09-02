@@ -11,12 +11,12 @@ from core.v10.risk_model import AccountContext
 from core.v10.broker_context import BrokerContext
 from core.v10.decision_report import format_v10_decision
 from core.v10.persistence_adapter import build_v10_decision_record
-from core.v3_shadow.models import (
+from core.market_understanding.models import (
     MarketUnderstanding, H4Understanding, H1Understanding,
     M15Understanding, M5Understanding,
 )
-from core.v3_shadow.context_models import (
-    V3MarketContext, HTFStructureContext, LocationContext, BehaviourContext,
+from core.market_understanding.context_models import (
+    MarketContextInterpretation, HTFStructureContext, LocationContext, BehaviourContext,
 )
 
 
@@ -40,7 +40,7 @@ def _full_inputs():
             zone_type="SUPPLY_OB", atr=0.00055, spread=0.00012,
         ),
     )
-    ctx = V3MarketContext(
+    ctx = MarketContextInterpretation(
         symbol="EURUSD", timestamp_utc=1785400000.0,
         htf_structure=HTFStructureContext(
             macro_bias="NEUTRAL", structure_alignment=0.30,

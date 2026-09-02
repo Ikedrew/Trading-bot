@@ -114,8 +114,12 @@ def _compute_avg_r_multiple() -> float | None:
                 # But net_pnl is in account currency, not normalized
                 # Simpler: if we have the raw pnl and risk, compute R
                 risk_amount = risk_distance * t.initial_volume
-                if risk_amount > 0:
-                    r = t.net_pnl / risk_amount if risk_amount != 0 else 0.0
+                # net_pnl may be None (costs unknown); fall back to gross
+                # realised_pnl so the dashboard R stays meaningful. Skip if both
+                # unknown. Observability only.
+                _pnl = t.net_pnl if t.net_pnl is not None else t.realised_pnl
+                if risk_amount > 0 and _pnl is not None:
+                    r = _pnl / risk_amount if risk_amount != 0 else 0.0
                     r_multiples.append(r)
 
         if not r_multiples:

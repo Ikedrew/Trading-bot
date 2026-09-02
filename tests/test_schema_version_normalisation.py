@@ -53,12 +53,6 @@ class TestExecutionResultsSchema:
         assert _SCHEMA_VERSION == "execution_results_v1"
 
 
-class TestOpportunityAssessmentSchema:
-    def test_schema_version_constant(self):
-        from core.persistence.opportunity_assessment_writer import _SCHEMA_VERSION
-        assert _SCHEMA_VERSION == "opportunity_assessment_v1"
-
-
 class TestAssessmentsSchema:
     def test_schema_version_constant(self):
         from core.assessment.persistence import _SCHEMA_VERSION
@@ -69,12 +63,6 @@ class TestAssessmentsSchema:
         """Assessment model already carries schema_version='assessment_v1'."""
         from core.assessment.assessment import SCHEMA_VERSION
         assert SCHEMA_VERSION == "assessment_v1"
-
-
-class TestLearningSchema:
-    def test_schema_version_constant(self):
-        from core.learning.store import _SCHEMA_VERSION
-        assert _SCHEMA_VERSION == "learning_v1"
 
 
 class TestManagementActionsSchema:

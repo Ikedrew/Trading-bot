@@ -12,15 +12,10 @@ Verifies:
 """
 
 import json
-import shutil
-import tempfile
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
 
 import pytest
 
-from core.v3_shadow.models import (
+from core.market_understanding.models import (
     MarketUnderstanding,
     H4Understanding,
     H1Understanding,
@@ -28,18 +23,18 @@ from core.v3_shadow.models import (
     M5Understanding,
     M1Understanding,
 )
-from core.v3_shadow.context_models import (
+from core.market_understanding.context_models import (
     HTFStructureContext,
     LocationContext,
     BehaviourContext,
-    V3MarketContext,
+    MarketContextInterpretation,
     _CONTEXT_SCHEMA_VERSION,
 )
-from core.v3_shadow.context_builders import (
+from core.market_understanding.context_builders import (
     build_htf_structure_context,
     build_location_context,
     build_behaviour_context,
-    build_v3_market_context,
+    build_market_context_interpretation,
 )
 
 
@@ -96,12 +91,12 @@ class TestContextModels:
     """Context models are frozen and serializable."""
 
     def test_v3_market_context_frozen(self):
-        ctx = V3MarketContext(symbol="EURUSD")
+        ctx = MarketContextInterpretation(symbol="EURUSD")
         with pytest.raises(Exception):
             ctx.symbol = "CHANGED"
 
     def test_to_dict(self):
-        ctx = V3MarketContext(
+        ctx = MarketContextInterpretation(
             symbol="EURUSD", timestamp_utc=1.0, overall_confidence=0.75)
         d = ctx.to_dict()
         assert d["schema_version"] == _CONTEXT_SCHEMA_VERSION
@@ -112,7 +107,7 @@ class TestContextModels:
         assert "behaviour" in d
 
     def test_json_serializable(self):
-        ctx = V3MarketContext(symbol="EURUSD", timestamp_utc=1.0)
+        ctx = MarketContextInterpretation(symbol="EURUSD", timestamp_utc=1.0)
         s = json.dumps(ctx.to_dict(), default=str)
         assert json.loads(s)["symbol"] == "EURUSD"
 
@@ -291,7 +286,7 @@ class TestBehaviourBuilder:
 
 
 class TestOrchestrator:
-    """V3MarketContext orchestrator."""
+    """MarketContextInterpretation orchestrator."""
 
     def test_full_context(self):
         """Produces complete context with all three layers."""
@@ -303,7 +298,7 @@ class TestOrchestrator:
             m5_at_zone=True, m5_zone_type="DEMAND_OB",
             m5_momentum_dir="BULLISH", m5_momentum_str=0.7,
         )
-        ctx = build_v3_market_context(mu)
+        ctx = build_market_context_interpretation(mu)
         assert ctx.symbol == "EURUSD"
         assert ctx.htf_structure.macro_bias == "BULLISH"
         assert ctx.location.inside_institutional_zone is True
@@ -315,7 +310,7 @@ class TestOrchestrator:
     def test_empty_understanding(self):
         """Minimal understanding produces neutral context."""
         mu = MarketUnderstanding(symbol="USDJPY", timestamp_utc=1.0)
-        ctx = build_v3_market_context(mu)
+        ctx = build_market_context_interpretation(mu)
         assert ctx.symbol == "USDJPY"
         assert ctx.htf_structure.macro_bias == "NEUTRAL"
         assert ctx.location.location_type == "OPEN_SPACE"
@@ -326,7 +321,7 @@ class TestOrchestrator:
         mu = _mu(h4_trend="BULLISH", h1_trend="BULLISH",
                  m5_at_zone=True, m5_zone_type="DEMAND_OB",
                  m5_momentum_dir="BULLISH", m5_momentum_str=0.8)
-        ctx = build_v3_market_context(mu)
+        ctx = build_market_context_interpretation(mu)
         htf_obs = [o for o in ctx.observations if o.startswith("[HTF]")]
         loc_obs = [o for o in ctx.observations if o.startswith("[LOC]")]
         beh_obs = [o for o in ctx.observations if o.startswith("[BEH]")]
@@ -335,82 +330,7 @@ class TestOrchestrator:
         assert len(beh_obs) > 0
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# OBSERVER INTEGRATION TESTS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-
-class TestObserverIntegration:
-    """Observer #10 produces both MarketUnderstanding and V3MarketContext."""
-
-    def setup_method(self):
-        self.temp_dir = tempfile.mkdtemp()
-        import core.v3_shadow.observer as mod
-        self._orig_mu = mod._LOCAL_DIR
-        self._orig_ctx = mod._CONTEXT_DIR
-        mod._LOCAL_DIR = self.temp_dir + "/mu"
-        mod._CONTEXT_DIR = self.temp_dir + "/ctx"
-
-    def teardown_method(self):
-        import core.v3_shadow.observer as mod
-        mod._LOCAL_DIR = self._orig_mu
-        mod._CONTEXT_DIR = self._orig_ctx
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-
-    def test_persists_both(self):
-        """Observer writes both MarketUnderstanding and V3MarketContext."""
-        from core.v3_shadow.observer import observe_market_understanding
-
-        @dataclass
-        class Ctx:
-            symbol: str = "EURUSD"
-            cycle_id: int = 1
-            bar_time: float = 1753574400.0
-            engine_result: dict = None
-            engine_state: Any = None
-            candles: list = None
-            closed_i: int = 60
-            bid: float = 1.085
-            ask: float = 1.0851
-            htf_context: Any = None
-            market_context: Any = None
-            runtime_session_id: str = "t"
-            decision_funnel: Any = None
-            config: Any = None
-            detected_patterns: list = None
-            risk_manager: Any = None
-
-        @dataclass
-        class MockCandle:
-            high: float = 1.086
-            low: float = 1.084
-            open: float = 1.085
-            close: float = 1.0855
-            time: int = 1753574400
-
-        ctx = Ctx(
-            engine_result={"entity_id": "TEST"},
-            candles=[MockCandle(
-                high=1.085 + (i % 5) * 0.0003,
-                low=1.083 + (i % 3) * 0.0002,
-                open=1.084, close=1.0845,
-                time=1753574400 + i * 300,
-            ) for i in range(65)],
-        )
-
-        observe_market_understanding(ctx)
-
-        mu_files = list(Path(self.temp_dir + "/mu").rglob("*.jsonl"))
-        ctx_files = list(Path(self.temp_dir + "/ctx").rglob("*.jsonl"))
-
-        assert len(mu_files) == 1, "MarketUnderstanding not persisted"
-        assert len(ctx_files) == 1, "V3MarketContext not persisted"
-
-        ctx_record = json.loads(open(ctx_files[0]).readline())
-        assert ctx_record["schema_version"] == _CONTEXT_SCHEMA_VERSION
-        assert "htf_structure" in ctx_record
-        assert "location" in ctx_record
-        assert "behaviour" in ctx_record
+# TestObserverIntegration removed — v3_shadow per-dataset persistence was retired in the Production V1 consolidation (fields now integrated into decision_trace / market_context).
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -423,22 +343,22 @@ class TestSafety:
 
     def test_no_forbidden_imports_models(self):
         import inspect
-        import core.v3_shadow.context_models as m
+        import core.market_understanding.context_models as m
         source = inspect.getsource(m)
         for f in ["import MetaTrader5", "from core.pipeline", "from core.runtime"]:
             assert f not in source
 
     def test_no_forbidden_imports_builders(self):
         import inspect
-        import core.v3_shadow.context_builders as m
+        import core.market_understanding.context_builders as m
         source = inspect.getsource(m)
         for f in ["import MetaTrader5", "from core.runtime"]:
             assert f not in source
 
     def test_no_trade_signals_in_context(self):
-        """V3MarketContext fields do not contain trade actions."""
+        """MarketContextInterpretation fields do not contain trade actions."""
         from dataclasses import fields as dc_fields
-        for f in dc_fields(V3MarketContext):
+        for f in dc_fields(MarketContextInterpretation):
             assert "execute" not in f.name.lower()
             assert "order" not in f.name.lower()
             assert "position" not in f.name.lower()

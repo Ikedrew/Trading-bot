@@ -6,7 +6,7 @@ with hierarchy validation (lower TFs cannot override higher TF authority).
 
 from __future__ import annotations
 
-from core.v3_shadow.models import MarketUnderstanding
+from core.market_understanding.models import MarketUnderstanding
 from core.v10.timeframe_context import (
     TimeframeContext,
     H4MacroEnvironment,

@@ -15,7 +15,7 @@ Update frequency:
     Every M5 bar where V10 pipeline evaluates the symbol (~every 5 minutes during session).
 
 Relationship to other datasets:
-    - decision_trace_v2: append-only history of ALL evaluations (research/audit)
+    - decision_trace: append-only history of ALL evaluations (research/audit)
     - live_market_state: LATEST evaluation only (real-time display)
     - opportunities: lifecycle tracking of detected patterns
     - live_market_state: current opportunity/strategy status (no lifecycle)

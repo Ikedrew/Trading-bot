@@ -190,10 +190,14 @@ class TestCorrelationInGraph:
 # -------------------------------------------------------------------------------
 
 class TestSpineConsistency:
-    def test_same_correlation_across_shadow_and_graph(self):
-        """Same correlation_id propagates from shadow_trade to graph node."""
+    def test_same_correlation_across_shadow_lifecycle(self):
+        """Same correlation_id propagates through the shadow_trade lifecycle.
+
+        (The trade_truth_graph node hop was retired in the Production V1
+        consolidation; correlation_id continuity is now verified end-to-end
+        within the shadow_trades STR record itself.)
+        """
         from core.shadow_trades import ShadowTradeEngine
-        from core.trade_truth_graph import build_graph_from_shadow_trade
 
         cor = generate_correlation_id(cycle_id=300, symbol="EURUSD", timestamp=1720108800.0)
 
@@ -213,10 +217,6 @@ class TestSpineConsistency:
         truth_record = records[0]
         # STR schema: correlation_id in identity section
         assert truth_record["identity"]["correlation_id"] == cor
-
-        # Build graph node from shadow trade record (STR format)
-        node = build_graph_from_shadow_trade(truth_record)
-        assert node["correlation_id"] == cor  # Same spine!
 
     def test_null_prohibition(self, enforcer):
         """correlation_id cannot be None — treated as missing."""

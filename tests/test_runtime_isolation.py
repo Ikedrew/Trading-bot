@@ -26,11 +26,9 @@ OFFLINE_PREFIXES = (
     "core.edge_attribution",
     "core.edge_optimisation",
     "core.strategy_compiler",
-    "core.trade_truth_graph",
     "core.behaviour_validation",
     "core.offline_query",
     "core.feature_role_contract",
-    "core.audit_persistence",
     "analysis.",
     "data_pipeline.",
 )

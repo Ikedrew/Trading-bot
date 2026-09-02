@@ -6,12 +6,12 @@ from core.v10.market_state import (
     RegimeState, LocationState, HTFAlignment,
 )
 from core.v10.market_state_builder import build_v10_market_state
-from core.v3_shadow.models import (
+from core.market_understanding.models import (
     MarketUnderstanding, H4Understanding, H1Understanding,
     M15Understanding, M5Understanding,
 )
-from core.v3_shadow.context_models import (
-    V3MarketContext, HTFStructureContext, LocationContext, BehaviourContext,
+from core.market_understanding.context_models import (
+    MarketContextInterpretation, HTFStructureContext, LocationContext, BehaviourContext,
 )
 
 
@@ -57,7 +57,7 @@ def _make_understanding():
 
 
 def _make_context():
-    return V3MarketContext(
+    return MarketContextInterpretation(
         symbol="EURUSD",
         timestamp_utc=1785302400.0,
         htf_structure=HTFStructureContext(

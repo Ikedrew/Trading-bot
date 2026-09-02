@@ -285,115 +285,105 @@ def normalise_execution_context(rec: dict[str, Any]) -> dict[str, Any]:
 
 # ─── NORMALISER: decision_audit/ ──────────────────────────────────────────────
 
-def normalise_decision_audit(rec: dict[str, Any]) -> dict[str, Any]:
-    """Normalise a decision_audit record to unified schema."""
-    event_time = _pick_time(rec)
-    intent = rec.get("intent") or {}
+def normalise_decision_trace(rec: dict[str, Any]) -> dict[str, Any]:
+    """Normalise a decision_trace record to unified schema.
 
-    action = "HOLD"
-    if rec.get("should_trade"):
-        side = rec.get("side") or (intent.get("side") if intent else None)
-        action = side if side else "BUY"
-    elif rec.get("rejection_type") == "RISK_GUARD":
-        action = "BLOCKED"
+    Migrated from the retired decision_audit dataset (Production V1
+    consolidation). The decision_trace record is the authoritative decision
+    record and now carries the audit fields that were previously in
+    decision_audit (trigger_candle, entry_timing, stability_policy, spread,
+    confirmation_detail, EV experiment flags). This normaliser reads them
+    directly from the trace record shape.
+
+    Event-typed enrichment records (e.g. RISK_REJECTION) are skipped by the
+    caller before this normaliser is invoked.
+    """
+    event_time = _pick_time(rec)
+
+    # decision_trace carries `action` directly (EXECUTE / NO_TRADE)
+    raw_action = rec.get("action", "")
+    if raw_action == "EXECUTE":
+        action = rec.get("side") or "BUY"
+    elif raw_action == "NO_TRADE":
+        action = "HOLD"
+    else:
+        action = raw_action or "HOLD"
+
+    score = float(rec.get("score_strategy", rec.get("score", 0)) or 0)
 
     return {
         "correlation_id": rec.get("correlation_id") or rec.get("decision_id"),
         "symbol": rec.get("symbol", "UNKNOWN"),
         "event_time_utc": event_time,
-        "source": "decision_audit",
+        "source": "decision_trace",
         "type": "decision",
         "decision": {
             "action": action,
-            "confidence": float(rec.get("score", 0)),
+            "confidence": score,
             "strategy_version": rec.get("stability_policy", ""),
-            "reason": rec.get("reason", ""),
-            "score": float(rec.get("score", 0)),
-            "patterns": rec.get("patterns", []),
-            "bias_phase": rec.get("bias_phase", ""),
-            "guard": rec.get("guard", None),
-            "guard_reason": rec.get("guard_reason", None),
+            "reason": rec.get("terminal_reason", rec.get("reason", "")),
+            "score": score,
+            "patterns": [rec.get("pattern_name")] if rec.get("pattern_name") else [],
+            "bias_phase": rec.get("h1_structural_phase", ""),
+            "entry_timing": rec.get("entry_timing"),
+            "terminal_stage": rec.get("terminal_stage", ""),
         },
         "outcome": {},
         "market": {
-            "spread": rec.get("spread"),
+            "spread": rec.get("spread_at_decision"),
             "session": None,
             "bid": None,
             "ask": None,
-            "regime": None,
+            "regime": rec.get("regime"),
         },
         "execution": {},
         "context": {
             "cycle_id": rec.get("cycle_id"),
-            "last_stage": rec.get("last_completed_stage", ""),
+            "last_stage": rec.get("terminal_stage", ""),
+            "stability_policy": rec.get("stability_policy", ""),
         },
     }
+
+
+# Backward-compatible alias — decision_audit dataset was consolidated into
+# decision_trace. Any offline caller referencing the old name still works.
+normalise_decision_audit = normalise_decision_trace
 
 
 # ─── NORMALISER: trade_truth/ ─────────────────────────────────────────────────
 
 def normalise_trade_truth(rec: dict[str, Any]) -> dict[str, Any]:
-    """Normalise a trade_truth record (v2 or v3) to unified schema."""
-    schema = rec.get("schema_version", "")
+    """Normalise a Production V1 trade_truth record to the unified schema.
 
-    # v3 schema (new — nested identity block)
-    if schema == "trade_truth_v3":
-        identity = rec.get("identity", {})
-        execution = rec.get("execution", {})
-        timestamps = rec.get("timestamps", {})
-        outcome = rec.get("outcome", {})
-        pnl = outcome.get("pnl_realised", 0)
-        return {
-            "correlation_id": identity.get("correlation_id"),
-            "symbol": identity.get("symbol", "UNKNOWN"),
-            "event_time_utc": timestamps.get("entry_timestamp_broker", 0),
-            "source": "trade_truth",
-            "type": "trade",
-            "decision": {},
-            "outcome": {
-                "pnl": pnl,
-                "r_multiple": outcome.get("r_multiple_realised", 0),
-                "win": pnl > 0,
-                "exit_reason": rec.get("exit", {}).get("exit_reason", ""),
-                "net_profit": outcome.get("net_profit", 0),
-            },
-            "market": {},
-            "execution": {
-                "fill_price": execution.get("entry_fill_price"),
-                "slippage": execution.get("slippage_entry", 0),
-                "order_type": execution.get("order_type", "market"),
-                "volume": execution.get("volume_executed", 0),
-            },
-            "context": {},
-        }
-
-    # v2 schema (legacy — flat structure)
+    Fresh V1 baseline: the trade_truth dataset uses a single nested-domain
+    shape (identity / execution / timestamps / outcome / exit). No V2/V3
+    schema-compatibility branch is retained.
+    """
+    identity = rec.get("identity", {})
+    execution = rec.get("execution", {})
     timestamps = rec.get("timestamps", {})
     outcome = rec.get("outcome", {})
-    prices = rec.get("prices", {})
-    position = rec.get("position", {})
-    exec_truth = rec.get("execution_truth", {})
-    pnl = outcome.get("pnl_cash", outcome.get("pnl_price", 0))
+    pnl = outcome.get("pnl_realised", 0)
     return {
-        "correlation_id": rec.get("correlation_id"),
-        "symbol": rec.get("symbol", "UNKNOWN"),
-        "event_time_utc": timestamps.get("entry_time", 0),
+        "correlation_id": identity.get("correlation_id"),
+        "symbol": identity.get("symbol", "UNKNOWN"),
+        "event_time_utc": timestamps.get("entry_timestamp_broker", 0),
         "source": "trade_truth",
         "type": "trade",
         "decision": {},
         "outcome": {
             "pnl": pnl,
-            "r_multiple": outcome.get("r_multiple", 0),
+            "r_multiple": outcome.get("r_multiple_realised", 0),
             "win": pnl > 0,
-            "exit_reason": "",
-            "net_profit": pnl,
+            "exit_reason": rec.get("exit", {}).get("exit_reason", ""),
+            "net_profit": outcome.get("net_profit", 0),
         },
         "market": {},
         "execution": {
-            "fill_price": exec_truth.get("broker_entry_fill", prices.get("entry_price")),
-            "slippage": 0,
-            "order_type": "market",
-            "volume": position.get("lot_size", 0),
+            "fill_price": execution.get("entry_fill_price"),
+            "slippage": execution.get("slippage_entry", 0),
+            "order_type": execution.get("order_type", "market"),
+            "volume": execution.get("volume_executed", 0),
         },
         "context": {},
     }

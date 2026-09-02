@@ -9,11 +9,18 @@ decision states using persisted events + causal graph traversal.
 
 USES:
     - trade_truth/ (what actually happened)
-    - decision_audit/ (what was decided)
+    - decision_ledger/ (authoritative terminal decision: action/reason/lineage)
+    - decision_trace/ (diagnostic reasoning: score/pattern/structure/stage)
     - execution_context/ (what conditions existed)
     - shadow_trades/ (what was intended)
     - events/ (what the market was doing)
     - Causal graph + API layer (why it happened)
+
+NOTE (Production V1): the retired ``decision_audit`` dataset was removed. The
+authoritative terminal decision now comes from ``decision_ledger`` and the
+diagnostic reasoning from ``decision_trace``; this module reads those retained
+V1 authorities directly and joins them by canonical lineage. Absence of
+``logs/decision_audit/`` is normal and never required.
 
 MUST NOT:
     - Infer missing history
@@ -87,18 +94,141 @@ def _load_trade_truth(trade_id: str) -> dict[str, Any] | None:
     return _load_jsonl_by_field("logs/trade_truth", "trade_id", trade_id)
 
 
-def _load_decision_audit(trade_id: str) -> dict[str, Any] | None:
-    """Load a decision audit record. Searches by trade_id or decision_id."""
-    # Decision audits may reference trade via different fields
-    rec = _load_jsonl_by_field("logs/decision_audit", "trade_id", trade_id)
-    if rec:
-        return rec
-    # Try matching by cycle pattern in trade_id (shadow_CYCLE_SYMBOL)
-    parts = trade_id.split("_")
-    if len(parts) >= 2:
-        cycle = parts[1] if parts[0] == "shadow" else parts[0]
-        return _load_jsonl_by_field("logs/decision_audit", "cycle_id", int(cycle) if cycle.isdigit() else cycle)
+def _load_jsonl_by_lineage(
+    base_dir: str,
+    lineage: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Load the first record in a dataset matching any available lineage identity.
+
+    Join priority (most authoritative → least): canonical_opportunity_id,
+    correlation_id, entity_id, decision_id. Checks both flat and nested-identity
+    record shapes. Returns None when the dataset directory is absent or no match.
+    """
+    path = Path(base_dir)
+    if not path.exists():
+        return None
+
+    # Ordered lineage keys to attempt (skip empties).
+    join_keys = [
+        ("canonical_opportunity_id", lineage.get("canonical_opportunity_id")),
+        ("correlation_id", lineage.get("correlation_id")),
+        ("entity_id", lineage.get("entity_id")),
+        ("decision_id", lineage.get("decision_id")),
+    ]
+    join_keys = [(k, v) for k, v in join_keys if v]
+    if not join_keys:
+        return None
+
+    for f in sorted(path.rglob("*.jsonl"), reverse=True):
+        try:
+            for line in f.read_text(encoding="utf-8").strip().split("\n"):
+                if not line.strip():
+                    continue
+                rec = json.loads(line)
+                identity = rec.get("identity", {})
+                identity = identity if isinstance(identity, dict) else {}
+                for key, value in join_keys:
+                    if rec.get(key) == value or identity.get(key) == value:
+                        return rec
+        except (json.JSONDecodeError, OSError):
+            continue
     return None
+
+
+def _extract_lineage(shadow: dict[str, Any] | None, truth: dict[str, Any] | None) -> dict[str, Any]:
+    """Extract canonical lineage identity from a shadow or trade_truth record.
+
+    Both carry a nested ``identity`` block owning the canonical lineage IDs.
+    """
+    src = shadow or truth or {}
+    identity = src.get("identity", {})
+    identity = identity if isinstance(identity, dict) else {}
+    return {
+        "canonical_opportunity_id": identity.get("canonical_opportunity_id", src.get("canonical_opportunity_id", "")),
+        "correlation_id": identity.get("correlation_id", src.get("correlation_id", "")),
+        "entity_id": identity.get("entity_id", src.get("entity_id", "")),
+        "decision_id": identity.get("decision_id", src.get("decision_id", "")),
+        "cycle_id": identity.get("cycle_id", src.get("cycle_id", "")),
+    }
+
+
+def _load_decision_ledger_record(lineage: dict[str, Any]) -> dict[str, Any] | None:
+    """AUTHORITATIVE terminal decision facts (action/reason/lineage).
+
+    Sourced from the retained ``decision_ledger`` dataset — the decision
+    authority. Never inferred from diagnostic trace when a ledger record exists.
+    """
+    return _load_jsonl_by_lineage("logs/decision_ledger", lineage)
+
+
+def _load_decision_trace_record(lineage: dict[str, Any]) -> dict[str, Any] | None:
+    """DIAGNOSTIC reasoning/detail (score/pattern/structure/terminal stage).
+
+    Sourced from the retained ``decision_trace`` dataset, which absorbed the
+    former decision_audit diagnostic fields (structure_ok, entry_timing,
+    trigger_candle, stability_policy, ...). Used only for reasoning the ledger
+    does not own.
+    """
+    return _load_jsonl_by_lineage("logs/decision_trace", lineage)
+
+
+def _merge_decision_view(
+    ledger: dict[str, Any] | None,
+    trace: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Build a read-only decision view from retained authorities.
+
+    AUTHORITY RULE: terminal decision facts (action/reason/decision_id/lineage,
+    execution intent) come from ``decision_ledger``. Diagnostic reasoning
+    (score components, pattern, structure_ok, terminal stage) comes from
+    ``decision_trace``. Terminal facts are NEVER inferred from trace when the
+    ledger owns them. Returns None only when NEITHER authority has a record.
+
+    Field keys mirror the shape the replay projection consumes; missing fields
+    are represented as unavailable (None / absent), never fabricated.
+    """
+    if not ledger and not trace:
+        return None
+
+    ledger = ledger or {}
+    trace = trace or {}
+
+    _intent = ledger.get("execution_intent") or {}
+    _decision = ledger.get("decision")  # EXECUTE | NO_TRADE | RISK_BLOCK | ...
+    # Authoritative terminal decision → boolean "should_trade".
+    _should_trade = (_decision == "EXECUTE") if _decision is not None else None
+
+    return {
+        # ── Terminal decision (AUTHORITATIVE — decision_ledger) ──
+        "decision": _decision,
+        "should_trade": _should_trade,
+        "reason": ledger.get("reason", ""),
+        "decision_id": ledger.get("decision_id", trace.get("decision_id", "")),
+        "correlation_id": ledger.get("correlation_id", trace.get("correlation_id", "")),
+        "canonical_opportunity_id": ledger.get(
+            "canonical_opportunity_id", trace.get("canonical_opportunity_id", "")
+        ),
+        "observation_id": ledger.get("observation_id", trace.get("observation_id", "")),
+        "entity_id": ledger.get("entity_id", trace.get("entity_id", "")),
+        "side": (_intent.get("side") if _intent else None),
+        "intent": ledger.get("execution_intent"),
+        "score": ledger.get("signal_score", trace.get("score_strategy", 0)),
+        # ── Diagnostic reasoning (decision_trace) ──
+        "last_stage": trace.get("terminal_stage", ledger.get("last_stage", "")),
+        "pattern": trace.get("pattern_name"),
+        "patterns": [trace["pattern_name"]] if trace.get("pattern_name") else [],
+        "structure_ok": trace.get("structure_ok"),
+        "trade_horizon": trace.get("trade_horizon"),
+        "selected_strategy": trace.get("selected_strategy"),
+        "score_components": trace.get("components", {}),
+        # bias_phase / engine_state have no retained V1 equivalent — unavailable.
+        "bias_phase": trace.get("metadata", {}).get("bias_phase", "") if isinstance(trace.get("metadata"), dict) else "",
+        # Provenance so consumers know which authorities backed this view.
+        "_sources": {
+            "ledger": bool(ledger),
+            "trace": bool(trace),
+        },
+    }
 
 
 def _load_execution_context(correlation_id: str) -> dict[str, Any] | None:
@@ -185,8 +315,14 @@ class CausalReplayEngine:
         # Step 2: Load execution context
         context = _load_execution_context(correlation_id)
 
-        # Step 3: Load decision audit
-        decision = _load_decision_audit(trade_id)
+        # Step 3: Load the decision from RETAINED V1 authorities.
+        #   - decision_ledger = authoritative terminal decision (action/reason)
+        #   - decision_trace  = diagnostic reasoning (score/pattern/structure)
+        # Joined by canonical lineage from the shadow/truth record.
+        _lineage = _extract_lineage(shadow, truth)
+        ledger = _load_decision_ledger_record(_lineage)
+        trace = _load_decision_trace_record(_lineage)
+        decision = _merge_decision_view(ledger, trace)
 
         # Step 4: Reconstruct causal lineage
         lineage = self.api.lineage("DECISION.SHADOW_TRADE")
@@ -346,7 +482,11 @@ class CausalReplayEngine:
         trade was good?" answer.
         """
         shadow = _load_shadow_trade(trade_id)
-        decision = _load_decision_audit(trade_id)
+        truth = _load_trade_truth(trade_id)
+        _lineage = _extract_lineage(shadow, truth)
+        ledger = _load_decision_ledger_record(_lineage)
+        trace = _load_decision_trace_record(_lineage)
+        decision = _merge_decision_view(ledger, trace)
 
         if not shadow and not decision:
             return {"error": f"No decision data found for trade_id '{trade_id}'"}
@@ -358,7 +498,8 @@ class CausalReplayEngine:
             decision_snapshot = shadow.get("decision_snapshot", {})
             simulation_env = shadow.get("simulation_environment", {})
 
-        # Extract from decision audit (if available)
+        # Decision state from retained authorities (ledger=terminal, trace=diagnostic).
+        # engine_state has no retained V1 equivalent → represented as unavailable ({}).
         audit_state = {}
         if decision:
             audit_state = {
@@ -368,8 +509,8 @@ class CausalReplayEngine:
                 "bias_phase": decision.get("bias_phase", ""),
                 "patterns": decision.get("patterns", []),
                 "structure_ok": decision.get("structure_ok", None),
-                "last_stage": decision.get("last_completed_stage", ""),
-                "engine_state": decision.get("engine_state", {}),
+                "last_stage": decision.get("last_stage", ""),
+                "engine_state": {},  # not owned by any retained V1 dataset — unavailable
                 "intent": decision.get("intent", None),
             }
 

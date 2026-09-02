@@ -30,22 +30,34 @@ def test_reset_writers_use_registry_values():
     from core.persistence.opportunity_writer import _SCHEMA_VERSION as opportunities
     from core.shadow_trades import _SCHEMA_VERSION as shadow_trades
     from core.trade_truth import _SCHEMA_VERSION as trade_truth
-    from core.trade_truth_graph import _SCHEMA_VERSION as trade_truth_graph
-    from core.v3_shadow.horizon_models import _HORIZON_SCHEMA_VERSION as horizon
 
     assert decision_trace == current_schema("decision_trace")
     assert market_context == current_schema("market_context")
     assert opportunities == current_schema("opportunities")
     assert shadow_trades == current_schema("shadow_trades")
     assert trade_truth == current_schema("trade_truth")
-    assert trade_truth_graph == current_schema("trade_truth_graph")
-    assert horizon == current_schema("v3_horizon_assessment")
+    # trade_truth_graph and v3_horizon_assessment datasets were retired
+    # (Production V1 consolidation); their schema-version imports were removed.
 
 
-def test_legacy_versions_are_read_only_allowlist_entries():
-    assert "trade_truth_v3" in supported_schemas("trade_truth")
-    assert "decision_trace_v2" in supported_schemas("decision_trace")
-    assert "shadow_trades_v2" in supported_schemas("shadow_trades")
+def test_no_v2_v3_schema_compatibility_is_retained():
+    """Fresh Production V1 baseline: every dataset supports ONLY its V1 schema.
+
+    No V2/V3 schema-compatibility (read allowlist) may exist. Future V2/V3 work
+    starts from this V1 baseline; it is not carried as legacy compatibility here.
+    """
+    for dataset, entry in PRODUCTION_SCHEMA_REGISTRY.items():
+        supported = supported_schemas(dataset)
+        # Sole supported schema is the current V1 schema.
+        assert supported == frozenset({entry.current}), (dataset, supported)
+        assert entry.legacy_supported_versions == (), dataset
+        # No supported schema carries a v2/v3 generation token.
+        for version in supported:
+            assert "_v2" not in version and "_v3" not in version, (dataset, version)
+    # Sanity: the previously compatibility-listed datasets now expose V1 only.
+    assert supported_schemas("trade_truth") == frozenset({"trade_truth_v1"})
+    assert supported_schemas("decision_trace") == frozenset({"decision_trace_v1"})
+    assert supported_schemas("shadow_trades") == frozenset({"shadow_trades_v1"})
     assert current_schema("shadow_trades") == "shadow_trades_v1"
 
 
@@ -56,7 +68,6 @@ def test_new_bucket_writer_sources_do_not_embed_old_schema_partitions():
         "core/persistence/opportunity_writer.py",
         "core/shadow_trades.py",
         "core/trade_truth.py",
-        "core/trade_truth_graph.py",
         "core/trade_journal.py",
     )
     forbidden = (
@@ -65,7 +76,6 @@ def test_new_bucket_writer_sources_do_not_embed_old_schema_partitions():
         "schema_version=opportunities_v2",
         "schema_version=shadow_trades_v2",
         "schema_version=trade_truth_v3",
-        "schema_version=trade_truth_graph_v2",
     )
     for filename in writer_files:
         source = Path(filename).read_text(encoding="utf-8")

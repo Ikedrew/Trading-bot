@@ -130,7 +130,7 @@ class TestSerialisation:
 
 class TestPipelineIntegration:
     def test_pipeline_produces_decision_context(self):
-        from core.v3_shadow.models import MarketUnderstanding, H1Understanding, M5Understanding
+        from core.market_understanding.models import MarketUnderstanding, H1Understanding, M5Understanding
         from core.v10.pipeline import V10Pipeline
         from core.v10.broker_context import BrokerContext
         from core.v10.risk_model import AccountContext

@@ -50,6 +50,18 @@ class Position:
     #: Favourable excursion since open (price movement helping the trade), in price units.
     max_favourable_price: float = 0.0
 
+    #: Adverse excursion since open (worst price against the position), in price units.
+    #: None = no valid observation yet (unknown) — never seeded to a misleading
+    #: market value. Observational telemetry only; never used for exit/stop logic.
+    max_adverse_price: float | None = None
+
+    #: Provenance of the excursion extremes:
+    #:   "full_lifecycle"  — tracked since open (or restored from durable state)
+    #:   "recovery_seeded" — no durable state on restart; seeded from broker price
+    #:   "unknown"         — no valid excursion observation
+    #: Observational metadata only; never used for any trading decision.
+    excursion_provenance: str = "full_lifecycle"
+
     mt5_ticket: int | None = None
     deal_id: int = 0
     order_id: int = 0

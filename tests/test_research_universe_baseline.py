@@ -21,7 +21,9 @@ def test_shadow_outcome_is_active_and_contracted():
     assert Universe.SHADOW_OUTCOME in ACTIVE_UNIVERSES
     assert Universe.SHADOW_OUTCOME in UNIVERSE_CONTRACTS
     contract = UNIVERSE_CONTRACTS[Universe.SHADOW_OUTCOME]
-    assert contract.source_schema_versions == ("shadow_trades_v1", "shadow_trades_v2")
+    # Fresh Production V1 baseline: the shadow-outcome contract accepts the V1
+    # shadow schema only — no v2/v3 schema compatibility is retained.
+    assert contract.source_schema_versions == ("shadow_trades_v1",)
     assert "counterfactual" in contract.description.lower()
 
 

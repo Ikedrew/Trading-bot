@@ -39,8 +39,8 @@ from typing import Any
 
 _SCHEMA_VERSION = "v1.4.0"
 _ENGINE_VERSION = "new_engine_v1.2"
-# NOTE: Legacy bucket "trading-engine-strategy-events" is fully decommissioned.
-# All S3 writes go exclusively to "trading-bot-data-mk1" via core/storage/s3_batch_writer.py.
+# NOTE: This module performs no S3 writes. All Production V1 S3 writes go
+# exclusively to the canonical NEW_RUNTIME_S3_BUCKET via core/storage/s3_batch_writer.py.
 _S3_BUCKET = None  # DECOMMISSIONED — no S3 writes from this module
 
 

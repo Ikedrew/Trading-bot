@@ -249,42 +249,9 @@ def load_canonical_trades(
     return records
 
 
-def load_audit_records(
-    audit_dir: str = "logs/decision_audit",
-    *,
-    symbol: str | None = None,
-    only_trades: bool = True,
-) -> list[dict[str, Any]]:
-    """
-    # deprecated — remove after migration
-    Legacy loader for logs/decision_audit/*.jsonl.
-    Prefer load_decisions() from unified ledger.
-    """
-    records: list[dict[str, Any]] = []
-    audit_path = Path(audit_dir)
-    if not audit_path.exists():
-        return records
-
-    for filepath in sorted(audit_path.glob("*.jsonl")):
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        record = json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
-                    if symbol and record.get("symbol") != symbol:
-                        continue
-                    if only_trades and not record.get("should_trade", False):
-                        continue
-                    records.append(record)
-        except Exception:
-            continue
-
-    return records
+# NOTE (Production V1 cleanup): load_audit_records() was removed — it read the
+# retired logs/decision_audit dataset and had no callers. Use load_decisions()
+# from the unified decision ledger instead.
 
 
 def load_journal_outcomes(

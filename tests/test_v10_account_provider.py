@@ -82,7 +82,7 @@ class TestBrokerProvider:
 class TestPipelineWithUnavailableContext:
     def test_zero_balance_rejects_at_risk(self):
         """Pipeline rejects cleanly when account data unavailable."""
-        from core.v3_shadow.models import MarketUnderstanding, H1Understanding, M5Understanding
+        from core.market_understanding.models import MarketUnderstanding, H1Understanding, M5Understanding
         from core.v10.pipeline import V10Pipeline
 
         mu = MarketUnderstanding(
@@ -101,7 +101,7 @@ class TestPipelineWithUnavailableContext:
 
     def test_disconnected_broker_rejects_at_execution(self):
         """Disconnected broker causes clean execution rejection."""
-        from core.v3_shadow.models import MarketUnderstanding
+        from core.market_understanding.models import MarketUnderstanding
         from core.v10.pipeline import V10Pipeline
         from core.v10.risk_model import AccountContext
         from core.v10.broker_context import BrokerContext

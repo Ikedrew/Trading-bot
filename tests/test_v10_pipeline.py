@@ -1,12 +1,12 @@
 """Tests for V10 Pipeline Orchestrator."""
 
 import pytest
-from core.v3_shadow.models import (
+from core.market_understanding.models import (
     MarketUnderstanding, H4Understanding, H1Understanding,
     M15Understanding, M5Understanding,
 )
-from core.v3_shadow.context_models import (
-    V3MarketContext, HTFStructureContext, LocationContext, BehaviourContext,
+from core.market_understanding.context_models import (
+    MarketContextInterpretation, HTFStructureContext, LocationContext, BehaviourContext,
 )
 from core.v10.risk_model import AccountContext
 from core.v10.broker_context import BrokerContext
@@ -57,8 +57,8 @@ def _strong_understanding():
 
 
 def _strong_context():
-    """V3MarketContext supporting the opportunity."""
-    return V3MarketContext(
+    """MarketContextInterpretation supporting the opportunity."""
+    return MarketContextInterpretation(
         symbol="EURUSD",
         timestamp_utc=1785400000.0,
         htf_structure=HTFStructureContext(
@@ -275,7 +275,7 @@ class TestPipelineReturnsCorrectly:
             assert result.rejection_stage == ""
 
     def test_works_without_context(self):
-        """Pipeline works with just MarketUnderstanding (no V3MarketContext)."""
+        """Pipeline works with just MarketUnderstanding (no MarketContextInterpretation)."""
         pipeline = V10Pipeline()
         result = pipeline.process(_strong_understanding(), None, _good_account(), _good_broker())
         assert isinstance(result, PipelineResult)

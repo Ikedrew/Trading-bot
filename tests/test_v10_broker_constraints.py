@@ -385,7 +385,7 @@ class TestPipelineRejectionStage:
         """Full pipeline with volume too small → rejection_stage='execution'."""
         from core.v10.pipeline import V10Pipeline
         from core.v10.risk_model import AccountContext
-        from core.v3_shadow.models import (
+        from core.market_understanding.models import (
             MarketUnderstanding, H1Understanding, M5Understanding,
         )
 
@@ -470,12 +470,12 @@ class TestPersistenceConsistency:
         """Run pipeline where execution rejects due to volume_min."""
         from core.v10.pipeline import V10Pipeline
         from core.v10.risk_model import AccountContext
-        from core.v3_shadow.models import (
+        from core.market_understanding.models import (
             MarketUnderstanding, H1Understanding, M5Understanding,
             M15Understanding,
         )
-        from core.v3_shadow.context_models import (
-            V3MarketContext, HTFStructureContext, LocationContext, BehaviourContext,
+        from core.market_understanding.context_models import (
+            MarketContextInterpretation, HTFStructureContext, LocationContext, BehaviourContext,
         )
 
         mu = MarketUnderstanding(
@@ -495,7 +495,7 @@ class TestPersistenceConsistency:
                 zone_type="SUPPLY_OB", atr=0.00055, spread=0.00012,
             ),
         )
-        ctx = V3MarketContext(
+        ctx = MarketContextInterpretation(
             symbol="EURUSD", timestamp_utc=1785400000.0,
             htf_structure=HTFStructureContext(macro_bias="NEUTRAL", structure_alignment=0.30, bos_active=True, bos_direction="BEARISH"),
             location=LocationContext(location_type="SUPPLY_OB", inside_institutional_zone=True, premium_discount="PREMIUM", range_position=0.75, zone_quality=0.85, liquidity_below=True),

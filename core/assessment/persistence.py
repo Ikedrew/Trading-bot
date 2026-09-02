@@ -9,7 +9,7 @@ This enables research into:
 
 Storage:
     Local:  logs/assessments/{SYMBOL}/{YYYY-MM-DD}.jsonl
-    S3:     s3://trading-bot-data-mk1/assessments/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
+    S3:     s3://trading-bot-v10-data/assessments/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
 
 This module is PURELY OBSERVATIONAL. It does NOT:
     - Affect trading decisions

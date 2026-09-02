@@ -6,12 +6,12 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from core.v3_shadow.models import (
+from core.market_understanding.models import (
     MarketUnderstanding, H4Understanding, H1Understanding,
     M15Understanding, M5Understanding,
 )
-from core.v3_shadow.context_models import (
-    V3MarketContext, HTFStructureContext, LocationContext, BehaviourContext,
+from core.market_understanding.context_models import (
+    MarketContextInterpretation, HTFStructureContext, LocationContext, BehaviourContext,
 )
 from core.v10.pipeline import V10Pipeline, PipelineResult
 from core.v10.risk_model import AccountContext
@@ -42,7 +42,7 @@ def _run_pipeline(strong=True):
                 atr=0.00055, spread=0.00012, spread_atr_ratio=0.22,
             ),
         )
-        ctx = V3MarketContext(
+        ctx = MarketContextInterpretation(
             symbol="EURUSD", timestamp_utc=1785400000.0,
             htf_structure=HTFStructureContext(macro_bias="NEUTRAL", structure_alignment=0.30, bos_active=True, bos_direction="BEARISH"),
             location=LocationContext(

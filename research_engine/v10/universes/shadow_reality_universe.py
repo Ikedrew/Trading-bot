@@ -14,7 +14,7 @@ JOIN KEY:
     correlation_id (format: "COR-{date}-{cycle}-{symbol}-{hash}")
 
 AUTHORITATIVE SHADOW POPULATION:
-    schema_version == "shadow_trades_v2"
+    schema_version == "shadow_trades_v1"
     AND identity.shadow_type == "V10_PRIMARY"
     AND identity.v10_action == "EXECUTE"
     AND identity.correlation_id starts with "COR-"
@@ -150,7 +150,7 @@ class ShadowRealityUniverseBuilder(UniverseBuilder):
         v10p_execute = []
         v10p_no_trade = 0
         for s in self._raw_shadows:
-            if s.get("schema_version") != "shadow_trades_v2":
+            if s.get("schema_version") != "shadow_trades_v1":
                 continue
             identity = s.get("identity", {})
             if identity.get("shadow_type") != "V10_PRIMARY":
@@ -406,7 +406,7 @@ def _filter_authoritative_shadows(
         if not isinstance(rec, dict):
             malformed_count += 1
             continue
-        if rec.get("schema_version") != "shadow_trades_v2":
+        if rec.get("schema_version") != "shadow_trades_v1":
             schema_mismatch_count += 1
             continue
 

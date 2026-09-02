@@ -397,8 +397,7 @@ class TestCrossLayerPrefixIsolation:
     """No module writes to another layer's prefix.
 
     Production V1 writers resolve their prefix via s3_base_prefix() from the
-    central contract.  Legacy research writers (edge_*, strategy_compiler) retain
-    their flat constants on the v10-engine bucket.
+    central contract. (Legacy v10-engine research writers were deleted.)
     """
 
     def test_shadow_trades_prefix(self):
@@ -411,43 +410,18 @@ class TestCrossLayerPrefixIsolation:
         from core.production_data_contract import s3_base_prefix
         assert _S3_TRADES_PREFIX == s3_base_prefix("trade_truth")  # "core/trade_truth"
 
-    def test_trade_truth_graph_prefix(self):
-        from core.trade_truth_graph import _S3_PREFIX
-        from core.production_data_contract import s3_base_prefix
-        assert _S3_PREFIX == s3_base_prefix("trade_truth_graph")  # "projections/trade_truth_graph"
-
-    def test_edge_attribution_prefix(self):
-        from core.edge_attribution import _S3_PREFIX
-        assert _S3_PREFIX == "edge_attribution"
-
-    def test_edge_optimisation_prefix(self):
-        from core.edge_optimisation import _S3_PREFIX
-        assert _S3_PREFIX == "edge_optimisation"
-
-    def test_strategy_compiler_prefix(self):
-        from core.strategy_compiler import _S3_PREFIX
-        assert _S3_PREFIX == "strategy_compiler"
-
     def test_execution_context_prefix(self):
         from core.execution_context import _S3_PREFIX
         from core.production_data_contract import s3_base_prefix
         assert _S3_PREFIX == s3_base_prefix("execution_context")  # "supporting/execution_context"
 
     def test_all_use_same_bucket(self):
-        """Runtime layers migrate; offline derivation layers retain their research sink."""
+        """All active Production V1 writers use the single canonical bucket."""
         from core.shadow_trades import _S3_BUCKET as st_bucket
         from core.trade_truth import _S3_BUCKET as tt_bucket
-        from core.trade_truth_graph import _S3_BUCKET as ttg_bucket
-        from core.edge_attribution import _S3_BUCKET as ea_bucket
-        from core.edge_optimisation import _S3_BUCKET as eo_bucket
-        from core.strategy_compiler import _S3_BUCKET as sc_bucket
         from core.execution_context import _S3_BUCKET as ec_bucket
 
         canonical = "trading-bot-v10-data"
         assert st_bucket == canonical
         assert tt_bucket == canonical
-        assert ttg_bucket == canonical
         assert ec_bucket == canonical
-        assert ea_bucket == "v10-engine"
-        assert eo_bucket == "v10-engine"
-        assert sc_bucket == "v10-engine"

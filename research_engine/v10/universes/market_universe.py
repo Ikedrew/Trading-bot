@@ -76,6 +76,9 @@ class MarketUniverseBuilder(UniverseBuilder):
 
         # Primary: extract from decision traces (has entity_id for joins)
         for raw in self._raw_dt:
+            # Skip RISK_REJECTION runtime-guard rejection records — no v10_market_state.
+            if raw.get("event_type") == "RISK_REJECTION":
+                continue
             mkt_state = raw.get("v10_market_state")
             if not mkt_state:
                 excluded_no_market_state += 1

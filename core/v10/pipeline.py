@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from core.v3_shadow.models import MarketUnderstanding
-from core.v3_shadow.context_models import V3MarketContext
+from core.market_understanding.models import MarketUnderstanding
+from core.market_understanding.context_models import MarketContextInterpretation
 from core.v10.market_state import V10MarketState
 from core.v10.market_state_builder import build_v10_market_state
 from core.v10.opportunity_assessment import OpportunityAssessment
@@ -84,7 +84,7 @@ class V10Pipeline:
     def process(
         self,
         understanding: MarketUnderstanding,
-        context: V3MarketContext | None = None,
+        context: MarketContextInterpretation | None = None,
         account: AccountContext | None = None,
         broker: BrokerContext | None = None,
     ) -> PipelineResult:
@@ -92,8 +92,8 @@ class V10Pipeline:
         Run the full V10 decision pipeline.
 
         Args:
-            understanding: V3 MarketUnderstanding (required)
-            context: V3MarketContext (optional, enhances regime/location data)
+            understanding: MarketUnderstanding (required)
+            context: MarketContextInterpretation (optional, enhances regime/location data)
             account: Account state for risk sizing (uses defaults if None)
             broker: Broker state for execution gating (uses defaults if None)
 

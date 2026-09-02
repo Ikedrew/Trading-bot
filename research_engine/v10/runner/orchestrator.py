@@ -331,7 +331,7 @@ class ResearchExecutionOrchestrator:
                 logger.warning(f"[ORCHESTRATOR] Failed to build OUTCOME: {e}")
 
         # Counterfactual outcomes remain separate from realised outcomes. This
-        # maps the existing authoritative shadow_trades_v2 dataset; it does not
+        # maps the existing authoritative shadow_trades_v1 dataset; it does not
         # create a duplicate shadow dataset.
         try:
             shadow_builder = ShadowOutcomeUniverseBuilder()

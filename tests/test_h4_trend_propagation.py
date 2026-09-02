@@ -13,7 +13,7 @@ trend_bias and trend_strength from RegimeSnapshot for ALL classifications:
 
 import pytest
 from unittest.mock import MagicMock
-from core.v3_shadow.builders import build_h4_understanding
+from core.market_understanding.builders import build_h4_understanding
 from core.timeframes.types import RegimeSnapshot, RegimeClassification
 
 

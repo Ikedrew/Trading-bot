@@ -1,20 +1,20 @@
-"""V10 MarketState Builder — Constructs V10MarketState from existing V3 outputs.
+"""V10 MarketState Builder — Constructs V10MarketState from market-understanding outputs.
 
 Consumes:
-  - MarketUnderstanding (core.v3_shadow.models)
-  - V3MarketContext (core.v3_shadow.context_models)
+  - MarketUnderstanding (core.market_understanding.models)
+  - MarketContextInterpretation (core.market_understanding.context_models)
   - TimeframeContext (core.v10.timeframe_context) [optional — new V10 path]
 
 Produces:
   - V10MarketState (unified single source of truth)
 
-Does NOT modify V3 pipeline. Runs alongside as an aggregator.
+Pure aggregation over the market-understanding + interpretation inputs.
 """
 
 from __future__ import annotations
 
-from core.v3_shadow.models import MarketUnderstanding
-from core.v3_shadow.context_models import V3MarketContext
+from core.market_understanding.models import MarketUnderstanding
+from core.market_understanding.context_models import MarketContextInterpretation
 from core.v10.market_state import (
     V10MarketState,
     H4State, H1State, M15State, M5State,
@@ -24,10 +24,10 @@ from core.v10.market_state import (
 
 def build_v10_market_state(
     understanding: MarketUnderstanding,
-    context: V3MarketContext | None = None,
+    context: MarketContextInterpretation | None = None,
 ) -> V10MarketState:
     """
-    Build a V10MarketState from existing V3 pipeline outputs.
+    Build a V10MarketState from the market-understanding + interpretation inputs.
 
     Args:
         understanding: Raw multi-timeframe observations
@@ -114,7 +114,7 @@ def build_v10_market_state(
         spread_atr_ratio=understanding.m5.spread_atr_ratio,
     )
 
-    # ─── Derived layers (from V3MarketContext if available) ────
+    # ─── Derived layers (from MarketContextInterpretation if available) ────
     if context:
         regime = RegimeState(
             regime=context.behaviour.regime,
@@ -192,13 +192,13 @@ from core.v10.timeframe_context import TimeframeContext
 
 def build_v10_from_timeframe_context(
     tf_ctx: TimeframeContext,
-    context: V3MarketContext | None = None,
+    context: MarketContextInterpretation | None = None,
 ) -> V10MarketState:
     """
     Build V10MarketState from the new TimeframeContext authority model.
 
     This is the V10-native path. TimeframeContext enforces hierarchy;
-    V3MarketContext provides supplementary regime/location data if available.
+    MarketContextInterpretation provides supplementary regime/location data if available.
     """
     from core.v10.market_state import (
         H4State, H1State, M15State, M5State,
@@ -278,7 +278,7 @@ def build_v10_from_timeframe_context(
         spread_atr_ratio=tf_ctx.m5.spread_atr_ratio,
     )
 
-    # Regime/location from V3MarketContext if provided
+    # Regime/location from MarketContextInterpretation if provided
     if context:
         regime = RegimeState(
             regime=context.behaviour.regime,

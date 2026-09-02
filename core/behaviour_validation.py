@@ -12,8 +12,8 @@ This is NOT a trading engine. It is a self-auditing scientific measurement
 system that continuously measures whether its own logic produces edge.
 
 DATA SOURCE CONTRACT (STRICT):
-    ✔ ALLOWED: Trade Truth Graph (local JSONL or S3)
-    ✔ ALLOWED: trade_truth_v2 records (persisted, schema-versioned)
+    ✔ ALLOWED: Trade Truth records (local JSONL or S3)
+    ✔ ALLOWED: trade_truth records (persisted, schema-versioned)
     ✔ ALLOWED: Aggregation, grouping, filtering, correlation
 
     ❌ FORBIDDEN: mt5, copy_rates, symbol_info_tick, live candles
@@ -277,21 +277,97 @@ def _compute_lifecycle_insights(nodes: list[dict[str, Any]]) -> dict[str, Any]:
 # PUBLIC API
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _load_nodes_from_trade_journal(journal_dir: str) -> list[dict[str, Any]]:
+    """
+    Load behaviour-validation nodes from the trade_journal dataset.
+
+    Migrated from the retired trade_truth_graph dataset (Production V1
+    consolidation). trade_truth_graph stored only reference pointers and
+    never carried outcome.r_multiple / strategy_meta / htf_snapshot, so the
+    old graph-based loader rejected every record. trade_journal is the correct
+    owner of realised outcome + management fields and is used here instead.
+
+    Maps each flat TradeRecord into the node shape the analytics expect:
+        outcome.r_multiple, outcome.bars_held, strategy_meta.{strategy,pattern},
+        position.direction, prices.*, htf_snapshot (best-effort from record).
+    """
+    from pathlib import Path as _Path
+
+    base = _Path(journal_dir)
+    nodes: list[dict[str, Any]] = []
+    if not base.exists():
+        return nodes
+
+    for fp in sorted(base.rglob("*.jsonl")):
+        try:
+            with open(fp, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        rec = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+
+                    entry = rec.get("entry_price")
+                    exit_p = rec.get("exit_price")
+                    sl = rec.get("initial_sl")
+                    direction = rec.get("direction", "")
+                    if entry is None or exit_p is None or not sl or not direction:
+                        continue
+
+                    risk = abs(float(entry) - float(sl))
+                    if risk <= 0:
+                        continue
+                    if direction.upper() == "BUY":
+                        r_mult = (float(exit_p) - float(entry)) / risk
+                    else:
+                        r_mult = (float(entry) - float(exit_p)) / risk
+
+                    nodes.append({
+                        "trade_id": rec.get("trade_id", ""),
+                        "symbol": rec.get("symbol", ""),
+                        "prices": {
+                            "entry_price": entry,
+                            "exit_price": exit_p,
+                            "initial_sl": sl,
+                        },
+                        "position": {"direction": direction},
+                        "outcome": {
+                            "r_multiple": round(r_mult, 4),
+                            "bars_held": rec.get("bars_held", 0),
+                        },
+                        "strategy_meta": {
+                            "strategy": rec.get("strategy", rec.get("pattern_name", "UNKNOWN")),
+                            "pattern": rec.get("pattern_name", "UNKNOWN"),
+                            "filters_active": rec.get("filters_active", []),
+                        },
+                        "htf_snapshot": rec.get("htf_snapshot", {}),
+                        "edges": {"regime": rec.get("regime", "UNKNOWN")},
+                        "lifecycle": {"bars_held": rec.get("bars_held", 0)},
+                    })
+        except OSError:
+            continue
+
+    return nodes
+
+
 def run_behaviour_validation(
     *,
-    graph_dir: str = "logs/trade_truth_graph",
+    graph_dir: str = "logs/trade_journal",
 ) -> dict[str, Any]:
     """
-    Run full behaviour validation over the Trade Truth Graph.
+    Run full behaviour validation over realised trades.
 
-    DATA SOURCE: Trade Truth Graph (local JSONL) ONLY.
+    DATA SOURCE (Production V1): the trade_journal dataset (local JSONL).
+    Migrated from the retired trade_truth_graph dataset — trade_journal is the
+    correct owner of realised outcome + management fields.
     No live data access. No runtime state. No MT5 calls.
 
     Returns structured report covering all 6 analytics dimensions.
     """
-    from core.trade_truth_graph import load_graph_local
-
-    raw_nodes = load_graph_local(graph_dir)
+    raw_nodes = _load_nodes_from_trade_journal(graph_dir)
 
     if not raw_nodes:
         return {

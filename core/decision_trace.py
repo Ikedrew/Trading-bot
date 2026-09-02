@@ -308,7 +308,7 @@ class DecisionTrace:
     # ─── METADATA ─────────────────────────────────────────────────────
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    # ─── V10 PIPELINE (full reasoning chain — decision_trace_v2) ──────
+    # ─── V10 PIPELINE (full reasoning chain — decision_trace_v1) ──────
     # Identity (V10-specific IDs for cross-dataset joins)
     observation_id: str = ""
     decision_id: str = ""
@@ -344,6 +344,22 @@ class DecisionTrace:
 
     # Broker snapshot at decision time
     v10_broker_snapshot: dict[str, Any] | None = None
+
+    # ─── INTEGRATED FROM decision_audit (consolidation) ───────────────
+    # All fields below are available in engine_result / the V10 pipeline
+    # result at decision-trace build time (observer #6). No ordering change:
+    # the decision_audit dataset previously read the SAME engine output.
+    trigger_candle: dict[str, Any] = field(default_factory=dict)  # OHLC of signal candle
+    entry_timing: str | None = None            # EARLY / MID / LATE from confirmation
+    confirmation_detail: dict[str, Any] = field(default_factory=dict)  # body_pct, wick_ratio, close_location
+    bias_validation_score: float = 0.0
+    structure_ok: bool | None = None
+    risk_rejection_detail: dict[str, Any] | None = None  # guard rejection detail
+    stability_policy: str = ""
+    spread_at_decision: float | None = None
+    ev_gate_enabled: bool = True
+    ev_rejection_bypassed: bool = False
+    ev_would_have_blocked: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize for JSONL persistence."""
@@ -409,7 +425,7 @@ class DecisionTrace:
             "confirmation_score": round(self.confirmation_score, 4) if self.confirmation_score is not None else None,
             "policy_reasoning": self.policy_reasoning,
             "metadata": self.metadata,
-            # V10 Pipeline (decision_trace_v2)
+            # V10 Pipeline (decision_trace_v1)
             "observation_id": self.observation_id,
             "decision_id": self.decision_id,
             "correlation_id": self.correlation_id,
@@ -426,6 +442,18 @@ class DecisionTrace:
             "v10_execution": self.v10_execution,
             "v10_account_snapshot": self.v10_account_snapshot,
             "v10_broker_snapshot": self.v10_broker_snapshot,
+            # ── Integrated from decision_audit (same-cycle engine output) ──
+            "trigger_candle": self.trigger_candle or None,
+            "entry_timing": self.entry_timing,
+            "confirmation_detail": self.confirmation_detail or None,
+            "bias_validation_score": round(self.bias_validation_score, 4) if self.bias_validation_score else None,
+            "structure_ok": self.structure_ok,
+            "risk_rejection_detail": self.risk_rejection_detail,
+            "stability_policy": self.stability_policy or None,
+            "spread_at_decision": round(self.spread_at_decision, 6) if self.spread_at_decision is not None else None,
+            "ev_gate_enabled": self.ev_gate_enabled,
+            "ev_rejection_bypassed": self.ev_rejection_bypassed,
+            "ev_would_have_blocked": self.ev_would_have_blocked,
         }
 
 
@@ -819,6 +847,63 @@ def _build_trace(
             pass
     # ─── END V10 PIPELINE EXTRACTION ─────────────────────────────────
 
+    # ─── DECISION_AUDIT FIELD EXTRACTION (consolidation) ──────────────
+    # These fields come from the SAME engine_result / pipeline result that
+    # the decision_audit dataset previously read. Extracted here so the
+    # decision_trace record fully absorbs the decision_audit dataset.
+    # No new runtime work, no ordering change — pure read of existing output.
+    _da_trigger_candle: dict[str, Any] = {}
+    _da_entry_timing: str | None = None
+    _da_confirmation_detail: dict[str, Any] = {}
+    _da_spread: float | None = None
+
+    # Trigger candle: prefer explicit engine stamp, else engine_result candle refs
+    _tc = engine_result.get("trigger_candle") or engine_result.get("_trigger_candle")
+    if isinstance(_tc, dict) and _tc:
+        _da_trigger_candle = dict(_tc)
+
+    # Confirmation detail + entry timing from V10 pipeline result when present
+    if v10_pipeline_result is not None:
+        try:
+            _entry_conf = getattr(v10_pipeline_result, "entry_confirmation", None)
+            if _entry_conf is not None and getattr(_entry_conf, "evaluated", False):
+                _da_confirmation_detail = {
+                    "strength": getattr(_entry_conf, "strength", None),
+                    "body_pct": getattr(_entry_conf, "body_pct", None),
+                    "wick_ratio": getattr(_entry_conf, "wick_ratio", None),
+                    "close_location": getattr(_entry_conf, "close_location", None),
+                    "reason": getattr(_entry_conf, "reason", None),
+                    "passed": getattr(_entry_conf, "passed", None),
+                }
+                if getattr(_entry_conf, "passed", False):
+                    try:
+                        from core.entry_timing import classify_entry_timing
+                        _da_entry_timing = classify_entry_timing(
+                            confirmation_strength=getattr(_entry_conf, "strength", None),
+                            body_pct=getattr(_entry_conf, "body_pct", None),
+                            wick_ratio=getattr(_entry_conf, "wick_ratio", None),
+                            close_location=getattr(_entry_conf, "close_location", None),
+                        )
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+    # Fallback: confirmation detail directly present on engine_result
+    if not _da_confirmation_detail:
+        _cd = engine_result.get("confirmation_detail") or engine_result.get("_confirmation_detail")
+        if isinstance(_cd, dict) and _cd:
+            _da_confirmation_detail = dict(_cd)
+    if _da_entry_timing is None:
+        _et = engine_result.get("entry_timing") or engine_result.get("_entry_timing")
+        if isinstance(_et, str) and _et:
+            _da_entry_timing = _et
+
+    # Spread at decision: explicit stamp only (never fabricated)
+    _sp = engine_result.get("spread") or engine_result.get("_spread_at_decision")
+    if isinstance(_sp, (int, float)) and _sp:
+        _da_spread = float(_sp)
+
     return DecisionTrace(
         entity_id=entity_id,
         symbol=symbol,
@@ -873,7 +958,7 @@ def _build_trace(
             "execution_mode": str(engine_result.get("execution_mode", "LIVE")),
             "population": str(engine_result.get("population", "LIVE")),
         },
-        # V10 Pipeline (decision_trace_v2)
+        # V10 Pipeline (decision_trace_v1)
         observation_id=_obs_id,
         decision_id=_decision_id,
         correlation_id=_correlation_id,
@@ -890,6 +975,18 @@ def _build_trace(
         v10_execution=_v10_execution,
         v10_account_snapshot=_v10_account,
         v10_broker_snapshot=_v10_broker,
+        # ── Integrated from decision_audit — same engine_result, same cycle ──
+        trigger_candle=_da_trigger_candle,
+        entry_timing=_da_entry_timing,
+        confirmation_detail=_da_confirmation_detail,
+        bias_validation_score=float(engine_result.get("bias_validation_score") or 0.0),
+        structure_ok=engine_result.get("structure_ok"),
+        risk_rejection_detail=engine_result.get("risk_rejection") or engine_result.get("_risk_rejection_detail"),
+        stability_policy=str(engine_result.get("stability_policy") or ""),
+        spread_at_decision=_da_spread,
+        ev_gate_enabled=bool(engine_result.get("ev_gate_enabled", True)),
+        ev_rejection_bypassed=bool(engine_result.get("ev_rejection_bypassed", False)),
+        ev_would_have_blocked=engine_result.get("ev_would_have_blocked") is not None,
     )
 
 

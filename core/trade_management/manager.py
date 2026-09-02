@@ -20,6 +20,7 @@ from core.trade_management.sl_tp_rules import (
     maybe_break_even_sl,
     maybe_trailing_sl,
     update_mfe_extreme,
+    update_mae_extreme,
 )
 from risk.models import OrderIntent
 from execution.mt5_execution import ExecutionResult
@@ -218,6 +219,9 @@ class TradeStateManager:
         ts = open_time_s if open_time_s is not None else time.time()
         pid = f"pos_{execution.deal}" if execution.deal else f"pos_{uuid.uuid4().hex[:12]}"
         mfe0 = bid if intent.side is Side.BUY else ask
+        # MAE seed = same open-tick price on the tracked side as MFE (first
+        # observation). Observational only.
+        mae0 = mfe0
 
         pos = Position(
             position_id=pid,
@@ -238,6 +242,7 @@ class TradeStateManager:
             pattern_tag=intent.pattern,
             trade_horizon=intent.metadata.get("horizon", "SCALP") if intent.metadata else "SCALP",
             max_favourable_price=mfe0,
+            max_adverse_price=mae0,
             trade_identity=trade_identity,
         )
         self._by_id[pid] = pos
@@ -407,7 +412,23 @@ class TradeStateManager:
         else:
             pos.unrealised_pnl = (pos.entry_price - ask) * pos.volume
 
+        _prev_mfe = pos.max_favourable_price
+        _prev_mae = pos.max_adverse_price
         pos.max_favourable_price = update_mfe_extreme(pos.side, bid, ask, pos.max_favourable_price)
+        # Observational adverse-excursion telemetry (symmetric with MFE).
+        # Never consulted by exit/stop/close logic below.
+        pos.max_adverse_price = update_mae_extreme(pos.side, bid, ask, pos.max_adverse_price)
+
+        # Durable excursion checkpoint — persist ONLY when an extreme changed
+        # (not per tick). Fire-and-forget observational telemetry; never affects
+        # trading. Makes MFE/MAE survive a restart so final mfe_r/mae_r cover the
+        # full trade lifetime.
+        if pos.max_favourable_price != _prev_mfe or pos.max_adverse_price != _prev_mae:
+            try:
+                from core.trade_management.excursion_state import persist_excursion
+                persist_excursion(pos)
+            except Exception:
+                pass  # Excursion persistence must NEVER affect trade management
 
         self._emit(TradeLifecycleEvent.ON_PRICE_UPDATE, pos, (bid, ask), ts, {})
 
@@ -749,6 +770,10 @@ class TradeStateManager:
                         "broker_exit_price": float(deal.price),
                         "broker_exit_time": exit_time_utc,
                         "broker_profit": float(deal.profit),
+                        # Real broker-measured costs (may be 0.0 = measured zero).
+                        # Absent attributes → None (unknown), never fake 0.0.
+                        "broker_commission": float(deal.commission) if hasattr(deal, "commission") and deal.commission is not None else None,
+                        "broker_swap": float(deal.swap) if hasattr(deal, "swap") and deal.swap is not None else None,
                         "broker_deal_id": int(deal.ticket),
                         "broker_comment": comment,
                         "broker_deal_reason": deal_reason_int,

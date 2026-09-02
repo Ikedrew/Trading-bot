@@ -432,16 +432,15 @@ def run_new_engine(
             pass  # Attribution failure must never affect trading
     # ─── END EVIDENCE ATTRIBUTION ─────────────────────────────────────
 
-    # ─── PERSIST ASSESSMENT (after all enrichment is complete) ─────────
-    # Persisted AFTER reasoning, uncertainty, and attribution enrichment
-    # so that the S3 record contains the fully populated object.
-    if _opportunity is not None:
-        try:
-            from core.persistence.opportunity_assessment_writer import persist_opportunity_assessment
-            persist_opportunity_assessment(_opportunity)
-        except Exception:
-            pass  # Persistence failure must never block trading
-    # ─── END PERSIST ──────────────────────────────────────────────────
+    # ─── ASSESSMENT PERSISTENCE (consolidated into `assessments`) ──────
+    # The separate opportunity_assessment dataset was retired in the
+    # Production V1 consolidation. The assessment-stage record is now
+    # persisted once, from live_scanner post-engine, into the `assessments`
+    # dataset (which is the richer superset: 10-factor components + EV +
+    # p_success + probability + confirmation + evidence). The V10
+    # OpportunityAssessment object flows out via engine_result["assessment"]
+    # and its component scores are captured in assessments.components.
+    # No unique field is lost; a duplicate write was removed.
 
     # ─── EXECUTION POLICY ─────────────────────────────────────────────
     from core.pipeline.execution_policy import compute_execution_policy

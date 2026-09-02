@@ -4,17 +4,14 @@ Offline Query Engine — Read-only analytics over persisted S3 truth data.
 Operates ONLY on immutable persisted datasets. Never accesses live feeds,
 MT5, execution engine, or modifies strategies.
 
-Data Sources (only):
-    s3://trading-bot-data-mk1/trade_truth_graph/
-    s3://trading-bot-data-mk1/edge_attribution/
-    s3://trading-bot-data-mk1/strategy_compiler/
+Data Source (only):
+    logs/trade_journal/  (realised-outcome nodes; the canonical V1 owner)
 
 Standard Queries:
     1. Expectancy (by strategy/pattern/HTF)
     2. Regime Performance
     3. Edge Decay (week-over-week)
-    4. Strategy Stability
-    5. HTF Contribution
+    4. HTF Contribution
 
 Usage:
     from core.offline_query import OfflineQueryEngine
@@ -35,9 +32,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_GRAPH_DIR = "logs/trade_truth_graph"
-_ATTR_DIR = "logs/edge_attribution"
-_COMPILER_DIR = "logs/strategy_compiler"
+_GRAPH_DIR = "logs/trade_journal"  # migrated from retired trade_truth_graph dataset
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -117,6 +112,47 @@ def _completeness_filter(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return valid
 
 
+def _adapt_trade_journal(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Adapt trade_journal records into the graph-node shape this engine expects.
+
+    Migrated from the retired trade_truth_graph dataset (Production V1
+    consolidation). trade_journal is the correct owner of realised outcome +
+    management fields (the old graph nodes never carried r_multiple).
+    """
+    adapted: list[dict[str, Any]] = []
+    for rec in records:
+        entry = rec.get("entry_price")
+        exit_p = rec.get("exit_price")
+        sl = rec.get("initial_sl")
+        direction = rec.get("direction", "")
+        if entry is None or exit_p is None or not sl or not direction:
+            continue
+        risk = abs(float(entry) - float(sl))
+        if risk <= 0:
+            continue
+        if direction.upper() == "BUY":
+            r_mult = (float(exit_p) - float(entry)) / risk
+        else:
+            r_mult = (float(entry) - float(exit_p)) / risk
+        adapted.append({
+            "trade_id": rec.get("trade_id", ""),
+            "symbol": rec.get("symbol", ""),
+            "timestamps": {
+                "entry_time": rec.get("entry_time"),
+                "exit_time": rec.get("exit_time"),
+            },
+            "outcome": {"r_multiple": round(r_mult, 4), "bars_held": rec.get("bars_held", 0)},
+            "strategy_meta": {
+                "strategy": rec.get("strategy", rec.get("pattern_name", "UNKNOWN")),
+                "pattern": rec.get("pattern_name", "UNKNOWN"),
+            },
+            "htf_snapshot": rec.get("htf_snapshot", {}),
+            "edges": {"regime": rec.get("regime", "UNKNOWN")},
+        })
+    return adapted
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # QUERY ENGINE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -128,15 +164,11 @@ class OfflineQueryEngine:
         self,
         *,
         graph_dir: str = _GRAPH_DIR,
-        attr_dir: str = _ATTR_DIR,
-        compiler_dir: str = _COMPILER_DIR,
         symbol: str | None = None,
         date_from: str | None = None,
         date_to: str | None = None,
     ):
         self._graph_dir = graph_dir
-        self._attr_dir = attr_dir
-        self._compiler_dir = compiler_dir
         self._symbol = symbol
         self._date_from = date_from
         self._date_to = date_to
@@ -146,7 +178,9 @@ class OfflineQueryEngine:
         """Lazy-load and cache filtered dataset."""
         if self._nodes is None:
             raw = _load_jsonl_dir(self._graph_dir, self._symbol, self._date_from, self._date_to)
-            self._nodes = _completeness_filter(raw)
+            # Adapt trade_journal records into the graph-node shape (consolidation).
+            adapted = _adapt_trade_journal(raw)
+            self._nodes = _completeness_filter(adapted)
         return self._nodes
 
     @property
@@ -264,58 +298,7 @@ class OfflineQueryEngine:
         return {"metric": "edge_decay", "weeks_compared": weeks, "weekly": weekly_ev, "decay_detected": decay_detected}
 
 
-    # ─── QUERY 4: STRATEGY STABILITY ──────────────────────────────────
-
-    def strategy_stability(self) -> dict[str, Any]:
-        """Compare strategy compiler outputs over time for drift."""
-        compiler_records = _load_jsonl_dir(self._compiler_dir)
-        if not compiler_records:
-            return {"metric": "strategy_stability", "snapshots": 0, "results": {}}
-
-        snapshots = []
-        for rec in compiler_records:
-            config = rec.get("strategy_config", {})
-            report = rec.get("compiler_report", {})
-            if config:
-                snapshots.append({
-                    "timestamp": config.get("generated_at", ""),
-                    "features": config.get("entry_rules", {}).get("required_features", []),
-                    "expected_r": report.get("expected_r", 0),
-                    "removed": report.get("removed_features", []),
-                })
-
-        if len(snapshots) < 2:
-            return {"metric": "strategy_stability", "snapshots": len(snapshots), "results": {"stable": True, "reason": "single_snapshot"}}
-
-        # Feature churn: how many features changed between latest two
-        latest = set(snapshots[-1].get("features", []))
-        previous = set(snapshots[-2].get("features", []))
-        added = latest - previous
-        removed = previous - latest
-        churn = len(added) + len(removed)
-
-        # Performance delta
-        ev_delta = snapshots[-1].get("expected_r", 0) - snapshots[-2].get("expected_r", 0)
-
-        # Similarity
-        overlap = len(latest & previous)
-        total = len(latest | previous) or 1
-        similarity = round(overlap / total, 4)
-
-        return {
-            "metric": "strategy_stability",
-            "snapshots": len(snapshots),
-            "results": {
-                "similarity_score": similarity,
-                "feature_churn": churn,
-                "features_added": list(added),
-                "features_removed": list(removed),
-                "ev_delta": round(ev_delta, 4),
-                "stable": churn <= 2 and abs(ev_delta) < 0.3,
-            },
-        }
-
-    # ─── QUERY 5: HTF CONTRIBUTION ───────────────────────────────────
+    # ─── QUERY 4: HTF CONTRIBUTION ───────────────────────────────────
 
     def htf_contribution(self) -> dict[str, Any]:
         """Compare R when HTF aligned vs not aligned."""
@@ -390,7 +373,6 @@ class OfflineQueryEngine:
             "expectancy_by_session": self.expectancy(group_by="session"),
             "regime_performance": self.regime_performance(),
             "edge_decay": self.edge_decay(weeks=3),
-            "strategy_stability": self.strategy_stability(),
             "htf_contribution": self.htf_contribution(),
         }
 

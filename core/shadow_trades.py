@@ -450,7 +450,7 @@ class ShadowTradeEngine:
         """
         Build a Simulated Trade Lifecycle Record (STR) from a closed shadow trade.
 
-        Schema: shadow_trades_v2 (STR contract)
+        Schema: shadow_trades_v1 (STR contract)
         Contains EXACTLY 4 domains:
             1. IDENTITY — trade identification + correlation
             2. DECISION_SNAPSHOT — pre-trade intent frozen at decision time
@@ -806,9 +806,9 @@ def _s3_append(symbol: str, date_str: str, line: str) -> None:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _emit_close_event(record: dict[str, Any]) -> None:
-    """Emit shadow trade close event. Handles both legacy and v2 schemas."""
+    """Emit shadow trade close event. Reads the V1 STR record shape."""
     try:
-        # v2 schema (shadow_trades_v2)
+        # shadow_trades_v1 STR record (nested identity domain)
         identity = record.get("identity", {})
         sim_outcome = record.get("simulated_outcome", {})
 

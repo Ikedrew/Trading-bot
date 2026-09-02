@@ -12,7 +12,7 @@ Storage:
     Local: logs/opportunities/{SYMBOL}/{YYYY-MM-DD}.jsonl
     S3:    s3://trading-bot-data-mk1/opportunities/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
 
-SCHEMA: opportunities_v2 (V10-enriched; opportunities_v1 is the legacy lifecycle tracker)
+SCHEMA: opportunities_v1 (the V10-enriched opportunity observation record)
 
 This module is PURELY OBSERVATIONAL. It does NOT:
     - Affect trading decisions
@@ -322,3 +322,10 @@ def _write_s3(symbol: str, date_str: str, line: str) -> None:
         )
     except Exception:
         pass  # S3 failure must never affect runtime
+
+
+# NOTE (Production V1 canonical cleanup): the LOCATION_OBSERVATION writer route
+# was removed. It was fed by the retired V2/V3 opportunity observers — a parallel
+# lineage outside the canonical V1 route. The opportunities dataset now carries
+# only its canonical lifecycle/assessment records keyed by observation_id /
+# canonical_opportunity_id.

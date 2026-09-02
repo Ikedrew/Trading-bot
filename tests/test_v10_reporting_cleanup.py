@@ -18,7 +18,7 @@ from core.v10.strategy_family import StrategyDecision, StrategyFamily
 from core.v10.entry_model import EntryDecision, EntryStatus
 from core.v10.risk_model import RiskDecision
 from core.v10.execution_model import ExecutionDecision
-from core.v3_shadow.models import MarketUnderstanding
+from core.market_understanding.models import MarketUnderstanding
 
 
 def _run(symbol="EURUSD"):

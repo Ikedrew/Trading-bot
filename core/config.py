@@ -117,7 +117,8 @@ ENABLE_LEGACY_SHADOW_PIPELINE = False  # When True, old pipeline runs as shadow 
 ENGINE_MODE = "V10"
 
 # --- V10 S3 Production Write Guard ---
-# ALL three conditions must be True for S3 writes to v10-engine bucket.
+# ALL three conditions must be True for S3 writes to the canonical
+# NEW_RUNTIME_S3_BUCKET (trading-bot-v10-data).
 # This prevents tests, replay, development, and accidental scripts from polluting production data.
 LIVE_MODE = True                        # True only in live trading runtime (False in test/replay/dev)
 ALLOW_PRODUCTION_S3_WRITE = True        # Explicit opt-in for production S3 writes
@@ -334,6 +335,17 @@ ENGINE_STATE_WARM_START_ENABLED = True       # When True, persist/restore Engine
 ENGINE_STATE_PERSIST_DIR = "logs/state"      # Directory for state snapshot files
 ENGINE_STATE_MAX_AGE_SECONDS = 86400         # Reject snapshots older than this (24h default)
 CHECKPOINT_INTERVAL_CYCLES = 50              # Persist EngineState every N cycles (0 = disabled)
+
+# --- Open-position excursion (MFE/MAE) durable state ---
+# Per-ticket excursion checkpoint so MFE/MAE survive restarts. Written ONLY when
+# an excursion extreme changes (not per tick). Observational telemetry only.
+POSITION_EXCURSION_DIR = "logs/position_excursion"  # Directory for per-ticket excursion snapshots
+POSITION_EXCURSION_MAX_AGE_SECONDS = 604800  # Reject snapshots older than this (7d default)
+# Mirror the per-ticket excursion checkpoint to S3 so open-position MFE/MAE state
+# survives VM restart / disk loss / instance replacement. Latest-state object per
+# ticket (overwrite, not append). Secondary + non-blocking: S3 failure never
+# affects trading. Defaults to the same switch as the event-stream S3 mirror.
+POSITION_EXCURSION_S3_MIRROR = EVENT_STREAM_S3_MIRROR
 
 # --- Risk coverage validation ---
 STRICT_RISK_COVERAGE = False  # When True, startup fails if any pattern lacks SL/TP rules

@@ -214,7 +214,6 @@ OFFLINE_MODULES = frozenset({
     "core.behaviour_validation",
     "core.offline_query",
     "core.feature_role_contract",
-    "core.audit_persistence",
     "analysis",
     "data_pipeline",
 })

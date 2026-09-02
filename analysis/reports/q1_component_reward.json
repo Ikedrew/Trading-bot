@@ -2,148 +2,246 @@
   "question_id": "Q1",
   "status": "COMPLETE",
   "overall": {
-    "total_decisions": 1189,
-    "matched_outcomes": 237,
-    "best_predictor": "confirmation_pre",
-    "worst_predictor": "pattern_quality",
-    "finding": "Strong predictors: confirmation_pre, bias_stability, bias_alignment. Negative contributors: pattern_quality. (n=237, confidence=HIGH)",
-    "decisions_with_outcome": 237,
-    "join_rate": 0.1993,
+    "total_decisions": 4308,
+    "matched_outcomes": 2431,
+    "best_predictor": "structure_score",
+    "worst_predictor": "location_score",
+    "finding": "Strong predictors: structure_score, h4_alignment. Negative contributors: market_quality, confirmation_pre, chop_clarity. (n=2431, confidence=HIGH)",
+    "decisions_with_outcome": 2431,
+    "join_rate": 0.5643,
     "component_stats": [
       {
-        "name": "confirmation_pre",
-        "sample_size": 237,
-        "win_rate": 0.3797,
-        "avg_r": -0.0145,
-        "avg_r_when_high": 0.1974,
-        "avg_r_when_low": -0.2283,
-        "correlation": 0.1694,
-        "predictive_value": 0.4257
-      },
-      {
-        "name": "bias_stability",
-        "sample_size": 237,
-        "win_rate": 0.3797,
-        "avg_r": -0.0145,
-        "avg_r_when_high": 0.4034,
-        "avg_r_when_low": 0.0364,
-        "correlation": 0.0212,
-        "predictive_value": 0.367
-      },
-      {
-        "name": "bias_alignment",
-        "sample_size": 237,
-        "win_rate": 0.3797,
-        "avg_r": -0.0145,
-        "avg_r_when_high": 0.2782,
-        "avg_r_when_low": -0.0399,
-        "correlation": 0.1721,
-        "predictive_value": 0.3181
-      },
-      {
-        "name": "volatility_quality",
-        "sample_size": 237,
-        "win_rate": 0.3797,
-        "avg_r": -0.0145,
-        "avg_r_when_high": 0.1509,
-        "avg_r_when_low": -0.0958,
-        "correlation": 0.0671,
-        "predictive_value": 0.2467
-      },
-      {
-        "name": "market_quality",
-        "sample_size": 237,
-        "win_rate": 0.3797,
-        "avg_r": -0.0145,
-        "avg_r_when_high": 0.1037,
-        "avg_r_when_low": -0.1318,
-        "correlation": 0.0406,
-        "predictive_value": 0.2356
-      },
-      {
-        "name": "trend_alignment",
-        "sample_size": 237,
-        "win_rate": 0.3797,
-        "avg_r": -0.0145,
-        "avg_r_when_high": 0.0118,
-        "avg_r_when_low": -0.2012,
-        "correlation": 0.0373,
-        "predictive_value": 0.213
-      },
-      {
-        "name": "htf_alignment",
-        "sample_size": 237,
-        "win_rate": 0.3797,
-        "avg_r": -0.0145,
-        "avg_r_when_high": 0.0118,
-        "avg_r_when_low": -0.0742,
-        "correlation": 0.0275,
-        "predictive_value": 0.0859
+        "name": "structure_score",
+        "sample_size": 571,
+        "win_rate": 0.7005,
+        "avg_r": 19.9092,
+        "avg_r_when_high": 36.5604,
+        "avg_r_when_low": 3.1996,
+        "correlation": 0.0531,
+        "predictive_value": 33.3608
       },
       {
         "name": "h4_alignment",
-        "sample_size": 237,
-        "win_rate": 0.3797,
-        "avg_r": -0.0145,
-        "avg_r_when_high": -0.0877,
-        "avg_r_when_low": -0.052,
-        "correlation": 0.0083,
-        "predictive_value": -0.0357
+        "sample_size": 1860,
+        "win_rate": 0.4242,
+        "avg_r": 0.3082,
+        "avg_r_when_high": 0.6615,
+        "avg_r_when_low": -0.028,
+        "correlation": 0.0226,
+        "predictive_value": 0.6895
       },
       {
-        "name": "chop_clarity",
-        "sample_size": 237,
-        "win_rate": 0.3797,
-        "avg_r": -0.0145,
-        "avg_r_when_high": -0.061,
-        "avg_r_when_low": 0.0323,
-        "correlation": -0.008,
-        "predictive_value": -0.0932
+        "name": "volatility_quality",
+        "sample_size": 1860,
+        "win_rate": 0.4242,
+        "avg_r": 0.3082,
+        "avg_r_when_high": -0.0069,
+        "avg_r_when_low": -0.0291,
+        "correlation": 0.0006,
+        "predictive_value": 0.0222
       },
       {
         "name": "pattern_quality",
-        "sample_size": 237,
-        "win_rate": 0.3797,
-        "avg_r": -0.0145,
-        "avg_r_when_high": 0.0211,
-        "avg_r_when_low": 0.2043,
-        "correlation": 0.0107,
-        "predictive_value": -0.1832
+        "sample_size": 1860,
+        "win_rate": 0.4242,
+        "avg_r": 0.3082,
+        "avg_r_when_high": -0.0523,
+        "avg_r_when_low": -0.0548,
+        "correlation": -0.0105,
+        "predictive_value": 0.0025
+      },
+      {
+        "name": "trend_alignment",
+        "sample_size": 1860,
+        "win_rate": 0.4242,
+        "avg_r": 0.3082,
+        "avg_r_when_high": -0.0411,
+        "avg_r_when_low": -0.0382,
+        "correlation": -0.0064,
+        "predictive_value": -0.0029
+      },
+      {
+        "name": "market_quality",
+        "sample_size": 1860,
+        "win_rate": 0.4242,
+        "avg_r": 0.3082,
+        "avg_r_when_high": 0.0071,
+        "avg_r_when_low": 0.6092,
+        "correlation": -0.0205,
+        "predictive_value": -0.6021
+      },
+      {
+        "name": "confirmation_pre",
+        "sample_size": 1860,
+        "win_rate": 0.4242,
+        "avg_r": 0.3082,
+        "avg_r_when_high": 0.0061,
+        "avg_r_when_low": 0.6102,
+        "correlation": -0.0456,
+        "predictive_value": -0.6041
+      },
+      {
+        "name": "chop_clarity",
+        "sample_size": 1860,
+        "win_rate": 0.4242,
+        "avg_r": 0.3082,
+        "avg_r_when_high": 0.0027,
+        "avg_r_when_low": 0.6137,
+        "correlation": -0.0146,
+        "predictive_value": -0.6109
+      },
+      {
+        "name": "bias_alignment",
+        "sample_size": 1860,
+        "win_rate": 0.4242,
+        "avg_r": 0.3082,
+        "avg_r_when_high": 0.0448,
+        "avg_r_when_low": 0.723,
+        "correlation": -0.016,
+        "predictive_value": -0.6782
+      },
+      {
+        "name": "bias_stability",
+        "sample_size": 1860,
+        "win_rate": 0.4242,
+        "avg_r": 0.3082,
+        "avg_r_when_high": -0.034,
+        "avg_r_when_low": 0.6652,
+        "correlation": -0.0207,
+        "predictive_value": -0.6992
+      },
+      {
+        "name": "formation_score",
+        "sample_size": 571,
+        "win_rate": 0.7005,
+        "avg_r": 19.9092,
+        "avg_r_when_high": 0.2666,
+        "avg_r_when_low": 1.0971,
+        "correlation": -0.0156,
+        "predictive_value": -0.8306
+      },
+      {
+        "name": "behaviour_score",
+        "sample_size": 571,
+        "win_rate": 0.7005,
+        "avg_r": 19.9092,
+        "avg_r_when_high": 0.6963,
+        "avg_r_when_low": 1.7819,
+        "correlation": 0.0363,
+        "predictive_value": -1.0857
+      },
+      {
+        "name": "htf_alignment",
+        "sample_size": 1860,
+        "win_rate": 0.4242,
+        "avg_r": 0.3082,
+        "avg_r_when_high": -0.0411,
+        "avg_r_when_low": 1.1061,
+        "correlation": -0.0161,
+        "predictive_value": -1.1471
+      },
+      {
+        "name": "location_score",
+        "sample_size": 571,
+        "win_rate": 0.7005,
+        "avg_r": 19.9092,
+        "avg_r_when_high": 0.7705,
+        "avg_r_when_low": 11.3593,
+        "correlation": -0.0175,
+        "predictive_value": -10.5888
       }
     ],
     "negative_contributors": [
       {
-        "name": "h4_alignment",
-        "avg_r_when_high": -0.0877,
-        "avg_r_when_low": -0.052,
-        "predictive_value": -0.0357,
-        "sample_size": 237
+        "name": "trend_alignment",
+        "avg_r_when_high": -0.0411,
+        "avg_r_when_low": -0.0382,
+        "predictive_value": -0.0029,
+        "sample_size": 1860
+      },
+      {
+        "name": "market_quality",
+        "avg_r_when_high": 0.0071,
+        "avg_r_when_low": 0.6092,
+        "predictive_value": -0.6021,
+        "sample_size": 1860
+      },
+      {
+        "name": "confirmation_pre",
+        "avg_r_when_high": 0.0061,
+        "avg_r_when_low": 0.6102,
+        "predictive_value": -0.6041,
+        "sample_size": 1860
       },
       {
         "name": "chop_clarity",
-        "avg_r_when_high": -0.061,
-        "avg_r_when_low": 0.0323,
-        "predictive_value": -0.0932,
-        "sample_size": 237
+        "avg_r_when_high": 0.0027,
+        "avg_r_when_low": 0.6137,
+        "predictive_value": -0.6109,
+        "sample_size": 1860
       },
       {
-        "name": "pattern_quality",
-        "avg_r_when_high": 0.0211,
-        "avg_r_when_low": 0.2043,
-        "predictive_value": -0.1832,
-        "sample_size": 237
+        "name": "bias_alignment",
+        "avg_r_when_high": 0.0448,
+        "avg_r_when_low": 0.723,
+        "predictive_value": -0.6782,
+        "sample_size": 1860
+      },
+      {
+        "name": "bias_stability",
+        "avg_r_when_high": -0.034,
+        "avg_r_when_low": 0.6652,
+        "predictive_value": -0.6992,
+        "sample_size": 1860
+      },
+      {
+        "name": "formation_score",
+        "avg_r_when_high": 0.2666,
+        "avg_r_when_low": 1.0971,
+        "predictive_value": -0.8306,
+        "sample_size": 571
+      },
+      {
+        "name": "behaviour_score",
+        "avg_r_when_high": 0.6963,
+        "avg_r_when_low": 1.7819,
+        "predictive_value": -1.0857,
+        "sample_size": 571
+      },
+      {
+        "name": "htf_alignment",
+        "avg_r_when_high": -0.0411,
+        "avg_r_when_low": 1.1061,
+        "predictive_value": -1.1471,
+        "sample_size": 1860
+      },
+      {
+        "name": "location_score",
+        "avg_r_when_high": 0.7705,
+        "avg_r_when_low": 11.3593,
+        "predictive_value": -10.5888,
+        "sample_size": 571
       }
     ],
     "interactions": [
+      {
+        "label": "Bias only (high)",
+        "components": [
+          "bias_alignment"
+        ],
+        "sample_size": 797,
+        "win_rate": 0.4404,
+        "avg_r": 0.0448
+      },
       {
         "label": "Bias + Trend aligned",
         "components": [
           "bias_alignment",
           "trend_alignment"
         ],
-        "sample_size": 29,
-        "win_rate": 0.4828,
-        "avg_r": 0.3927
+        "sample_size": 299,
+        "win_rate": 0.4381,
+        "avg_r": 0.0137
       },
       {
         "label": "Bias + HTF aligned",
@@ -151,18 +249,27 @@
           "bias_alignment",
           "htf_alignment"
         ],
-        "sample_size": 29,
-        "win_rate": 0.4828,
-        "avg_r": 0.3927
+        "sample_size": 299,
+        "win_rate": 0.4381,
+        "avg_r": 0.0137
       },
       {
-        "label": "Bias only (high)",
+        "label": "HTF only (high)",
         "components": [
-          "bias_alignment"
+          "htf_alignment"
         ],
-        "sample_size": 76,
-        "win_rate": 0.4079,
-        "avg_r": 0.2782
+        "sample_size": 777,
+        "win_rate": 0.4131,
+        "avg_r": -0.0411
+      },
+      {
+        "label": "Trend only (high)",
+        "components": [
+          "trend_alignment"
+        ],
+        "sample_size": 777,
+        "win_rate": 0.4131,
+        "avg_r": -0.0411
       },
       {
         "label": "Pattern + Confirmation",
@@ -170,27 +277,9 @@
           "pattern_quality",
           "confirmation_pre"
         ],
-        "sample_size": 42,
-        "win_rate": 0.4762,
-        "avg_r": 0.0454
-      },
-      {
-        "label": "HTF only (high)",
-        "components": [
-          "htf_alignment"
-        ],
-        "sample_size": 96,
-        "win_rate": 0.4375,
-        "avg_r": 0.0118
-      },
-      {
-        "label": "Trend only (high)",
-        "components": [
-          "trend_alignment"
-        ],
-        "sample_size": 96,
-        "win_rate": 0.4375,
-        "avg_r": 0.0118
+        "sample_size": 304,
+        "win_rate": 0.4178,
+        "avg_r": -0.0609
       },
       {
         "label": "Volatility + Trend",
@@ -198,9 +287,9 @@
           "volatility_quality",
           "trend_alignment"
         ],
-        "sample_size": 52,
-        "win_rate": 0.3846,
-        "avg_r": 0.0043
+        "sample_size": 479,
+        "win_rate": 0.4092,
+        "avg_r": -0.0701
       },
       {
         "label": "HTF + H4 aligned",
@@ -208,31 +297,34 @@
           "htf_alignment",
           "h4_alignment"
         ],
-        "sample_size": 15,
-        "win_rate": 0.1333,
-        "avg_r": -0.2381
+        "sample_size": 38,
+        "win_rate": 0.3947,
+        "avg_r": -0.1181
       }
     ],
-    "conclusion": "Strong predictors: confirmation_pre, bias_stability, bias_alignment. Negative contributors: pattern_quality. (n=237, confidence=HIGH)",
+    "conclusion": "Strong predictors: structure_score, h4_alignment. Negative contributors: market_quality, confirmation_pre, chop_clarity. (n=2431, confidence=HIGH)",
     "confidence": "HIGH"
   },
   "confidence": "HIGH",
   "dataset": {
     "source": "decision_trace + shadow_trades",
-    "sample_size": 237
+    "sample_size": 2431
   },
   "fingerprint": {
-    "dataset_id": "decision_trace+shadow_trades_2026-07-27",
-    "records_used": 237,
-    "records_excluded": 952,
+    "dataset_id": "decision_trace+shadow_trades_2026-09-02",
+    "records_used": 2431,
+    "records_excluded": 1877,
     "source": "decision_trace+shadow_trades",
+    "epoch": "CURRENT",
+    "architecture_version": "new_pipeline_v1.2",
     "validation_score": "UNKNOWN",
-    "generated": "2026-07-27"
+    "generated": "2026-09-02"
   },
   "recommendation": "WEIGHT_ADJUSTMENT",
   "assumptions": [],
   "warnings": [],
-  "generated": "2026-07-27T04:26:00Z",
+  "epoch": "CURRENT",
+  "generated": "2026-09-02T03:01:19Z",
   "provenance": {
     "experiment_module": "research_engine.experiments.component_reward",
     "registry_id": "Q1",

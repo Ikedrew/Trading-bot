@@ -121,3 +121,21 @@ def update_mfe_extreme(side: Side, bid: float, ask: float, current: float) -> fl
     if side is Side.BUY:
         return max(current, bid)
     return min(current, ask)
+
+
+def update_mae_extreme(side: Side, bid: float, ask: float, current: float | None) -> float:
+    """Track the worst ADVERSE excursion price, symmetric with update_mfe_extreme.
+
+    Observational only — never used for exit/stop/close decisions.
+
+    Uses the SAME per-side tick price as the MFE tracker so favourable and
+    adverse excursions are directly comparable:
+        BUY  favourable = highest bid  → adverse = lowest bid
+        SELL favourable = lowest ask   → adverse = highest ask
+
+    ``current`` is None when no adverse observation exists yet (unknown state);
+    the first observation seeds it. Never fabricates a value.
+    """
+    if side is Side.BUY:
+        return bid if current is None else min(current, bid)
+    return ask if current is None else max(current, ask)

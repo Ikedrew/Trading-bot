@@ -227,7 +227,7 @@ OWNERSHIP_REGISTRY = {
     "live/opportunity": {"owner": "logs/opportunities", "grain": "canonical_opportunity_id (state upserts)"},
     "live/decision": {
         "owner": "logs/decision_ledger (spine) + logs/decision_trace (stage detail) "
-                 "+ logs/decision_audit (gate flags) + logs/assessments (EV block)",
+                 "+ logs/assessments (EV block)",
         "grain": "symbol x cycle",
     },
     "live/execution": {

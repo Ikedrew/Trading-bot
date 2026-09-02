@@ -230,17 +230,9 @@ class TestMissingCorrelationRule:
 # TEST: TRADE TRUTH GRAPH PROPAGATION
 # -------------------------------------------------------------------------------
 
-class TestGraphPropagation:
-    def test_graph_node_includes_correlation_id(self):
-        from core.trade_truth_graph import build_graph_node
-
-        node = build_graph_node(
-            trade_id="G1",
-            correlation_id="COR-20260704-100-EURUSD-ABCD",
-            symbol="EURUSD",
-            cycle_id=100,
-        )
-        assert node["correlation_id"] == "COR-20260704-100-EURUSD-ABCD"
+# TestGraphPropagation removed — the trade_truth_graph dataset was retired in the
+# Production V1 consolidation. correlation_id propagation is still covered by the
+# trade_truth / trade_journal / decision_trace correlation tests.
 
 
 # -------------------------------------------------------------------------------

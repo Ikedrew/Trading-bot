@@ -183,14 +183,14 @@ def _extract_correlation_id(record: dict[str, Any]) -> str:
 
 
 def _extract_r_multiple(record: dict[str, Any]) -> float | None:
-    """Extract R-multiple from shadow trade (handles both schema versions)."""
-    # shadow_trades_v2 (current)
+    """Extract R-multiple from a shadow trade or trade_truth record."""
+    # shadow_trades_v1 (simulated_outcome block)
     simulated = record.get("simulated_outcome", {})
     if isinstance(simulated, dict):
         r = simulated.get("pnl_r_multiple")
         if r is not None:
             return float(r)
-    # trade_truth_v2 (older)
+    # trade_truth_v1 (outcome block)
     outcome = record.get("outcome", {})
     if isinstance(outcome, dict):
         r = outcome.get("r_multiple") or outcome.get("pnl_r_multiple")
