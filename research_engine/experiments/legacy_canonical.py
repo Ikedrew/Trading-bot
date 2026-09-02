@@ -17,12 +17,12 @@ This module is PURELY RESEARCH. It does NOT modify trading logic.
 
 from __future__ import annotations
 
-import json
 import statistics
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
+from research_engine.data_access.s3_source import get_default_source
 from research_engine.experiments.experiment_base import (
     ReadinessStatus,
     build_fingerprint,
@@ -32,12 +32,13 @@ from research_engine.experiments.experiment_base import (
     extract_r_multiples,
 )
 
-_TRACE_DIR = Path("logs/decision_trace")
-_SHADOW_DIR = Path("logs/research_shadow_trades")
-_SHADOW_DIR2 = Path("logs/shadow_trades")
-_TRUTH_DIR = Path("logs/trade_truth")
-_LEDGER_DIR = Path("logs/decision_ledger")
-_EXEC_DIR = Path("logs/execution_context")
+# Production-contract dataset names read via the shared S3 data-access layer.
+_TRACE_DATASET = "decision_trace"
+_SHADOW_DATASET = "research_shadow_trades"
+_SHADOW_DATASET2 = "shadow_trades"
+_TRUTH_DATASET = "trade_truth"
+_LEDGER_DATASET = "decision_ledger"
+_EXEC_DATASET = "execution_context"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -45,23 +46,14 @@ _EXEC_DIR = Path("logs/execution_context")
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def _load_jsonl(directory: Path) -> list[dict]:
-    records = []
-    if not directory.exists():
-        return records
-    for f in sorted(directory.rglob("*.jsonl")):
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                try:
-                    records.append(json.loads(line))
-                except Exception:
-                    pass
-    return records
+def _load_jsonl(dataset: str) -> list[dict]:
+    """Read a production dataset from S3 via the shared data-access layer."""
+    return get_default_source().read_dataset(dataset)
 
 
 def _shadow_outcomes() -> list[dict]:
     outcomes = []
-    for d in [_SHADOW_DIR, _SHADOW_DIR2]:
+    for d in [_SHADOW_DATASET, _SHADOW_DATASET2]:
         for rec in _load_jsonl(d):
             o = rec.get("simulated_outcome", {})
             ds = rec.get("decision_snapshot", {})
@@ -96,7 +88,7 @@ def _provenance(qid: str, func: str) -> dict:
 
 def run_q03() -> dict[str, Any]:
     """Q3/D5: Missed opportunity cost."""
-    traces = _load_jsonl(_TRACE_DIR)
+    traces = _load_jsonl(_TRACE_DATASET)
     rejected = [t for t in traces if t.get("action") == "NO_TRADE" and t.get("terminal_stage")]
     n = len(rejected)
 
@@ -120,7 +112,7 @@ def run_q03() -> dict[str, Any]:
 
 def run_q06() -> dict[str, Any]:
     """Q6/M1: Regime accuracy."""
-    traces = _load_jsonl(_TRACE_DIR)
+    traces = _load_jsonl(_TRACE_DATASET)
     shadows = _shadow_outcomes()
     regimes = Counter(t.get("regime") for t in traces if t.get("regime"))
     n = len(shadows)
@@ -156,7 +148,7 @@ def run_q07() -> dict[str, Any]:
 
 def run_q08() -> dict[str, Any]:
     """Q8: HTF alignment value."""
-    traces = _load_jsonl(_TRACE_DIR)
+    traces = _load_jsonl(_TRACE_DATASET)
     htf_vals = [t.get("htf_alignment", 0.5) for t in traces if t.get("htf_alignment") is not None]
     h4_vals = [t.get("h4_alignment", 0) for t in traces if t.get("h4_alignment") is not None]
     n = len(htf_vals)
@@ -171,7 +163,7 @@ def run_q08() -> dict[str, Any]:
 
 def run_q09() -> dict[str, Any]:
     """Q9/X3: Spread/fill quality."""
-    exec_data = _load_jsonl(_EXEC_DIR)
+    exec_data = _load_jsonl(_EXEC_DATASET)
     n = len(exec_data)
     if not exec_data:
         return build_report(question_id="Q9", status=ReadinessStatus.BLOCKED,
@@ -188,8 +180,8 @@ def run_q09() -> dict[str, Any]:
 
 def run_q10() -> dict[str, Any]:
     """Q10/R1/R2: Guard efficacy."""
-    traces = _load_jsonl(_TRACE_DIR)
-    ledger = _load_jsonl(_LEDGER_DIR)
+    traces = _load_jsonl(_TRACE_DATASET)
+    ledger = _load_jsonl(_LEDGER_DATASET)
     risk_blocks = [r for r in ledger if r.get("decision") == "RISK_BLOCK" or "RISK_BLOCK" in str(r.get("decision", ""))]
     n = len(risk_blocks)
 
@@ -202,7 +194,7 @@ def run_q10() -> dict[str, Any]:
 
 def run_q11() -> dict[str, Any]:
     """Q11/X1: Slippage model."""
-    truth = _load_jsonl(_TRUTH_DIR)
+    truth = _load_jsonl(_TRUTH_DATASET)
     n = len(truth)
     if not truth:
         return build_report(question_id="Q11", status=ReadinessStatus.BLOCKED,
@@ -219,7 +211,7 @@ def run_q11() -> dict[str, Any]:
 
 def run_q12() -> dict[str, Any]:
     """Q12/X2: Broker reliability."""
-    truth = _load_jsonl(_TRUTH_DIR)
+    truth = _load_jsonl(_TRUTH_DATASET)
     n = len(truth)
     if not truth:
         return build_report(question_id="Q12", status=ReadinessStatus.BLOCKED,
@@ -236,7 +228,7 @@ def run_q12() -> dict[str, Any]:
 
 def run_q14() -> dict[str, Any]:
     """Q14: Causal chains."""
-    traces = _load_jsonl(_TRACE_DIR)
+    traces = _load_jsonl(_TRACE_DATASET)
     executes = [t for t in traces if t.get("action") == "EXECUTE"]
     n = len(executes)
 
@@ -262,7 +254,7 @@ def run_q15() -> dict[str, Any]:
 
 def run_q17() -> dict[str, Any]:
     """Q17/L4: Drawdown precursors."""
-    truth = _load_jsonl(_TRUTH_DIR)
+    truth = _load_jsonl(_TRUTH_DATASET)
     n = len(truth)
     if not truth:
         return build_report(question_id="Q17", status=ReadinessStatus.BLOCKED,
@@ -284,7 +276,7 @@ def run_q17() -> dict[str, Any]:
 
 def run_q02() -> dict[str, Any]:
     """Q2/D4: Regime-adaptive threshold."""
-    traces = _load_jsonl(_TRACE_DIR)
+    traces = _load_jsonl(_TRACE_DATASET)
     shadows = _shadow_outcomes()
     n = len(shadows)
 
@@ -313,7 +305,7 @@ def run_q02() -> dict[str, Any]:
 
 def run_q04() -> dict[str, Any]:
     """Q4/D2: Confidence calibration."""
-    traces = _load_jsonl(_TRACE_DIR)
+    traces = _load_jsonl(_TRACE_DATASET)
     shadows = _shadow_outcomes()
     n = len(shadows)
     with_p = [t for t in traces if t.get("p_success") is not None]
@@ -453,7 +445,7 @@ def run_q22() -> dict[str, Any]:
 
 def run_q23() -> dict[str, Any]:
     """Q23: Regime edge."""
-    traces = _load_jsonl(_TRACE_DIR)
+    traces = _load_jsonl(_TRACE_DATASET)
     post = [t for t in traces if t.get("regime_source") == "H4_MARKET_CONTEXT"]
     regimes = Counter(t.get("regime") for t in post)
     n = len(post)
@@ -468,7 +460,7 @@ def run_q23() -> dict[str, Any]:
 
 def run_q24() -> dict[str, Any]:
     """Q24/E3/S1: Strategy edge."""
-    traces = _load_jsonl(_TRACE_DIR)
+    traces = _load_jsonl(_TRACE_DATASET)
     strategies = Counter(t.get("selected_strategy") or "None" for t in traces if t.get("score_neutral", 0) > 0)
     n = sum(strategies.values())
 

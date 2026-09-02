@@ -76,7 +76,9 @@ class ResearchSegmenter:
     @property
     def events(self) -> list[dict]:
         if self._events is None:
-            self._events = _load_jsonl(self._universe_file)
+            # S3 is authoritative; local override ignored.
+            from research_engine.data_access.s3_source import get_default_source
+            self._events = get_default_source().read_artifact("research_universe")
         return self._events
 
     def filter(
@@ -296,19 +298,6 @@ def _filter_score(events: list[dict], bucket: str) -> list[dict]:
 # ═══════════════════════════════════════════════════════════════
 # HELPERS
 # ═══════════════════════════════════════════════════════════════
-
-def _load_jsonl(path: Path) -> list[dict]:
-    if not path.exists():
-        return []
-    events = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            try:
-                events.append(json.loads(line))
-            except json.JSONDecodeError:
-                pass
-    return events
-
 
 def _write_jsonl(path: Path, events: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -56,7 +56,7 @@ from research_engine.v10.universes.models import Population, Universe
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_DIR = Path("logs/shadow_trades")
+_DATASET = "shadow_trades"
 
 # Valid trade_id prefixes for production shadow records
 _VALID_PREFIXES = ("hshadow_", "shadow_")
@@ -79,9 +79,9 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
         - Records from all Horizon shadow horizons
     """
 
-    def __init__(self, source_dir: Path | str | None = None):
+    def __init__(self, symbol: str | None = None):
         super().__init__()
-        self._source_dir = Path(source_dir) if source_dir else _DEFAULT_DIR
+        self._symbol = symbol
         self._raw: list[dict[str, Any]] = []
 
     @property
@@ -89,10 +89,10 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
         return Universe.SHADOW_OUTCOME
 
     def load(self) -> int:
-        self._raw = self._load_jsonl_directory(self._source_dir)
+        self._raw = self._load_dataset(_DATASET, symbol=self._symbol)
         logger.info(
             f"[SHADOW_OUTCOME] Loaded {len(self._raw)} raw shadow records "
-            f"from {self._source_dir}"
+            f"from S3 dataset '{_DATASET}'"
         )
         return len(self._raw)
 
@@ -152,13 +152,11 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
         self._records = records
         self._built = True
 
-        source_files = tuple(
-            str(p) for p in sorted(self._source_dir.rglob("*.jsonl"))
-        ) if self._source_dir.exists() else ()
+        source_files = (f"s3:{_DATASET}",)
 
         self._metadata = self._generate_metadata(
             records=records,
-            source_files=source_files[:5] + ("...",) if len(source_files) > 5 else source_files,
+            source_files=source_files,
             populations=(
                 Population.ALL_SHADOW_OUTCOMES.value,
                 Population.SHADOW_WINS.value,

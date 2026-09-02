@@ -1,11 +1,14 @@
 """Tests for V10 Baseline Snapshot System."""
 import json
+import os
 import sys
 from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _s3_fake import install_fake_s3, reset_fake_s3
 
 from research_engine.v10.baselines import (
     BaselineSnapshot, SnapshotBuilder, SnapshotRegistry, compare_snapshots,
@@ -58,10 +61,14 @@ class TestSnapshotModel:
 
 class TestConfiguration:
     def test_configuration_captured(self):
-        builder = SnapshotBuilder(universe_file="nonexistent.jsonl")
-        snapshot = builder.build()
-        # Should have configuration block (may be MISSING if config not importable)
-        assert "configuration" in snapshot.to_dict()
+        install_fake_s3()  # empty S3 — universe absent is fine for this check
+        try:
+            builder = SnapshotBuilder()
+            snapshot = builder.build()
+            # Should have configuration block (may be MISSING if config not importable)
+            assert "configuration" in snapshot.to_dict()
+        finally:
+            reset_fake_s3()
 
     def test_missing_config_reported(self):
         """Missing configuration should report status, not crash."""
@@ -78,9 +85,8 @@ class TestConfiguration:
 
 class TestPerformance:
     def test_metrics_from_universe(self):
-        universe = Path("data/research/research_universe.jsonl")
-        if not universe.exists():
-            pytest.skip("Research Universe not available")
+        if os.environ.get("RESEARCH_LIVE_S3_TESTS") != "1":
+            pytest.skip("live S3 test — set RESEARCH_LIVE_S3_TESTS=1 to run")
         builder = SnapshotBuilder()
         snapshot = builder.build()
         perf = snapshot.performance_metrics
@@ -90,18 +96,16 @@ class TestPerformance:
         assert "net_realised_pnl" in perf
 
     def test_canonical_pnl_used(self):
-        universe = Path("data/research/research_universe.jsonl")
-        if not universe.exists():
-            pytest.skip("Research Universe not available")
+        if os.environ.get("RESEARCH_LIVE_S3_TESTS") != "1":
+            pytest.skip("live S3 test — set RESEARCH_LIVE_S3_TESTS=1 to run")
         builder = SnapshotBuilder()
         snapshot = builder.build()
         # net_realised_pnl should match governance-validated canonical PnL
         assert snapshot.performance_metrics["net_realised_pnl"] != 0
 
     def test_governance_definitions_reused(self):
-        universe = Path("data/research/research_universe.jsonl")
-        if not universe.exists():
-            pytest.skip("Research Universe not available")
+        if os.environ.get("RESEARCH_LIVE_S3_TESTS") != "1":
+            pytest.skip("live S3 test — set RESEARCH_LIVE_S3_TESTS=1 to run")
         builder = SnapshotBuilder()
         snapshot = builder.build()
         # Uses compute_metrics from base.py
@@ -114,9 +118,8 @@ class TestPerformance:
 
 class TestDatasetIdentity:
     def test_metadata_stored(self):
-        universe = Path("data/research/research_universe.jsonl")
-        if not universe.exists():
-            pytest.skip("Research Universe not available")
+        if os.environ.get("RESEARCH_LIVE_S3_TESTS") != "1":
+            pytest.skip("live S3 test — set RESEARCH_LIVE_S3_TESTS=1 to run")
         builder = SnapshotBuilder()
         snapshot = builder.build()
         ds = snapshot.dataset_metadata
@@ -125,22 +128,34 @@ class TestDatasetIdentity:
         assert ds["records"] == 94
 
     def test_hash_generated(self):
-        universe = Path("data/research/research_universe.jsonl")
-        if not universe.exists():
-            pytest.skip("Research Universe not available")
+        if os.environ.get("RESEARCH_LIVE_S3_TESTS") != "1":
+            pytest.skip("live S3 test — set RESEARCH_LIVE_S3_TESTS=1 to run")
         builder = SnapshotBuilder()
         snapshot = builder.build()
         assert len(snapshot.dataset_metadata["hash"]) > 0
 
-    def test_hash_changes_detected(self, tmp_path):
-        # Two different files should have different hashes
-        f1 = tmp_path / "u1.jsonl"
-        f1.write_text('{"trade_id": "1"}\n', encoding="utf-8")
-        f2 = tmp_path / "u2.jsonl"
-        f2.write_text('{"trade_id": "2"}\n', encoding="utf-8")
+    def test_hash_changes_detected(self):
+        # Two DIFFERENT research_universe artifact contents → different hashes.
+        # dataset_metadata no longer carries file_size_bytes/last_modified (S3
+        # artifact has no local file identity); only dataset/records/hash exist.
+        fake1 = install_fake_s3()
+        fake1.add_artifact("research_universe", [{"trade_id": "1"}])
+        try:
+            b1 = SnapshotBuilder().build()
+        finally:
+            reset_fake_s3()
 
-        b1 = SnapshotBuilder(universe_file=str(f1)).build()
-        b2 = SnapshotBuilder(universe_file=str(f2)).build()
+        fake2 = install_fake_s3()
+        fake2.add_artifact("research_universe", [{"trade_id": "2"}])
+        try:
+            b2 = SnapshotBuilder().build()
+        finally:
+            reset_fake_s3()
+
+        assert b1.dataset_metadata["dataset"] == "research_universe"
+        assert b2.dataset_metadata["dataset"] == "research_universe"
+        assert b1.dataset_metadata["records"] == 1
+        assert b2.dataset_metadata["records"] == 1
         assert b1.dataset_metadata["hash"] != b2.dataset_metadata["hash"]
 
 

@@ -1,78 +1,38 @@
 """
-Data Access Layer — Read-only loaders for existing persistence layers.
+Data Access Layer — Read-only dataset loaders for the Research Engine.
 
-Reads JSONL files from the logs/ directory. Never writes. Never modifies source data.
-Handles missing files and schema mismatches gracefully.
+SOURCE OF TRUTH: S3 (via the shared S3ResearchDataSource). These loaders do NOT
+read production source data from local ``logs/``. Local logs remain only for
+live-runtime persistence/debugging and are not a research source.
+
+Each loader asks the shared layer for a logical dataset by its production-contract
+name; the shared layer owns bucket/prefix/schema resolution, pagination, symbol
+and date pruning, JSONL decoding, deterministic ordering, run-level caching, and
+explicit missing/failed-read semantics (a missing dataset returns an empty list;
+an S3 error raises ResearchDataSourceError — never a silent local fallback).
+
+Public function signatures are unchanged from the pre-migration local loaders so
+existing callers (main.py, shadow_ev, edge_candidates, edge_attribution, tests)
+keep working — only the SOURCE changed from logs/ to S3.
 """
 
 from __future__ import annotations
 
-import json
 import logging
-import os
-from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
+
+from research_engine.data_access.s3_source import get_default_source
 
 logger = logging.getLogger(__name__)
 
-# Default persistence root (relative to project root)
-_DEFAULT_LOGS_DIR = "logs"
 
-
-def _get_logs_dir() -> Path:
-    """Resolve the logs directory path."""
-    # Walk up from this file to find project root
-    here = Path(__file__).resolve().parent.parent.parent
-    return here / _DEFAULT_LOGS_DIR
-
-
-def _iter_jsonl_files(subdir: str, symbol: str | None = None) -> Iterator[Path]:
-    """Iterate over JSONL files in a persistence subdirectory."""
-    base = _get_logs_dir() / subdir
-    if not base.exists():
-        logger.warning("[RESEARCH_LOADER] directory not found: %s", base)
-        return
-
-    if symbol:
-        # Symbol-partitioned: logs/{subdir}/{SYMBOL}/*.jsonl
-        sym_dir = base / symbol
-        if sym_dir.exists():
-            for f in sorted(sym_dir.glob("*.jsonl")):
-                yield f
-    else:
-        # Date-partitioned: logs/{subdir}/*.jsonl or logs/{subdir}/{SYM}/*.jsonl
-        # Try flat first
-        flat_files = sorted(base.glob("*.jsonl"))
-        if flat_files:
-            yield from flat_files
-        else:
-            # Try symbol subdirectories
-            for sym_dir in sorted(base.iterdir()):
-                if sym_dir.is_dir():
-                    for f in sorted(sym_dir.glob("*.jsonl")):
-                        yield f
-
-
-def _load_jsonl(path: Path) -> list[dict[str, Any]]:
-    """Load all records from a single JSONL file."""
-    records = []
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line_num, line in enumerate(f, 1):
-                stripped = line.strip()
-                if not stripped:
-                    continue
-                try:
-                    records.append(json.loads(stripped))
-                except json.JSONDecodeError as e:
-                    logger.debug("[RESEARCH_LOADER] %s:%d parse error: %s", path.name, line_num, e)
-    except Exception as e:
-        logger.warning("[RESEARCH_LOADER] failed to read %s: %s", path, e)
-    return records
+def _read(dataset: str, symbol: str | None = None, **kwargs: Any) -> list[dict[str, Any]]:
+    """Read a dataset from the shared S3 source (run-scoped, cached)."""
+    return get_default_source().read_dataset(dataset, symbol=symbol, **kwargs)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# PUBLIC LOADERS
+# PUBLIC LOADERS  (dataset source = S3, resolved via production data contract)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -80,48 +40,42 @@ def load_shadow_trades(symbol: str | None = None, *, outcomes_only: bool = True)
     """
     Load shadow trade records.
 
-    Source: logs/shadow_trades/{SYMBOL}/{DATE}.jsonl
+    Source: S3 dataset ``shadow_trades`` (supporting/shadow_trades).
     Key fields: trade_id, correlation_id, canonical_opportunity_id, symbol,
                 pnl_r_multiple, exit_reason, bars_held, mfe_r, mae_r,
                 direction, entry_price, stop_loss, take_profit
 
-    Remediation Stage 8: lifecycle OPEN events are NEVER completed outcomes.
-    With ``outcomes_only=True`` (default) records carrying ``event_type=="OPEN""
-    are excluded. Historical records without ``event_type`` are CLOSE/outcome
-    records and always included.
+    lifecycle OPEN events are NEVER completed outcomes. With
+    ``outcomes_only=True`` (default) records carrying ``event_type=="OPEN"`` are
+    excluded. Historical records without ``event_type`` are CLOSE/outcome records
+    and always included.
     """
-    records = []
+    loaded = _read("shadow_trades", symbol)
     skipped_open = 0
-    for path in _iter_jsonl_files("shadow_trades", symbol):
-        loaded = _load_jsonl(path)
-        if outcomes_only:
-            kept = []
-            for rec in loaded:
-                if rec.get("event_type") == "OPEN":
-                    skipped_open += 1
-                    continue
-                kept.append(rec)
-            records.extend(kept)
-        else:
-            records.extend(loaded)
+    if outcomes_only:
+        kept = []
+        for rec in loaded:
+            if rec.get("event_type") == "OPEN":
+                skipped_open += 1
+                continue
+            kept.append(rec)
+        loaded = kept
     logger.info(
         "[RESEARCH_LOADER] loaded %d shadow trade records (excluded %d OPEN events)",
-        len(records), skipped_open,
+        len(loaded), skipped_open,
     )
-    return records
+    return loaded
 
 
 def load_trade_truth(symbol: str | None = None) -> list[dict[str, Any]]:
     """
     Load trade truth records (actual broker outcomes).
 
-    Source: logs/trade_truth/{SYMBOL}/{DATE}.jsonl
+    Source: S3 dataset ``trade_truth`` (core/trade_truth).
     Key fields: identity.trade_id, identity.correlation_id, identity.symbol,
                 outcome.r_multiple_realised, outcome.pnl_realised, exit.exit_reason
     """
-    records = []
-    for path in _iter_jsonl_files("trade_truth", symbol):
-        records.extend(_load_jsonl(path))
+    records = _read("trade_truth", symbol)
     logger.info("[RESEARCH_LOADER] loaded %d trade truth records", len(records))
     return records
 
@@ -130,13 +84,11 @@ def load_decision_ledger(symbol: str | None = None) -> list[dict[str, Any]]:
     """
     Load decision ledger records.
 
-    Source: logs/decision_ledger/{SYMBOL}/{DATE}.jsonl
+    Source: S3 dataset ``decision_ledger`` (core/decision_ledger).
     Key fields: symbol, cycle_id, decision, reason, signal_score, regime,
                 correlation_id, entity_id, execution_intent
     """
-    records = []
-    for path in _iter_jsonl_files("decision_ledger", symbol):
-        records.extend(_load_jsonl(path))
+    records = _read("decision_ledger", symbol)
     logger.info("[RESEARCH_LOADER] loaded %d decision ledger records", len(records))
     return records
 
@@ -145,19 +97,17 @@ def load_decision_trace(symbol: str | None = None) -> list[dict[str, Any]]:
     """
     Load decision trace records (detailed engine reasoning).
 
-    Source: logs/decision_trace/{SYMBOL}/{DATE}.jsonl
+    Source: S3 dataset ``decision_trace`` (supporting/decision_trace).
     Key fields: entity_id, symbol, cycle_id, action, terminal_stage,
                 score_strategy, components, regime, pattern_name
     """
-    records = []
-    for path in _iter_jsonl_files("decision_trace", symbol):
-        records.extend(_load_jsonl(path))
+    records = _read("decision_trace", symbol)
     logger.info("[RESEARCH_LOADER] loaded %d decision trace records", len(records))
     return records
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# PHASE 3A: INTELLIGENCE CHAIN LOADERS
+# INTELLIGENCE CHAIN LOADERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -165,15 +115,12 @@ def load_opportunities(symbol: str | None = None) -> list[dict[str, Any]]:
     """
     Load opportunity records (market intelligence — what appeared).
 
-    Source: logs/opportunities/{SYMBOL}/{DATE}.jsonl
+    Source: S3 dataset ``opportunities`` (core/opportunities). Schema: opportunity_v1.
     Key fields: opportunity_id, symbol, direction, pattern, state,
                 rejection_reason, rejection_stage, h4_regime, h1_direction,
                 pattern_confidence, overall_score, entity_id, cycle_id
-    Schema: opportunity_v1
     """
-    records = []
-    for path in _iter_jsonl_files("opportunities", symbol):
-        records.extend(_load_jsonl(path))
+    records = _read("opportunities", symbol)
     logger.info("[RESEARCH_LOADER] loaded %d opportunity records", len(records))
     return records
 
@@ -182,15 +129,12 @@ def load_assessments(symbol: str | None = None) -> list[dict[str, Any]]:
     """
     Load assessment records (opportunity evaluation — how good was it).
 
-    Source: logs/assessments/{SYMBOL}/{DATE}.jsonl
+    Source: S3 dataset ``assessments`` (core/assessments). Schema: assessment_v1.
     Key fields: assessment_id, opportunity_id, symbol, score_neutral,
                 score_strategy, ev, p_success, rr_effective, market_state,
                 selected_strategy, strategy_confidence, entity_id, cycle_id
-    Schema: assessment_v1
     """
-    records = []
-    for path in _iter_jsonl_files("assessments", symbol):
-        records.extend(_load_jsonl(path))
+    records = _read("assessments", symbol)
     logger.info("[RESEARCH_LOADER] loaded %d assessment records", len(records))
     return records
 
@@ -199,16 +143,10 @@ def load_portfolio_rankings() -> list[dict[str, Any]]:
     """
     Load portfolio ranking records (cross-symbol opportunity comparison).
 
-    Source: logs/portfolio_rankings/{DATE}.jsonl
-    Key fields: ranking_id, cycle_id, total_candidates, eligible_count,
-                selected_symbol, selected_rank_score, ranking_method,
-                candidates (list with opportunity_id, rank_position, selection_status)
-    Schema: portfolio_ranking_v1
-    Partition: Date only (cross-symbol — one record per cycle)
+    Source: S3 dataset ``portfolio_rankings`` (supporting/portfolio_rankings).
+    Schema: portfolio_ranking_v1. Partition: date only (cross-symbol).
     """
-    records = []
-    for path in _iter_jsonl_files("portfolio_rankings"):
-        records.extend(_load_jsonl(path))
+    records = _read("portfolio_rankings")
     logger.info("[RESEARCH_LOADER] loaded %d portfolio ranking records", len(records))
     return records
 
@@ -217,15 +155,10 @@ def load_shadow_comparisons() -> list[dict[str, Any]]:
     """
     Load portfolio shadow comparison records (ranking vs actual execution).
 
-    Source: logs/portfolio_shadow/{DATE}.jsonl
-    Key fields: cycle_id, agreement, disagreement_type, disagreement_detail,
-                actual_executed_symbols, ranking_selected_symbol,
-                outranked_symbols, total_candidates, eligible_candidates
-    Partition: Date only (cross-symbol)
+    Source: S3 dataset ``portfolio_shadow`` (projections/portfolio_shadow).
+    Partition: date only (cross-symbol).
     """
-    records = []
-    for path in _iter_jsonl_files("portfolio_shadow"):
-        records.extend(_load_jsonl(path))
+    records = _read("portfolio_shadow")
     logger.info("[RESEARCH_LOADER] loaded %d shadow comparison records", len(records))
     return records
 
@@ -234,14 +167,12 @@ def load_execution_results(symbol: str | None = None) -> list[dict[str, Any]]:
     """
     Load execution result records (broker response to order submission).
 
-    Source: logs/execution_results/{SYMBOL}/{DATE}.jsonl
+    Source: S3 dataset ``execution_results`` (core/execution_results).
     Key fields: symbol, result_ok, retcode, deal, fill_price, slippage,
                 side, volume, sl, tp, pattern, decision_id, correlation_id,
                 entity_id, protection_status, broker_confirmed_sl
     """
-    records = []
-    for path in _iter_jsonl_files("execution_results", symbol):
-        records.extend(_load_jsonl(path))
+    records = _read("execution_results", symbol)
     logger.info("[RESEARCH_LOADER] loaded %d execution result records", len(records))
     return records
 
@@ -250,15 +181,13 @@ def load_execution_context(symbol: str | None = None) -> list[dict[str, Any]]:
     """
     Load execution context records (pre-trade environment snapshot).
 
-    Source: logs/execution_context/{SYMBOL}/{DATE}.jsonl
+    Source: S3 dataset ``execution_context`` (supporting/execution_context).
     Key fields: correlation_id, symbol, timestamp_utc,
                 market_access (session_state, spread, bid, ask),
                 infrastructure (latency_ms, feed_state),
                 risk_environment (drawdown_pct, daily_loss_pct, open_positions)
     """
-    records = []
-    for path in _iter_jsonl_files("execution_context", symbol):
-        records.extend(_load_jsonl(path))
+    records = _read("execution_context", symbol)
     logger.info("[RESEARCH_LOADER] loaded %d execution context records", len(records))
     return records
 
@@ -267,14 +196,12 @@ def load_protection_audit(symbol: str | None = None) -> list[dict[str, Any]]:
     """
     Load protection audit records (post-fill SL/TP verification).
 
-    Source: logs/protection_audit/{SYMBOL}/{DATE}.jsonl
+    Source: S3 dataset ``protection_audit`` (supporting/protection_audit).
     Key fields: symbol, position_ticket, correlation_id,
                 requested_sl, broker_confirmed_sl, requested_tp, broker_confirmed_tp,
                 protection_status, correction_attempted, correction_success
     """
-    records = []
-    for path in _iter_jsonl_files("protection_audit", symbol):
-        records.extend(_load_jsonl(path))
+    records = _read("protection_audit", symbol)
     logger.info("[RESEARCH_LOADER] loaded %d protection audit records", len(records))
     return records
 
@@ -283,14 +210,12 @@ def load_risk_deviation(symbol: str | None = None) -> list[dict[str, Any]]:
     """
     Load risk deviation records (planned vs actual risk measurement).
 
-    Source: logs/risk_deviation/{SYMBOL}/{DATE}.jsonl
+    Source: S3 dataset ``risk_deviation`` (supporting/risk_deviation).
     Key fields: trade_id, symbol, correlation_id, planned_risk_R,
                 actual_risk_R, risk_deviation, risk_classification,
                 entry_price, exit_price, initial_sl, direction
     """
-    records = []
-    for path in _iter_jsonl_files("risk_deviation", symbol):
-        records.extend(_load_jsonl(path))
+    records = _read("risk_deviation", symbol)
     logger.info("[RESEARCH_LOADER] loaded %d risk deviation records", len(records))
     return records
 

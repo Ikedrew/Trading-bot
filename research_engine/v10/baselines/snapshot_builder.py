@@ -157,22 +157,20 @@ class SnapshotBuilder:
         }
 
     def _collect_dataset_metadata(self) -> dict[str, Any]:
-        """Collect dataset identity information."""
-        if not self._universe_file.exists():
-            return {"status": "MISSING", "reason": "Universe file not found"}
+        """Collect dataset identity information from the S3 research universe artifact."""
+        events = self._load_universe()
+        if not events:
+            return {"status": "MISSING", "reason": "Research Universe not available"}
 
-        content = self._universe_file.read_text(encoding="utf-8")
-        lines = [l for l in content.splitlines() if l.strip()]
-        file_hash = hashlib.sha256(content.encode()).hexdigest()[:16]
+        # Deterministic content hash over the parsed records (S3 is authoritative;
+        # no local file size/mtime is applicable to an S3 artifact).
+        content = "\n".join(json.dumps(e, sort_keys=True, default=str) for e in events)
+        content_hash = hashlib.sha256(content.encode()).hexdigest()[:16]
 
         return {
-            "dataset": str(self._universe_file),
-            "records": len(lines),
-            "hash": file_hash,
-            "file_size_bytes": self._universe_file.stat().st_size,
-            "last_modified": datetime.fromtimestamp(
-                self._universe_file.stat().st_mtime, tz=timezone.utc
-            ).isoformat(),
+            "dataset": "research_universe",
+            "records": len(events),
+            "hash": content_hash,
         }
 
     def _collect_research_state(self, performance: dict) -> dict[str, Any]:
@@ -187,13 +185,6 @@ class SnapshotBuilder:
         }
 
     def _load_universe(self) -> list[dict]:
-        if not self._universe_file.exists():
-            return []
-        events = []
-        for line in self._universe_file.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                try:
-                    events.append(json.loads(line))
-                except json.JSONDecodeError:
-                    pass
-        return events
+        # S3 is authoritative; local override ignored.
+        from research_engine.data_access.s3_source import get_default_source
+        return get_default_source().read_artifact("research_universe")

@@ -366,32 +366,16 @@ def run(shadow_trades: list[dict[str, Any]] | None = None) -> dict:
     """
     Run Q19 and persist result using standard research report framework.
 
-    If shadow_trades not provided, loads from default location.
+    If shadow_trades not provided, loads from S3 via the shared data-access layer.
     """
-    import json
-    from pathlib import Path
-
     if shadow_trades is None:
+        from research_engine.data_access.s3_source import get_default_source
+
+        _source = get_default_source()
         shadow_trades = []
-        shadow_dir = Path("logs/research_shadow_trades")
-        if shadow_dir.exists():
-            for f in shadow_dir.rglob("*.jsonl"):
-                for line in f.read_text(encoding="utf-8").splitlines():
-                    if line.strip():
-                        try:
-                            shadow_trades.append(json.loads(line))
-                        except Exception:
-                            pass
-        # Also load regular shadow trades
-        shadow_dir2 = Path("logs/shadow_trades")
-        if shadow_dir2.exists():
-            for f in shadow_dir2.rglob("*.jsonl"):
-                for line in f.read_text(encoding="utf-8").splitlines():
-                    if line.strip():
-                        try:
-                            shadow_trades.append(json.loads(line))
-                        except Exception:
-                            pass
+        # research_shadow_trades first, then regular shadow_trades (order preserved)
+        shadow_trades.extend(_source.read_dataset("research_shadow_trades"))
+        shadow_trades.extend(_source.read_dataset("shadow_trades"))
 
     result = run_expected_value(shadow_trades)
 

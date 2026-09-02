@@ -1,6 +1,10 @@
 """Research-universe boundaries that must remain stable before enrichment."""
 
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _s3_fake import install_fake_s3, reset_fake_s3
 
 from research_engine.v10.universes.contracts import UNIVERSE_CONTRACTS
 from research_engine.v10.universes.models import (
@@ -40,13 +44,17 @@ def test_shadow_reality_is_explicitly_retired():
     )
 
 
-def test_shadow_runtime_stream_is_not_silently_reclassified(tmp_path: Path):
-    runtime_dir = tmp_path / "shadow_runtime_v1"
-    runtime_dir.mkdir()
-    (runtime_dir / "EURUSD.jsonl").write_text(
-        '{"schema_version":"shadow_runtime_v1","event_type":"CLOSE",'
-        '"simulated_outcome":{"pnl_r_multiple":1.0}}\n',
-        encoding="utf-8",
-    )
-    builder = ShadowOutcomeUniverseBuilder(source_dir=runtime_dir)
-    assert builder.build() == []
+def test_shadow_runtime_stream_is_not_silently_reclassified():
+    # Seed S3 shadow_trades with a runtime-stream record whose schema is NOT the
+    # supported V1 shadow schema — it must be excluded, not silently reclassified.
+    fake = install_fake_s3()
+    try:
+        fake.add("shadow_trades", [{
+            "schema_version": "shadow_runtime_v1",
+            "event_type": "CLOSE",
+            "simulated_outcome": {"pnl_r_multiple": 1.0},
+        }], symbol="EURUSD")
+        builder = ShadowOutcomeUniverseBuilder()
+        assert builder.build() == []
+    finally:
+        reset_fake_s3()

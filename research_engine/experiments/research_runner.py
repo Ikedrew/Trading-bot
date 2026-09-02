@@ -13,31 +13,20 @@ This module is PURELY ORCHESTRATION. It does NOT modify trading logic.
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any
 
+from research_engine.data_access.s3_source import get_default_source
 from research_engine.report_builder import persist_report
 from research_engine.validation import validate_dataset
 
-_SHADOW_DIR = Path("logs/research_shadow_trades")
-_SHADOW_DIR2 = Path("logs/shadow_trades")
-_TRACE_DIR = Path("logs/decision_trace")
+_SHADOW_DATASET = "research_shadow_trades"
+_SHADOW_DATASET2 = "shadow_trades"
+_TRACE_DATASET = "decision_trace"
 
 
-def _load_jsonl(directory: Path) -> list[dict]:
-    """Load JSONL records from a directory tree."""
-    records = []
-    if not directory.exists():
-        return records
-    for f in sorted(directory.rglob("*.jsonl")):
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                try:
-                    records.append(json.loads(line))
-                except Exception:
-                    pass
-    return records
+def _load_jsonl(dataset: str) -> list[dict]:
+    """Read a production dataset from S3 via the shared data-access layer."""
+    return get_default_source().read_dataset(dataset)
 
 
 def run_all() -> dict[str, dict]:
@@ -51,9 +40,9 @@ def run_all() -> dict[str, dict]:
 
     # ─── PRE-EXPERIMENT DATASET VALIDATION ────────────────────────────
     _shadow_raw = []
-    for d in [_SHADOW_DIR, _SHADOW_DIR2]:
+    for d in [_SHADOW_DATASET, _SHADOW_DATASET2]:
         _shadow_raw.extend(_load_jsonl(d))
-    _trace_data = _load_jsonl(_TRACE_DIR)
+    _trace_data = _load_jsonl(_TRACE_DATASET)
 
     shadow_validation = validate_dataset(
         _shadow_raw,

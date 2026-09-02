@@ -203,38 +203,22 @@ def run() -> dict:
     # Build records from available data
     records: list[ResearchRecord] = []
 
-    # Attempt to load matched records (shadow + trade_truth joined)
-    import json
-    from pathlib import Path
+    # Attempt to load matched records (shadow + trade_truth joined) from S3
+    from research_engine.data_access.s3_source import get_default_source
 
-    shadow_dir = Path("logs/shadow_trades")
-    truth_dir = Path("logs/trade_truth")
+    _source = get_default_source()
 
     shadows: dict[str, dict] = {}
-    if shadow_dir.exists():
-        for f in shadow_dir.rglob("*.jsonl"):
-            for line in f.read_text(encoding="utf-8").splitlines():
-                if line.strip():
-                    try:
-                        rec = json.loads(line)
-                        cor_id = rec.get("identity", {}).get("correlation_id") or rec.get("correlation_id", "")
-                        if cor_id:
-                            shadows[cor_id] = rec
-                    except Exception:
-                        pass
+    for rec in _source.read_dataset("shadow_trades"):
+        cor_id = rec.get("identity", {}).get("correlation_id") or rec.get("correlation_id", "")
+        if cor_id:
+            shadows[cor_id] = rec
 
     truths: dict[str, dict] = {}
-    if truth_dir.exists():
-        for f in truth_dir.rglob("*.jsonl"):
-            for line in f.read_text(encoding="utf-8").splitlines():
-                if line.strip():
-                    try:
-                        rec = json.loads(line)
-                        cor_id = rec.get("correlation_id", "")
-                        if cor_id:
-                            truths[cor_id] = rec
-                    except Exception:
-                        pass
+    for rec in _source.read_dataset("trade_truth"):
+        cor_id = rec.get("correlation_id", "")
+        if cor_id:
+            truths[cor_id] = rec
 
     # Match shadow to truth
     for cor_id, shadow in shadows.items():

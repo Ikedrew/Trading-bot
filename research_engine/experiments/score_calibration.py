@@ -19,33 +19,24 @@ It only produces research findings for human review.
 
 from __future__ import annotations
 
-import json
 import statistics
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from research_engine.data_access.s3_source import get_default_source
 
-_SHADOW_DIR = Path("logs/research_shadow_trades")
-_TRACE_DIR = Path("logs/decision_trace")
+
+_SHADOW_DATASET = "research_shadow_trades"
+_TRACE_DATASET = "decision_trace"
 _OUTPUT_DIR = Path("analysis/reports")
 
 _MIN_SAMPLE_SIZE = 20  # Minimum trades per bucket for statistical validity
 
 
-def _load_jsonl_tree(directory: Path) -> list[dict]:
-    """Load all JSONL records from a directory tree."""
-    records = []
-    if not directory.exists():
-        return records
-    for item in sorted(directory.rglob("*.jsonl")):
-        for line in item.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                try:
-                    records.append(json.loads(line))
-                except Exception:
-                    pass
-    return records
+def _load_jsonl_tree(dataset: str) -> list[dict]:
+    """Read a production dataset from S3 via the shared data-access layer."""
+    return get_default_source().read_dataset(dataset)
 
 
 def _bucket_score(score: float) -> str:
@@ -179,8 +170,8 @@ def run() -> dict[str, Any]:
 
     Returns structured research result with calibration assessment.
     """
-    shadows = _load_jsonl_tree(_SHADOW_DIR)
-    traces = _load_jsonl_tree(_TRACE_DIR)
+    shadows = _load_jsonl_tree(_SHADOW_DATASET)
+    traces = _load_jsonl_tree(_TRACE_DATASET)
 
     # Extract shadow outcomes
     shadow_outcomes: list[dict] = []

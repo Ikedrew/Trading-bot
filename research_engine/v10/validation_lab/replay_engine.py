@@ -11,7 +11,6 @@ For filter changes: includes/excludes trades based on new criteria.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -129,16 +128,9 @@ class ReplayEngine:
         return metrics
 
     def _load(self) -> list[dict]:
-        if not self._universe_file.exists():
-            return []
-        events = []
-        for line in self._universe_file.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                try:
-                    events.append(json.loads(line))
-                except json.JSONDecodeError:
-                    pass
-        return events
+        # S3 is authoritative; local override ignored.
+        from research_engine.data_access.s3_source import get_default_source
+        return get_default_source().read_artifact("research_universe")
 
 
 def _deep_copy_event(event: dict) -> dict:

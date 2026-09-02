@@ -1,21 +1,26 @@
 """
 Execution Universe Builder.
 
-Wraps the existing execution universe at data/research/research_universe.jsonl.
-Normalises the nested {execution, decision, market, strategy, quality} structure
-into flat records with semantic field names.
+Builds the realised-execution population from S3 dataset ``trade_truth`` (the
+authoritative realised-outcome source). Normalises each trade_truth record's
+nested {identity, execution, timestamps, outcome, exit} structure into the flat
+semantic record shape the Outcome universe + outcome enrichment consume.
 
-Enrichment: joins entity_id from logs/execution_results/ via deal/ticket matching
-to enable deterministic cross-universe correlation with the Decision Universe.
+Enrichment: joins entity_id from S3 dataset ``execution_results`` via
+correlation_id to enable deterministic cross-universe correlation with the
+Decision Universe.
 
-Grain: 1 record = 1 completed trade with execution outcome.
+Grain: 1 record = 1 completed trade with realised execution outcome.
+
+Migration note: this universe previously wrapped the local derived file
+data/research/research_universe.jsonl. That file is a rebuildable research
+artifact, not a source of truth. The Execution universe is now rebuilt directly
+from S3 trade_truth so it works after local logs/data are deleted.
 """
 
 from __future__ import annotations
 
-import json
 import logging
-from pathlib import Path
 from typing import Any
 
 from research_engine.v10.universes.base import UniverseBuilder, UniverseMetadata
@@ -23,41 +28,33 @@ from research_engine.v10.universes.models import Population, Universe
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_PATH = Path("data/research/research_universe.jsonl")
-_EXECUTION_RESULTS_DIR = Path("logs/execution_results")
+_DATASET = "trade_truth"
+_EXEC_RESULTS_DATASET = "execution_results"
 
 
 class ExecutionUniverseBuilder(UniverseBuilder):
     """
-    Builds the Execution Universe from the existing research universe file.
+    Builds the Execution Universe from S3 dataset ``trade_truth``.
 
-    Source: data/research/research_universe.jsonl
-    Schema: {trade_id, execution{...}, decision{...}, market{...}, strategy{...}, quality{...}}
+    Source: S3 trade_truth (identity/execution/timestamps/outcome/exit).
+    entity_id is joined from S3 execution_results via correlation_id.
     """
 
-    def __init__(
-        self,
-        source_path: Path | str | None = None,
-        execution_results_dir: Path | str | None = None,
-    ):
+    def __init__(self, symbol: str | None = None):
         super().__init__()
-        self._source_path = Path(source_path) if source_path else _DEFAULT_PATH
-        self._exec_results_dir = (
-            Path(execution_results_dir) if execution_results_dir
-            else _EXECUTION_RESULTS_DIR
-        )
+        self._symbol = symbol
         self._raw: list[dict[str, Any]] = []
-        self._entity_id_lookup: dict[int, str] = {}  # deal → entity_id
+        self._entity_id_lookup: dict[str, str] = {}  # correlation_id → entity_id
 
     @property
     def universe_type(self) -> Universe:
         return Universe.EXECUTION
 
     def load(self) -> int:
-        self._raw = self._load_jsonl(self._source_path)
+        self._raw = self._load_dataset(_DATASET, symbol=self._symbol)
         self._entity_id_lookup = self._build_entity_id_lookup()
         logger.info(
-            f"[EXECUTION] Loaded {len(self._raw)} records from {self._source_path}, "
+            f"[EXECUTION] Loaded {len(self._raw)} trade_truth records from S3, "
             f"{len(self._entity_id_lookup)} entity_id mappings from execution_results"
         )
         return len(self._raw)
@@ -71,10 +68,9 @@ class ExecutionUniverseBuilder(UniverseBuilder):
         excluded_missing_r_multiple = 0
 
         for raw in self._raw:
-            # Pre-check exclusion reasons for tracking
-            trade_id = raw.get("trade_id", "")
-            exe = raw.get("execution", {})
-            r_multiple = exe.get("r_multiple") if exe else None
+            # Pre-check exclusion reasons for tracking (trade_truth grain).
+            trade_id = (raw.get("identity") or {}).get("trade_id", "")
+            r_multiple = (raw.get("outcome") or {}).get("r_multiple_realised")
 
             if not trade_id:
                 excluded_missing_trade_id += 1
@@ -102,7 +98,7 @@ class ExecutionUniverseBuilder(UniverseBuilder):
         self._built = True
         self._metadata = self._generate_metadata(
             records=records,
-            source_files=(str(self._source_path),),
+            source_files=(f"s3:{_DATASET}", f"s3:{_EXEC_RESULTS_DATASET}"),
             populations=(
                 Population.ALL_TRADES.value,
                 Population.WINNING_TRADES.value,
@@ -148,117 +144,99 @@ class ExecutionUniverseBuilder(UniverseBuilder):
         return []
 
     def _normalise(self, raw: dict[str, Any]) -> dict[str, Any] | None:
-        """Flatten the nested execution universe record into semantic fields."""
-        exe = raw.get("execution", {})
-        dec = raw.get("decision", {})
-        mkt = raw.get("market", {})
-        strat = raw.get("strategy", {})
-        qual = raw.get("quality", {})
+        """Flatten a trade_truth record into the flat semantic execution record.
 
-        # Must have at minimum a trade_id and r_multiple
-        trade_id = raw.get("trade_id", "")
-        r_multiple = exe.get("r_multiple")
+        trade_truth is the authoritative realised-outcome source. It does NOT
+        carry pre-trade intent (stop_loss/take_profit) or decision/market/strategy
+        context by contract — those live in the Decision/Market/Strategy universes
+        and are joined downstream by entity_id. This normaliser therefore populates
+        the realised-execution facts and leaves intent/context fields as their
+        neutral defaults (they are not consumed from this universe).
+        """
+        identity = raw.get("identity", {}) or {}
+        exe = raw.get("execution", {}) or {}
+        ts = raw.get("timestamps", {}) or {}
+        outcome = raw.get("outcome", {}) or {}
+        exit_ = raw.get("exit", {}) or {}
+
+        trade_id = identity.get("trade_id", "")
+        r_multiple = outcome.get("r_multiple_realised")
         if not trade_id or r_multiple is None:
             return None
 
-        # Enrich entity_id from execution_results (CR-001 fix)
-        # The execution_results dataset persists entity_id alongside deal/ticket.
-        # We join via ticket number extracted from trade_id (format: pos_DEAL).
-        ticket = exe.get("ticket")
-        enriched_entity_id = ""
-        if ticket and ticket in self._entity_id_lookup:
-            enriched_entity_id = self._entity_id_lookup[ticket]
+        # Enrich entity_id from execution_results, joined by correlation_id
+        # (deterministic cross-universe key into the Decision universe).
+        correlation_id = identity.get("correlation_id", "")
+        enriched_entity_id = self._entity_id_lookup.get(correlation_id, "")
 
         return {
             # Identity
             "trade_id": trade_id,
             "entity_id": enriched_entity_id or trade_id,  # Enriched or fallback
-            # Execution fields
-            "ticket": exe.get("ticket"),
-            "symbol": exe.get("symbol", ""),
-            "direction": exe.get("direction", ""),
-            "entry_price": exe.get("entry_price"),
-            "exit_price": exe.get("exit_price"),
-            "entry_time": exe.get("entry_time"),
-            "exit_time": exe.get("exit_time"),
-            "stop_loss": exe.get("stop_loss"),
-            "take_profit": exe.get("take_profit"),
-            "gross_profit": exe.get("gross_profit"),
-            "commission": exe.get("commission"),
-            "swap": exe.get("swap"),
-            "net_realised_pnl": exe.get("net_realised_pnl"),
+            "correlation_id": correlation_id,
+            # Realised execution fields (from trade_truth)
+            "symbol": identity.get("symbol", ""),
+            "direction": "",  # not in trade_truth (order_type only); joined elsewhere
+            "entry_price": exe.get("entry_fill_price"),
+            "exit_price": exe.get("exit_fill_price"),
+            "entry_time": ts.get("entry_timestamp_broker"),
+            "exit_time": ts.get("exit_timestamp_broker"),
+            "stop_loss": None,   # intent — excluded from trade_truth by contract
+            "take_profit": None,  # intent — excluded from trade_truth by contract
+            "gross_profit": outcome.get("pnl_realised"),
+            "commission": outcome.get("commission"),
+            "swap": outcome.get("swap"),
+            "net_realised_pnl": outcome.get("net_profit"),
             "r_multiple": r_multiple,
-            "volume": exe.get("volume"),
-            "duration_seconds": exe.get("duration_seconds"),
-            "exit_reason": exe.get("exit_reason", ""),
-            # Decision fields (from execution universe)
-            "score": dec.get("score"),
-            "confidence": dec.get("confidence"),
-            "ev": dec.get("ev"),
-            "p_success": dec.get("p_success"),
-            "components": dec.get("components"),
-            "weakest_component": dec.get("weakest_component"),
-            # Market fields (from execution universe)
-            "regime": mkt.get("regime", ""),
-            "session": mkt.get("session", ""),
-            "volatility": mkt.get("volatility", ""),
-            "trend_state": mkt.get("trend_state", ""),
-            "higher_timeframe_bias": mkt.get("higher_timeframe_bias", ""),
-            "h4_phase": mkt.get("h4_phase", ""),
-            "h1_clarity": mkt.get("h1_clarity"),
-            # Strategy fields (from execution universe)
-            "family": strat.get("family", ""),
-            "pattern": strat.get("pattern", ""),
-            "conditions_met": strat.get("conditions_met"),
-            "strategy_confidence": strat.get("strategy_confidence"),
-            "opportunity_quality": strat.get("opportunity_quality"),
-            "opportunity_type": strat.get("opportunity_type", ""),
-            # Quality fields
-            "anomaly": qual.get("anomaly", False),
-            "anomaly_reasons": qual.get("anomaly_reasons", []),
-            "data_completeness": qual.get("data_completeness", ""),
+            "volume": exe.get("volume_executed"),
+            "duration_seconds": ts.get("duration_seconds"),
+            "exit_reason": exit_.get("exit_reason", ""),
+            # Decision/market/strategy context is owned by their own universes and
+            # joined by entity_id downstream — left as neutral defaults here.
+            "score": None,
+            "confidence": None,
+            "ev": None,
+            "p_success": None,
+            "components": None,
+            "weakest_component": None,
+            "regime": "",
+            "session": "",
+            "volatility": "",
+            "trend_state": "",
+            "higher_timeframe_bias": "",
+            "h4_phase": "",
+            "h1_clarity": None,
+            "family": "",
+            "pattern": "",
+            "conditions_met": None,
+            "strategy_confidence": None,
+            "opportunity_quality": None,
+            "opportunity_type": "",
+            # Quality
+            "anomaly": False,
+            "anomaly_reasons": [],
+            "data_completeness": "",
         }
 
-    def _build_entity_id_lookup(self) -> dict[int, str]:
+    def _build_entity_id_lookup(self) -> dict[str, str]:
         """
-        Build a lookup table: deal/ticket → entity_id from execution_results.
+        Build a lookup: correlation_id → entity_id from S3 execution_results.
 
-        This is the CR-001 fix: it enables deterministic cross-universe
-        correlation by incorporating entity_id (which links to Decision Universe)
-        into Execution Universe records.
-
-        Source: logs/execution_results/{SYMBOL}/{DATE}.jsonl
-        Join key: deal (int) → entity_id (str, format SYMBOL_CYCLE_TS)
+        Enables deterministic cross-universe correlation by incorporating
+        entity_id (which links to the Decision Universe) into Execution records.
+        Source: S3 dataset ``execution_results``. Join key: correlation_id.
         """
-        lookup: dict[int, str] = {}
-        if not self._exec_results_dir.exists():
-            return lookup
-
-        for jsonl_file in sorted(self._exec_results_dir.rglob("*.jsonl")):
-            try:
-                with open(jsonl_file, encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if not line:
-                            continue
-                        try:
-                            record = json.loads(line)
-                        except json.JSONDecodeError:
-                            continue
-
-                        # Only use primary execution records (not protection_verification)
-                        if record.get("comment") == "protection_verification":
-                            continue
-                        if not record.get("result_ok", False):
-                            continue
-
-                        entity_id = record.get("entity_id", "")
-                        deal = record.get("deal")
-
-                        if entity_id and deal:
-                            lookup[int(deal)] = entity_id
-            except Exception:
+        lookup: dict[str, str] = {}
+        for record in self._load_dataset(_EXEC_RESULTS_DATASET, symbol=self._symbol):
+            # Only primary execution results (not protection verification records).
+            if record.get("comment") == "protection_verification":
                 continue
+            if not record.get("result_ok", False):
+                continue
+            entity_id = record.get("entity_id", "")
+            correlation_id = record.get("correlation_id", "")
+            if entity_id and correlation_id:
+                lookup[correlation_id] = entity_id
 
         logger.info(f"[EXECUTION] Entity_id lookup built: {len(lookup)} mappings")
         return lookup

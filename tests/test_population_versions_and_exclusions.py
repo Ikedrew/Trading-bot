@@ -199,21 +199,18 @@ class TestExclusionTracking:
         from unittest.mock import patch
         from pathlib import Path
 
-        builder = ExecutionUniverseBuilder(
-            source_path=Path("nonexistent.jsonl"),
-            execution_results_dir=Path("nonexistent_dir"),
-        )
+        builder = ExecutionUniverseBuilder()
 
-        # Simulate raw data with some valid and some invalid records
+        # Simulate raw trade_truth data (nested shape) with valid + invalid records
         builder._raw = [
             # Valid
-            {"trade_id": "pos_1", "execution": {"r_multiple": 1.5, "ticket": 1, "symbol": "EURUSD"}},
-            {"trade_id": "pos_2", "execution": {"r_multiple": -1.0, "ticket": 2, "symbol": "EURUSD"}},
+            {"identity": {"trade_id": "pos_1", "symbol": "EURUSD"}, "outcome": {"r_multiple_realised": 1.5}},
+            {"identity": {"trade_id": "pos_2", "symbol": "EURUSD"}, "outcome": {"r_multiple_realised": -1.0}},
             # Missing trade_id
-            {"trade_id": "", "execution": {"r_multiple": 0.5}},
+            {"identity": {"trade_id": ""}, "outcome": {"r_multiple_realised": 0.5}},
             # Missing r_multiple
-            {"trade_id": "pos_3", "execution": {"symbol": "GBPUSD"}},
-            {"trade_id": "pos_4", "execution": {}},
+            {"identity": {"trade_id": "pos_3", "symbol": "GBPUSD"}, "outcome": {}},
+            {"identity": {"trade_id": "pos_4"}, "outcome": {}},
         ]
 
         with patch.object(builder, '_build_entity_id_lookup', return_value={}):
@@ -233,7 +230,7 @@ class TestExclusionTracking:
         from research_engine.v10.universes.decision_universe import DecisionUniverseBuilder
         from pathlib import Path
 
-        builder = DecisionUniverseBuilder(source_dir=Path("nonexistent_dir"))
+        builder = DecisionUniverseBuilder()
 
         # Simulate raw data
         builder._raw = [

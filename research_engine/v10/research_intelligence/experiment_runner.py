@@ -54,6 +54,8 @@ class ExperimentRunner:
         universe_file: str | None = None,
         reports_dir: str | None = None,
     ):
+        # S3 is authoritative; local override ignored. The universe is read from
+        # S3 via the segmenter (read_artifact("research_universe")).
         self._universe_file = Path(universe_file or _UNIVERSE_FILE)
         self._reports_dir = Path(reports_dir or _REPORTS_DIR)
         self._registry = QuestionRegistry()
@@ -62,7 +64,8 @@ class ExperimentRunner:
     @property
     def segmenter(self) -> ResearchSegmenter:
         if self._segmenter is None:
-            self._segmenter = ResearchSegmenter(universe_file=str(self._universe_file))
+            # S3 is authoritative; segmenter reads the universe artifact from S3.
+            self._segmenter = ResearchSegmenter()
         return self._segmenter
 
     def run(

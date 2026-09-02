@@ -30,20 +30,21 @@ from research_engine.v10.universes.models import Population, Universe
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_DIR = Path("logs/decision_trace")
+_DATASET = "decision_trace"
 
 
 class DecisionUniverseBuilder(UniverseBuilder):
     """
-    Builds the Decision Universe from decision trace logs.
+    Builds the Decision Universe from the decision_trace dataset (S3).
 
     Loads all V2-schema decision traces across all symbols and normalises
-    them into flat records with semantic field names.
+    them into flat records with semantic field names. Source of truth is S3
+    (dataset ``decision_trace``), resolved via the shared S3 access layer.
     """
 
-    def __init__(self, source_dir: Path | str | None = None):
+    def __init__(self, symbol: str | None = None):
         super().__init__()
-        self._source_dir = Path(source_dir) if source_dir else _DEFAULT_DIR
+        self._symbol = symbol
         self._raw: list[dict[str, Any]] = []
 
     @property
@@ -51,10 +52,10 @@ class DecisionUniverseBuilder(UniverseBuilder):
         return Universe.DECISION
 
     def load(self) -> int:
-        self._raw = self._load_jsonl_directory(self._source_dir)
+        self._raw = self._load_dataset(_DATASET, symbol=self._symbol)
         logger.info(
             f"[DECISION] Loaded {len(self._raw)} raw decision records "
-            f"from {self._source_dir}"
+            f"from S3 dataset '{_DATASET}'"
         )
         return len(self._raw)
 
@@ -98,14 +99,12 @@ class DecisionUniverseBuilder(UniverseBuilder):
         self._records = records
         self._built = True
 
-        # Collect source files for metadata
-        source_files = tuple(
-            str(p) for p in sorted(self._source_dir.rglob("*.jsonl"))
-        ) if self._source_dir.exists() else ()
+        # Source is the S3 dataset (resolved via the shared access layer).
+        source_files = (f"s3:{_DATASET}",)
 
         self._metadata = self._generate_metadata(
             records=records,
-            source_files=source_files[:5] + ("...",) if len(source_files) > 5 else source_files,
+            source_files=source_files,
             populations=(
                 Population.ALL_DECISIONS.value,
                 Population.EXECUTE_DECISIONS.value,

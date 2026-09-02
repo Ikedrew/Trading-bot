@@ -187,16 +187,7 @@ def _persist_full_evaluation(candidate_id: str, evaluation: CandidateEvaluation)
 
 
 def _load_shadow_observations() -> list[dict[str, Any]]:
-    """Load all shadow trade observations from disk."""
-    observations = []
-    shadow_dir = Path("logs/shadow_trades")
-    if not shadow_dir.exists():
-        return []
-    for f in shadow_dir.rglob("*.jsonl"):
-        try:
-            for line in f.read_text(encoding="utf-8").splitlines():
-                if line.strip():
-                    observations.append(json.loads(line))
-        except Exception:
-            continue
-    return observations
+    """Load all shadow trade observations from S3 via the shared data-access layer."""
+    from research_engine.data_access.s3_source import get_default_source
+
+    return list(get_default_source().read_dataset("shadow_trades"))

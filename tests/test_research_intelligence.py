@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _s3_fake import install_fake_s3, reset_fake_s3
 
 from research_engine.v10.research_intelligence import ExperimentRunner, QuestionRegistry
 from research_engine.v10.research_intelligence.models import ExperimentResult, classify_confidence
@@ -81,7 +83,7 @@ def _make_event(trade_id="pos_1", symbol="EURUSD", session="LONDON",
 
 @pytest.fixture
 def runner(tmp_path):
-    """Create runner with synthetic universe (25 events)."""
+    """Create runner with a synthetic research_universe artifact seeded in S3 (25 events)."""
     events = []
     for i in range(25):
         events.append(_make_event(
@@ -93,12 +95,12 @@ def runner(tmp_path):
             r=-1.0 if i % 3 != 0 else 1.5,
             pnl=-0.5 if i % 3 != 0 else 1.0,
         ))
-    universe_file = tmp_path / "universe.jsonl"
-    universe_file.write_text("\n".join(json.dumps(e) for e in events), encoding="utf-8")
-    return ExperimentRunner(
-        universe_file=str(universe_file),
-        reports_dir=str(tmp_path / "reports"),
-    )
+    fake = install_fake_s3()
+    fake.add_artifact("research_universe", events)
+    try:
+        yield ExperimentRunner(reports_dir=str(tmp_path / "reports"))
+    finally:
+        reset_fake_s3()
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -166,17 +168,17 @@ class TestMissingFields:
 
 class TestMinimumSampleSize:
     def test_below_minimum_returns_inconclusive(self, tmp_path):
-        # Create universe with only 3 events
+        # Seed a research_universe artifact with only 3 events
         events = [_make_event(f"pos_{i}") for i in range(3)]
-        universe_file = tmp_path / "small.jsonl"
-        universe_file.write_text("\n".join(json.dumps(e) for e in events), encoding="utf-8")
-        runner = ExperimentRunner(
-            universe_file=str(universe_file),
-            reports_dir=str(tmp_path / "rep"),
-        )
-        result = runner.run("E1")  # min sample = 20
-        assert result.recommendation == "INCONCLUSIVE"
-        assert any("below minimum" in l for l in result.limitations)
+        fake = install_fake_s3()
+        fake.add_artifact("research_universe", events)
+        try:
+            runner = ExperimentRunner(reports_dir=str(tmp_path / "rep"))
+            result = runner.run("E1")  # min sample = 20
+            assert result.recommendation == "INCONCLUSIVE"
+            assert any("below minimum" in l for l in result.limitations)
+        finally:
+            reset_fake_s3()
 
 
 class TestSegmentationFilters:
@@ -227,24 +229,23 @@ class TestLambdaCompat:
     def test_no_global_state_dependency(self, tmp_path):
         """Runner can be instantiated with explicit paths — no globals needed."""
         events = [_make_event(f"pos_{i}") for i in range(25)]
-        universe_file = tmp_path / "u.jsonl"
-        universe_file.write_text("\n".join(json.dumps(e) for e in events), encoding="utf-8")
-
-        runner = ExperimentRunner(
-            universe_file=str(universe_file),
-            reports_dir=str(tmp_path / "r"),
-        )
-        result = runner.run("E1")
-        assert result.sample_size == 25
-        assert not result.error
+        fake = install_fake_s3()
+        fake.add_artifact("research_universe", events)
+        try:
+            runner = ExperimentRunner(reports_dir=str(tmp_path / "r"))
+            result = runner.run("E1")
+            assert result.sample_size == 25
+            assert not result.error
+        finally:
+            reset_fake_s3()
 
 
 class TestLiveExecution:
     def test_live_run(self):
-        """Run against real research universe."""
-        universe = Path("data/research/research_universe.jsonl")
-        if not universe.exists():
-            pytest.skip("Research universe not available")
+        """Run against the real research universe in S3 (opt-in, hits real S3)."""
+        import os
+        if os.environ.get("RESEARCH_LIVE_S3_TESTS") != "1":
+            pytest.skip("live S3 test — set RESEARCH_LIVE_S3_TESTS=1 to run")
         runner = ExperimentRunner()
         result = runner.run("E1")
         assert result.sample_size > 0

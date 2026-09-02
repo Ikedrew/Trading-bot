@@ -34,23 +34,23 @@ from research_engine.v10.universes.models import Population, Universe
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_DIR = Path("logs/decision_trace")
+_DATASET = "decision_trace"
 
 
 class RiskUniverseBuilder(UniverseBuilder):
     """
-    Builds the Risk Universe from decision trace logs.
+    Builds the Risk Universe from the decision_trace dataset (S3).
 
     Extracts the v10_risk sub-object from each decision trace record
-    that reached the risk evaluation stage.
+    that reached the risk evaluation stage. Source of truth is S3.
 
     Records that never reached risk evaluation (rejected at earlier stages)
     are excluded because no risk assessment was performed.
     """
 
-    def __init__(self, source_dir: Path | str | None = None):
+    def __init__(self, symbol: str | None = None):
         super().__init__()
-        self._source_dir = Path(source_dir) if source_dir else _DEFAULT_DIR
+        self._symbol = symbol
         self._raw: list[dict[str, Any]] = []
 
     @property
@@ -58,10 +58,10 @@ class RiskUniverseBuilder(UniverseBuilder):
         return Universe.RISK
 
     def load(self) -> int:
-        self._raw = self._load_jsonl_directory(self._source_dir)
+        self._raw = self._load_dataset(_DATASET, symbol=self._symbol)
         logger.info(
             f"[RISK] Loaded {len(self._raw)} raw decision trace records "
-            f"from {self._source_dir}"
+            f"from S3 dataset '{_DATASET}'"
         )
         return len(self._raw)
 
@@ -117,13 +117,11 @@ class RiskUniverseBuilder(UniverseBuilder):
         self._records = records
         self._built = True
 
-        source_files = tuple(
-            str(p) for p in sorted(self._source_dir.rglob("*.jsonl"))
-        ) if self._source_dir.exists() else ()
+        source_files = (f"s3:{_DATASET}",)
 
         self._metadata = self._generate_metadata(
             records=records,
-            source_files=source_files[:5] + ("...",) if len(source_files) > 5 else source_files,
+            source_files=source_files,
             populations=(
                 Population.ALL_RISK_EVALUATIONS.value,
                 Population.RISK_APPROVED.value,

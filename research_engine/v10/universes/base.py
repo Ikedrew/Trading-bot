@@ -154,30 +154,22 @@ class UniverseBuilder(ABC):
             exclusions=exclusions or {},
         )
 
-    def _load_jsonl(self, path: Path) -> list[dict[str, Any]]:
-        """Load a JSONL file into a list of dicts."""
-        records = []
-        if not path.exists():
-            logger.warning(f"[{self.universe_type.value}] File not found: {path}")
-            return records
-        with open(path, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    try:
-                        records.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        continue
-        return records
+    def _load_dataset(
+        self,
+        dataset: str,
+        *,
+        symbol: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Load a logical dataset from the shared S3 research source.
 
-    def _load_jsonl_directory(self, directory: Path) -> list[dict[str, Any]]:
-        """Load all JSONL files from a directory (recursively)."""
-        records = []
-        if not directory.exists():
-            logger.warning(
-                f"[{self.universe_type.value}] Directory not found: {directory}"
-            )
-            return records
-        for jsonl_file in sorted(directory.rglob("*.jsonl")):
-            records.extend(self._load_jsonl(jsonl_file))
-        return records
+        This is the ONLY sanctioned source for universe raw data. It routes
+        through S3ResearchDataSource (bucket/prefix/schema resolution, pagination,
+        pruning, ordering, run-level cache). A missing dataset returns an empty
+        list; an S3 error surfaces as ResearchDataSourceError (no local fallback).
+        """
+        from research_engine.data_access.s3_source import get_default_source
+        return get_default_source().read_dataset(
+            dataset, symbol=symbol, start_date=start_date, end_date=end_date,
+        )

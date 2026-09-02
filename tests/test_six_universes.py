@@ -86,7 +86,7 @@ class TestRiskUniverseBuilder:
     """Verify RiskUniverseBuilder constructs correctly from decision trace data."""
 
     def _make_builder_with_data(self, raw_records):
-        builder = RiskUniverseBuilder(source_dir=Path("nonexistent"))
+        builder = RiskUniverseBuilder()
         builder._raw = raw_records
         builder.build()
         return builder
@@ -111,7 +111,7 @@ class TestRiskUniverseBuilder:
         assert len(builder.records) == 2
 
     def test_universe_type(self):
-        builder = RiskUniverseBuilder(source_dir=Path("nonexistent"))
+        builder = RiskUniverseBuilder()
         assert builder.universe_type == Universe.RISK
 
     def test_exclusion_no_entity_id(self):
@@ -220,10 +220,7 @@ class TestOutcomeUniverseBuilder:
 
     def _make_exe_builder(self, records):
         """Create a mock-built ExecutionUniverseBuilder with given records."""
-        builder = ExecutionUniverseBuilder(
-            source_path=Path("nonexistent.jsonl"),
-            execution_results_dir=Path("nonexistent_dir"),
-        )
+        builder = ExecutionUniverseBuilder()
         builder._records = records
         builder._built = True
         builder._metadata = builder._generate_metadata(

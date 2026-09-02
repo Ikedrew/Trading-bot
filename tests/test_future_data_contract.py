@@ -12,10 +12,14 @@ Proves:
 """
 
 import json
+import sys
 import tempfile
 from pathlib import Path
 
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _s3_fake import FakeS3, install_fake_s3, reset_fake_s3
 
 from research_engine.v10.universes.future_data_contract import (
     ALL_PERSISTENCE_PATHS,
@@ -162,44 +166,30 @@ class TestFutureCorrelation:
 
 class TestUniverseIndependence:
 
-    def test_execution_enriches_entity_id_from_results(self, tmp_path):
-        """CR-001 FIX: ExecutionUniverseBuilder enriches entity_id from execution_results."""
-        # Create a minimal execution universe record
-        uni_path = tmp_path / "universe.jsonl"
-        uni_path.write_text(json.dumps({
-            "trade_id": "pos_54850055",
-            "execution": {
-                "ticket": 54850055, "symbol": "EURUSD", "direction": "BUY",
-                "entry_price": 1.155, "exit_price": 1.157, "entry_time": 1785975900,
-                "exit_time": 1785980000, "stop_loss": 1.154, "take_profit": 1.160,
-                "gross_profit": 20, "commission": -2, "swap": 0,
-                "net_realised_pnl": 18, "r_multiple": 2.0,
-                "volume": 0.1, "duration_seconds": 4100, "exit_reason": "TAKE_PROFIT",
-            },
-            "decision": {"strategy": "", "score": 0, "confidence": 0,
-                         "decision_type": "", "decision_timestamp": 0,
-                         "components": {}, "weakest_component": "", "ev": None, "p_success": None},
-            "market": {"regime": "", "session": "", "volatility": "", "trend_state": "",
-                       "higher_timeframe_bias": "", "h4_phase": "", "h1_clarity": 0},
-            "strategy": {"family": "", "pattern": "", "conditions_met": 0,
-                         "strategy_confidence": 0, "opportunity_quality": 0, "opportunity_type": ""},
-            "quality": {"anomaly": False, "anomaly_reasons": [], "governance_status": "VALID",
-                        "data_completeness": "FULL", "missing": [], "join_method": "", "pnl_source": ""},
-        }) + "\n")
+    @pytest.fixture(autouse=True)
+    def _s3(self):
+        fake = install_fake_s3()
+        yield fake
+        reset_fake_s3()
 
-        # Create matching execution_results with entity_id
-        er_dir = tmp_path / "exec_results" / "EURUSD"
-        er_dir.mkdir(parents=True)
-        (er_dir / "2026-08-06.jsonl").write_text(json.dumps({
+    def test_execution_enriches_entity_id_from_results(self, _s3):
+        """CR-001 FIX: ExecutionUniverseBuilder enriches entity_id from execution_results."""
+        # Seed trade_truth (authoritative realised outcome) for the trade.
+        _s3.add("trade_truth", [{
+            "identity": {"trade_id": "pos_54850055", "correlation_id": "COR-20260806-3005-EURUSD-A0CE", "symbol": "EURUSD"},
+            "execution": {"entry_fill_price": 1.155, "exit_fill_price": 1.157, "volume_executed": 0.1},
+            "timestamps": {"entry_timestamp_broker": 1785975900, "exit_timestamp_broker": 1785980000, "duration_seconds": 4100},
+            "outcome": {"r_multiple_realised": 2.0, "pnl_realised": 20, "net_profit": 18, "commission": -2, "swap": 0},
+            "exit": {"exit_reason": "TAKE_PROFIT"},
+        }], symbol="EURUSD")
+        # Seed execution_results carrying the entity_id (joined by correlation_id).
+        _s3.add("execution_results", [{
             "symbol": "EURUSD", "deal": 54850055, "result_ok": True,
             "entity_id": "EURUSD_1785986700", "correlation_id": "COR-20260806-3005-EURUSD-A0CE",
             "comment": "Request executed",
-        }) + "\n")
+        }], symbol="EURUSD")
 
-        builder = ExecutionUniverseBuilder(
-            source_path=uni_path,
-            execution_results_dir=tmp_path / "exec_results",
-        )
+        builder = ExecutionUniverseBuilder()
         records = builder.build()
 
         assert len(records) == 1
@@ -208,115 +198,74 @@ class TestUniverseIndependence:
         # trade_id preserved
         assert records[0]["trade_id"] == "pos_54850055"
 
-    def test_execution_fallback_when_no_results(self, tmp_path):
+    def test_execution_fallback_when_no_results(self, _s3):
         """Without execution_results, entity_id falls back to trade_id."""
-        uni_path = tmp_path / "universe.jsonl"
-        uni_path.write_text(json.dumps({
-            "trade_id": "pos_999",
-            "execution": {
-                "ticket": 999, "symbol": "GBPUSD", "direction": "SELL",
-                "entry_price": 1.33, "exit_price": 1.325, "entry_time": 1000,
-                "exit_time": 2000, "stop_loss": 1.335, "take_profit": 1.325,
-                "gross_profit": 5, "commission": -1, "swap": 0,
-                "net_realised_pnl": 4, "r_multiple": 1.0,
-                "volume": 0.1, "duration_seconds": 1000, "exit_reason": "TP",
-            },
-            "decision": {"strategy": "", "score": 0, "confidence": 0,
-                         "decision_type": "", "decision_timestamp": 0,
-                         "components": {}, "weakest_component": "", "ev": None, "p_success": None},
-            "market": {"regime": "", "session": "", "volatility": "", "trend_state": "",
-                       "higher_timeframe_bias": "", "h4_phase": "", "h1_clarity": 0},
-            "strategy": {"family": "", "pattern": "", "conditions_met": 0,
-                         "strategy_confidence": 0, "opportunity_quality": 0, "opportunity_type": ""},
-            "quality": {"anomaly": False, "anomaly_reasons": [], "governance_status": "VALID",
-                        "data_completeness": "FULL", "missing": [], "join_method": "", "pnl_source": ""},
-        }) + "\n")
+        _s3.add("trade_truth", [{
+            "identity": {"trade_id": "pos_999", "correlation_id": "", "symbol": "GBPUSD"},
+            "execution": {"entry_fill_price": 1.33, "exit_fill_price": 1.325, "volume_executed": 0.1},
+            "timestamps": {"entry_timestamp_broker": 1000, "exit_timestamp_broker": 2000, "duration_seconds": 1000},
+            "outcome": {"r_multiple_realised": 1.0, "pnl_realised": 5, "net_profit": 4, "commission": -1, "swap": 0},
+            "exit": {"exit_reason": "TP"},
+        }], symbol="GBPUSD")
 
-        # No execution_results directory
-        builder = ExecutionUniverseBuilder(
-            source_path=uni_path,
-            execution_results_dir=tmp_path / "nonexistent",
-        )
+        # No execution_results seeded → no entity_id join available.
+        builder = ExecutionUniverseBuilder()
         records = builder.build()
 
         assert len(records) == 1
         # Falls back to trade_id
         assert records[0]["entity_id"] == "pos_999"
 
-    def test_execution_builds_independently(self, tmp_path):
+    def test_execution_builds_independently(self, _s3):
         """Execution Universe builds without Decision/Market/Strategy."""
-        p = tmp_path / "uni.jsonl"
-        p.write_text(json.dumps({
-            "trade_id": "pos_1",
-            "execution": {"r_multiple": 1.0, "symbol": "EURUSD", "direction": "BUY",
-                          "entry_price": 1.1, "exit_price": 1.11, "entry_time": 1000,
-                          "exit_time": 2000, "stop_loss": 1.09, "take_profit": 1.12,
-                          "gross_profit": 10, "commission": -1, "swap": 0,
-                          "net_realised_pnl": 9, "volume": 0.1,
-                          "duration_seconds": 1000, "exit_reason": "TP"},
-            "decision": {"strategy": "", "score": 0, "confidence": 0,
-                         "decision_type": "", "decision_timestamp": 0,
-                         "components": {}, "weakest_component": "", "ev": None, "p_success": None},
-            "market": {"regime": "", "session": "", "volatility": "", "trend_state": "",
-                       "higher_timeframe_bias": "", "h4_phase": "", "h1_clarity": 0},
-            "strategy": {"family": "", "pattern": "", "conditions_met": 0,
-                         "strategy_confidence": 0, "opportunity_quality": 0, "opportunity_type": ""},
-            "quality": {"anomaly": False, "anomaly_reasons": [], "governance_status": "VALID",
-                        "data_completeness": "FULL", "missing": [], "join_method": "", "pnl_source": ""},
-        }) + "\n")
-        builder = ExecutionUniverseBuilder(source_path=p)
+        _s3.add("trade_truth", [{
+            "identity": {"trade_id": "pos_1", "correlation_id": "", "symbol": "EURUSD"},
+            "execution": {"entry_fill_price": 1.1, "exit_fill_price": 1.11, "volume_executed": 0.1},
+            "timestamps": {"entry_timestamp_broker": 1000, "exit_timestamp_broker": 2000, "duration_seconds": 1000},
+            "outcome": {"r_multiple_realised": 1.0, "pnl_realised": 10, "net_profit": 9, "commission": -1, "swap": 0},
+            "exit": {"exit_reason": "TP"},
+        }], symbol="EURUSD")
+        builder = ExecutionUniverseBuilder()
         records = builder.build()
         assert len(records) == 1
 
-    def test_decision_builds_independently(self, tmp_path):
+    def test_decision_builds_independently(self, _s3):
         """Decision Universe builds without Execution/Market/Strategy."""
-        d = tmp_path / "SYM"
-        d.mkdir()
-        (d / "f.jsonl").write_text(json.dumps({
+        _s3.add("decision_trace", [{
             "entity_id": "SYM_1000", "symbol": "SYM", "cycle_id": 1,
             "timestamp_utc": "2026-08-09T00:00:00Z", "action": "NO_TRADE",
             "terminal_stage": "unknown", "terminal_reason": "test",
             "v10_market_state": {}, "v10_opportunity": {}, "v10_strategy": {},
             "v10_risk": {}, "v10_entry": {},
-        }) + "\n")
-        builder = DecisionUniverseBuilder(source_dir=tmp_path)
+        }], symbol="SYM")
+        builder = DecisionUniverseBuilder()
         records = builder.build()
         assert len(records) == 1
 
-    def test_market_builds_independently(self, tmp_path):
+    def test_market_builds_independently(self, _s3):
         """Market Universe builds without Execution."""
-        dt = tmp_path / "dt" / "SYM"
-        dt.mkdir(parents=True)
-        (dt / "f.jsonl").write_text(json.dumps({
+        _s3.add("decision_trace", [{
             "entity_id": "SYM_1000", "symbol": "SYM", "cycle_id": 1,
             "timestamp_utc": "2026-08-09T00:00:00Z", "action": "NO_TRADE",
             "v10_market_state": {"regime": {"regime": "TRENDING", "regime_confidence": 0.8,
                                             "volatility_state": "NEUTRAL", "expansion_state": ""},
                                  "h4": {}, "h1": {}, "m15": {}, "m5": {},
                                  "location": {}, "htf_alignment": {}},
-        }) + "\n")
-        builder = MarketUniverseBuilder(
-            decision_trace_dir=tmp_path / "dt",
-            market_context_dir=tmp_path / "mc",
-        )
+        }], symbol="SYM")
+        builder = MarketUniverseBuilder()
         records = builder.build()
         assert len(records) == 1
 
-    def test_strategy_builds_independently(self, tmp_path):
+    def test_strategy_builds_independently(self, _s3):
         """Strategy Universe builds without Execution."""
-        so = tmp_path / "so" / "SYM"
-        so.mkdir(parents=True)
-        (so / "f.jsonl").write_text(json.dumps({
+        _s3.add("strategy_observations", [{
             "entity_id": "SYM_1000", "symbol": "SYM", "cycle_id": 1,
             "timestamp_utc": 1000.0, "strategy_family": "MEAN_REVERSION",
             "confidence": 0.7, "conditions_passed": 3, "evaluation_status": "SELECTED",
             "decision_action": "EXECUTE", "decision_score": 72.0,
             "detected_pattern": "ENGULFING", "direction": "BUY",
-        }) + "\n")
-        builder = StrategyUniverseBuilder(
-            decision_trace_dir=tmp_path / "dt",
-            strategy_obs_dir=tmp_path / "so",
-        )
+        }], symbol="SYM")
+        builder = StrategyUniverseBuilder()
         records = builder.build()
         assert len(records) == 1
 
@@ -328,62 +277,57 @@ class TestUniverseIndependence:
 
 class TestPopulationContinuity:
 
-    def test_new_record_appears_in_population(self, tmp_path):
+    @pytest.fixture(autouse=True)
+    def _s3(self):
+        fake = install_fake_s3()
+        yield fake
+        reset_fake_s3()
+
+    def test_new_record_appears_in_population(self, _s3):
         """A new record automatically appears in the applicable population."""
-        d = tmp_path / "SYM"
-        d.mkdir()
         # Initially one NO_TRADE
-        (d / "f.jsonl").write_text(json.dumps({
+        no_trade = {
             "entity_id": "SYM_1000", "symbol": "SYM", "cycle_id": 1,
             "timestamp_utc": "2026-08-09T00:00:00Z", "action": "NO_TRADE",
             "terminal_stage": "unknown", "terminal_reason": "V10 [opportunity]: invalid",
             "v10_market_state": {}, "v10_opportunity": {}, "v10_strategy": {},
             "v10_risk": {}, "v10_entry": {},
-        }) + "\n")
+        }
+        _s3.add("decision_trace", [no_trade], symbol="SYM")
 
-        builder = DecisionUniverseBuilder(source_dir=tmp_path)
+        builder = DecisionUniverseBuilder()
         builder.build()
         assert len(builder.get_population(Population.EXECUTE_DECISIONS)) == 0
 
-        # Simulate new EXECUTE record arriving
-        with open(d / "f.jsonl", "a") as f:
-            f.write(json.dumps({
-                "entity_id": "SYM_2000", "symbol": "SYM", "cycle_id": 2,
-                "timestamp_utc": "2026-08-09T01:00:00Z", "action": "EXECUTE",
-                "terminal_stage": "", "terminal_reason": "",
-                "v10_market_state": {}, "v10_opportunity": {}, "v10_strategy": {},
-                "v10_risk": {}, "v10_entry": {},
-            }) + "\n")
+        # Simulate new EXECUTE record arriving in S3 (fresh run reads it).
+        _s3.add("decision_trace", [{
+            "entity_id": "SYM_2000", "symbol": "SYM", "cycle_id": 2,
+            "timestamp_utc": "2026-08-09T01:00:00Z", "action": "EXECUTE",
+            "terminal_stage": "", "terminal_reason": "",
+            "v10_market_state": {}, "v10_opportunity": {}, "v10_strategy": {},
+            "v10_risk": {}, "v10_entry": {},
+        }], symbol="SYM")
+        # New run → fresh source (no stale run-level cache carried over).
+        reset_fake_s3()
+        install_fake_s3(_s3)
 
         # Rebuild — new record automatically in population
-        builder2 = DecisionUniverseBuilder(source_dir=tmp_path)
+        builder2 = DecisionUniverseBuilder()
         builder2.build()
         assert len(builder2.get_population(Population.EXECUTE_DECISIONS)) == 1
 
-    def test_failed_correlation_preserves_records(self, tmp_path):
+    def test_failed_correlation_preserves_records(self, _s3):
         """If correlation fails, both universe records remain intact."""
-        # Execution record
-        exe_path = tmp_path / "exe.jsonl"
-        exe_path.write_text(json.dumps({
-            "trade_id": "pos_NOCORR",
-            "execution": {"r_multiple": -0.5, "symbol": "GBPUSD", "direction": "SELL",
-                          "entry_price": 1.33, "exit_price": 1.335, "entry_time": 9999,
-                          "exit_time": 10000, "stop_loss": 1.335, "take_profit": 1.325,
-                          "gross_profit": -5, "commission": -1, "swap": 0,
-                          "net_realised_pnl": -6, "volume": 0.1,
-                          "duration_seconds": 100, "exit_reason": "SL"},
-            "decision": {"strategy": "", "score": 0, "confidence": 0,
-                         "decision_type": "", "decision_timestamp": 0,
-                         "components": {}, "weakest_component": "", "ev": None, "p_success": None},
-            "market": {"regime": "", "session": "", "volatility": "", "trend_state": "",
-                       "higher_timeframe_bias": "", "h4_phase": "", "h1_clarity": 0},
-            "strategy": {"family": "", "pattern": "", "conditions_met": 0,
-                         "strategy_confidence": 0, "opportunity_quality": 0, "opportunity_type": ""},
-            "quality": {"anomaly": False, "anomaly_reasons": [], "governance_status": "VALID",
-                        "data_completeness": "FULL", "missing": [], "join_method": "", "pnl_source": ""},
-        }) + "\n")
+        # Execution record (trade_truth), no matching decision to correlate with.
+        _s3.add("trade_truth", [{
+            "identity": {"trade_id": "pos_NOCORR", "correlation_id": "", "symbol": "GBPUSD"},
+            "execution": {"entry_fill_price": 1.33, "exit_fill_price": 1.335, "volume_executed": 0.1},
+            "timestamps": {"entry_timestamp_broker": 9999, "exit_timestamp_broker": 10000, "duration_seconds": 100},
+            "outcome": {"r_multiple_realised": -0.5, "pnl_realised": -5, "net_profit": -6, "commission": -1, "swap": 0},
+            "exit": {"exit_reason": "SL"},
+        }], symbol="GBPUSD")
 
-        exe_builder = ExecutionUniverseBuilder(source_path=exe_path)
+        exe_builder = ExecutionUniverseBuilder()
         exe_builder.build()
 
         # Attempt correlation with empty decision set

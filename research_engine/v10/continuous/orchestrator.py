@@ -178,11 +178,12 @@ class ContinuousResearchOrchestrator:
             # Use question-level sample sizes as proxy
             current_sizes["latest_run_questions"] = latest_run.get("questions_executed", 0)
 
-        # Get execution dataset size
-        exe_path = Path("data/research/research_universe.jsonl")
-        if exe_path.exists():
-            with open(exe_path, encoding="utf-8") as f:
-                current_sizes["execution_records"] = sum(1 for line in f if line.strip())
+        # Get execution dataset size from the S3 research universe artifact.
+        # S3 is authoritative; an empty list means the artifact is absent in S3.
+        from research_engine.data_access.s3_source import get_default_source
+        records = get_default_source().read_artifact("research_universe")
+        if records:
+            current_sizes["execution_records"] = len(records)
 
         # Compare with previous state
         prev = self._store.load_latest()

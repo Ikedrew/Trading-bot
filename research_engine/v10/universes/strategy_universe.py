@@ -28,26 +28,22 @@ from research_engine.v10.universes.models import Population, Universe
 
 logger = logging.getLogger(__name__)
 
-_DECISION_TRACE_DIR = Path("logs/decision_trace")
-_STRATEGY_OBS_DIR = Path("logs/strategy_observations")
+_DT_DATASET = "decision_trace"
+_SO_DATASET = "strategy_observations"
 
 
 class StrategyUniverseBuilder(UniverseBuilder):
     """
-    Builds the Strategy Universe from decision traces and strategy observation logs.
+    Builds the Strategy Universe from the decision_trace + strategy_observations datasets (S3).
 
     Primary source: v10_strategy in decision traces (linked by entity_id).
-    Secondary source: logs/strategy_observations/ (detailed strategy evaluations).
+    Secondary source: strategy_observations (detailed strategy evaluations).
+    Both datasets are read from S3 via the shared access layer.
     """
 
-    def __init__(
-        self,
-        decision_trace_dir: Path | str | None = None,
-        strategy_obs_dir: Path | str | None = None,
-    ):
+    def __init__(self, symbol: str | None = None):
         super().__init__()
-        self._dt_dir = Path(decision_trace_dir) if decision_trace_dir else _DECISION_TRACE_DIR
-        self._so_dir = Path(strategy_obs_dir) if strategy_obs_dir else _STRATEGY_OBS_DIR
+        self._symbol = symbol
         self._raw_dt: list[dict[str, Any]] = []
         self._raw_so: list[dict[str, Any]] = []
 
@@ -56,12 +52,12 @@ class StrategyUniverseBuilder(UniverseBuilder):
         return Universe.STRATEGY
 
     def load(self) -> int:
-        self._raw_dt = self._load_jsonl_directory(self._dt_dir)
-        self._raw_so = self._load_jsonl_directory(self._so_dir)
+        self._raw_dt = self._load_dataset(_DT_DATASET, symbol=self._symbol)
+        self._raw_so = self._load_dataset(_SO_DATASET, symbol=self._symbol)
         total = len(self._raw_dt) + len(self._raw_so)
         logger.info(
             f"[STRATEGY] Loaded {len(self._raw_dt)} decision traces + "
-            f"{len(self._raw_so)} strategy observations = {total} total"
+            f"{len(self._raw_so)} strategy observations = {total} total (S3)"
         )
         return total
 
@@ -122,7 +118,7 @@ class StrategyUniverseBuilder(UniverseBuilder):
         self._records = records
         self._built = True
 
-        source_files = (str(self._dt_dir), str(self._so_dir))
+        source_files = (f"s3:{_DT_DATASET}", f"s3:{_SO_DATASET}")
         self._metadata = self._generate_metadata(
             records=records,
             source_files=source_files,

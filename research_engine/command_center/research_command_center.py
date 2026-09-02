@@ -60,10 +60,11 @@ from research_engine.registry.research_question_models import QuestionCategory
 
 _REPORTS_DIR = Path("analysis/reports")
 _SUMMARIES_DIR = Path("analysis/summaries")
-_SHADOW_DIR = Path("logs/shadow_trades")
-_RESEARCH_SHADOW_DIR = Path("logs/research_shadow_trades")
-_TRACE_DIR = Path("logs/decision_trace")
-_TRUTH_DIR = Path("logs/trade_truth")
+# Production-contract dataset names read via the shared S3 data-access layer.
+_SHADOW_DATASET = "shadow_trades"
+_RESEARCH_SHADOW_DATASET = "research_shadow_trades"
+_TRACE_DATASET = "decision_trace"
+_TRUTH_DATASET = "trade_truth"
 
 _COVERAGE_HIGH = 0.80
 _COVERAGE_MED = 0.50
@@ -85,33 +86,20 @@ def _load_json(path: Path) -> dict[str, Any] | None:
         return None
 
 
-def _count_jsonl(directory: Path) -> int:
-    count = 0
-    if not directory.exists():
-        return 0
-    for f in directory.rglob("*.jsonl"):
-        try:
-            count += sum(1 for line in f.read_text(encoding="utf-8").splitlines() if line.strip())
-        except OSError:
-            pass
-    return count
+def _count_jsonl(dataset: str) -> int:
+    """Count records in a production dataset read from S3 via the shared layer."""
+    from research_engine.data_access.s3_source import get_default_source
+
+    return len(get_default_source().read_dataset(dataset))
 
 
-def _load_jsonl_sample(directory: Path, limit: int = 500) -> list[dict[str, Any]]:
-    """Load a sample of JSONL records (most recent first, capped)."""
-    records: list[dict[str, Any]] = []
-    if not directory.exists():
-        return records
-    for f in sorted(directory.rglob("*.jsonl"), reverse=True):
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                try:
-                    records.append(json.loads(line))
-                except (json.JSONDecodeError, ValueError):
-                    pass
-                if len(records) >= limit:
-                    return records
-    return records
+def _load_jsonl_sample(dataset: str, limit: int = 500) -> list[dict[str, Any]]:
+    """Load a sample of dataset records from S3 (most recent first, capped)."""
+    from research_engine.data_access.s3_source import get_default_source
+
+    records = get_default_source().read_dataset(dataset)
+    # S3 layer orders ascending by timestamp; reverse for most-recent-first, then cap.
+    return list(reversed(records))[:limit]
 
 
 def _load_all_reports() -> dict[str, dict[str, Any]]:
@@ -165,11 +153,11 @@ def generate_command_report() -> ResearchCommandReport:
     knowledge = _load_json(_SUMMARIES_DIR / "research_knowledge.json")
     reports = _load_all_reports()
 
-    shadow_records = _load_jsonl_sample(_SHADOW_DIR)
-    research_shadow_records = _load_jsonl_sample(_RESEARCH_SHADOW_DIR)
+    shadow_records = _load_jsonl_sample(_SHADOW_DATASET)
+    research_shadow_records = _load_jsonl_sample(_RESEARCH_SHADOW_DATASET)
     all_shadow = shadow_records + research_shadow_records
-    shadow_count = _count_jsonl(_SHADOW_DIR) + _count_jsonl(_RESEARCH_SHADOW_DIR)
-    trace_count = _count_jsonl(_TRACE_DIR)
+    shadow_count = _count_jsonl(_SHADOW_DATASET) + _count_jsonl(_RESEARCH_SHADOW_DATASET)
+    trace_count = _count_jsonl(_TRACE_DATASET)
 
     # Build each section
     data_health = _build_data_health(all_shadow, shadow_count)

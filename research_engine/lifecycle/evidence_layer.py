@@ -655,22 +655,18 @@ def _evidence_spread_anomaly(shadows: list[dict], ts: str) -> EvidenceRecord:
 
 
 def _evidence_slippage(ts: str) -> EvidenceRecord:
-    exec_dir = Path("logs/execution_results")
-    if not exec_dir.exists():
+    from research_engine.data_access.s3_source import get_default_source
+
+    exec_records = get_default_source().read_dataset("execution_results")
+    if not exec_records:
         return EvidenceRecord(detector_id="DET-012", detector_name="slippage_deterioration",
                               surface="execution_slippage", timestamp=ts,
-                              status=EvidenceStatus.NOT_OBSERVABLE, reason="No execution_results directory")
+                              status=EvidenceStatus.NOT_OBSERVABLE, reason="No execution_results data")
 
     slippages = []
-    for f in sorted(exec_dir.rglob("*.jsonl")):
-        try:
-            for line in f.read_text(encoding="utf-8").splitlines():
-                if line.strip():
-                    rec = json.loads(line)
-                    if rec.get("result_ok") and rec.get("slippage") is not None:
-                        slippages.append((rec.get("timestamp_unix", 0), abs(rec["slippage"])))
-        except Exception:
-            continue
+    for rec in exec_records:
+        if rec.get("result_ok") and rec.get("slippage") is not None:
+            slippages.append((rec.get("timestamp_unix", 0), abs(rec["slippage"])))
 
     if len(slippages) < 20:
         return EvidenceRecord(detector_id="DET-012", detector_name="slippage_deterioration",
@@ -822,28 +818,22 @@ def _evidence_shadow_reality(ts: str) -> EvidenceRecord:
 
 
 def _evidence_drawdown(ts: str) -> EvidenceRecord:
-    dt_dir = Path("logs/decision_trace")
-    if not dt_dir.exists():
+    from research_engine.data_access.s3_source import get_default_source
+
+    trace_records = get_default_source().read_dataset("decision_trace")
+    if not trace_records:
         return EvidenceRecord(detector_id="DET-016", detector_name="drawdown_approaching",
                               surface="drawdown_daily_loss", timestamp=ts,
                               status=EvidenceStatus.NOT_OBSERVABLE)
 
     daily_losses = []
-    for f in sorted(dt_dir.rglob("*.jsonl"), reverse=True):
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            try:
-                rec = json.loads(line)
-                snap = rec.get("v10_account_snapshot")
-                if snap and snap.get("daily_loss_pct"):
-                    daily_losses.append(abs(snap["daily_loss_pct"]))
-                    if len(daily_losses) >= 50:
-                        break
-            except Exception:
-                continue
-        if len(daily_losses) >= 50:
-            break
+    # Most-recent-first (S3 layer orders ascending by timestamp), take up to 50.
+    for rec in reversed(trace_records):
+        snap = rec.get("v10_account_snapshot")
+        if snap and snap.get("daily_loss_pct"):
+            daily_losses.append(abs(snap["daily_loss_pct"]))
+            if len(daily_losses) >= 50:
+                break
 
     if len(daily_losses) < 5:
         return EvidenceRecord(detector_id="DET-016", detector_name="drawdown_approaching",

@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _s3_fake import install_fake_s3, reset_fake_s3
 
 from research_engine.v10.segmentation_engine import ResearchSegmenter
 
@@ -78,8 +80,8 @@ def _event(trade_id="pos_1", symbol="EURUSD", session="LONDON", regime="TRENDING
 
 
 @pytest.fixture
-def segmenter(tmp_path):
-    """Create segmenter with synthetic universe."""
+def segmenter():
+    """Create segmenter with a synthetic research_universe artifact seeded in S3."""
     events = [
         _event("pos_1", "EURUSD", "LONDON", "TRENDING", "NEUTRAL", 0.7, 0.6),
         _event("pos_2", "EURUSD", "NEW_YORK", "RANGING", "HIGH", 0.8, 0.75),
@@ -89,9 +91,12 @@ def segmenter(tmp_path):
         _event("pos_6", "NZDUSD", "LONDON", "RANGING", "NEUTRAL", 0.6, 0.5),
         _event("pos_7", "US500", "LONDON_NY_OVERLAP", "TRENDING", "HIGH", 0.85, 0.72),
     ]
-    universe_file = tmp_path / "universe.jsonl"
-    universe_file.write_text("\n".join(json.dumps(e) for e in events), encoding="utf-8")
-    return ResearchSegmenter(universe_file=str(universe_file))
+    fake = install_fake_s3()
+    fake.add_artifact("research_universe", events)
+    try:
+        yield ResearchSegmenter()
+    finally:
+        reset_fake_s3()
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -258,9 +263,16 @@ class TestBuildAllSegments:
 
 class TestLiveData:
     def test_live_segmentation(self):
-        universe = Path("data/research/research_universe.jsonl")
-        if not universe.exists():
-            pytest.skip("Research universe not available")
+        # Live/integration test: the research universe is now authoritative in S3
+        # (not the local file). This exercises the REAL S3 source, so it is gated
+        # behind an explicit opt-in to avoid network access in normal runs.
+        import os
+        if os.environ.get("RESEARCH_LIVE_S3_TESTS") != "1":
+            pytest.skip("live S3 test — set RESEARCH_LIVE_S3_TESTS=1 to run")
+        from research_engine.data_access.s3_source import get_default_source
+        events = get_default_source().read_artifact("research_universe")
+        if not events:
+            pytest.skip("Research universe not available in S3")
         seg = ResearchSegmenter()
         result = seg.build_all_segments(
             segments_dir="data/research/segments",

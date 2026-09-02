@@ -331,29 +331,27 @@ class TestShadowBranch:
 # ─── research consumers ───────────────────────────────────────────────────────
 
 class TestResearchConsumers:
-    def test_loader_excludes_open_events_by_default(self, tmp_path, monkeypatch):
+    def test_loader_excludes_open_events_by_default(self):
         import time as _time
         import research_engine.data_access.loaders as loaders_mod
-        logs_dir = tmp_path / "logs"
-        d = logs_dir / "shadow_trades" / "EURUSD"
-        d.mkdir(parents=True)
+        from tests._s3_fake import install_fake_s3, reset_fake_s3
         open_rec = {
             "event_type": "OPEN", "identity": {"trade_id": "a", "canonical_opportunity_id": CANONICAL},
-            # OPEN events are partitioned by entry time like real ones
             "decision_snapshot": {"timestamp_decision_utc": _time.time()},
         }
         close_rec = {"identity": {"trade_id": "b", "canonical_opportunity_id": CANONICAL},
                      "simulated_outcome": {"pnl_r_multiple": 1.0}}
         hist = {"identity": {"trade_id": "c"}}  # pre-remediation record: outcome
-        (d / "2026-08-24.jsonl").write_text(
-            "\n".join(json.dumps(r) for r in (open_rec, close_rec, hist)), encoding="utf-8"
-        )
-        monkeypatch.setattr(loaders_mod, "_get_logs_dir", lambda: logs_dir)
-        outcomes = loaders_mod.load_shadow_trades()
-        ids = {(r["identity"]["trade_id"]) for r in outcomes}
-        assert ids == {"b", "c"}          # OPEN excluded, historical kept
-        everything = loaders_mod.load_shadow_trades(outcomes_only=False)
-        assert len(everything) == 3
+        fake = install_fake_s3()
+        try:
+            fake.add("shadow_trades", [open_rec, close_rec, hist], symbol="EURUSD", date="2026-08-24")
+            outcomes = loaders_mod.load_shadow_trades()
+            ids = {(r["identity"]["trade_id"]) for r in outcomes}
+            assert ids == {"b", "c"}          # OPEN excluded, historical kept
+            everything = loaders_mod.load_shadow_trades(outcomes_only=False)
+            assert len(everything) == 3
+        finally:
+            reset_fake_s3()
 
     def test_classifier_requires_canonical_for_current_epoch(self):
         from research_engine.data_quality.classifier import classify_record, DataEpoch

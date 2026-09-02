@@ -14,10 +14,9 @@ Usage:
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any
 
+from research_engine.data_access.s3_source import get_default_source
 from research_engine.registry.research_question_models import (
     QuestionAuditResult,
     QuestionStatus,
@@ -29,29 +28,19 @@ from research_engine.validation import validate_dataset, ResearchValidationResul
 
 # ─── DATA LOADING ─────────────────────────────────────────────────────────────
 
-_SHADOW_DIRS = [Path("logs/shadow_trades"), Path("logs/research_shadow_trades")]
-_TRACE_DIR = Path("logs/decision_trace")
+_SHADOW_DATASETS = ["shadow_trades", "research_shadow_trades"]
+_TRACE_DATASET = "decision_trace"
 
 
-def _load_jsonl(directory: Path) -> list[dict]:
-    """Load all JSONL records from a directory tree."""
-    records: list[dict] = []
-    if not directory.exists():
-        return records
-    for f in sorted(directory.rglob("*.jsonl")):
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                try:
-                    records.append(json.loads(line))
-                except Exception:
-                    pass
-    return records
+def _load_jsonl(dataset: str) -> list[dict]:
+    """Read a production dataset from S3 via the shared data-access layer."""
+    return get_default_source().read_dataset(dataset)
 
 
 def _load_shadows() -> list[dict]:
     """Load all shadow trade records."""
     records: list[dict] = []
-    for d in _SHADOW_DIRS:
+    for d in _SHADOW_DATASETS:
         records.extend(_load_jsonl(d))
     return records
 
@@ -171,7 +160,7 @@ def audit_registry(
     if shadow_records is None:
         shadow_records = _load_shadows()
     if trace_records is None:
-        trace_records = _load_jsonl(_TRACE_DIR)
+        trace_records = _load_jsonl(_TRACE_DATASET)
 
     # Validate datasets
     shadow_validation = validate_dataset(shadow_records, dataset_name="shadow_trades_combined")

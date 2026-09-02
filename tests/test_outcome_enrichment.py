@@ -13,9 +13,13 @@ Proves:
 """
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _s3_fake import FakeS3, install_fake_s3, reset_fake_s3
 
 from research_engine.v10.universes.outcome_enrichment import (
     OutcomeEnrichment,
@@ -32,37 +36,24 @@ from research_engine.v10.universes.models import Universe
 # HELPERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _write_jsonl(path: Path, records: list[dict]):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
-        for r in records:
-            f.write(json.dumps(r) + "\n")
-
-
-def _exe_record(trade_id, entity_id, r_mult, symbol="EURUSD"):
+def _trade_truth(trade_id, entity_id, r_mult, symbol="EURUSD"):
+    """A trade_truth-shaped record. entity_id is joined from execution_results
+    via correlation_id (see _exec_result); here we key correlation on entity_id."""
+    corr = f"COR-{entity_id}"
     return {
-        "trade_id": trade_id,
-        "execution": {
-            "ticket": int(trade_id.replace("pos_", "")),
-            "symbol": symbol, "direction": "BUY",
-            "entry_price": 1.1, "exit_price": 1.11, "entry_time": 1000,
-            "exit_time": 2000, "stop_loss": 1.09, "take_profit": 1.12,
-            "gross_profit": 10, "commission": -1, "swap": 0,
-            "net_realised_pnl": 9, "r_multiple": r_mult,
-            "volume": 0.1, "duration_seconds": 1000, "exit_reason": "TAKE_PROFIT",
-        },
-        "decision": {"strategy": "", "score": 70, "confidence": 0.8,
-                     "decision_type": "EXECUTE", "decision_timestamp": 999,
-                     "components": {}, "weakest_component": "", "ev": None, "p_success": None},
-        "market": {"regime": "TRENDING", "session": "LONDON", "volatility": "",
-                   "trend_state": "", "higher_timeframe_bias": "",
-                   "h4_phase": "", "h1_clarity": 0},
-        "strategy": {"family": "TREND_CONTINUATION", "pattern": "ENGULFING",
-                     "conditions_met": 3, "strategy_confidence": 0.7,
-                     "opportunity_quality": 0.8, "opportunity_type": ""},
-        "quality": {"anomaly": False, "anomaly_reasons": [],
-                    "governance_status": "VALID", "data_completeness": "FULL",
-                    "missing": [], "join_method": "", "pnl_source": ""},
+        "identity": {"trade_id": trade_id, "correlation_id": corr, "symbol": symbol},
+        "execution": {"entry_fill_price": 1.1, "exit_fill_price": 1.11, "volume_executed": 0.1},
+        "timestamps": {"entry_timestamp_broker": 1000, "exit_timestamp_broker": 2000, "duration_seconds": 1000},
+        "outcome": {"r_multiple_realised": r_mult, "pnl_realised": 10, "net_profit": 9, "commission": -1, "swap": 0},
+        "exit": {"exit_reason": "TAKE_PROFIT"},
+    }
+
+
+def _exec_result(entity_id, symbol="EURUSD"):
+    """An execution_results record that supplies entity_id, joined by correlation_id."""
+    return {
+        "symbol": symbol, "result_ok": True, "correlation_id": f"COR-{entity_id}",
+        "entity_id": entity_id, "comment": "Request executed",
     }
 
 
@@ -86,53 +77,43 @@ def _dec_trace(entity_id, action="EXECUTE", symbol="EURUSD"):
     }
 
 
-def _build_test_setup(tmp_path):
-    """Build a test setup with matching execution and decision records."""
-    # Execution universe with 3 trades, entity_ids enriched
-    exe_path = tmp_path / "exe.jsonl"
-    _write_jsonl(exe_path, [
-        _exe_record("pos_100", "EURUSD_1000", 1.5),
-        _exe_record("pos_200", "EURUSD_2000", -1.0),
-        _exe_record("pos_300", "GBPUSD_3000", 0.5, symbol="GBPUSD"),
-    ])
+def _build_test_setup(fake: FakeS3):
+    """Seed S3 with matching trade_truth/execution_results/decision_trace, then build."""
+    # trade_truth: 3 trades (entity_ids enriched via execution_results)
+    fake.add("trade_truth", [
+        _trade_truth("pos_100", "EURUSD_1000", 1.5),
+        _trade_truth("pos_200", "EURUSD_2000", -1.0),
+    ], symbol="EURUSD")
+    fake.add("trade_truth", [
+        _trade_truth("pos_300", "GBPUSD_3000", 0.5, symbol="GBPUSD"),
+    ], symbol="GBPUSD")
 
-    # Execution results (for entity_id enrichment)
-    er_dir = tmp_path / "exec_results" / "EURUSD"
-    er_dir.mkdir(parents=True)
-    _write_jsonl(er_dir / "data.jsonl", [
-        {"deal": 100, "entity_id": "EURUSD_1000", "result_ok": True, "comment": "Request executed"},
-        {"deal": 200, "entity_id": "EURUSD_2000", "result_ok": True, "comment": "Request executed"},
-    ])
-    er_dir2 = tmp_path / "exec_results" / "GBPUSD"
-    er_dir2.mkdir(parents=True)
-    _write_jsonl(er_dir2 / "data.jsonl", [
-        {"deal": 300, "entity_id": "GBPUSD_3000", "result_ok": True, "comment": "Request executed"},
-    ])
+    # execution_results (for entity_id enrichment, joined by correlation_id)
+    fake.add("execution_results", [
+        _exec_result("EURUSD_1000"),
+        _exec_result("EURUSD_2000"),
+    ], symbol="EURUSD")
+    fake.add("execution_results", [
+        _exec_result("GBPUSD_3000", symbol="GBPUSD"),
+    ], symbol="GBPUSD")
 
     # Decision traces: 3 EXECUTE (matching) + 2 NO_TRADE (no match)
-    dt_dir = tmp_path / "dt" / "EURUSD"
-    dt_dir.mkdir(parents=True)
-    _write_jsonl(dt_dir / "data.jsonl", [
+    fake.add("decision_trace", [
         _dec_trace("EURUSD_1000", "EXECUTE"),
         _dec_trace("EURUSD_2000", "EXECUTE"),
         _dec_trace("EURUSD_5000", "NO_TRADE"),
         _dec_trace("EURUSD_6000", "NO_TRADE"),
-    ])
-    dt_dir2 = tmp_path / "dt" / "GBPUSD"
-    dt_dir2.mkdir(parents=True)
-    _write_jsonl(dt_dir2 / "data.jsonl", [
+    ], symbol="EURUSD")
+    fake.add("decision_trace", [
         _dec_trace("GBPUSD_3000", "EXECUTE", "GBPUSD"),
-    ])
+    ], symbol="GBPUSD")
 
     # Build execution universe
-    exe_builder = ExecutionUniverseBuilder(
-        source_path=exe_path,
-        execution_results_dir=tmp_path / "exec_results",
-    )
+    exe_builder = ExecutionUniverseBuilder()
     exe_builder.build()
 
     # Build decision universe
-    dec_builder = DecisionUniverseBuilder(source_dir=tmp_path / "dt")
+    dec_builder = DecisionUniverseBuilder()
     dec_builder.build()
 
     return exe_builder, dec_builder
@@ -145,8 +126,14 @@ def _build_test_setup(tmp_path):
 
 class TestOutcomeEnrichment:
 
-    def test_matched_records_get_r_multiple(self, tmp_path):
-        exe, dec = _build_test_setup(tmp_path)
+    @pytest.fixture(autouse=True)
+    def _s3(self):
+        fake = install_fake_s3()
+        yield fake
+        reset_fake_s3()
+
+    def test_matched_records_get_r_multiple(self, _s3):
+        exe, dec = _build_test_setup(_s3)
         enrichment = OutcomeEnrichment(exe)
         result = enrichment.enrich(dec)
 
@@ -155,8 +142,8 @@ class TestOutcomeEnrichment:
         assert result.matched == 3
         assert all(r["r_multiple"] is not None for r in matched)
 
-    def test_no_trade_does_not_get_outcome(self, tmp_path):
-        exe, dec = _build_test_setup(tmp_path)
+    def test_no_trade_does_not_get_outcome(self, _s3):
+        exe, dec = _build_test_setup(_s3)
         enrichment = OutcomeEnrichment(exe)
         enrichment.enrich(dec)
 
@@ -167,8 +154,8 @@ class TestOutcomeEnrichment:
             assert r["outcome_available"] is False
             assert r["r_multiple"] is None
 
-    def test_exact_r_multiple_preserved(self, tmp_path):
-        exe, dec = _build_test_setup(tmp_path)
+    def test_exact_r_multiple_preserved(self, _s3):
+        exe, dec = _build_test_setup(_s3)
         enrichment = OutcomeEnrichment(exe)
         enrichment.enrich(dec)
 
@@ -180,8 +167,8 @@ class TestOutcomeEnrichment:
         assert eu2000["r_multiple"] == -1.0
         assert gb3000["r_multiple"] == 0.5
 
-    def test_execution_id_provenance(self, tmp_path):
-        exe, dec = _build_test_setup(tmp_path)
+    def test_execution_id_provenance(self, _s3):
+        exe, dec = _build_test_setup(_s3)
         enrichment = OutcomeEnrichment(exe)
         enrichment.enrich(dec)
 
@@ -189,8 +176,8 @@ class TestOutcomeEnrichment:
         assert eu1000["execution_id"] == "pos_100"
         assert eu1000["exit_reason"] == "TAKE_PROFIT"
 
-    def test_enrichment_result_counts(self, tmp_path):
-        exe, dec = _build_test_setup(tmp_path)
+    def test_enrichment_result_counts(self, _s3):
+        exe, dec = _build_test_setup(_s3)
         enrichment = OutcomeEnrichment(exe)
         result = enrichment.enrich(dec)
 
@@ -199,40 +186,45 @@ class TestOutcomeEnrichment:
         assert result.matched == 3
         assert result.unmatched == 2
 
-    def test_duplicate_match_protection(self, tmp_path):
+    def test_duplicate_match_protection(self, _s3):
         """First match wins — no duplicate outcome assignment."""
-        exe_path = tmp_path / "exe.jsonl"
-        _write_jsonl(exe_path, [
-            _exe_record("pos_100", "EURUSD_1000", 1.5),
-            _exe_record("pos_101", "EURUSD_1000", 2.0),  # Duplicate entity_id!
-        ])
-        er_dir = tmp_path / "exec_results" / "EURUSD"
-        er_dir.mkdir(parents=True)
-        _write_jsonl(er_dir / "data.jsonl", [
-            {"deal": 100, "entity_id": "EURUSD_1000", "result_ok": True, "comment": "Request executed"},
-            {"deal": 101, "entity_id": "EURUSD_1000", "result_ok": True, "comment": "Request executed"},
-        ])
+        # Two trades sharing the SAME correlation_id → same enriched entity_id.
+        # Ordered by exit timestamp: pos_100 (t=2000, r=1.5) precedes pos_101 (t=3000).
+        _s3.add("trade_truth", [
+            {
+                "identity": {"trade_id": "pos_100", "correlation_id": "COR-EURUSD_1000", "symbol": "EURUSD"},
+                "execution": {"entry_fill_price": 1.1, "exit_fill_price": 1.11, "volume_executed": 0.1},
+                "timestamps": {"entry_timestamp_broker": 1000, "exit_timestamp_broker": 2000, "duration_seconds": 1000},
+                "outcome": {"r_multiple_realised": 1.5, "pnl_realised": 10, "net_profit": 9, "commission": -1, "swap": 0},
+                "exit": {"exit_reason": "TAKE_PROFIT"},
+            },
+            {
+                "identity": {"trade_id": "pos_101", "correlation_id": "COR-EURUSD_1000", "symbol": "EURUSD"},
+                "execution": {"entry_fill_price": 1.1, "exit_fill_price": 1.12, "volume_executed": 0.1},
+                "timestamps": {"entry_timestamp_broker": 2000, "exit_timestamp_broker": 3000, "duration_seconds": 1000},
+                "outcome": {"r_multiple_realised": 2.0, "pnl_realised": 20, "net_profit": 18, "commission": -1, "swap": 0},
+                "exit": {"exit_reason": "TAKE_PROFIT"},
+            },
+        ], symbol="EURUSD")
+        _s3.add("execution_results", [_exec_result("EURUSD_1000")], symbol="EURUSD")
 
-        exe = ExecutionUniverseBuilder(
-            source_path=exe_path,
-            execution_results_dir=tmp_path / "exec_results",
-        )
+        exe = ExecutionUniverseBuilder()
         exe.build()
 
         enrichment = OutcomeEnrichment(exe)
         # First match (pos_100, r=1.5) wins
         assert enrichment._outcome_lookup.get("EURUSD_1000", {}).get("r_multiple") == 1.5
 
-    def test_enrichment_is_deterministic(self, tmp_path):
+    def test_enrichment_is_deterministic(self, _s3):
         """Same data → same enrichment."""
-        exe, dec = _build_test_setup(tmp_path)
+        exe, dec = _build_test_setup(_s3)
 
         e1 = OutcomeEnrichment(exe)
         e1.enrich(dec)
         first_values = [(r["entity_id"], r.get("r_multiple")) for r in dec.records]
 
-        # Rebuild and enrich again
-        dec2 = DecisionUniverseBuilder(source_dir=tmp_path / "dt")
+        # Rebuild and enrich again (same S3 source → identical data)
+        dec2 = DecisionUniverseBuilder()
         dec2.build()
         e2 = OutcomeEnrichment(exe)
         e2.enrich(dec2)
@@ -240,9 +232,9 @@ class TestOutcomeEnrichment:
 
         assert first_values == second_values
 
-    def test_execution_universe_unchanged(self, tmp_path):
+    def test_execution_universe_unchanged(self, _s3):
         """Enrichment of other universes doesn't modify Execution Universe."""
-        exe, dec = _build_test_setup(tmp_path)
+        exe, dec = _build_test_setup(_s3)
         original_count = len(exe.records)
         original_r = [r["r_multiple"] for r in exe.records]
 
@@ -258,6 +250,7 @@ class TestOutcomeEnrichment:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+@pytest.mark.skip(reason="requires live S3 data (integration test gated on real dataset presence)")
 class TestRealDataEnrichment:
     """Run against real data to validate actual enrichment counts."""
 

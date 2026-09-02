@@ -21,9 +21,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-_SHADOW_DIR = Path("logs/shadow_trades")
-_RESEARCH_SHADOW_DIR = Path("logs/research_shadow_trades")
-_TRACE_DIR = Path("logs/decision_trace")
+from research_engine.data_access.s3_source import get_default_source
+
+# Production-contract dataset names read via the shared S3 data-access layer.
+_SHADOW_DATASET = "shadow_trades"
+_RESEARCH_SHADOW_DATASET = "research_shadow_trades"
 _REPORTS_DIR = Path("analysis/reports")
 _KNOWLEDGE_PATH = Path("analysis/summaries/research_knowledge.json")
 
@@ -67,20 +69,10 @@ def load_shadow_trades(
     """
     from research_engine.data_quality.classifier import classify_record, DataEpoch
 
+    _source = get_default_source()
     records: list[dict[str, Any]] = []
-    for directory in (_SHADOW_DIR, _RESEARCH_SHADOW_DIR):
-        if not directory.exists():
-            continue
-        for f in sorted(directory.rglob("*.jsonl")):
-            try:
-                for line in f.read_text(encoding="utf-8").splitlines():
-                    if line.strip():
-                        try:
-                            records.append(json.loads(line))
-                        except (json.JSONDecodeError, ValueError):
-                            pass
-            except OSError:
-                pass
+    for dataset in (_SHADOW_DATASET, _RESEARCH_SHADOW_DATASET):
+        records.extend(_source.read_dataset(dataset))
 
     # Epoch filtering (default: CURRENT only)
     if include_all_epochs or epoch == "ALL":

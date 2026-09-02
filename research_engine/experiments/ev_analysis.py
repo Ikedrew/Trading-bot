@@ -15,34 +15,28 @@ Does NOT modify trading logic. Research infrastructure only.
 
 from __future__ import annotations
 
-import json
 import statistics
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from research_engine.data_access.s3_source import get_default_source
 from research_engine.dashboard import can_execute, generate_dashboard
 from research_engine.validation import validate_dataset
 
 
 # ─── DATA LOADING ─────────────────────────────────────────────────────────────
 
-_SHADOW_DIRS = [Path("logs/shadow_trades"), Path("logs/research_shadow_trades")]
+_SHADOW_DATASETS = ["shadow_trades", "research_shadow_trades"]
 _COMBINED_PATTERN = ("_SCALP", "_INTRADAY", "_EXTENDED")
 
 
 def _load_shadows() -> list[dict]:
+    _source = get_default_source()
     records: list[dict] = []
-    for d in _SHADOW_DIRS:
-        if d.exists():
-            for f in sorted(d.rglob("*.jsonl")):
-                for line in f.read_text(encoding="utf-8").splitlines():
-                    if line.strip():
-                        try:
-                            records.append(json.loads(line))
-                        except Exception:
-                            pass
+    for dataset in _SHADOW_DATASETS:
+        records.extend(_source.read_dataset(dataset))
     return records
 
 

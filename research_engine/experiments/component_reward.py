@@ -513,32 +513,17 @@ def run() -> dict:
     """
     Run Q1 and persist result using standard research report framework.
 
-    Loads decision traces and shadow trades from default locations.
+    Loads decision traces and shadow trades from S3 via the shared data-access layer.
     """
-    import json
-    from pathlib import Path
+    from research_engine.data_access.s3_source import get_default_source
 
-    decision_traces = []
-    trace_dir = Path("logs/decision_trace")
-    if trace_dir.exists():
-        for f in trace_dir.rglob("*.jsonl"):
-            for line in f.read_text(encoding="utf-8").splitlines():
-                if line.strip():
-                    try:
-                        decision_traces.append(json.loads(line))
-                    except Exception:
-                        pass
+    _source = get_default_source()
+
+    decision_traces = list(_source.read_dataset("decision_trace"))
 
     shadow_trades = []
-    for shadow_dir in [Path("logs/shadow_trades"), Path("logs/research_shadow_trades")]:
-        if shadow_dir.exists():
-            for f in shadow_dir.rglob("*.jsonl"):
-                for line in f.read_text(encoding="utf-8").splitlines():
-                    if line.strip():
-                        try:
-                            shadow_trades.append(json.loads(line))
-                        except Exception:
-                            pass
+    for dataset in ["shadow_trades", "research_shadow_trades"]:
+        shadow_trades.extend(_source.read_dataset(dataset))
 
     result = run_component_reward(decision_traces, shadow_trades)
 

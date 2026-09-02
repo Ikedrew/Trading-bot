@@ -23,8 +23,11 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_RESEARCH_READY_DIR = "logs/research_ready_trade_dataset"
-_DECISION_TRACE_DIR = "logs/decision_trace"
+# The research-ready trade dataset is a DERIVED research artifact (computed
+# offline from source datasets), persisted to and read from S3 as the single
+# source of truth. Not a production-contract runtime dataset — rebuildable.
+_RESEARCH_READY_ARTIFACT = "research_ready_trades"
+_DECISION_TRACE_DATASET = "decision_trace"
 
 
 class DatasetView(str, Enum):
@@ -63,27 +66,23 @@ def load_trades(view: DatasetView = DatasetView.FULL, base_dir: str | None = Non
 
     This is the primary data access function for all V10 research experiments.
 
+    Source of truth: S3 research artifact ``research_ready_trades`` (a derived,
+    rebuildable dataset), read via the shared S3 access layer. Local logs are not
+    consulted. An empty result means the artifact is absent in S3 (a real gap).
+
     Args:
         view: Which instrument subset to return
-        base_dir: Override path to research_ready directory
+        base_dir: Deprecated/ignored — retained for signature compatibility.
 
     Returns:
         List of trade dicts with realised_r computed
     """
-    data_dir = Path(base_dir or _RESEARCH_READY_DIR)
-    data_file = data_dir / "research_ready_trades.jsonl"
+    from research_engine.data_access.s3_source import get_default_source
 
-    if not data_file.exists():
-        logger.warning("[V10_RESEARCH] Dataset not found: %s", data_file)
+    trades = [dict(t) for t in get_default_source().read_artifact(_RESEARCH_READY_ARTIFACT)]
+    if not trades:
+        logger.warning("[V10_RESEARCH] research-ready artifact empty/absent in S3")
         return []
-
-    trades = []
-    for line in data_file.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            try:
-                trades.append(json.loads(line))
-            except json.JSONDecodeError:
-                pass
 
     # Ensure instrument_class and realised_r are present
     for t in trades:
@@ -132,28 +131,20 @@ def enrich_with_decision_trace(trades: list[dict], trace_dir: str | None = None)
     """
     Enrich trades with component scores from decision traces.
 
+    Source: S3 dataset ``decision_trace`` via the shared access layer.
     Modifies trades in-place. Returns count of successfully enriched trades.
     """
-    dt_path = Path(trace_dir or _DECISION_TRACE_DIR)
-    if not dt_path.exists():
-        return 0
+    from research_engine.data_access.s3_source import get_default_source
 
-    # Build index of EXECUTE decisions
+    # Build index of EXECUTE decisions from S3 decision_trace.
     dt_by_key: dict[str, dict] = {}
-    for f in dt_path.rglob("*.jsonl"):
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            try:
-                d = json.loads(line)
-                if d.get("action") == "EXECUTE":
-                    key = f"{d.get('symbol', '')}_{d.get('cycle_id', '')}"
-                    dt_by_key[key] = d
-                    eid = d.get("entity_id", "")
-                    if eid:
-                        dt_by_key[eid] = d
-            except json.JSONDecodeError:
-                pass
+    for d in get_default_source().read_dataset(_DECISION_TRACE_DATASET):
+        if d.get("action") == "EXECUTE":
+            key = f"{d.get('symbol', '')}_{d.get('cycle_id', '')}"
+            dt_by_key[key] = d
+            eid = d.get("entity_id", "")
+            if eid:
+                dt_by_key[eid] = d
 
     enriched = 0
     for t in trades:

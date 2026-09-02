@@ -96,18 +96,10 @@ def _simulate_trade(*, direction: str, entry_price: float, stop_loss: float,
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _load_shadow_population() -> list[dict]:
-    """Load deduplicated real shadow trade population."""
-    raw = []
-    base = Path("logs/shadow_trades")
-    if not base.exists():
-        return []
-    for f in base.rglob("*.jsonl"):
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                try:
-                    raw.append(json.loads(line))
-                except (json.JSONDecodeError, ValueError):
-                    pass
+    """Load deduplicated real shadow trade population from S3 via the shared layer."""
+    from research_engine.data_access.s3_source import get_default_source
+
+    raw = get_default_source().read_dataset("shadow_trades")
 
     def extract(rec):
         if "identity" in rec:

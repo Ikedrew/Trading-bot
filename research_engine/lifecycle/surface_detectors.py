@@ -394,27 +394,20 @@ def detect_drawdown_approaching(
 
     Reads decision_trace v10_account_snapshot for recent equity/drawdown state.
     """
-    dt_dir = Path("logs/decision_trace")
-    if not dt_dir.exists():
+    from research_engine.data_access.s3_source import get_default_source
+
+    trace_records = get_default_source().read_dataset("decision_trace")
+    if not trace_records:
         return []
 
-    # Read most recent decision traces for account snapshots
+    # Most-recent-first (S3 layer orders ascending by timestamp), take up to 100.
     recent_snapshots: list[dict] = []
-    for f in sorted(dt_dir.rglob("*.jsonl"), reverse=True):
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            try:
-                rec = json.loads(line)
-                snap = rec.get("v10_account_snapshot")
-                if snap and snap.get("equity"):
-                    recent_snapshots.append(snap)
-                    if len(recent_snapshots) >= 100:
-                        break
-            except Exception:
-                continue
-        if len(recent_snapshots) >= 100:
-            break
+    for rec in reversed(trace_records):
+        snap = rec.get("v10_account_snapshot")
+        if snap and snap.get("equity"):
+            recent_snapshots.append(snap)
+            if len(recent_snapshots) >= 100:
+                break
 
     if len(recent_snapshots) < 5:
         return []
@@ -621,19 +614,10 @@ def run_surface_detectors(
 
 
 def _load_execution_results() -> list[dict[str, Any]]:
-    """Load execution_results from disk."""
-    results: list[dict] = []
-    exec_dir = Path("logs/execution_results")
-    if not exec_dir.exists():
-        return results
-    for f in sorted(exec_dir.rglob("*.jsonl")):
-        try:
-            for line in f.read_text(encoding="utf-8").splitlines():
-                if line.strip():
-                    results.append(json.loads(line))
-        except Exception:
-            continue
-    return results
+    """Load execution_results from S3 via the shared data-access layer."""
+    from research_engine.data_access.s3_source import get_default_source
+
+    return list(get_default_source().read_dataset("execution_results"))
 
 
 def _load_research_events() -> list[dict[str, Any]]:

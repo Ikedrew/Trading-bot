@@ -36,7 +36,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_SHADOW_DIR = Path("logs/shadow_trades")
+# Production-contract dataset name read via the shared S3 data-access layer.
+_SHADOW_DATASET = "shadow_trades"
 
 # Minimum number of paired observations before triggering evaluation
 _DEFAULT_MINIMUM_PAIRS = 30
@@ -198,19 +199,15 @@ def _count_prospective_pairs(
 
 
 def _load_observations(shadow_dir: str | None = None) -> list[dict[str, Any]]:
-    """Load all shadow trade observations from disk."""
-    obs_dir = Path(shadow_dir) if shadow_dir else _SHADOW_DIR
-    observations = []
-    if not obs_dir.exists():
-        return []
-    for f in obs_dir.rglob("*.jsonl"):
-        try:
-            for line in f.read_text(encoding="utf-8").splitlines():
-                if line.strip():
-                    observations.append(json.loads(line))
-        except Exception:
-            continue
-    return observations
+    """Load all shadow trade observations from S3 via the shared data-access layer.
+
+    The ``shadow_dir`` parameter is retained for signature stability but is no
+    longer used as a data source — S3 is authoritative and there is no local
+    fallback.
+    """
+    from research_engine.data_access.s3_source import get_default_source
+
+    return list(get_default_source().read_dataset(_SHADOW_DATASET))
 
 
 def _parse_timestamp(ts_str: str) -> float:

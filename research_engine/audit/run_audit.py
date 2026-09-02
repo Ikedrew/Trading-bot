@@ -16,31 +16,27 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from research_engine.question_registry import QUESTIONS
 
+from research_engine.data_access.s3_source import get_default_source
+
 _REPORTS_DIR = Path("analysis/reports")
 _SUMMARIES_DIR = Path("analysis/summaries")
 _AUDIT_DIR = Path("research_engine/audit")
-_SHADOW_DIR = Path("logs/research_shadow_trades")
-_SHADOW_DIR2 = Path("logs/shadow_trades")
-_TRACE_DIR = Path("logs/decision_trace")
-_TRUTH_DIR = Path("logs/trade_truth")
-_LEDGER_DIR = Path("logs/decision_ledger")
-_EXEC_DIR = Path("logs/execution_context")
+# Production-contract dataset names read via the shared S3 data-access layer.
+_SHADOW_DATASET = "research_shadow_trades"
+_SHADOW_DATASET2 = "shadow_trades"
+_TRACE_DATASET = "decision_trace"
+_TRUTH_DATASET = "trade_truth"
+_LEDGER_DATASET = "decision_ledger"
+_EXEC_DATASET = "execution_context"
 
 # Minimum samples for confident analysis
 _MIN_SAMPLES_CONFIDENCE = 50
 _MIN_SAMPLES_PROMOTION = 100
 
 
-def _count_jsonl(directory: Path) -> int:
-    count = 0
-    if not directory.exists():
-        return 0
-    for f in directory.rglob("*.jsonl"):
-        try:
-            count += sum(1 for line in f.read_text(encoding="utf-8").splitlines() if line.strip())
-        except Exception:
-            pass
-    return count
+def _count_jsonl(dataset: str) -> int:
+    """Count records in a production dataset read from S3 via the shared layer."""
+    return len(get_default_source().read_dataset(dataset))
 
 
 def _report_exists(qid: str) -> tuple[bool, dict | None]:
@@ -61,13 +57,13 @@ def _assess_data_sufficiency(qid: str, data_sources: list[str]) -> tuple[bool, i
     Returns (sufficient, sample_count, reason).
     """
     counts = {
-        "decision_trace": _count_jsonl(_TRACE_DIR),
-        "shadow_trades": _count_jsonl(_SHADOW_DIR) + _count_jsonl(_SHADOW_DIR2),
-        "research_shadow_trades": _count_jsonl(_SHADOW_DIR),
-        "trade_truth": _count_jsonl(_TRUTH_DIR),
-        "decision_ledger": _count_jsonl(_LEDGER_DIR),
-        "execution_context": _count_jsonl(_EXEC_DIR),
-        "execution_results": _count_jsonl(_TRUTH_DIR),  # approximation
+        "decision_trace": _count_jsonl(_TRACE_DATASET),
+        "shadow_trades": _count_jsonl(_SHADOW_DATASET) + _count_jsonl(_SHADOW_DATASET2),
+        "research_shadow_trades": _count_jsonl(_SHADOW_DATASET),
+        "trade_truth": _count_jsonl(_TRUTH_DATASET),
+        "decision_ledger": _count_jsonl(_LEDGER_DATASET),
+        "execution_context": _count_jsonl(_EXEC_DATASET),
+        "execution_results": _count_jsonl(_TRUTH_DATASET),  # approximation
         "learning": 0,
         "trade_truth_graph": 0,
     }
@@ -134,11 +130,11 @@ def run_audit() -> dict:
 
     # Count available data
     data_counts = {
-        "decision_trace": _count_jsonl(_TRACE_DIR),
-        "shadow_trades": _count_jsonl(_SHADOW_DIR) + _count_jsonl(_SHADOW_DIR2),
-        "trade_truth": _count_jsonl(_TRUTH_DIR),
-        "decision_ledger": _count_jsonl(_LEDGER_DIR),
-        "execution_context": _count_jsonl(_EXEC_DIR),
+        "decision_trace": _count_jsonl(_TRACE_DATASET),
+        "shadow_trades": _count_jsonl(_SHADOW_DATASET) + _count_jsonl(_SHADOW_DATASET2),
+        "trade_truth": _count_jsonl(_TRUTH_DATASET),
+        "decision_ledger": _count_jsonl(_LEDGER_DATASET),
+        "execution_context": _count_jsonl(_EXEC_DATASET),
     }
 
     questions_audit = []
