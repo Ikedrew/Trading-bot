@@ -1,17 +1,17 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "AUDUSD",
-  "cycle_id": 14082,
-  "bar_time": 1788410700,
-  "updated_at": "2026-09-03T01:46:02.669Z",
-  "updated_at_unix": 1788399962.669,
-  "action": "NO_TRADE",
-  "score": 0.12,
-  "reason": "V10 [opportunity]: No opportunity (INVALID)",
+  "cycle_id": 17791,
+  "bar_time": 1788464700,
+  "updated_at": "2026-09-03T16:45:43.365Z",
+  "updated_at_unix": 1788453943.365,
+  "action": "EXECUTE",
+  "score": 0.46,
+  "reason": "V10: MEAN_REVERSION \u2192 SCALP",
   "identity": {
-    "entity_id": "AUDUSD_1788410700",
-    "observation_id": "e375a4d5e43ca4a1",
-    "cycle_id": 14082,
+    "entity_id": "AUDUSD_1788464700",
+    "observation_id": "77a29aef6e1817db",
+    "cycle_id": 17791,
     "correlation_id": "",
     "trade_id": ""
   },
@@ -20,42 +20,42 @@
     "regime_confidence": 0.5,
     "volatility_state": "NEUTRAL",
     "h4_trend": "NEUTRAL",
-    "h4_trend_strength": 0.0,
-    "h4_phase": "CONSOLIDATION",
+    "h4_trend_strength": 0.2,
+    "h4_phase": "PULLBACK",
     "h1_bos_direction": "",
-    "h1_structural_clarity": 0.1431,
-    "h1_dominant_trend": "NEUTRAL",
+    "h1_structural_clarity": 0.8557,
+    "h1_dominant_trend": "BULLISH",
     "m15_pullback_active": true,
     "m15_displacement": false,
-    "m15_range_position": 0.3793,
+    "m15_range_position": 0.863,
     "m5_momentum": "NEUTRAL",
     "m5_momentum_strength": 0.0,
     "m5_rejection": false,
     "m5_confirmation": false,
-    "m5_local_bos": false,
+    "m5_local_bos": true,
     "location_type": "OPEN_SPACE",
     "inside_zone": false,
     "zone_quality": 0.0,
-    "range_position": 0.3793,
-    "premium_discount": "EQUILIBRIUM",
-    "htf_macro_bias": "NEUTRAL",
-    "htf_structure_alignment": 0.0
+    "range_position": 0.863,
+    "premium_discount": "PREMIUM",
+    "htf_macro_bias": "BULLISH",
+    "htf_structure_alignment": 0.5
   },
   "opportunity": {
-    "state": "INVALID",
-    "directional_bias": "NEUTRAL",
-    "opportunity_type": "NONE",
-    "overall_quality": 0.12,
-    "location_score": 0.0,
-    "structure_score": 0.0,
+    "state": "WATCHING",
+    "directional_bias": "BULLISH",
+    "opportunity_type": "ZONE_REACTION",
+    "overall_quality": 0.46,
+    "location_score": 0.5,
+    "structure_score": 0.35,
     "behaviour_score": 0.7999999999999999,
-    "formation_score": 0.0,
-    "observation_id": "e375a4d5e43ca4a1"
+    "formation_score": 0.3,
+    "observation_id": "77a29aef6e1817db"
   },
   "strategy": {
-    "family": "NONE",
-    "confidence": 0.0,
-    "direction": "NEUTRAL"
+    "family": "MEAN_REVERSION",
+    "confidence": 0.7999999999999999,
+    "direction": "BULLISH"
   },
   "horizon": {
     "type": "SCALP",
@@ -64,29 +64,29 @@
     "duration_minutes": 30
   },
   "entry": {
-    "status": "INVALID",
+    "status": "READY",
     "method": "CONFIRMATION_ENTRY",
-    "direction": "NONE",
-    "price": 0.0,
-    "stop": 0.0,
-    "target": 0.0,
-    "risk_distance": 0.0,
-    "reward_distance": 0.0,
-    "expected_rr": 0.0
+    "direction": "BUY",
+    "price": 0.71966,
+    "stop": 0.7192385714285714,
+    "target": 0.72069,
+    "risk_distance": 0.0004214285714285726,
+    "reward_distance": 0.0010300000000000864,
+    "expected_rr": 2.44
   },
   "risk": {
-    "approved": false,
-    "rejection_reason": "Entry is INVALID \u2014 cannot assess risk",
-    "risk_percentage": 0.0,
-    "position_size": 0.0,
-    "max_loss": 0.0
+    "approved": true,
+    "rejection_reason": "",
+    "risk_percentage": 0.0025,
+    "position_size": 4.26,
+    "max_loss": 132.8221
   },
   "execution": {
-    "approved": false,
-    "rejection_reason": "Risk rejected: Entry is INVALID \u2014 cannot assess risk",
-    "order_type": "",
-    "volume": 0.0
+    "approved": true,
+    "rejection_reason": "",
+    "order_type": "MARKET",
+    "volume": 4.26
   },
-  "rejection_stage": "opportunity",
-  "approved": false
+  "rejection_stage": "",
+  "approved": true
 }
