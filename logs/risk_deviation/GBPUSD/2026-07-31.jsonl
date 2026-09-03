@@ -1,1 +1,0 @@
-{"trade_id":"t2","symbol":"GBPUSD","correlation_id":"","planned_risk_R":-1.0,"actual_risk_R":1.0,"risk_deviation":1.0,"risk_classification":"WIN","entry_price":1.1,"exit_price":1.105,"initial_sl":1.095,"direction":"BUY","risk_distance":0.005,"pnl_distance":0.005,"timestamp_utc":"2026-07-31T12:26:30.038Z","schema_version":"risk_deviation_v1"}

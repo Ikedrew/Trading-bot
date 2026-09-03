@@ -1,1 +1,0 @@
-{"trade_id":"pos_local_test","symbol":"USDJPY","correlation_id":"","planned_risk_R":-1.0,"actual_risk_R":1.0,"risk_deviation":1.0,"risk_classification":"WIN","entry_price":150.0,"exit_price":150.5,"initial_sl":149.5,"direction":"BUY","risk_distance":0.5,"pnl_distance":0.5,"timestamp_utc":"2026-08-03T13:11:00.773Z","schema_version":"risk_deviation_v1"}

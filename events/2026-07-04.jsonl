@@ -1,2 +1,0 @@
-{"ts_utc_ms":1783192295395,"type":"CANDLE","symbol":"TEST","payload":{"ts":1},"pattern":"UNKNOWN","regime":"UNKNOWN","bias":"UNKNOWN","side":"FLAT","guard_result":"UNKNOWN","schema_version":2,"feature_version":1}
-{"ts_utc_ms":1783192295413,"type":"SESSION_TRANSITION","symbol":"TEST","payload":{"session":"LONDON"},"pattern":"UNKNOWN","regime":"UNKNOWN","bias":"UNKNOWN","side":"FLAT","guard_result":"UNKNOWN","schema_version":2,"feature_version":1}

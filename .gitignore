@@ -25,3 +25,32 @@ MagicMock/
 
 # Logs
 *.log
+
+# ---------------------------------------------------------------------------
+# V1 production-data epoch reset — generated/runtime data hygiene
+# These paths hold generated runtime datasets (re-created by the bot at
+# runtime). They are ignored so fresh production data does not appear as Git
+# changes. Intentional source/docs are preserved via negation rules below.
+# ---------------------------------------------------------------------------
+
+# Event stream (generated)
+events/
+
+# Replay tick data (generated)
+replay_data/
+
+# Temporary S3 shadow output (generated)
+tmp_s3_shadows/
+
+# Generated research projections + reports (keep hand-authored architecture docs)
+research_data/*
+!research_data/README.md
+reports/research/
+reports/research_cycles/
+
+# Generated runtime datasets under logs/ (keep the source module + heartbeat temp files)
+logs/*
+!logs/opportunity_assessment_log.py
+
+# Generated temporary heartbeat/state files
+*.tmp
