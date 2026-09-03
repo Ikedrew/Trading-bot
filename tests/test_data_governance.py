@@ -265,12 +265,14 @@ class TestReportGeneration:
 # ═══════════════════════════════════════════════════════════════
 
 class TestLiveData:
-    def test_live_validation_does_not_crash(self):
+    def test_live_validation_does_not_crash(self, tmp_path):
         """Run governance on actual project data — should not crash."""
         src = Path("logs/research_ready_trade_dataset/research_ready_trades.jsonl")
         if not src.exists():
             pytest.skip("Live research dataset not available")
-        v = DataGovernanceValidator()
+        # Reads the real dataset (read-only) but writes its report into the
+        # per-test temp dir — never into the repository reports/research tree.
+        v = DataGovernanceValidator(reports_dir=str(tmp_path / "reports"))
         result = v.validate()
         assert result["data_trust"] in (GovernanceStatus.PASS, GovernanceStatus.WARNING, GovernanceStatus.FAIL)
         assert "checks" in result

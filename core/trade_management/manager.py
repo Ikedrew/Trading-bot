@@ -911,12 +911,20 @@ class TradeStateManager:
                 pos = self._by_id.get(pid)
                 if pos is not None:
                     if entry.volume is None:
-                        # Full close
-                        pos.status = PositionStatus.CLOSED
-                        pos.closed_time = time.time()
-                        self._emit(entry.kind, pos, entry.prices, time.time(), entry.detail)
-                        # Enrich detail with close_reason for journal persistence
+                        # ─── Full close ─────────────────────────────────────
+                        # Broker honoured the retried close, so reconcile genuine
+                        # broker close facts using the SAME canonical mechanism as
+                        # the normal close path (_close_local → _query_broker_close_history)
+                        # — never a parallel accounting implementation. The merged
+                        # detail flows to the trade-close lifecycle event and then
+                        # into trade_journal / trade_truth exactly like a normal
+                        # close. When broker truth cannot be resolved, the original
+                        # detail is used unchanged (no monetary values fabricated).
+                        _broker_detail = self._query_broker_close_history(pos)
                         _close_detail = dict(entry.detail)
+                        if _broker_detail:
+                            _close_detail.update(_broker_detail)
+                        # Preserve close reason/context for journal persistence
                         if "reason" not in _close_detail:
                             _reason_map = {
                                 TradeLifecycleEvent.ON_STOP_LOSS_HIT: "stop_loss",
@@ -924,6 +932,9 @@ class TradeStateManager:
                                 TradeLifecycleEvent.ON_MANAGEMENT_EXIT: "management_exit",
                             }
                             _close_detail["reason"] = _reason_map.get(entry.kind, "unknown")
+                        pos.status = PositionStatus.CLOSED
+                        pos.closed_time = time.time()
+                        self._emit(entry.kind, pos, entry.prices, time.time(), _close_detail)
                         self._emit(TradeLifecycleEvent.ON_TRADE_CLOSE, pos, entry.prices, time.time(), _close_detail)
                     else:
                         # Partial close

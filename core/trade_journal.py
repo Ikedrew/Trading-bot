@@ -50,6 +50,22 @@ def _get_journal_dir() -> Path:
         return Path(_JOURNAL_DIR)
 
 
+def _get_trade_truth_dir() -> Path:
+    """Resolve the trade_truth local directory.
+
+    Mirrors ``_get_journal_dir`` so tests and alternate runtimes can redirect
+    trade_truth persistence via dependency/configuration injection instead of
+    ever relying on production-path defaults. The default is unchanged
+    (``logs/trade_truth``); S3 mirroring inside ``persist_trade_truth`` is
+    automatically skipped when the resolved path is not the production path.
+    """
+    try:
+        from core import config
+        return Path(getattr(config, "TRADE_TRUTH_DIR", "logs/trade_truth"))
+    except ImportError:
+        return Path("logs/trade_truth")
+
+
 # ─── TRADE RECORD ─────────────────────────────────────────────────────────────
 
 class CloseReason(str, Enum):
@@ -638,7 +654,7 @@ def persist_trade(record: TradeRecord) -> bool:
                 },
             )
 
-            persist_trade_truth(_truth_record)
+            persist_trade_truth(_truth_record, local_dir=str(_get_trade_truth_dir()))
 
         except Exception as _tt_exc:
             logger.warning("[TRADE_TRUTH] write_failed: %s", _tt_exc)

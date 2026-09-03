@@ -335,7 +335,7 @@ class TestNotApplicable:
 # -------------------------------------------------------------------------------
 
 class TestRealValidatorGraph:
-    def test_production_graph_builds_successfully(self):
+    def test_production_graph_builds_successfully(self, tmp_path):
         """The real production validator set produces a valid graph."""
         from core.contracts.validators.schema_validator import SchemaValidator
         from core.contracts.validators.feature_role_validator import FeatureRoleValidator
@@ -343,7 +343,7 @@ class TestRealValidatorGraph:
         from core.contracts.validators.persistence_validator import PersistenceValidator
         from core.contracts.validators.causal_validator import CausalValidator
 
-        store = QuarantineStore(local_dir="logs/quarantine_test")
+        store = QuarantineStore(local_dir=str(tmp_path / "quarantine_test"))
         e = ContractEnforcer(quarantine_store=store)
         e.register(SchemaValidator())
         e.register(FeatureRoleValidator())
@@ -363,14 +363,14 @@ class TestRealValidatorGraph:
         assert order.index("SCHEMA_001") < order.index("IMMUTABILITY_001")
         assert order.index("SCHEMA_001") < order.index("PERSISTENCE_001")
 
-    def test_production_schema_failure_skips_causal(self):
+    def test_production_schema_failure_skips_causal(self, tmp_path):
         """If schema validation fails, causal validator is skipped."""
         from core.contracts.validators.schema_validator import SchemaValidator
         from core.contracts.validators.feature_role_validator import FeatureRoleValidator
         from core.contracts.validators.persistence_validator import PersistenceValidator
         from core.contracts.validators.causal_validator import CausalValidator
 
-        store = QuarantineStore(local_dir="logs/quarantine_test")
+        store = QuarantineStore(local_dir=str(tmp_path / "quarantine_test"))
         e = ContractEnforcer(quarantine_store=store)
         e.register(SchemaValidator())
         e.register(FeatureRoleValidator())

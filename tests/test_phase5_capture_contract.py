@@ -123,16 +123,19 @@ class TestMarketContextCapture:
         for key in ("regime", "phase", "direction", "h4", "h1", "m15", "m5"):
             assert key in rec
 
-    def test_local_jsonl_persistence_writes_captured_record(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)  # never touch real logs/
+    def test_local_jsonl_persistence_writes_captured_record(self, tmp_path):
+        # Persistence destination is injected by the autouse isolation fixture
+        # in conftest.py to <tmp_path>/market_context — the test asserts the
+        # real MarketContextPersistence JSONL contract at that injected path
+        # instead of the production logs/market_context tree.
         MarketContextPersistence().persist(
             {"symbol": SYMBOL, "cycle_id": CYCLE_ID},
             entity_id=f"{SYMBOL}_{BAR_TIME}",
             bar_time=BAR_TIME,
             correlation_id="COR-TEST-0001",
         )
-        files = list((Path("logs/market_context") / SYMBOL).glob("*.jsonl"))
-        assert files, "JSONL row must exist under logs/market_context/<symbol>/"
+        files = list((tmp_path / "market_context" / SYMBOL).glob("*.jsonl"))
+        assert files, "JSONL row must exist under the injected market_context dir"
         rec = json.loads(files[0].read_text(encoding="utf-8").splitlines()[-1])
         assert rec["symbol"] == SYMBOL
         assert rec["cycle_id"] == CYCLE_ID

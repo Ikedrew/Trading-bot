@@ -272,6 +272,97 @@ class TestCloseRetryDrain:
         assert pos.status == PositionStatus.CLOSED
         assert len(mgr._close_retry_queue) == 0
 
+    def test_retry_success_merges_broker_close_facts(self):
+        """Successful full-close retry reconciles genuine broker close facts.
+
+        Regression (broker-close forensic audit, Issue 1): a successful retry
+        must reconcile broker close history via the SAME canonical mechanism as
+        the normal close path and merge broker_profit/commission/swap plus the
+        broker exit info into the ON_TRADE_CLOSE detail, so trade_journal /
+        trade_truth receive the same broker-derived accounting semantics as
+        normal closes.
+        """
+        listener = MagicMock()
+        mock_exec = MagicMock()
+        mock_exec.close_position.side_effect = [_fail_result(), _ok_result()]
+
+        brok = {
+            "reason": "stop_loss",
+            "broker_exit_price": 1.0951,
+            "broker_exit_time": 2500.0,
+            "broker_profit": -12.34,
+            "broker_commission": -0.05,
+            "broker_swap": 0.0,
+            "broker_deal_id": 777,
+            "broker_deal_reason": 4,
+            "broker_comment": "[sl]",
+        }
+
+        mgr = TradeStateManager(_cfg(), listener=listener, execution=mock_exec)
+        pos = _make_position()
+        mgr._by_id[pos.position_id] = pos
+        mgr._query_broker_close_history = MagicMock(return_value=brok)
+
+        # First attempt fails -> queued; drain retry succeeds
+        mgr._close_local(pos, TradeLifecycleEvent.ON_STOP_LOSS_HIT, (1.095, 1.096), 2000.0, {})
+        assert pos.status == PositionStatus.OPEN
+        assert len(mgr._close_retry_queue) == 1
+
+        mgr.drain_close_retry_queue()
+        assert pos.status == PositionStatus.CLOSED
+        assert len(mgr._close_retry_queue) == 0
+
+        # The canonical broker-history query must have been used on the retry
+        mgr._query_broker_close_history.assert_called_with(pos)
+
+        close_events = [
+            e for e in (c.args[0] for c in listener.on_trade_event.call_args_list)
+            if e.kind == TradeLifecycleEvent.ON_TRADE_CLOSE
+        ]
+        assert close_events, "ON_TRADE_CLOSE must be emitted after a successful retry"
+        d = close_events[-1].detail
+        assert d["broker_profit"] == -12.34
+        assert d["broker_commission"] == -0.05
+        assert d["broker_swap"] == 0.0
+        assert d["broker_exit_price"] == 1.0951
+        assert d["broker_exit_time"] == 2500.0
+        assert d["broker_deal_id"] == 777
+        assert d["broker_deal_reason"] == 4
+        # Close reason/context preserved
+        assert d["reason"] == "stop_loss"
+
+    def test_retry_success_without_broker_truth_no_placeholders(self):
+        """When broker history cannot be resolved, a successful retry must NOT
+        introduce monetary placeholders (e.g. the old -0.09/-0.02 constants)."""
+        listener = MagicMock()
+        mock_exec = MagicMock()
+        mock_exec.close_position.side_effect = [_fail_result(), _ok_result()]
+
+        mgr = TradeStateManager(_cfg(), listener=listener, execution=mock_exec)
+        pos = _make_position()
+        mgr._by_id[pos.position_id] = pos
+        mgr._query_broker_close_history = MagicMock(return_value=None)
+
+        mgr._close_local(pos, TradeLifecycleEvent.ON_TAKE_PROFIT_HIT, (1.109, 1.110), 2000.0, {})
+        assert len(mgr._close_retry_queue) == 1
+
+        mgr.drain_close_retry_queue()
+        assert pos.status == PositionStatus.CLOSED
+
+        close_events = [
+            e for e in (c.args[0] for c in listener.on_trade_event.call_args_list)
+            if e.kind == TradeLifecycleEvent.ON_TRADE_CLOSE
+        ]
+        assert close_events
+        d = close_events[-1].detail
+        # No fabricated monetary facts
+        assert "broker_profit" not in d
+        assert "broker_commission" not in d
+        assert "broker_swap" not in d
+        assert d.get("realised_pnl", None) != -0.09
+        # Lifecycle reason preserved
+        assert d["reason"] == "take_profit"
+
     def test_retry_partial_success_reduces_volume(self):
         """Successful retry for partial close reduces volume."""
         mock_exec = MagicMock()

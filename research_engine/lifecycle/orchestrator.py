@@ -56,6 +56,11 @@ from research_engine.lifecycle.validation_harness import (
 from research_engine.lifecycle.placebo_controller import PlaceboTestOutcome, run_placebo_test
 from research_engine.lifecycle.governance_gate import GovernanceGate
 
+# Destination for hypothesis research reports. Module-level so alternate
+# runtimes (tests) can redirect persistence via the same module-attr injection
+# pattern used across the persistence layer; default path unchanged.
+_REPORT_DIR = Path("reports/research/lifecycle")
+
 
 class ResearchOrchestrator:
     """
@@ -525,7 +530,7 @@ class ResearchOrchestrator:
 
         # Persist
         try:
-            report_dir = Path("reports/research/lifecycle")
+            report_dir = _REPORT_DIR
             report_dir.mkdir(parents=True, exist_ok=True)
             report_path = report_dir / f"{hypothesis.hypothesis_id}_report.md"
             report_path.write_text(report_text, encoding="utf-8")
@@ -911,7 +916,7 @@ def _add_investigate_to_orchestrator():
         inv_result.report_text = report_text
 
         # Determine report path
-        report_path = f"reports/research/lifecycle/{hypothesis.hypothesis_id}_report.md"
+        report_path = str(_REPORT_DIR / f"{hypothesis.hypothesis_id}_report.md")
         inv_result.report_path = report_path
 
         # ─── STEP 10: GOVERNANCE STATUS ──────────────────────────────

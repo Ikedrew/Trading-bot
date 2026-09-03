@@ -30,6 +30,11 @@ from research_engine.lifecycle.candidate_evaluator import (
 
 logger = logging.getLogger(__name__)
 
+# Audit-trail destination for full CandidateEvaluation records. Module-level so
+# alternate runtimes (tests) can redirect persistence via the same module-attr
+# injection pattern used across the persistence layer; default path unchanged.
+_EVALUATIONS_DIR = Path("logs/research_lifecycle/evaluations")
+
 
 def evaluate_candidate(
     candidate_id: str,
@@ -171,7 +176,7 @@ def _persist_full_evaluation(candidate_id: str, evaluation: CandidateEvaluation)
     Each line is one full evaluation run (appended, never overwritten).
     """
     try:
-        eval_dir = Path("logs/research_lifecycle/evaluations")
+        eval_dir = _EVALUATIONS_DIR
         eval_dir.mkdir(parents=True, exist_ok=True)
         eval_path = eval_dir / f"{candidate_id}.jsonl"
 
