@@ -98,6 +98,27 @@ def test_writer_key_matches_research_loader_prefix(dataset):
     assert f"schema_version={pc.current_schema(dataset)}/" in writer_key
 
 
+def test_execution_results_writer_emits_canonical_schema_partition():
+    """Regression: the active execution_results writer must build its S3 key via
+    the canonical contract (schema_version= partition) so the Research Engine
+    loader can discover it. Previously it wrote a Layout-B key without the
+    schema_version segment and returned 0 records to the loader."""
+    import core.persistence.execution_result_writer as w
+    src = S3ResearchDataSource(bucket="b", client=object())
+    # Writer stamps the same schema the contract declares (single source).
+    assert w._SCHEMA_VERSION == pc.current_schema("execution_results") == "execution_results_v1"
+    key = pc.canonical_s3_key("execution_results", symbol="USDCAD", date="2026-09-03")
+    loader_prefix = src._list_prefixes("execution_results", symbol="USDCAD", all_schemas=False)[0]
+    assert key == ("core/execution_results/schema_version=execution_results_v1/"
+                   "symbol=USDCAD/date=2026-09-03/part-000.jsonl")
+    assert key.startswith(loader_prefix)
+    # The active writer source uses the canonical helper, not a manual key.
+    import inspect
+    src_txt = inspect.getsource(w)
+    assert 'canonical_s3_key("execution_results"' in src_txt
+    assert '/symbol={symbol}/date={date_str}/part-000.jsonl"' not in src_txt
+
+
 def test_portfolio_rankings_is_date_scoped_not_symbol():
     assert not pc.is_symbol_scoped("portfolio_rankings")
     key = pc.canonical_s3_key("portfolio_rankings", symbol="EURUSD", date="2026-09-02")

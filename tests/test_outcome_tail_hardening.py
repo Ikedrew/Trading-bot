@@ -107,7 +107,8 @@ def test_C_measured_nonzero_preserved():
     assert rec.swap == 0.40
     assert rec.commission_status == "measured_nonzero"
     assert rec.swap_status == "measured_nonzero"
-    assert rec.net_pnl == round(50.0 + 0.40 - (-1.25), 4)
+    # Raw MT5 signs: net = gross + swap + commission (commission -1.25 is a cost).
+    assert rec.net_pnl == round(50.0 + 0.40 + (-1.25), 4)  # = 49.15
 
 
 def test_cost_status_helper():

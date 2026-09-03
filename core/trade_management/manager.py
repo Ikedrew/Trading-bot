@@ -718,20 +718,58 @@ class TradeStateManager:
             from core.mt5_timestamp import normalize_mt5_timestamp
             from datetime import datetime, timezone
 
-            ticket = int(pos.mt5_ticket) if pos.mt5_ticket else 0
-            if ticket <= 0:
+            # MT5 identity: history_deals_get(position=...) keys on the MT5
+            # POSITION id, which for a market entry equals the order ticket
+            # (pos.order_id), NOT the deal ticket. pos.mt5_ticket / deal_id hold
+            # the ENTRY DEAL ticket (a different MT5 namespace). Passing the deal
+            # ticket here makes MT5 return an unrelated position's deal set, and
+            # the previous "first entry==1" pick then selected a foreign deal —
+            # the source of the bogus constant P&L. Use the position id and match
+            # each deal's own position_id to this trade.
+            position_id = int(pos.order_id) if getattr(pos, "order_id", 0) else 0
+            if position_id <= 0:
+                # Fallback to the legacy field only if order_id is unavailable.
+                position_id = int(pos.mt5_ticket) if pos.mt5_ticket else 0
+            if position_id <= 0:
                 return None
 
             # Search recent history for exit deal matching this position
             from_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
             to_time = datetime(2030, 1, 1, tzinfo=timezone.utc)
-            deals = mt5_call(mt5.history_deals_get, from_time, to_time, position=ticket)
+            deals = mt5_call(mt5.history_deals_get, from_time, to_time, position=position_id)
 
             if not deals:
                 return None
 
+            # Restrict to THIS position's deals only. MT5 may return a broader
+            # set; deal.position_id is the authoritative per-position link.
+            own_deals = [
+                d for d in deals
+                if int(getattr(d, "position_id", 0) or 0) == position_id
+            ]
+            if not own_deals:
+                # If the broker build does not expose position_id, we cannot
+                # safely disambiguate — return None rather than guess a foreign
+                # deal (never fabricate broker truth).
+                return None
+
+            # Trade-level costs: aggregate commission/swap across ALL of this
+            # position's deals (entry + exit); MT5 charges commission per deal.
+            # Gross profit and exit reason come from the OUT deal.
+            _agg_commission = 0.0
+            _agg_swap = 0.0
+            _have_commission = False
+            _have_swap = False
+            for d in own_deals:
+                _c = getattr(d, "commission", None)
+                if _c is not None:
+                    _agg_commission += float(_c); _have_commission = True
+                _s = getattr(d, "swap", None)
+                if _s is not None:
+                    _agg_swap += float(_s); _have_swap = True
+
             # Find the EXIT deal (entry=1 means exit in MT5 deal history)
-            for deal in deals:
+            for deal in own_deals:
                 if int(deal.entry) == 1:  # 1 = DEAL_ENTRY_OUT
                     # ─── Use MT5 deal.reason (authoritative enum) ─────
                     # MT5 DEAL_REASON constants:
@@ -770,10 +808,13 @@ class TradeStateManager:
                         "broker_exit_price": float(deal.price),
                         "broker_exit_time": exit_time_utc,
                         "broker_profit": float(deal.profit),
-                        # Real broker-measured costs (may be 0.0 = measured zero).
-                        # Absent attributes → None (unknown), never fake 0.0.
-                        "broker_commission": float(deal.commission) if hasattr(deal, "commission") and deal.commission is not None else None,
-                        "broker_swap": float(deal.swap) if hasattr(deal, "swap") and deal.swap is not None else None,
+                        # Trade-level broker costs aggregated across this
+                        # position's deals (entry + exit). Raw MT5 signs are
+                        # preserved (commission is negative when it is a cost).
+                        # None only when the broker did not expose the field at
+                        # all (never fake 0.0).
+                        "broker_commission": round(_agg_commission, 4) if _have_commission else None,
+                        "broker_swap": round(_agg_swap, 4) if _have_swap else None,
                         "broker_deal_id": int(deal.ticket),
                         "broker_comment": comment,
                         "broker_deal_reason": deal_reason_int,

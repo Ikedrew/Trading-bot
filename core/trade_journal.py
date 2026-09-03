@@ -94,7 +94,7 @@ class TradeRecord:
     realised_pnl: float
     commission: float | None = None
     swap: float | None = None
-    net_pnl: float | None = None  # realised_pnl + swap - commission (None if any unknown)
+    net_pnl: float | None = None  # realised_pnl + swap + commission (raw MT5 signs; None if any unknown)
 
     # Outcome provenance status: "unknown" | "measured_zero" | "measured_nonzero".
     commission_status: str = "unknown"
@@ -252,8 +252,8 @@ def build_trade_record(
         exit_price: Price at which position was closed
         exit_time: Unix timestamp of close
         close_reason: Why the trade was closed (CloseReason value)
-        commission: Broker commission (positive = cost). None = UNKNOWN (not 0).
-        swap: Swap/rollover amount (positive = credit). None = UNKNOWN (not 0).
+        commission: Broker commission, RAW MT5 sign (NEGATIVE = cost). None = UNKNOWN (not 0).
+        swap: Swap/rollover amount, RAW MT5 sign. None = UNKNOWN (not 0).
         realised_pnl_override: If broker provides exact P&L, use it instead of calculating.
 
     NULL SEMANTICS: commission/swap are None when the broker/runtime did not
@@ -277,8 +277,13 @@ def build_trade_record(
 
     # net_pnl requires realised P&L AND both cost components to be known.
     # A missing commission/swap must NOT be treated as a measured zero.
+    # SIGN CONVENTION (V1): raw MT5 signs are preserved end-to-end — commission
+    # is NEGATIVE when it is a cost, swap is signed as the broker reports it.
+    # Therefore net = gross + swap + commission (adding a negative commission
+    # correctly reduces net). (Previously this subtracted commission while the
+    # source value was already negative, double-counting the sign.)
     if commission is not None and swap is not None:
-        net_pnl = realised_pnl + swap - commission
+        net_pnl = realised_pnl + swap + commission
     else:
         net_pnl = None
 

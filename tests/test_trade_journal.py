@@ -182,7 +182,8 @@ class TestBuildTradeRecord:
         assert record.realised_pnl == -25.50
 
     def test_net_pnl_includes_commission_and_swap(self):
-        """net_pnl = realised_pnl + swap - commission."""
+        """net_pnl = realised_pnl + swap + commission (raw MT5 signs; commission
+        is NEGATIVE when it is a cost, so it reduces net)."""
         pos = _make_position()
         record = build_trade_record(
             position=pos,
@@ -190,10 +191,10 @@ class TestBuildTradeRecord:
             exit_time=pos.open_time + 1000,
             close_reason=CloseReason.TAKE_PROFIT.value,
             realised_pnl_override=100.0,
-            commission=5.0,
+            commission=-5.0,   # raw MT5 sign: cost is negative
             swap=-2.0,
         )
-        assert record.net_pnl == pytest.approx(100.0 + (-2.0) - 5.0)
+        assert record.net_pnl == pytest.approx(100.0 + (-2.0) + (-5.0))  # = 93.0
 
 
 # --- TEST: JOURNAL PERSISTENCE ------------------------------------------------

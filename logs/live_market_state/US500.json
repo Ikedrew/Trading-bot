@@ -1,17 +1,17 @@
 {
   "schema_version": "live_market_state_v1",
   "symbol": "US500",
-  "cycle_id": 2038,
-  "bar_time": 1788372600,
-  "updated_at": "2026-09-02T15:10:24.428Z",
-  "updated_at_unix": 1788361824.428,
+  "cycle_id": 14081,
+  "bar_time": 1788410700,
+  "updated_at": "2026-09-03T01:45:18.001Z",
+  "updated_at_unix": 1788399918.002,
   "action": "NO_TRADE",
-  "score": 0.515,
-  "reason": "V10 [strategy]: No strategy matched",
+  "score": 0.355,
+  "reason": "V10 [opportunity]: No opportunity (INVALID)",
   "identity": {
-    "entity_id": "US500_1788372600",
-    "observation_id": "fbe1d43612d25698",
-    "cycle_id": 2038,
+    "entity_id": "US500_1788410700",
+    "observation_id": "b6610f99d010a2a2",
+    "cycle_id": 14081,
     "correlation_id": "",
     "trade_id": ""
   },
@@ -20,42 +20,42 @@
     "regime_confidence": 0.5,
     "volatility_state": "NEUTRAL",
     "h4_trend": "NEUTRAL",
-    "h4_trend_strength": 0.2,
-    "h4_phase": "REVERSAL",
-    "h1_bos_direction": "BULLISH",
-    "h1_structural_clarity": 0.2766,
+    "h4_trend_strength": 0.0,
+    "h4_phase": "EXHAUSTION",
+    "h1_bos_direction": "",
+    "h1_structural_clarity": 0.1373,
     "h1_dominant_trend": "NEUTRAL",
     "m15_pullback_active": true,
     "m15_displacement": false,
-    "m15_range_position": 0.1261,
-    "m5_momentum": "BEARISH",
-    "m5_momentum_strength": 0.8,
+    "m15_range_position": 0.2115,
+    "m5_momentum": "NEUTRAL",
+    "m5_momentum_strength": 0.0,
     "m5_rejection": false,
     "m5_confirmation": false,
     "m5_local_bos": false,
     "location_type": "OPEN_SPACE",
     "inside_zone": false,
     "zone_quality": 0.0,
-    "range_position": 0.1261,
+    "range_position": 0.2115,
     "premium_discount": "DISCOUNT",
     "htf_macro_bias": "NEUTRAL",
-    "htf_structure_alignment": 0.6
+    "htf_structure_alignment": 0.3
   },
   "opportunity": {
-    "state": "WATCHING",
-    "directional_bias": "BULLISH",
+    "state": "INVALID",
+    "directional_bias": "NEUTRAL",
     "opportunity_type": "ZONE_REACTION",
-    "overall_quality": 0.515,
-    "location_score": 0.7000000000000001,
-    "structure_score": 0.30000000000000004,
+    "overall_quality": 0.355,
+    "location_score": 0.5,
+    "structure_score": 0.0,
     "behaviour_score": 0.7999999999999999,
     "formation_score": 0.3,
-    "observation_id": "fbe1d43612d25698"
+    "observation_id": "b6610f99d010a2a2"
   },
   "strategy": {
     "family": "NONE",
     "confidence": 0.0,
-    "direction": "BULLISH"
+    "direction": "NEUTRAL"
   },
   "horizon": {
     "type": "SCALP",
@@ -87,6 +87,6 @@
     "order_type": "",
     "volume": 0.0
   },
-  "rejection_stage": "strategy",
+  "rejection_stage": "opportunity",
   "approved": false
 }

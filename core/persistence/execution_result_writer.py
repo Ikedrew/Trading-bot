@@ -31,7 +31,8 @@ from core.production_data_contract import s3_base_prefix
 
 _S3_BUCKET = NEW_RUNTIME_S3_BUCKET
 _S3_PREFIX = s3_base_prefix("execution_results")
-_SCHEMA_VERSION = "execution_results_v1"
+from core.production_data_contract import current_schema as _current_schema
+_SCHEMA_VERSION = _current_schema("execution_results")
 
 
 def persist_execution_result(
@@ -207,7 +208,8 @@ def _write_s3(symbol: str, date_str: str, line: str) -> None:
                 retries={"max_attempts": 0},
             ),
         )
-        key = f"{_S3_PREFIX}/symbol={symbol}/date={date_str}/part-000.jsonl"
+        from core.production_data_contract import canonical_s3_key
+        key = canonical_s3_key("execution_results", symbol=symbol, date=date_str)
         body = line + "\n"
 
         try:
