@@ -4,7 +4,10 @@ Shadow Outcome Universe Builder.
 Consumes runtime shadow trade data and produces the Shadow research world's
 counterfactual outcome populations.
 
-Source: logs/shadow_trades/<SYMBOL>/*.jsonl (production: shadow_trades_v1)
+Source: S3 shadow_runtime_v1 event stream (canonical production shadow source),
+reconstructed into completed shadow outcomes in the existing internal research
+shape via research_engine.data_access.shadow_runtime_ingestion. The legacy
+``shadow_trades`` dataset and local ``logs/shadow_trades`` are never read.
 
 Grain: 1 record = 1 closed shadow trade = 1 counterfactual outcome observation.
 
@@ -56,18 +59,20 @@ from research_engine.v10.universes.models import Population, Universe
 
 logger = logging.getLogger(__name__)
 
-_DATASET = "shadow_trades"
+# Raw source label for metadata provenance.
+_SOURCE_LABEL = "s3:shadow_runtime_v1(ingested)"
 
-# Valid trade_id prefixes for production shadow records
-_VALID_PREFIXES = ("hshadow_", "shadow_")
+# Valid trade_id prefixes for shadow records. ``nshadow_`` is the canonical
+# runtime-minted ID (NEW Shadow Runtime); ``hshadow_``/``shadow_`` remain for
+# any historical records still flowing through the research shape.
+_VALID_PREFIXES = ("hshadow_", "shadow_", "nshadow_")
 
 
 class ShadowOutcomeUniverseBuilder(UniverseBuilder):
     """
-    Builds the Shadow Outcome Universe from runtime shadow trade data.
-
-    Reads production V1 and supported legacy shadow-trade JSONL files.
-    records, and classifies into shadow populations.
+    Builds the Shadow Outcome Universe from the canonical production shadow
+    source: the S3 shadow_runtime_v1 event stream, ingested into completed
+    shadow outcomes in the internal research shape.
 
     Excludes:
         - Records without valid R-multiple
@@ -89,10 +94,17 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
         return Universe.SHADOW_OUTCOME
 
     def load(self) -> int:
-        self._raw = self._load_dataset(_DATASET, symbol=self._symbol)
+        from research_engine.data_access.shadow_runtime_ingestion import (
+            ingest_completed_shadow_trades,
+        )
+
+        # Canonical production shadow source: S3 shadow_runtime_v1 event
+        # stream, reconstructed into completed shadow outcomes in the
+        # internal research shape. No legacy dataset, no local fallback.
+        self._raw = ingest_completed_shadow_trades(symbol=self._symbol)
         logger.info(
-            f"[SHADOW_OUTCOME] Loaded {len(self._raw)} raw shadow records "
-            f"from S3 dataset '{_DATASET}'"
+            f"[SHADOW_OUTCOME] Ingested {len(self._raw)} completed shadow "
+            f"outcomes from {_SOURCE_LABEL}"
         )
         return len(self._raw)
 
@@ -152,7 +164,7 @@ class ShadowOutcomeUniverseBuilder(UniverseBuilder):
         self._records = records
         self._built = True
 
-        source_files = (f"s3:{_DATASET}",)
+        source_files = (_SOURCE_LABEL,)
 
         self._metadata = self._generate_metadata(
             records=records,

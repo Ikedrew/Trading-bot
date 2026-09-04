@@ -22,8 +22,9 @@ _REPORTS_DIR = Path("analysis/reports")
 _SUMMARIES_DIR = Path("analysis/summaries")
 _AUDIT_DIR = Path("research_engine/audit")
 # Production-contract dataset names read via the shared S3 data-access layer.
+# Production shadow outcomes come from the canonical shadow_runtime_v1 stream
+# via the ingestion layer — the legacy shadow_trades dataset is never read.
 _SHADOW_DATASET = "research_shadow_trades"
-_SHADOW_DATASET2 = "shadow_trades"
 _TRACE_DATASET = "decision_trace"
 _TRUTH_DATASET = "trade_truth"
 _LEDGER_DATASET = "decision_ledger"
@@ -37,6 +38,19 @@ _MIN_SAMPLES_PROMOTION = 100
 def _count_jsonl(dataset: str) -> int:
     """Count records in a production dataset read from S3 via the shared layer."""
     return len(get_default_source().read_dataset(dataset))
+
+
+def _count_shadow_outcomes() -> int:
+    """Count completed production shadow outcomes via the ingestion layer.
+
+    Canonical production shadow source: S3 shadow_runtime_v1 event stream,
+    reconstructed into completed shadow outcomes. No legacy dataset.
+    """
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+
+    return len(ingest_completed_shadow_trades())
 
 
 def _report_exists(qid: str) -> tuple[bool, dict | None]:
@@ -58,7 +72,7 @@ def _assess_data_sufficiency(qid: str, data_sources: list[str]) -> tuple[bool, i
     """
     counts = {
         "decision_trace": _count_jsonl(_TRACE_DATASET),
-        "shadow_trades": _count_jsonl(_SHADOW_DATASET) + _count_jsonl(_SHADOW_DATASET2),
+        "shadow_trades": _count_shadow_outcomes() + _count_jsonl(_SHADOW_DATASET),
         "research_shadow_trades": _count_jsonl(_SHADOW_DATASET),
         "trade_truth": _count_jsonl(_TRUTH_DATASET),
         "decision_ledger": _count_jsonl(_LEDGER_DATASET),
@@ -131,7 +145,7 @@ def run_audit() -> dict:
     # Count available data
     data_counts = {
         "decision_trace": _count_jsonl(_TRACE_DATASET),
-        "shadow_trades": _count_jsonl(_SHADOW_DATASET) + _count_jsonl(_SHADOW_DATASET2),
+        "shadow_trades": _count_shadow_outcomes() + _count_jsonl(_SHADOW_DATASET),
         "trade_truth": _count_jsonl(_TRUTH_DATASET),
         "decision_ledger": _count_jsonl(_LEDGER_DATASET),
         "execution_context": _count_jsonl(_EXEC_DATASET),

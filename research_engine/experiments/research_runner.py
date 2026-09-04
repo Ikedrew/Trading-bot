@@ -16,11 +16,13 @@ from __future__ import annotations
 from typing import Any
 
 from research_engine.data_access.s3_source import get_default_source
+from research_engine.data_access.shadow_runtime_ingestion import (
+    ingest_completed_shadow_trades,
+)
 from research_engine.report_builder import persist_report
 from research_engine.validation import validate_dataset
 
 _SHADOW_DATASET = "research_shadow_trades"
-_SHADOW_DATASET2 = "shadow_trades"
 _TRACE_DATASET = "decision_trace"
 
 
@@ -39,9 +41,13 @@ def run_all() -> dict[str, dict]:
     from research_engine.runner_discovery import get_all_runners
 
     # ─── PRE-EXPERIMENT DATASET VALIDATION ────────────────────────────
-    _shadow_raw = []
-    for d in [_SHADOW_DATASET, _SHADOW_DATASET2]:
-        _shadow_raw.extend(_load_jsonl(d))
+    # Canonical production shadow source (S3 shadow_runtime_v1 event stream,
+    # reconstructed into completed shadow outcomes), then the separate
+    # live-written research_shadow_trades dataset. Order preserved.
+    _shadow_raw = [
+        *ingest_completed_shadow_trades(),
+        *_load_jsonl(_SHADOW_DATASET),
+    ]
     _trace_data = _load_jsonl(_TRACE_DATASET)
 
     shadow_validation = validate_dataset(

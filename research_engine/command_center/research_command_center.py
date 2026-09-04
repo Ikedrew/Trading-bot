@@ -61,7 +61,8 @@ from research_engine.registry.research_question_models import QuestionCategory
 _REPORTS_DIR = Path("analysis/reports")
 _SUMMARIES_DIR = Path("analysis/summaries")
 # Production-contract dataset names read via the shared S3 data-access layer.
-_SHADOW_DATASET = "shadow_trades"
+# Production shadow outcomes come from the canonical shadow_runtime_v1 stream
+# via the ingestion layer (see _load_shadow_records below).
 _RESEARCH_SHADOW_DATASET = "research_shadow_trades"
 _TRACE_DATASET = "decision_trace"
 _TRUTH_DATASET = "trade_truth"
@@ -100,6 +101,29 @@ def _load_jsonl_sample(dataset: str, limit: int = 500) -> list[dict[str, Any]]:
     records = get_default_source().read_dataset(dataset)
     # S3 layer orders ascending by timestamp; reverse for most-recent-first, then cap.
     return list(reversed(records))[:limit]
+
+
+def _load_shadow_records(limit: int = 500) -> list[dict[str, Any]]:
+    """Canonical production shadow population via the shadow_runtime ingestion layer.
+
+    Reads the S3 shadow_runtime_v1 event stream and returns completed shadow
+    outcomes in the internal research shape. No legacy dataset, no local fallback.
+    """
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+
+    records = ingest_completed_shadow_trades()
+    return list(reversed(records))[:limit]
+
+
+def _count_shadow_outcomes() -> int:
+    """Count completed production shadow outcomes via the ingestion layer."""
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+
+    return len(ingest_completed_shadow_trades())
 
 
 def _load_all_reports() -> dict[str, dict[str, Any]]:
@@ -153,10 +177,10 @@ def generate_command_report() -> ResearchCommandReport:
     knowledge = _load_json(_SUMMARIES_DIR / "research_knowledge.json")
     reports = _load_all_reports()
 
-    shadow_records = _load_jsonl_sample(_SHADOW_DATASET)
+    shadow_records = _load_shadow_records()
     research_shadow_records = _load_jsonl_sample(_RESEARCH_SHADOW_DATASET)
     all_shadow = shadow_records + research_shadow_records
-    shadow_count = _count_jsonl(_SHADOW_DATASET) + _count_jsonl(_RESEARCH_SHADOW_DATASET)
+    shadow_count = _count_shadow_outcomes() + _count_jsonl(_RESEARCH_SHADOW_DATASET)
     trace_count = _count_jsonl(_TRACE_DATASET)
 
     # Build each section

@@ -24,7 +24,6 @@ from typing import Any
 from research_engine.data_access.s3_source import get_default_source
 
 # Production-contract dataset names read via the shared S3 data-access layer.
-_SHADOW_DATASET = "shadow_trades"
 _RESEARCH_SHADOW_DATASET = "research_shadow_trades"
 _REPORTS_DIR = Path("analysis/reports")
 _KNOWLEDGE_PATH = Path("analysis/summaries/research_knowledge.json")
@@ -69,10 +68,19 @@ def load_shadow_trades(
     """
     from research_engine.data_quality.classifier import classify_record, DataEpoch
 
+    from research_engine.data_access.s3_source import get_default_source
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+
     _source = get_default_source()
     records: list[dict[str, Any]] = []
-    for dataset in (_SHADOW_DATASET, _RESEARCH_SHADOW_DATASET):
-        records.extend(_source.read_dataset(dataset))
+    # Canonical production shadow source: S3 shadow_runtime_v1 event stream
+    # reconstructed into completed shadow outcomes (internal research shape).
+    # research_shadow_trades is a separate live-written research dataset and
+    # is appended unchanged. The legacy shadow_trades dataset is never read.
+    records.extend(ingest_completed_shadow_trades())
+    records.extend(_source.read_dataset(_RESEARCH_SHADOW_DATASET))
 
     # Epoch filtering (default: CURRENT only)
     if include_all_epochs or epoch == "ALL":

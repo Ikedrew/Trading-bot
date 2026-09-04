@@ -369,13 +369,18 @@ def run(shadow_trades: list[dict[str, Any]] | None = None) -> dict:
     If shadow_trades not provided, loads from S3 via the shared data-access layer.
     """
     if shadow_trades is None:
+        from research_engine.data_access.shadow_runtime_ingestion import (
+            ingest_completed_shadow_trades,
+        )
         from research_engine.data_access.s3_source import get_default_source
 
         _source = get_default_source()
         shadow_trades = []
-        # research_shadow_trades first, then regular shadow_trades (order preserved)
+        # Canonical production shadow source first (S3 shadow_runtime_v1
+        # event stream, reconstructed into the internal research shape),
+        # then research_shadow_trades (order preserved).
+        shadow_trades.extend(ingest_completed_shadow_trades())
         shadow_trades.extend(_source.read_dataset("research_shadow_trades"))
-        shadow_trades.extend(_source.read_dataset("shadow_trades"))
 
     result = run_expected_value(shadow_trades)
 
@@ -398,7 +403,7 @@ def run(shadow_trades: list[dict[str, Any]] | None = None) -> dict:
             **result.to_dict(),
         },
         confidence=result.confidence,
-        dataset={"source": "shadow_trades + research_shadow_trades", "sample_size": result.total_trades},
+        dataset={"source": "shadow_runtime_v1(ingested) + research_shadow_trades", "sample_size": result.total_trades},
         fingerprint=build_fingerprint(result.total_trades, 0, "shadow_trades"),
         recommendation=recommendation,
         provenance={"experiment_module": "research_engine.experiments.expected_value", "registry_id": "Q19", "function": "run", "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"},

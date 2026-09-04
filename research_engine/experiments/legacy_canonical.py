@@ -35,7 +35,6 @@ from research_engine.experiments.experiment_base import (
 # Production-contract dataset names read via the shared S3 data-access layer.
 _TRACE_DATASET = "decision_trace"
 _SHADOW_DATASET = "research_shadow_trades"
-_SHADOW_DATASET2 = "shadow_trades"
 _TRUTH_DATASET = "trade_truth"
 _LEDGER_DATASET = "decision_ledger"
 _EXEC_DATASET = "execution_context"
@@ -52,23 +51,29 @@ def _load_jsonl(dataset: str) -> list[dict]:
 
 
 def _shadow_outcomes() -> list[dict]:
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+
     outcomes = []
-    for d in [_SHADOW_DATASET, _SHADOW_DATASET2]:
-        for rec in _load_jsonl(d):
-            o = rec.get("simulated_outcome", {})
-            ds = rec.get("decision_snapshot", {})
-            ident = rec.get("identity", {})
-            if o:
-                outcomes.append({
-                    "r": o.get("pnl_r_multiple", 0),
-                    "win": o.get("pnl_r_multiple", 0) > 0,
-                    "score": ds.get("score", 0),
-                    "pattern": ds.get("pattern", ""),
-                    "direction": ds.get("direction", ""),
-                    "symbol": ident.get("symbol", ""),
-                    "exit_reason": o.get("exit_reason", ""),
-                    "bars_held": o.get("bars_held", 0),
-                })
+    # Canonical production shadow source (S3 shadow_runtime_v1 event stream,
+    # reconstructed into completed shadow outcomes), then the separate
+    # live-written research_shadow_trades dataset. Order preserved.
+    for rec in [*ingest_completed_shadow_trades(), *_load_jsonl(_SHADOW_DATASET)]:
+        o = rec.get("simulated_outcome", {})
+        ds = rec.get("decision_snapshot", {})
+        ident = rec.get("identity", {})
+        if o:
+            outcomes.append({
+                "r": o.get("pnl_r_multiple", 0),
+                "win": o.get("pnl_r_multiple", 0) > 0,
+                "score": ds.get("score", 0),
+                "pattern": ds.get("pattern", ""),
+                "direction": ds.get("direction", ""),
+                "symbol": ident.get("symbol", ""),
+                "exit_reason": o.get("exit_reason", ""),
+                "bars_held": o.get("bars_held", 0),
+            })
     return outcomes
 
 

@@ -36,8 +36,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Production-contract dataset name read via the shared S3 data-access layer.
-_SHADOW_DATASET = "shadow_trades"
+# Production-contract dataset names are resolved inside the ingestion layer.
 
 # Minimum number of paired observations before triggering evaluation
 _DEFAULT_MINIMUM_PAIRS = 30
@@ -199,15 +198,19 @@ def _count_prospective_pairs(
 
 
 def _load_observations(shadow_dir: str | None = None) -> list[dict[str, Any]]:
-    """Load all shadow trade observations from S3 via the shared data-access layer.
+    """Load completed shadow outcomes from the canonical shadow_runtime_v1 stream.
 
+    Canonical production shadow source: S3 shadow_runtime_v1 event stream,
+    reconstructed into completed shadow outcomes via the ingestion layer.
     The ``shadow_dir`` parameter is retained for signature stability but is no
     longer used as a data source — S3 is authoritative and there is no local
     fallback.
     """
-    from research_engine.data_access.s3_source import get_default_source
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
 
-    return list(get_default_source().read_dataset(_SHADOW_DATASET))
+    return list(ingest_completed_shadow_trades())
 
 
 def _parse_timestamp(ts_str: str) -> float:

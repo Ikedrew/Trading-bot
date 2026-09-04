@@ -28,7 +28,6 @@ from research_engine.validation import validate_dataset, ResearchValidationResul
 
 # ─── DATA LOADING ─────────────────────────────────────────────────────────────
 
-_SHADOW_DATASETS = ["shadow_trades", "research_shadow_trades"]
 _TRACE_DATASET = "decision_trace"
 
 
@@ -38,10 +37,18 @@ def _load_jsonl(dataset: str) -> list[dict]:
 
 
 def _load_shadows() -> list[dict]:
-    """Load all shadow trade records."""
-    records: list[dict] = []
-    for d in _SHADOW_DATASETS:
-        records.extend(_load_jsonl(d))
+    """Canonical production shadow population via the shadow_runtime ingestion layer.
+
+    Reads the S3 shadow_runtime_v1 event stream and returns completed shadow
+    outcomes in the internal research shape, plus the separate live-written
+    research_shadow_trades dataset. No legacy dataset, no local fallback.
+    """
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+
+    records: list[dict] = list(ingest_completed_shadow_trades())
+    records.extend(_load_jsonl("research_shadow_trades"))
     return records
 
 

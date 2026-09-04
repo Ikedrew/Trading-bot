@@ -209,7 +209,13 @@ def run() -> dict:
     _source = get_default_source()
 
     shadows: dict[str, dict] = {}
-    for rec in _source.read_dataset("shadow_trades"):
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+
+    # Canonical production shadow source: S3 shadow_runtime_v1 event stream,
+    # reconstructed into completed shadow outcomes (internal research shape).
+    for rec in ingest_completed_shadow_trades():
         cor_id = rec.get("identity", {}).get("correlation_id") or rec.get("correlation_id", "")
         if cor_id:
             shadows[cor_id] = rec

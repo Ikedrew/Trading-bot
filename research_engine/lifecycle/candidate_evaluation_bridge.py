@@ -192,7 +192,14 @@ def _persist_full_evaluation(candidate_id: str, evaluation: CandidateEvaluation)
 
 
 def _load_shadow_observations() -> list[dict[str, Any]]:
-    """Load all shadow trade observations from S3 via the shared data-access layer."""
-    from research_engine.data_access.s3_source import get_default_source
+    """Load completed shadow outcomes from the canonical shadow_runtime_v1 stream.
 
-    return list(get_default_source().read_dataset("shadow_trades"))
+    Canonical production shadow source: S3 shadow_runtime_v1 event stream,
+    reconstructed into completed shadow outcomes via the ingestion layer.
+    No legacy dataset, no local fallback.
+    """
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+
+    return list(ingest_completed_shadow_trades())

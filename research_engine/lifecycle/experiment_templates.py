@@ -96,10 +96,16 @@ def _simulate_trade(*, direction: str, entry_price: float, stop_loss: float,
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _load_shadow_population() -> list[dict]:
-    """Load deduplicated real shadow trade population from S3 via the shared layer."""
-    from research_engine.data_access.s3_source import get_default_source
+    """Load deduplicated shadow population from the canonical shadow_runtime_v1 stream.
 
-    raw = get_default_source().read_dataset("shadow_trades")
+    Canonical production shadow source: S3 shadow_runtime_v1 event stream,
+    reconstructed into completed shadow outcomes via the ingestion layer.
+    """
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+
+    raw = ingest_completed_shadow_trades()
 
     def extract(rec):
         if "identity" in rec:

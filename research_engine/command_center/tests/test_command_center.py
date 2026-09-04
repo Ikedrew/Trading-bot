@@ -166,34 +166,44 @@ def _sample_q5_report() -> dict:
 
 
 class TestReportGeneration:
+    @patch("research_engine.command_center.research_command_center._load_shadow_records")
+    @patch("research_engine.command_center.research_command_center._count_shadow_outcomes")
     @patch("research_engine.command_center.research_command_center._load_jsonl_sample")
     @patch("research_engine.command_center.research_command_center._count_jsonl")
     @patch("research_engine.command_center.research_command_center._load_all_reports")
     @patch("research_engine.command_center.research_command_center._load_json")
-    def test_empty_state(self, mock_json, mock_reports, mock_count, mock_sample):
+    def test_empty_state(self, mock_json, mock_reports, mock_count, mock_sample, mock_ingest_count, mock_ingest):
         mock_json.return_value = None
         mock_reports.return_value = {}
         mock_count.return_value = 0
         mock_sample.return_value = []
+        mock_ingest_count.return_value = 0
+        mock_ingest.return_value = []
 
         report = generate_command_report()
         assert isinstance(report, ResearchCommandReport)
         assert report.system_state.infrastructure == "NOT_READY"
         assert report.data_health.record_count == 0
 
+    @patch("research_engine.command_center.research_command_center._load_shadow_records")
+    @patch("research_engine.command_center.research_command_center._count_shadow_outcomes")
     @patch("research_engine.command_center.research_command_center._load_jsonl_sample")
     @patch("research_engine.command_center.research_command_center._count_jsonl")
     @patch("research_engine.command_center.research_command_center._load_all_reports")
     @patch("research_engine.command_center.research_command_center._load_json")
-    def test_with_data(self, mock_json, mock_reports, mock_count, mock_sample):
+    def test_with_data(self, mock_json, mock_reports, mock_count, mock_sample, mock_ingest_count, mock_ingest):
         mock_json.return_value = _sample_dashboard()
         mock_reports.return_value = {"Q5": _sample_q5_report()}
         mock_count.return_value = 200
         mock_sample.return_value = _make_records(200)
+        # Canonical shadow_runtime ingestion: 200 completed production
+        # outcomes + 200 research_shadow_trades = 400 (same total as before).
+        mock_ingest_count.return_value = 200
+        mock_ingest.return_value = _make_records(200)
 
         report = generate_command_report()
         assert report.system_state.infrastructure == "READY"
-        assert report.data_health.record_count == 400  # 200 per dir x 2
+        assert report.data_health.record_count == 400  # 200 ingested + 200 research shadow
 
     def test_to_dict_serializable(self):
         report = _make_full_report()
