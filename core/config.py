@@ -71,6 +71,19 @@ EVENT_STREAM_S3_MIRROR = True       # Enables/disables S3 batch event persistenc
 NEW_RUNTIME_S3_BUCKET = _os.getenv("AWS_S3_BUCKET", "trading-bot-v10-data")  # Canonical live + shadow sink
 DECISION_AUDIT_ENABLED = True       # Enables/disables decision audit trail persistence
 
+# --- Research Engine AWS access (read-only research reads ONLY) ---
+# Explicit AWS profile for the Research Engine S3 data source
+# (research_engine/data_access/s3_source.py). Local development typically sets
+# this to the SSO profile that owns the research bucket so research NEVER falls
+# through to the laptop machine's wrong default AWS profile (canonical local
+# example: `RESEARCH_AWS_PROFILE=trading-bot-new` in a local .env / shell).
+# This ONLY affects research READS — collectors/writers keep their existing
+# credential path and are untouched. Leave UNSET/empty on EC2/VM: the standard
+# boto3 chain (AWS_PROFILE / env / shared config / web identity / EC2 instance
+# role via IMDS) applies, so the Trading-Bot-S3-Access instance role keeps
+# working without any change or profile requirement.
+RESEARCH_AWS_PROFILE = _os.getenv("RESEARCH_AWS_PROFILE", "")
+
 # --- NEW Shadow Runtime (per-opportunity horizon shadows) ---
 # Gated integration: when False, the legacy horizon-shadow branch runs unchanged.
 # When True, the pre-verdict shadow branch and BarProvider closed-bar routing

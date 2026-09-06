@@ -130,6 +130,71 @@ _CATEGORY_TO_HYPOTHESIS: dict[TriggerCategory, HypothesisCategory] = {
 }
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# EVIDENCE PROVENANCE (Gap 7)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# A trigger's `evidence` payload carries two distinguishable layers:
+#
+#     evidence summary    — the statistical/research result that justified the
+#                           trigger (mean_r, win_rate, deltas, multiple-testing
+#                           count, ...). Owned by the producing detector.
+#     evidence provenance — where that result came from and how it traces back
+#                           to canonical evidence (question_id, report status,
+#                           source datasets, fingerprint, as-of marker).
+#
+# Provenance fields are ADDITIVE keys inside the existing evidence dict (no
+# schema bump, no parallel model). A field is present ONLY when the source
+# surface genuinely produced it — absence is preserved explicitly, never
+# "unknown", never fabricated.
+
+
+def build_evidence_provenance(
+    *,
+    question_id: str | None = None,
+    experiment_id: str | None = None,
+    source_report_status: str | None = None,
+    source_report_recommendation: str | None = None,
+    source_datasets: list[str] | None = None,
+    dataset_fingerprint: str | None = None,
+    evidence_as_of: str | None = None,
+) -> dict[str, Any]:
+    """Build provenance keys for a trigger evidence payload.
+
+    Only fields with a genuine value are emitted. Empty/None inputs are
+    omitted so optional evidence stays honestly absent.
+    """
+    provenance: dict[str, Any] = {}
+    if question_id:
+        provenance["question_id"] = question_id
+    if experiment_id:
+        provenance["experiment_id"] = experiment_id
+    if source_report_status:
+        provenance["source_report_status"] = source_report_status
+    if source_report_recommendation:
+        provenance["source_report_recommendation"] = source_report_recommendation
+    if source_datasets:
+        provenance["source_datasets"] = list(source_datasets)
+    if dataset_fingerprint:
+        provenance["dataset_fingerprint"] = dataset_fingerprint
+    if evidence_as_of:
+        provenance["evidence_as_of"] = evidence_as_of
+    return provenance
+
+
+def stamp_provenance(triggers: list["FindingTrigger"], **provenance: Any) -> None:
+    """Attach provenance to triggers that do not already carry it.
+
+    Adds only provenance keys that are absent on each trigger, so a trigger
+    created with its own explicit provenance (e.g. from a research question
+    finding) is never overwritten.
+    """
+    for trigger in triggers:
+        for key, value in build_evidence_provenance(**provenance).items():
+            trigger.evidence.setdefault(key, value)
+
+
+
 @dataclass
 class FindingTrigger:
     """A detected anomaly that may warrant research investigation."""
@@ -368,13 +433,24 @@ class FindingTriggerEngine:
         if total_n < self._config.min_sample_size:
             return None
 
+        # Evidence payload: the finding's own metrics are the summary layer;
+        # provenance records where the finding came from (Gap 7). Fields the
+        # finding does not carry stay honestly absent.
+        evidence = dict(metrics) if isinstance(metrics, dict) else {}
+        evidence.update(build_evidence_provenance(
+            question_id=question_id or None,
+            source_report_status=finding.get("status") or None,
+            source_report_recommendation=finding.get("recommendation") or None,
+            evidence_as_of=datetime.now(timezone.utc).isoformat(),
+        ))
+
         trigger = FindingTrigger(
             finding_id=question_id or f"finding_{uuid.uuid4().hex[:6]}",
             source=f"research_question_{question_id}",
             category=TriggerCategory.POOR_PATTERN_PERFORMANCE,
             title=finding.get("title", f"Anomalous finding from {question_id}"),
             observation=finding.get("conclusion", ""),
-            evidence=metrics,
+            evidence=evidence,
             confidence=confidence,
             sample_size=total_n,
             trigger_reason=f"Research finding outcome={outcome}, confidence={confidence}",
@@ -881,9 +957,23 @@ class FindingTriggerEngine:
             return None
 
         # Rule 2: Deduplication — check if same finding already active/investigated
-        if self._is_duplicate(trigger):
+        existing = self._find_duplicate(trigger)
+        if existing is not None:
+            if trigger.sample_size > existing.sample_size:
+                # Reconfirmation (Gap 7): same stable finding identity, but the
+                # evidence has strengthened. Update the EXISTING trigger's
+                # evidence summary/provenance in place — never mint a duplicate
+                # trigger for grown evidence. The audit log records the event.
+                existing.evidence = dict(trigger.evidence)
+                existing.sample_size = trigger.sample_size
+                existing.confidence = trigger.confidence or existing.confidence
+                existing.observation = trigger.observation
+                self._store(existing)
+                self._audit("FINDING_RECONFIRMED", existing)
+                return None
+            # Stale/identical evidence: idempotent — nothing changes.
             trigger.status = TriggerStatus.DISMISSED
-            trigger.dismissed_reason = "Duplicate of existing trigger or hypothesis"
+            trigger.dismissed_reason = "Duplicate of existing trigger (stale or identical evidence)"
             self._store(trigger)
             return None
 
@@ -915,12 +1005,12 @@ class FindingTriggerEngine:
         self._store(trigger)
         return trigger
 
-    def _is_duplicate(self, trigger: FindingTrigger) -> bool:
+    def _find_duplicate(self, trigger: FindingTrigger) -> "FindingTrigger | None":
         """
-        Check if this finding has already been triggered.
-        
-        Deduplication rules:
-        1. Exact finding_id match → duplicate (always)
+        Locate an existing trigger for the same finding (dedup identity).
+
+        Rules:
+        1. Exact finding_id match → duplicate
         2. Same suggested_patterns + same category → duplicate
            BUT only when BOTH have non-empty suggested_patterns.
            Empty suggested_patterns (non-pattern detectors like SYMBOL_ANOMALY,
@@ -932,13 +1022,17 @@ class FindingTriggerEngine:
                 continue
             # Rule 1: Exact finding_id match
             if existing.finding_id == trigger.finding_id:
-                return True
+                return existing
             # Rule 2: Structural match (only when both have non-empty patterns)
             if (existing.suggested_patterns and trigger.suggested_patterns and
                     existing.suggested_patterns == trigger.suggested_patterns and
                     existing.category == trigger.category):
-                return True
-        return False
+                return existing
+        return None
+
+    def _is_duplicate(self, trigger: FindingTrigger) -> bool:
+        """Backward-compatible wrapper around _find_duplicate()."""
+        return self._find_duplicate(trigger) is not None
 
     def _already_rejected(self, trigger: FindingTrigger) -> bool:
         """Check if the knowledge map already has a REJECTED conclusion for this."""
@@ -1010,8 +1104,23 @@ class FindingTriggerEngine:
 
     # ─── QUERIES ──────────────────────────────────────────────────────
 
+    def stamp_evidence_provenance(self, triggers: list["FindingTrigger"],
+                                  **provenance: Any) -> None:
+        """Stamp provenance onto triggers and persist the updated payloads.
+
+        The triggers are the engine's own stored objects (detectors store at
+        construction/screen time), so updating in place + saving keeps the
+        persisted JSON in sync. Only absent provenance keys are added.
+        """
+        stamp_provenance(triggers, **provenance)
+        self._save()
+
     def all_triggers(self) -> list[FindingTrigger]:
         return list(self._triggers.values())
+
+    def get(self, trigger_id: str) -> "FindingTrigger | None":
+        """Look up one trigger by ID."""
+        return self._triggers.get(trigger_id)
 
     def eligible(self) -> list[FindingTrigger]:
         return [t for t in self._triggers.values() if t.status == TriggerStatus.ELIGIBLE]

@@ -2,13 +2,16 @@
 Candidate Evaluation Bridge — Connects CandidateEvaluator results to the CandidateRegistry lifecycle.
 
 Responsibilities:
-    1. Run evaluation for a specific candidate
-    2. Persist the evaluation result as a ValidationEntry
-    3. Transition the candidate to the appropriate lifecycle state
-    4. Return the complete evaluation
+    1. Build matched prospective pairs via the shared pairing contract
+       (research_engine.lifecycle.candidate_pairing)
+    2. Run evaluation for a specific candidate
+    3. Persist the evaluation result as a ValidationEntry
+    4. Transition the candidate to the appropriate lifecycle state
+    5. Return the complete evaluation
 
 Lifecycle mapping:
-    VALIDATED   → candidate transitions to VALIDATED
+    VALIDATED   → candidate transitions to VALIDATED (or READY_FOR_REVIEW
+                  when coming from SHADOW_TESTING)
     REJECTED    → candidate transitions to REJECTED (or FAILED_VALIDATION)
     INCONCLUSIVE → candidate remains in current state (eligible for more evidence)
 
@@ -40,6 +43,8 @@ def evaluate_candidate(
     candidate_id: str,
     *,
     shadow_observations: list[dict[str, Any]] | None = None,
+    candidate_records: list[dict[str, Any]] | None = None,
+    incumbent_records: list[dict[str, Any]] | None = None,
     config: EvaluationConfig | None = None,
     registry_dir: str | None = None,
 ) -> CandidateEvaluation:
@@ -48,8 +53,10 @@ def evaluate_candidate(
     
     1. Loads candidate from registry
     2. Confirms candidate is eligible for evaluation
-    3. Loads shadow observations (if not provided)
-    4. Runs CandidateEvaluator
+    3. Builds matched prospective pairs via the shared pairing contract
+       (candidate shadows ↔ incumbent realised outcomes, exact correlation_id;
+       populations are injected or loaded through the sanctioned S3 layer)
+    4. Runs CandidateEvaluator on the matched pairs
     5. Persists validation result to candidate's history
     6. Transitions candidate lifecycle state (if decision is terminal)
     7. Returns complete evaluation
@@ -58,7 +65,12 @@ def evaluate_candidate(
     
     Args:
         candidate_id: The candidate to evaluate
-        shadow_observations: Pre-loaded observations (if None, loads from disk)
+        shadow_observations: DEPRECATED alias for ``candidate_records``
+            (candidate-shadow CLOSE records, dataset ``shadow_trades`` shape).
+        candidate_records: Injected candidate-shadow records (testing);
+            loaded via the sanctioned S3 layer when None.
+        incumbent_records: Injected incumbent trade_truth records (testing);
+            loaded via the sanctioned S3 layer when None.
         config: Evaluation configuration (defaults to standard thresholds)
         registry_dir: Override for CandidateRegistry storage (testing)
     
@@ -82,16 +94,19 @@ def evaluate_candidate(
                                    f"Candidate in state '{candidate.status}', "
                                    f"expected one of {eligible_states}")
 
-    # ─── 3. LOAD SHADOW OBSERVATIONS ─────────────────────────────────
-    if shadow_observations is None:
-        shadow_observations = _load_shadow_observations()
+    # ─── 3+4. MATCHED PAIRS + EVALUATOR (shared pairing contract) ────
+    # The evaluator delegates pairing to research_engine.lifecycle.
+    # candidate_pairing — the same implementation the auto-evaluator's pair
+    # counter uses, so count and evaluation can never drift.
+    if shadow_observations is not None and candidate_records is None:
+        candidate_records = shadow_observations  # deprecated alias
 
-    # ─── 4. RUN EVALUATOR ─────────────────────────────────────────────
     evaluator = CandidateEvaluator(config=config or EvaluationConfig())
     evaluation = evaluator.evaluate(
         candidate_id=candidate_id,
         candidate_activated_at=candidate.created_at,
-        shadow_observations=shadow_observations,
+        candidate_records=candidate_records,
+        incumbent_records=incumbent_records,
     )
 
     # ─── 5. PERSIST VALIDATION RESULT ─────────────────────────────────
@@ -190,16 +205,11 @@ def _persist_full_evaluation(candidate_id: str, evaluation: CandidateEvaluation)
     except Exception as e:
         logger.debug("[CANDIDATE_EVAL_BRIDGE] Failed to persist full evaluation: %s", str(e)[:100])
 
-
-def _load_shadow_observations() -> list[dict[str, Any]]:
-    """Load completed shadow outcomes from the canonical shadow_runtime_v1 stream.
-
-    Canonical production shadow source: S3 shadow_runtime_v1 event stream,
-    reconstructed into completed shadow outcomes via the ingestion layer.
-    No legacy dataset, no local fallback.
-    """
-    from research_engine.data_access.shadow_runtime_ingestion import (
-        ingest_completed_shadow_trades,
-    )
-
-    return list(ingest_completed_shadow_trades())
+# NOTE (Phase 1I-C repair): the former _load_shadow_observations() helper —
+# which loaded the canonical nshadow_* shadow_runtime_v1 stream — was removed.
+# That stream NEVER contains candidate shadows (runtime-minted nshadow_* IDs
+# only), so it could never supply candidate evidence. Pairing populations are
+# now owned exclusively by research_engine.lifecycle.candidate_pairing:
+# candidate shadows come from the shadow_trades dataset
+# (shadow_type=CANDIDATE_<id>) and incumbents from trade_truth, joined by the
+# exact execution correlation_id.

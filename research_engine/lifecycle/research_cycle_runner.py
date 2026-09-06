@@ -182,6 +182,10 @@ class CycleResult:
     errors: list[str] = field(default_factory=list)
     dataset_fingerprint: str = ""
     duration_seconds: float = 0.0
+    snapshot_path: str = ""             # successful-cycle snapshot (Gap 6)
+    change_report_path: str = ""        # weekly change report (Gap 6)
+    change_kind: str = ""               # baseline | no_material_change | material_change
+    durability_status: str = ""         # durable | checkpoint_failed | recovered | skipped (Gap 8)
 
     def to_dict(self) -> dict[str, Any]:
         return self.__dict__
@@ -226,6 +230,34 @@ class ResearchCycleRunner:
             return result
 
         try:
+            # ─── RESEARCH-STATE RECOVERY (Gap 8) ──────────────────────────
+            # If required local lifecycle state is missing (fresh/rebuilt VM),
+            # restore the latest complete durable checkpoint BEFORE any
+            # research action. If recovery is impossible AND local state is
+            # missing, fail loudly — running without accumulated lifecycle
+            # state would create duplicate hypotheses/triggers.
+            try:
+                from research_engine.lifecycle.state_durability import (
+                    ResearchStateDurability,
+                )
+                recovery = ResearchStateDurability().restore_if_needed()
+                result.durability_status = recovery.status
+                self._audit("RESEARCH_STATE_RECOVERY_CHECKED", cycle_id,
+                            {"status": recovery.status,
+                             "checkpoint_id": recovery.checkpoint_id,
+                             "error": recovery.error[:150]})
+            except Exception as e:
+                # Recovery was REQUIRED (local state absent) but unavailable.
+                result.status = "failed"
+                result.durability_status = "recovery_unavailable"
+                result.errors.append(f"research-state recovery unavailable: {str(e)[:160]}")
+                result.duration_seconds = time.time() - start_time
+                self._state.last_error = result.errors[-1][:200]
+                self._state.save()
+                self._audit("RESEARCH_STATE_RECOVERY_FAILED", cycle_id,
+                            {"error": str(e)[:200]})
+                return result
+
             # ─── COOLDOWN CHECK ───────────────────────────────────────
             if self._state.last_cycle_timestamp:
                 try:
@@ -253,6 +285,20 @@ class ResearchCycleRunner:
             )
 
             triggers = self._detect_findings(engine, population_stats.get("patterns", {}))
+
+            # Evidence provenance (Gap 7): these population-statistic findings
+            # come from the canonical shadow_runtime_v1 ingestion via the
+            # universe builders. Stamp source datasets, the cycle's dataset
+            # fingerprint and an evidence-as-of marker onto every trigger and
+            # persist. question_id stays honestly absent — these are
+            # population-level detector findings, not single-question results.
+            engine.stamp_evidence_provenance(
+                triggers,
+                source_datasets=["shadow_runtime_v1(ingested)"],
+                dataset_fingerprint=result.dataset_fingerprint or None,
+                evidence_as_of=result.timestamp or None,
+            )
+
             result.triggers_detected = len(triggers)
             result.triggers_eligible = sum(1 for t in triggers if t.status == TriggerStatus.ELIGIBLE)
             result.triggers_dismissed = sum(1 for t in triggers
@@ -289,7 +335,41 @@ class ResearchCycleRunner:
             except Exception:
                 pass  # Auto-evaluation must never block research cycle
 
+            # ─── CYCLE SNAPSHOT + WEEKLY CHANGE REPORT (Gap 6) ─────────
+            # Only a successfully completed cycle may produce a snapshot and
+            # become the comparison baseline. A snapshot failure marks the
+            # whole cycle failed (never a misleading successful change report).
+            snapshot_ok = True
+            try:
+                from research_engine.lifecycle.cycle_snapshot import record_cycle
+                snapshot, change_report, change_kind = record_cycle(
+                    cycle_id=cycle_id, fingerprint=result.dataset_fingerprint,
+                )
+                result.snapshot_path = str(snapshot["snapshot_file"])
+                result.change_report_path = str(
+                    snapshot["snapshot_file"]).replace("_snapshot.json", "_change_report.json")
+                result.change_kind = change_kind
+                self._audit("RESEARCH_CYCLE_SNAPSHOT_RECORDED", cycle_id, {
+                    "change_kind": change_kind,
+                    "material_change": change_report.get("material_change", False),
+                })
+            except Exception as e:
+                snapshot_ok = False
+                result.errors.append(f"snapshot: {str(e)[:200]}")
+                self._audit("RESEARCH_CYCLE_SNAPSHOT_FAILED", cycle_id,
+                            {"error": str(e)[:200]})
+
             # ─── UPDATE STATE ─────────────────────────────────────────
+            if not snapshot_ok:
+                result.status = "failed"
+                result.duration_seconds = time.time() - start_time
+                self._state.last_error = "snapshot failed: " + result.errors[-1][:180]
+                self._state.save()
+                self._audit("RESEARCH_CYCLE_FAILED", cycle_id,
+                            {"error": result.errors[-1][:200]})
+                _release_research_lock()
+                return result
+
             result.status = "complete"
             result.duration_seconds = time.time() - start_time
 
@@ -304,6 +384,28 @@ class ResearchCycleRunner:
             self._audit("RESEARCH_CYCLE_COMPLETED", cycle_id,
                         {"triggers": result.triggers_detected, "eligible": result.triggers_eligible,
                          "investigated": result.investigations_started})
+
+            # ─── DURABLE CHECKPOINT (Gap 8) ──────────────────────────────
+            # The cycle itself succeeded; durability is an explicit, observable
+            # post-condition. A checkpoint failure is surfaced loudly (never
+            # silently claimed as durable) but does not invalidate the cycle.
+            try:
+                from research_engine.lifecycle.state_durability import (
+                    ResearchStateDurability,
+                )
+                dur = ResearchStateDurability().checkpoint(
+                    cycle_id=cycle_id,
+                    dataset_fingerprint=result.dataset_fingerprint,
+                )
+                result.durability_status = dur.status
+                if dur.status != "durable":
+                    result.errors.append(f"durability: {dur.error}")
+                self._audit("RESEARCH_STATE_CHECKPOINTED", cycle_id, dur.to_dict())
+            except Exception as e:
+                result.durability_status = "checkpoint_failed"
+                result.errors.append(f"durability checkpoint failed: {str(e)[:160]}")
+                self._audit("RESEARCH_STATE_CHECKPOINT_FAILED", cycle_id,
+                            {"error": str(e)[:200]})
 
         except Exception as e:
             result.status = "failed"

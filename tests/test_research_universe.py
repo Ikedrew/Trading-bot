@@ -226,16 +226,22 @@ class TestRMultiple:
 class TestGovernanceGate:
     def test_governance_fail_blocks(self, tmp_path):
         """If governance returns FAIL, universe is not built."""
-        # No data files = governance will fail
-        result = build_research_universe(
-            enriched_file=str(tmp_path / "nonexistent.jsonl"),
-            base_file=str(tmp_path / "nonexistent.jsonl"),
-            output_file=str(tmp_path / "out.jsonl"),
-            reports_dir=str(tmp_path / "reports"),
-            skip_governance=False,
-        )
-        # Either governance fails or no data found
-        assert "error" in result
+        # Empty fake S3 (production evidence source) + no data files = governance fails.
+        from _s3_fake import install_fake_s3, reset_fake_s3
+
+        fake = install_fake_s3()
+        try:
+            result = build_research_universe(
+                enriched_file=str(tmp_path / "nonexistent.jsonl"),
+                base_file=str(tmp_path / "nonexistent.jsonl"),
+                output_file=str(tmp_path / "out.jsonl"),
+                reports_dir=str(tmp_path / "reports"),
+                skip_governance=False,
+            )
+            # Either governance fails or no data found
+            assert "error" in result
+        finally:
+            reset_fake_s3()
 
 
 class TestReportGeneration:

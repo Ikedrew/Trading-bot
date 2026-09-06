@@ -35,7 +35,7 @@ from research_engine.v10.universes.market_universe import MarketUniverseBuilder
 from research_engine.v10.universes.strategy_universe import StrategyUniverseBuilder
 from research_engine.v10.universes.health import check_population_health
 from research_engine.v10.universes.models import Population, Universe
-from research_engine.v10.universes.question_bank import QUESTION_BANK
+from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK
 from research_engine.v10.universes.question_validator import validate_all_questions
 from research_engine.v10.universes.resolver import (
     PopulationResolver,

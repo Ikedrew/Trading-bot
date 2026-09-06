@@ -87,12 +87,18 @@ class DataGovernanceValidator:
         execution_results_dir: str | None = None,
         reports_dir: str | None = None,
     ):
-        self._journal_dir = Path(journal_dir or _JOURNAL_DIR)
+        # Production evidence (journal, decision_trace, execution_results): when
+        # no explicit path is supplied these are loaded from the canonical S3
+        # datasets via the shared research data-access layer. Explicit paths are
+        # OFFLINE FIXTURES only (test/local replay) and are never a fallback.
+        self._journal_dir = Path(journal_dir) if journal_dir else None
+        # Research output/state (research-ready dataset, excluded, recon report)
+        # stays local — these are derived research artifacts, not production evidence.
         self._research_file = Path(research_file or _RESEARCH_READY)
         self._excluded_file = Path(excluded_file or _EXCLUDED_FILE)
         self._recon_file = Path(recon_file or _RECON_REPORT)
-        self._dt_dir = Path(decision_trace_dir or _DECISION_TRACE_DIR)
-        self._exec_dir = Path(execution_results_dir or _EXECUTION_RESULTS_DIR)
+        self._dt_dir = Path(decision_trace_dir) if decision_trace_dir else None
+        self._exec_dir = Path(execution_results_dir) if execution_results_dir else None
         self._reports_dir = Path(reports_dir or _REPORTS_DIR)
 
         # Loaded data (lazy)
@@ -489,8 +495,14 @@ class DataGovernanceValidator:
     # ═══════════════════════════════════════════════════════════
 
     def _load_all(self) -> None:
-        """Load all data sources."""
-        self._journal_trades = self._load_jsonl_dir(self._journal_dir)
+        """Load all data sources.
+
+        Production evidence (trade journal, decision trace, execution results)
+        is read from the canonical S3 datasets when no explicit offline-fixture
+        path was supplied. Research output/state (research-ready dataset,
+        excluded trades, MT5 recon report) remains a local derived artifact.
+        """
+        self._journal_trades = self._load_journal_records()
         self._research_trades = self._load_jsonl_file(self._research_file)
         self._excluded_trades = self._load_jsonl_file(self._excluded_file)
         self._recon_data = self._load_json(self._recon_file)
@@ -501,6 +513,20 @@ class DataGovernanceValidator:
             f"research={len(self._research_trades)}, excluded={len(self._excluded_trades)}, "
             f"recon_entries={len(self._recon_entries)}"
         )
+
+    def _load_journal_records(self) -> list[dict]:
+        """Load the realised trade journal.
+
+        Authoritative source: S3 dataset ``trade_journal`` via the shared
+        research data-access layer. An explicit ``journal_dir`` (offline
+        fixture) reads local files ONLY as an explicit test/local override —
+        never as a production fallback.
+        """
+        if self._journal_dir is not None:
+            return self._load_jsonl_dir(self._journal_dir)
+        from research_engine.data_access.s3_source import get_default_source
+
+        return get_default_source().read_dataset("trade_journal")
 
     def _load_jsonl_dir(self, path: Path) -> list[dict]:
         if not path.exists():
@@ -536,21 +562,33 @@ class DataGovernanceValidator:
             return None
 
     def _load_execute_decisions(self) -> list[dict]:
-        """Load EXECUTE decisions from decision trace."""
-        if not self._dt_dir.exists():
-            return []
-        decisions = []
-        for f in self._dt_dir.rglob("*.jsonl"):
-            for line in f.read_text(encoding="utf-8").splitlines():
-                if not line.strip() or '"EXECUTE"' not in line:
-                    continue
-                try:
-                    d = json.loads(line)
-                    if d.get("action") == "EXECUTE":
-                        decisions.append(d)
-                except json.JSONDecodeError:
-                    pass
-        return decisions
+        """Load EXECUTE decisions from the decision trace.
+
+        Authoritative source: S3 dataset ``decision_trace`` via the shared
+        research data-access layer. An explicit ``decision_trace_dir``
+        (offline fixture) reads local files ONLY as an explicit test/local
+        override — never as a production fallback.
+        """
+        if self._dt_dir is not None:
+            if not self._dt_dir.exists():
+                return []
+            decisions = []
+            for f in self._dt_dir.rglob("*.jsonl"):
+                for line in f.read_text(encoding="utf-8").splitlines():
+                    if not line.strip() or '"EXECUTE"' not in line:
+                        continue
+                    try:
+                        d = json.loads(line)
+                        if d.get("action") == "EXECUTE":
+                            decisions.append(d)
+                    except json.JSONDecodeError:
+                        pass
+            return decisions
+
+        from research_engine.data_access.s3_source import get_default_source
+
+        records = get_default_source().read_dataset("decision_trace")
+        return [d for d in records if d.get("action") == "EXECUTE"]
 
     def _get_dataset_version(self) -> str:
         """Generate a version string from the research file modification time."""

@@ -106,7 +106,7 @@ def reconstruct_completed_shadow_trades(
     """
     opens: dict[str, dict[str, Any]] = {}
     closes: dict[str, dict[str, Any]] = {}
-    plans = 0
+    plans: dict[str, dict[str, Any]] = {}
     progresses = 0
     bad_schema = 0
     close_without_open: set[str] = set()
@@ -121,7 +121,9 @@ def reconstruct_completed_shadow_trades(
         event_type = ev.get("event_type")
         trade_id = str(ev.get("shadow_trade_id", "") or "")
         if event_type == "PLAN":
-            plans += 1
+            plan_id = str(ev.get("plan_id", "") or "")
+            if plan_id and plan_id not in plans:
+                plans[plan_id] = ev
         elif event_type == "PROGRESS":
             progresses += 1
         elif event_type == "OPEN":
@@ -145,7 +147,7 @@ def reconstruct_completed_shadow_trades(
         if close_ev is None:
             incomplete_no_close += 1
             continue
-        rec = _map_to_research_record(open_ev, close_ev)
+        rec = _map_to_research_record(open_ev, close_ev, plans)
         if rec is None:
             incomplete_no_outcome += 1
             continue
@@ -157,7 +159,7 @@ def reconstruct_completed_shadow_trades(
         "[SHADOW_INGESTION] shadow_runtime_v1 stream: plans=%d opens=%d "
         "progress=%d closes=%d → completed=%d (incomplete: no_close=%d "
         "no_outcome=%d close_without_open=%d bad_schema=%d)",
-        plans, len(opens), progresses, len(closes), len(records),
+        len(plans), len(opens), progresses, len(closes), len(records),
         incomplete_no_close, incomplete_no_outcome, len(close_without_open),
         bad_schema,
     )
@@ -200,11 +202,17 @@ def ingest_completed_shadow_trades(
 def _map_to_research_record(
     open_ev: dict[str, Any],
     close_ev: dict[str, Any],
+    plans: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any] | None:
     """
     Map one completed runtime lifecycle (OPEN + CLOSE) into the existing
     internal research shadow shape (identity / decision_snapshot /
     simulated_outcome). Returns None when the outcome evidence is incomplete.
+
+    ``plans`` indexes PLAN events by plan_id so lineage fields the OPEN did not
+    carry (e.g. observation_id in older eras) are preserved from the paired
+    canonical PLAN of the SAME lifecycle — never invented, never cross-joined
+    across lifecycles. The CLOSE of the same lifecycle is a further fallback.
     """
     construction = open_ev.get("construction") or {}
     open_identity = open_ev.get("identity") or {}
@@ -218,6 +226,14 @@ def _map_to_research_record(
         # CLOSE without outcome evidence is NOT a completed outcome.
         return None
 
+    plan_id = str(open_ev.get("plan_id", "") or "")
+    paired_plan = (plans or {}).get(plan_id, {})
+    observation_id = (
+        open_ev.get("observation_id", "")
+        or paired_plan.get("observation_id", "")
+        or close_ev.get("observation_id", "")
+    )
+
     exit_reason_raw = str(close_ev.get("exit_reason", "") or "")
     horizon = str(open_identity.get("evaluated_horizon", "") or "")
 
@@ -229,8 +245,8 @@ def _map_to_research_record(
         "identity": {
             "trade_id": shadow_trade_id,
             "shadow_trade_id": shadow_trade_id,
-            "plan_id": open_ev.get("plan_id", ""),
-            "observation_id": open_ev.get("observation_id", ""),
+            "plan_id": plan_id,
+            "observation_id": observation_id,
             "canonical_opportunity_id": open_ev.get(
                 "canonical_opportunity_id", ""
             ),

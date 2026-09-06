@@ -3,7 +3,8 @@ New-Engine Research Universes.
 
 This package contains:
     - models.py: Data models for questions, angles, populations, and joins
-    - question_bank.py: The single canonical question registry for the new engine
+    - legacy_question_bank.py: LEGACY research-coverage audit bank (NOT the
+  canonical question inventory - that is research_engine.registry.research_question_registry)
     - base.py: Abstract base class for universe builders
     - execution_universe.py: Execution Universe builder (wraps existing data)
     - decision_universe.py: Decision Universe builder (from decision_trace logs)

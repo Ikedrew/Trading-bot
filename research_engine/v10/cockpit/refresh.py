@@ -5,18 +5,17 @@ This is the ONE entry point for cockpit regeneration. It:
     1. Locates the latest persisted research run manifest (canonical source).
     2. Synchronizes control_plane_state.json with that canonical run.
     3. Generates the local cockpit HTML.
-    4. Publishes the cockpit HTML to S3.
 
-Usage:
-    from research_engine.v10.cockpit.refresh import refresh_cockpit
-    result = refresh_cockpit()
+RETIREMENT NOTE (Gap 9 final architecture cleanup): the former step 4
+(publish to the legacy V10 research bucket) has been RETIRED. The cockpit
+HTML is a derived LOCAL artifact only; the scheduled cycle calls this with
+skip_s3=True and no active caller requests an S3 publish.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -26,8 +25,6 @@ logger = logging.getLogger(__name__)
 _RUNS_DIR = Path("reports/research/runs")
 _STATE_PATH = Path("reports/research/control_plane_state.json")
 _LOCAL_COCKPIT = Path("reports/research/cockpit.html")
-_S3_BUCKET = os.environ.get("RESEARCH_BUCKET", "v10-engine")
-_S3_KEY = "reports/v10-research/cockpit/cockpit.html"
 
 
 @dataclass
@@ -80,14 +77,9 @@ def refresh_cockpit(skip_s3: bool = False) -> CockpitRefreshResult:
         result.error = f"Cockpit generation failed: {e}"
         return result
 
-    # Step 4: Publish to S3
-    if not skip_s3:
-        s3_ok, s3_err = _publish_to_s3(path)
-        result.s3_published = s3_ok
-        result.s3_error = s3_err
-        result.s3_path = f"s3://{_S3_BUCKET}/{_S3_KEY}" if s3_ok else ""
-    else:
-        result.s3_path = "(skipped)"
+    # Step 4: S3 publish RETIRED (old v10-engine bucket) — cockpit is
+    # local-only. skip_s3 is retained for call-site compatibility.
+    result.s3_path = "(retired - local only)"
 
     result.success = True
     return result
@@ -134,40 +126,3 @@ def _sync_control_plane_state(manifest: dict[str, Any]) -> None:
 
     _STATE_PATH.write_text(json.dumps(state, indent=2, default=str), encoding="utf-8")
 
-
-def _publish_to_s3(local_path: Path) -> tuple[bool, str]:
-    """
-    Publish cockpit HTML to S3.
-
-    Returns (success, error_message).
-    Non-fatal: research results are never affected by S3 publish failures.
-    """
-    try:
-        import boto3
-        from botocore.config import Config as BotoConfig
-
-        s3 = boto3.client(
-            "s3",
-            region_name=os.environ.get("AWS_REGION", "eu-west-2"),
-            config=BotoConfig(
-                connect_timeout=5,
-                read_timeout=10,
-                retries={"max_attempts": 2},
-            ),
-        )
-
-        content = local_path.read_text(encoding="utf-8")
-        s3.put_object(
-            Bucket=_S3_BUCKET,
-            Key=_S3_KEY,
-            Body=content.encode("utf-8"),
-            ContentType="text/html",
-        )
-        return True, ""
-
-    except ImportError:
-        return False, "boto3 not installed — S3 publish skipped"
-    except Exception as e:
-        msg = f"S3 publish failed: {e}"
-        logger.warning(f"[COCKPIT] {msg}")
-        return False, msg

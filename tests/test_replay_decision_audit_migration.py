@@ -15,12 +15,11 @@ Read-only offline consumer test — no trading logic is exercised.
 
 from __future__ import annotations
 
-import json
-import os
+import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
-import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -49,20 +48,9 @@ class _StubCausalAPI:
     def find(self, **filters):         return {"nodes": []}
 
 
-def _write_jsonl(path: Path, rows: list[dict]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
-
-
-def _seed_retained_v1(root: Path, *, ledger_decision: str, ledger_reason: str,
-                      trace_pattern: str, trace_structure_ok: bool,
-                      trace_terminal_stage: str) -> None:
-    """Stage A: persist the retained V1 records a real runtime writes.
-
-    Deliberately does NOT create logs/decision_audit/.
-    """
-    # Shadow record provides the lineage the replay starts from.
-    _write_jsonl(root / "logs" / "shadow_trades" / SYMBOL / "2026-07-23.jsonl", [{
+def _make_shadow_record(trace_pattern: str) -> dict:
+    """Build the shadow-trade record a real runtime would stage in S3."""
+    return {
         "schema_version": "shadow_trades_v1",
         "identity": {
             "trade_id": TRADE_ID,
@@ -75,10 +63,12 @@ def _seed_retained_v1(root: Path, *, ledger_decision: str, ledger_reason: str,
         "decision_snapshot": {"timestamp_decision_utc": 1785205500, "pattern": trace_pattern,
                               "direction": "BUY", "score": 0.61},
         "simulated_outcome": {"pnl_r_multiple": 1.4, "exit_reason": "take_profit"},
-    }])
+    }
 
-    # decision_ledger = AUTHORITATIVE terminal decision.
-    _write_jsonl(root / "logs" / "decision_ledger" / SYMBOL / "2026-07-23.jsonl", [{
+
+def _make_ledger_record(ledger_decision: str, ledger_reason: str) -> dict:
+    """Build the decision_ledger record (authoritative terminal decision)."""
+    return {
         "schema_version": "decision_ledger_v1",
         "symbol": SYMBOL,
         "cycle_id": CYCLE,
@@ -91,44 +81,62 @@ def _seed_retained_v1(root: Path, *, ledger_decision: str, ledger_reason: str,
         "entity_id": ENTITY,
         "canonical_opportunity_id": CANONICAL,
         "observation_id": OBSERVATION,
-    }])
+    }
 
-    # decision_trace = DIAGNOSTIC reasoning (deliberately carries a DIFFERENT,
-    # non-authoritative action to prove the terminal decision comes from ledger).
-    _write_jsonl(root / "logs" / "decision_trace" / SYMBOL / "2026-07-23.jsonl", [{
+
+def _make_trace_record(trace_pattern: str, trace_structure_ok: bool,
+                       trace_terminal_stage: str) -> dict:
+    """Build the decision_trace record (diagnostic reasoning).
+    Carries a DIFFERENT, non-authoritative action to prove the terminal decision
+    comes from the ledger, not the trace.
+    """
+    return {
         "schema_version": "decision_trace_v1",
         "symbol": SYMBOL,
         "cycle_id": CYCLE,
-        "action": "NO_TRADE",  # NON-authoritative — must NOT override ledger
-        "terminal_stage": trace_terminal_stage,
+        "decision": "NO_TRADE",
+        "reason": "pattern_confidence_low",
         "pattern_name": trace_pattern,
+        "patterns": [trace_pattern],
         "structure_ok": trace_structure_ok,
-        "selected_strategy": "CONTINUATION",
-        "trade_horizon": "INTRADAY",
-        "components": {"htf_alignment": 0.7, "formation": 0.5},
-        "score_strategy": 0.61,
+        "terminal_stage": trace_terminal_stage,
         "correlation_id": CORRELATION,
         "decision_id": DECISION_ID,
         "entity_id": ENTITY,
         "canonical_opportunity_id": CANONICAL,
         "observation_id": OBSERVATION,
-    }])
+    }
 
 
 @pytest.fixture
 def replay_env(tmp_path):
-    _seed_retained_v1(
-        tmp_path,
-        ledger_decision="EXECUTE", ledger_reason="all_gates_passed",
-        trace_pattern="ENGULFING_BULLISH", trace_structure_ok=True,
-        trace_terminal_stage="execution",
-    )
-    old = os.getcwd()
-    os.chdir(tmp_path)
-    try:
-        yield tmp_path
-    finally:
-        os.chdir(old)
+    """Patch the S3-backed loaders to return in-memory test records.
+
+    No local logs/ files are written or read — production evidence paths are
+    S3-only. This is a read-only offline consumer test — no trading logic is
+    exercised.
+    """
+    shadow = _make_shadow_record("ENGULFING_BULLISH")
+    ledger = _make_ledger_record("EXECUTE", "all_gates_passed")
+    trace = _make_trace_record("ENGULFING_BULLISH", True, "execution")
+
+    patches = [
+        patch("core.causal.replay._load_shadow_trade",
+              side_effect=lambda tid: shadow if tid == TRADE_ID else None),
+        patch("core.causal.replay._load_trade_truth",
+              side_effect=lambda tid: None),
+        patch("core.causal.replay._load_decision_ledger_record",
+              side_effect=lambda lineage: ledger),
+        patch("core.causal.replay._load_decision_trace_record",
+              side_effect=lambda lineage: trace),
+        patch("core.causal.replay._load_execution_context",
+              side_effect=lambda correlation_id: None),
+    ]
+    for p in patches:
+        p.start()
+    yield tmp_path
+    for p in patches:
+        p.stop()
 
 
 def _engine() -> CausalReplayEngine:

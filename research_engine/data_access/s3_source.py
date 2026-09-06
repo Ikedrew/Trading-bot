@@ -11,7 +11,8 @@ Design goals (permanent architecture, not a toggle):
     Research Engine → S3ResearchDataSource.read_dataset(...) → S3
 
 Responsibilities owned here (and nowhere else):
-    - S3 client creation (env credentials, canonical region)
+    - S3 client creation (RESEARCH_AWS_PROFILE or the standard boto3 chain,
+      canonical region, actionable secret-free diagnostics)
     - canonical bucket selection (core.config.NEW_RUNTIME_S3_BUCKET)
     - dataset prefix resolution (core.production_data_contract.s3_base_prefix)
     - schema/version resolution (current_schema + supported_schemas)
@@ -49,6 +50,15 @@ from core.production_data_contract import (
 
 logger = logging.getLogger(__name__)
 
+_CANONICAL_REGION = "eu-west-2"
+_RESEARCH_AWS_PROFILE_ENV = "RESEARCH_AWS_PROFILE"
+# S3 permission/credential denial codes — a permissions/account problem, NEVER an
+# SSO-expiry or network error.
+_DENIED_CODES = {
+    "AccessDenied", "ExpiredToken", "InvalidToken",
+    "SignatureDoesNotMatch", "AuthorizationHeaderMalformed",
+}
+
 
 class ResearchDataSourceError(RuntimeError):
     """Raised when the S3 research data source cannot be read.
@@ -59,6 +69,120 @@ class ResearchDataSourceError(RuntimeError):
     """
 
 
+# ─── AWS credential/session resolution ────────────────────────────────────────
+# Research Engine readers authenticate to S3 through ONE path below.
+#
+# Priority 1 — explicit research profile:  RESEARCH_AWS_PROFILE=<profile>
+#     A boto3 Session is built with that NAMED profile (SSO/session keys) and its
+#     credentials are resolved eagerly so a misconfigured/expired profile fails
+#     here with an actionable error. Local research therefore NEVER falls through
+#     to the laptop machine's wrong default AWS profile.
+# Priority 2 — standard boto3 chain:       RESEARCH_AWS_PROFILE unset/empty
+#     No profile is forced: the normal default chain runs (AWS_PROFILE,
+#     environment credentials, shared config, web identity, EC2 instance role via
+#     IMDS). This is what the production VM relies on (instance role
+#     Trading-Bot-S3-Access); nothing here may block/force IMDS credential use.
+# Priority 3 — explicit failure:           any S3/credential error surfaces as a
+#     ResearchDataSourceError with actionable, secret-free diagnostics. Never a
+#     silent local fallback, never a silent account switch.
+
+
+def _build_session(profile: str | None, region: str) -> Any:
+    """Create the ONE sanctioned boto3 Session for Research Engine reads.
+
+    Explicit profile → Session(profile_name=...)      (RESEARCH_AWS_PROFILE)
+    No profile       → Session(region_name=...) using the standard default chain
+                       (AWS_PROFILE / env / shared config / EC2 instance role).
+
+    Dependency hook for tests — patched via monkeypatch. Real calls never touch
+    AWS/Ec2Metadata at construction time (credentials resolve lazily by boto3).
+    """
+    import boto3
+
+    if profile:
+        return boto3.Session(profile_name=profile, region_name=region)
+    return boto3.Session(region_name=region)
+
+
+def _describe_aws_error(
+    exc: Exception,
+    *,
+    profile: str | None,
+    bucket: str,
+    region: str,
+    operation: str,
+) -> str:
+    """Build a secret-free, actionable diagnostic for an AWS failure.
+
+    The ``aws sso login`` hint is emitted ONLY when the failure is genuinely an
+    SSO/profile-authentication problem (SSO token load / SSO refresh failure with
+    expiry evidence). Access-denied, network, and generic errors are never
+    mislabelled as SSO expiry, and no credential material is ever included.
+    """
+    name = type(exc).__name__
+    detail = str(exc) or "(no detail)"
+    context = f"bucket={bucket}, region={region}, operation={operation}"
+    via = f"research profile '{profile}'" if profile else "the default AWS chain"
+
+    # ── SSO authentication evidence (explicit research profile only) ──────────
+    if profile and name in ("SSOTokenLoadError", "UnauthorizedSSOTokenError"):
+        return (
+            f"AWS SSO credentials for profile '{profile}' are unavailable or "
+            f"expired ({context}); run: aws sso login --profile {profile}."
+        )
+    if profile and name in ("SSOError", "CredentialRetrievalError"):
+        if any(
+            k in detail.lower()
+            for k in ("expired", "token", "unauthorized", "401", "invalid session")
+        ):
+            return (
+                f"RESEARCH_AWS_PROFILE='{profile}': AWS SSO credentials are "
+                f"unavailable or expired ({context}); run: aws sso login "
+                f"--profile {profile}. Original failure: {detail}"
+            )
+    if name == "ProfileNotFound":
+        who = (
+            f"research profile '{profile}' (from RESEARCH_AWS_PROFILE)"
+            if profile
+            else "the profile selected by the default AWS chain"
+        )
+        fix = (
+            "Fix the profile name or unset RESEARCH_AWS_PROFILE."
+            if profile
+            else "Check AWS_PROFILE / the shared AWS config files."
+        )
+        return (
+            f"AWS profile for {who} does not exist ({context}). {fix} "
+            f"Original failure: {detail}"
+        )
+    if name in ("NoCredentialsError", "InvalidConfigError"):
+        return (
+            f"No AWS credentials were resolved via {via} ({context}). Set "
+            f"RESEARCH_AWS_PROFILE to a configured local SSO profile, or rely on "
+            f"AWS_PROFILE / environment credentials / EC2 instance role."
+        )
+    if name == "PartialCredentialsError":
+        return f"Incomplete AWS credentials via {via} ({context}): {detail}"
+    if name == "ClientError" or name in _DENIED_CODES:
+        # Denial detection works across botocore versions: classic ClientError
+        # carries the code in exc.response; newer botocore raises dedicated
+        # exception classes (e.g. `AccessDenied`) whose NAME is the denial code.
+        resp = getattr(exc, "response", None) or {}
+        code = str((resp.get("Error") or {}).get("Code") or "")
+        denied = code in _DENIED_CODES or name in _DENIED_CODES
+        if denied:
+            return (
+                f"AWS access was DENIED via {via} ({context}, code='{code or name}'). "
+                f"Confirm the active credentials belong to the account allowed "
+                f"to read the research bucket (check RESEARCH_AWS_PROFILE / "
+                f"AWS_PROFILE). This is a permissions/account problem, NOT an "
+                f"SSO-expiry or network error. Original failure: {detail}"
+            )
+        return f"AWS request failed via {via} ({context}, code='{code or name}'): {detail}"
+    # ── everything else (network, timeouts, 5xx, plugin errors) ───────────────
+    return f"AWS failure via {via} ({context}, type={name}): {detail}"
+
+
 # ─── Dataset-appropriate deterministic ordering ──────────────────────────────
 # S3 listing order must never determine research results. After loading, records
 # are ordered by a dataset-appropriate key so runs are reproducible. Each entry
@@ -66,6 +190,7 @@ class ResearchDataSourceError(RuntimeError):
 # use dotted paths. Datasets not listed fall back to _DEFAULT_ORDER_KEYS.
 _ORDER_KEYS: dict[str, tuple[str, ...]] = {
     "trade_truth": ("timestamps.exit_timestamp_broker", "timestamps.entry_timestamp_broker"),
+    "trade_journal": ("exit_time", "entry_time", "timestamp_utc"),
     "decision_trace": ("timestamp_utc", "cycle_id"),
     "decision_ledger": ("timestamp_utc", "cycle_id"),
     "market_context": ("timestamp_utc", "cycle_id"),
@@ -78,7 +203,12 @@ _ORDER_KEYS: dict[str, tuple[str, ...]] = {
     "risk_deviation": ("timestamp_utc",),
     "protection_audit": ("timestamp_utc",),
     "portfolio_rankings": ("cycle_id", "timestamp_utc"),
-    "portfolio_shadow": ("cycle_id", "timestamp_utc"),
+        "portfolio_shadow": ("cycle_id", "timestamp_utc"),
+    # Step-4 connected datasets:
+    "horizon_candidates": ("bar_time", "cycle_id"),
+    "strategy_candidates": ("bar_time", "cycle_id"),
+    "execution_attempts": ("timestamp_unix", "timestamp_utc", "cycle_id"),
+    "management_actions": ("timestamp_unix", "timestamp_utc", "cycle_id"),
 }
 _DEFAULT_ORDER_KEYS: tuple[str, ...] = ("timestamp_utc",)
 
@@ -130,10 +260,19 @@ class S3ResearchDataSource:
         bucket: str | None = None,
         client: Any | None = None,
         region: str | None = None,
+        profile: str | None = None,
     ):
         self._bucket = bucket or NEW_RUNTIME_S3_BUCKET
-        self._region = region or os.getenv("AWS_REGION", "eu-west-2")
+        self._region = region or os.getenv("AWS_REGION", _CANONICAL_REGION)
         self._client = client  # dependency-injectable for tests
+        # Explicit Research Engine profile (RESEARCH_AWS_PROFILE) → priority 1.
+        # None → the standard boto3 chain (AWS_PROFILE / env / shared config /
+        # EC2 instance role), preserving EC2 instance-role behaviour verbatim.
+        self._research_profile = (
+            profile
+            if profile is not None
+            else (os.getenv(_RESEARCH_AWS_PROFILE_ENV, "") or "").strip() or None
+        )
         # Run-level cache keyed by (dataset, symbol, start, end, schema-set).
         self._cache: dict[tuple, list[dict[str, Any]]] = {}
         self._malformed: dict[str, MalformedReport] = {}
@@ -144,22 +283,54 @@ class S3ResearchDataSource:
     def bucket(self) -> str:
         return self._bucket
 
+    @property
+    def research_profile(self) -> str | None:
+        """Explicit RESEARCH_AWS_PROFILE in effect for this source, if any."""
+        return self._research_profile
+
     def _get_client(self) -> Any:
         if self._client is not None:
             return self._client
         try:
-            import boto3
+            if self._research_profile:
+                session = _build_session(self._research_profile, self._region)
+                # Eager credential resolution: a missing/misnamed/expired profile
+                # fails HERE with an actionable error instead of surfacing as a
+                # cryptic mid-read failure. (The standard-chain path stays lazy so
+                # EC2 instance-role / normal chain behaviour is unchanged.)
+                if session.get_credentials() is None:
+                    raise ResearchDataSourceError(
+                        f"RESEARCH_AWS_PROFILE='{self._research_profile}': the "
+                        f"profile resolved but returned no credentials "
+                        f"(bucket={self._bucket}, region={self._region}); for an "
+                        f"SSO profile run: aws sso login --profile "
+                        f"{self._research_profile}."
+                    )
+                self._client = session.client("s3", region_name=self._region)
+            else:
+                session = _build_session(None, self._region)
+                self._client = session.client("s3", region_name=self._region)
         except ImportError as exc:  # pragma: no cover - environment dependent
             raise ResearchDataSourceError(
                 "boto3 is required for the Research Engine S3 data source"
             ) from exc
-        self._client = boto3.client(
-            "s3",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=self._region,
-        )
+        except ResearchDataSourceError:
+            raise
+        except Exception as exc:
+            raise self._diagnose(exc, operation="AWS session/client construction") from exc
         return self._client
+
+    def _diagnose(self, exc: Exception, *, operation: str) -> ResearchDataSourceError:
+        """Wrap an AWS failure in an actionable, secret-free ResearchDataSourceError."""
+        return ResearchDataSourceError(
+            _describe_aws_error(
+                exc,
+                profile=self._research_profile,
+                bucket=self._bucket,
+                region=self._region,
+                operation=operation,
+            )
+        )
 
     # ─── prefix resolution ──────────────────────────────────────────────────
 
@@ -217,8 +388,8 @@ class S3ResearchDataSource:
             try:
                 resp = client.list_objects_v2(**kwargs)
             except Exception as exc:
-                raise ResearchDataSourceError(
-                    f"S3 list_objects_v2 failed for prefix '{prefix}': {exc}"
+                raise self._diagnose(
+                    exc, operation=f"list_objects_v2 prefix='{prefix}'"
                 ) from exc
             for obj in resp.get("Contents", []) or []:
                 key = obj.get("Key", "")
@@ -261,8 +432,8 @@ class S3ResearchDataSource:
             if isinstance(body, bytes):
                 body = body.decode("utf-8")
         except Exception as exc:
-            raise ResearchDataSourceError(
-                f"S3 get_object failed for key '{key}': {exc}"
+            raise self._diagnose(
+                exc, operation=f"get_object key='{key}'"
             ) from exc
 
         out: list[dict[str, Any]] = []

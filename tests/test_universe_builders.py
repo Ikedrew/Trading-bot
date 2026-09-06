@@ -1,17 +1,18 @@
 """
-Tests for the four universe builders.
+Tests for the six universe builders (S3-backed).
+
+Post-migration these builders read their datasets from S3 via the shared
+S3ResearchDataSource (see UniverseBuilder._load_dataset). Tests drive them
+through the in-memory fake S3 source (tests/_s3_fake.py) — the sanctioned test
+mechanism. No test touches the network or local logs/ for source data.
 
 Validates:
-    - Each builder loads data, builds normalised records, and serves populations
+    - Each builder loads S3 data, builds normalised records, serves populations
     - Normalised records contain the semantic fields questions require
     - Population filters return correct subsets
     - Metadata is generated correctly
-    - Builders work with synthetic data (no file system dependency)
+    - Trade_truth → execution universe contract (entity_id enrichment, exclusions)
 """
-
-import json
-import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -22,53 +23,65 @@ from research_engine.v10.universes.decision_universe import DecisionUniverseBuil
 from research_engine.v10.universes.market_universe import MarketUniverseBuilder
 from research_engine.v10.universes.strategy_universe import StrategyUniverseBuilder
 
+from tests._s3_fake import FakeS3, install_fake_s3, reset_fake_s3
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FIXTURES
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def _write_jsonl(path: Path, records: list[dict]):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
-        for r in records:
-            f.write(json.dumps(r) + "\n")
+@pytest.fixture(autouse=True)
+def fake_s3():
+    """Every test runs against an in-memory S3 source (never the network)."""
+    fake = install_fake_s3()
+    yield fake
+    reset_fake_s3()
 
 
-def _sample_execution_record(trade_id="pos_1", r_mult=1.5, regime="TRENDING",
-                              session="LONDON", pattern="ENGULFING",
-                              family="TREND_CONTINUATION", anomaly=False):
+def _sample_trade_truth(trade_id="pos_1", r_mult=1.5, correlation_id="COR-1",
+                        symbol="EURUSD"):
+    """Canonical trade_truth_v1 nested record (identity/execution/timestamps/
+    outcome/exit) — the shape the Execution universe normalises."""
     return {
-        "trade_id": trade_id,
+        "identity": {
+            "trade_id": trade_id,
+            "correlation_id": correlation_id,
+            "canonical_opportunity_id": "EURUSD*1784800000*ENGULFING",
+            "symbol": symbol,
+        },
         "execution": {
-            "ticket": 1, "symbol": "EURUSD", "direction": "BUY",
-            "entry_price": 1.1, "exit_price": 1.102, "entry_time": 1000.0,
-            "exit_time": 2000.0, "stop_loss": 1.099, "take_profit": 1.103,
-            "gross_profit": 20.0, "commission": -2.0, "swap": 0.0,
-            "net_realised_pnl": 18.0, "r_multiple": r_mult,
-            "volume": 0.1, "duration_seconds": 1000.0, "exit_reason": "TAKE_PROFIT",
+            "position_ticket": 12345,
+            "order_type": "BUY",
+            "entry_fill_price": 1.1,
+            "exit_fill_price": 1.102,
+            "volume_executed": 0.1,
         },
-        "decision": {
-            "strategy": "trend", "score": 75.0, "confidence": 0.8,
-            "decision_type": "EXECUTE", "decision_timestamp": 999.0,
-            "components": {"location": 80, "structure": 70},
-            "weakest_component": "structure", "ev": 0.3, "p_success": 0.6,
+        "timestamps": {
+            "entry_timestamp_broker": 1000.0,
+            "exit_timestamp_broker": 2000.0,
+            "duration_seconds": 1000.0,
         },
-        "market": {
-            "regime": regime, "session": session, "volatility": "NORMAL",
-            "trend_state": "UP", "higher_timeframe_bias": "BULLISH",
-            "h4_phase": "IMPULSE", "h1_clarity": 0.8,
+        "outcome": {
+            "r_multiple_realised": r_mult,
+            "pnl_realised": 20.0,
+            "commission": -2.0,
+            "swap": 0.0,
+            "net_profit": 18.0,
         },
-        "strategy": {
-            "family": family, "pattern": pattern, "conditions_met": 4,
-            "strategy_confidence": 0.75, "opportunity_quality": 0.8,
-            "opportunity_type": "REVERSAL",
+        "exit": {
+            "exit_reason": "TAKE_PROFIT",
         },
-        "quality": {
-            "anomaly": anomaly, "anomaly_reasons": [],
-            "governance_status": "VALID", "data_completeness": "FULL",
-            "missing": [], "join_method": "entity_id", "pnl_source": "BROKER",
-        },
+    }
+
+
+def _sample_execution_result(correlation_id="COR-1", entity_id="EURUSD_1000",
+                             result_ok=True):
+    return {
+        "correlation_id": correlation_id,
+        "entity_id": entity_id,
+        "result_ok": result_ok,
+        "comment": "",
     }
 
 
@@ -211,84 +224,100 @@ def _sample_strategy_obs(entity_id="EURUSD_1000", family="TREND_CONTINUATION",
 
 class TestExecutionUniverse:
 
-    def test_build_from_synthetic_data(self, tmp_path):
-        path = tmp_path / "universe.jsonl"
-        records = [
-            _sample_execution_record("t1", r_mult=1.5, regime="TRENDING"),
-            _sample_execution_record("t2", r_mult=-1.0, regime="RANGING"),
-            _sample_execution_record("t3", r_mult=0.5, regime="TRENDING", anomaly=True),
-        ]
-        _write_jsonl(path, records)
+    def test_build_from_synthetic_data(self, fake_s3):
+        fake_s3.add("trade_truth", [
+            _sample_trade_truth("t1", r_mult=1.5),
+            _sample_trade_truth("t2", r_mult=-1.0, correlation_id="COR-2"),
+            _sample_trade_truth("t3", r_mult=0.5, correlation_id="COR-3"),
+        ], symbol="EURUSD")
 
-        builder = ExecutionUniverseBuilder(source_path=path)
+        builder = ExecutionUniverseBuilder(symbol="EURUSD")
         result = builder.build()
 
         assert len(result) == 3
         assert builder.is_built
         assert builder.metadata.record_count == 3
 
-    def test_populations(self, tmp_path):
-        path = tmp_path / "universe.jsonl"
-        records = [
-            _sample_execution_record("t1", r_mult=2.0),
-            _sample_execution_record("t2", r_mult=-1.0),
-            _sample_execution_record("t3", r_mult=0.5, anomaly=True),
-        ]
-        _write_jsonl(path, records)
+    def test_populations(self, fake_s3):
+        fake_s3.add("trade_truth", [
+            _sample_trade_truth("t1", r_mult=2.0),
+            _sample_trade_truth("t2", r_mult=-1.0, correlation_id="COR-2"),
+            _sample_trade_truth("t3", r_mult=0.5, correlation_id="COR-3"),
+        ], symbol="EURUSD")
 
-        builder = ExecutionUniverseBuilder(source_path=path)
+        builder = ExecutionUniverseBuilder(symbol="EURUSD")
         builder.build()
 
         assert len(builder.get_population(Population.ALL_TRADES)) == 3
         assert len(builder.get_population(Population.WINNING_TRADES)) == 2
         assert len(builder.get_population(Population.LOSING_TRADES)) == 1
-        assert len(builder.get_population(Population.ANOMALOUS_TRADES)) == 1
 
-    def test_normalised_fields_present(self, tmp_path):
-        path = tmp_path / "universe.jsonl"
-        _write_jsonl(path, [_sample_execution_record()])
+    def test_normalised_fields_present(self, fake_s3):
+        fake_s3.add("trade_truth", [_sample_trade_truth()], symbol="EURUSD")
 
-        builder = ExecutionUniverseBuilder(source_path=path)
+        builder = ExecutionUniverseBuilder(symbol="EURUSD")
         builder.build()
         r = builder.records[0]
 
-        # Core execution fields
+        # Core realised-execution fields (from trade_truth outcome/execution)
         assert "r_multiple" in r
         assert "net_realised_pnl" in r
         assert "entry_price" in r
         assert "exit_reason" in r
         assert "duration_seconds" in r
         assert "volume" in r
-        # Decision fields
+        # Decision/market/strategy context joined downstream by entity_id
         assert "score" in r
         assert "ev" in r
-        # Market fields
         assert "regime" in r
         assert "session" in r
-        # Strategy fields
         assert "family" in r
         assert "pattern" in r
         # Join key
         assert "entity_id" in r
 
-    def test_session_population(self, tmp_path):
-        path = tmp_path / "universe.jsonl"
-        records = [
-            _sample_execution_record("t1", session="LONDON"),
-            _sample_execution_record("t2", session="NEW_YORK"),
-            _sample_execution_record("t3", session="ASIA"),
-        ]
-        _write_jsonl(path, records)
+    def test_entity_id_enriched_from_execution_results(self, fake_s3):
+        """correlation_id joins execution_results → entity_id (cross-universe spine)."""
+        fake_s3.add("trade_truth", [_sample_trade_truth("t1", correlation_id="COR-1")],
+                    symbol="EURUSD")
+        fake_s3.add("execution_results",
+                    [_sample_execution_result("COR-1", entity_id="EU_ENRICHED")],
+                    symbol="EURUSD")
 
-        builder = ExecutionUniverseBuilder(source_path=path)
+        builder = ExecutionUniverseBuilder(symbol="EURUSD")
+        builder.build()
+        r = builder.records[0]
+        assert r["entity_id"] == "EU_ENRICHED"
+
+    def test_entity_id_falls_back_to_trade_id(self, fake_s3):
+        """Without an execution_results match, entity_id falls back to trade_id."""
+        fake_s3.add("trade_truth", [_sample_trade_truth("t1", correlation_id="COR-X")],
+                    symbol="EURUSD")
+
+        builder = ExecutionUniverseBuilder(symbol="EURUSD")
+        builder.build()
+        r = builder.records[0]
+        assert r["entity_id"] == "t1"
+
+    def test_exclusion_tracking(self, fake_s3):
+        fake_s3.add("trade_truth", [
+            _sample_trade_truth("t1", r_mult=1.0),
+            {"identity": {"trade_id": "", "correlation_id": "COR-2", "symbol": "EURUSD"},
+             "execution": {}, "timestamps": {}, "outcome": {"r_multiple_realised": 1.0},
+             "exit": {}},
+            _sample_trade_truth("t3", r_mult=None, correlation_id="COR-3"),
+        ], symbol="EURUSD")
+
+        builder = ExecutionUniverseBuilder(symbol="EURUSD")
         builder.build()
 
-        assert len(builder.get_population(Population.SESSION_LONDON)) == 1
-        assert len(builder.get_population(Population.SESSION_NY)) == 1
-        assert len(builder.get_population(Population.SESSION_ASIA)) == 1
+        assert len(builder.records) == 1
+        reasons = builder.metadata.exclusions["reasons"]
+        assert reasons["missing_trade_id"] == 1
+        assert reasons["missing_r_multiple"] == 1
 
-    def test_not_built_raises(self, tmp_path):
-        builder = ExecutionUniverseBuilder(source_path=tmp_path / "nope.jsonl")
+    def test_not_built_raises(self):
+        builder = ExecutionUniverseBuilder()
         with pytest.raises(RuntimeError):
             _ = builder.records
 
@@ -304,26 +333,23 @@ class TestExecutionUniverse:
 
 class TestDecisionUniverse:
 
-    def test_build_from_synthetic_data(self, tmp_path):
-        path = tmp_path / "EURUSD" / "2026-08-07.jsonl"
-        records = [
+    def test_build_from_synthetic_data(self, fake_s3):
+        fake_s3.add("decision_trace", [
             _sample_decision_trace("EU_1", action="EXECUTE"),
             _sample_decision_trace("EU_2", action="NO_TRADE",
                                    terminal_reason="V10 [opportunity]: No opportunity"),
             _sample_decision_trace("EU_3", action="NO_TRADE",
                                    terminal_reason="V10 [risk]: Risk: R:R too low"),
-        ]
-        _write_jsonl(path, records)
+        ], symbol="EURUSD")
 
-        builder = DecisionUniverseBuilder(source_dir=tmp_path)
+        builder = DecisionUniverseBuilder(symbol="EURUSD")
         result = builder.build()
 
         assert len(result) == 3
         assert builder.is_built
 
-    def test_populations(self, tmp_path):
-        path = tmp_path / "EURUSD" / "2026-08-07.jsonl"
-        records = [
+    def test_populations(self, fake_s3):
+        fake_s3.add("decision_trace", [
             _sample_decision_trace("EU_1", action="EXECUTE"),
             _sample_decision_trace("EU_2", action="NO_TRADE",
                                    terminal_reason="V10 [opportunity]: invalid"),
@@ -333,10 +359,9 @@ class TestDecisionUniverse:
                                    terminal_reason="V10 [entry]: Entry not ready"),
             _sample_decision_trace("EU_5", action="NO_TRADE",
                                    terminal_reason="V10 [risk]: R:R below min"),
-        ]
-        _write_jsonl(path, records)
+        ], symbol="EURUSD")
 
-        builder = DecisionUniverseBuilder(source_dir=tmp_path)
+        builder = DecisionUniverseBuilder(symbol="EURUSD")
         builder.build()
 
         assert len(builder.get_population(Population.ALL_DECISIONS)) == 5
@@ -347,11 +372,10 @@ class TestDecisionUniverse:
         assert len(builder.get_population(Population.REJECTED_AT_ENTRY)) == 1
         assert len(builder.get_population(Population.REJECTED_AT_RISK)) == 1
 
-    def test_normalised_fields(self, tmp_path):
-        path = tmp_path / "SYM" / "file.jsonl"
-        _write_jsonl(path, [_sample_decision_trace()])
+    def test_normalised_fields(self, fake_s3):
+        fake_s3.add("decision_trace", [_sample_decision_trace()], symbol="EURUSD")
 
-        builder = DecisionUniverseBuilder(source_dir=tmp_path)
+        builder = DecisionUniverseBuilder(symbol="EURUSD")
         builder.build()
         r = builder.records[0]
 
@@ -377,35 +401,27 @@ class TestDecisionUniverse:
 
 class TestMarketUniverse:
 
-    def test_build_from_decision_traces(self, tmp_path):
-        dt_dir = tmp_path / "dt" / "EURUSD"
-        _write_jsonl(dt_dir / "2026-08-07.jsonl", [
+    def test_build_from_decision_traces(self, fake_s3):
+        fake_s3.add("decision_trace", [
             _sample_decision_trace("EU_1", regime="TRENDING"),
             _sample_decision_trace("EU_2", regime="RANGING"),
-        ])
+        ], symbol="EURUSD")
 
-        builder = MarketUniverseBuilder(
-            decision_trace_dir=tmp_path / "dt",
-            market_context_dir=tmp_path / "mc",  # empty
-        )
+        builder = MarketUniverseBuilder(symbol="EURUSD")
         result = builder.build()
 
         assert len(result) == 2
         assert builder.is_built
 
-    def test_regime_populations(self, tmp_path):
-        dt_dir = tmp_path / "dt" / "EURUSD"
-        _write_jsonl(dt_dir / "file.jsonl", [
+    def test_regime_populations(self, fake_s3):
+        fake_s3.add("decision_trace", [
             _sample_decision_trace("EU_1", regime="TRENDING"),
             _sample_decision_trace("EU_2", regime="RANGING"),
             _sample_decision_trace("EU_3", regime="RANGING"),
             _sample_decision_trace("EU_4", regime="TRANSITIONAL"),
-        ])
+        ], symbol="EURUSD")
 
-        builder = MarketUniverseBuilder(
-            decision_trace_dir=tmp_path / "dt",
-            market_context_dir=tmp_path / "mc",
-        )
+        builder = MarketUniverseBuilder(symbol="EURUSD")
         builder.build()
 
         assert len(builder.get_population(Population.ALL_MARKET_STATES)) == 4
@@ -413,14 +429,10 @@ class TestMarketUniverse:
         assert len(builder.get_population(Population.RANGING_REGIME)) == 2
         assert len(builder.get_population(Population.TRANSITIONAL_REGIME)) == 1
 
-    def test_normalised_fields(self, tmp_path):
-        dt_dir = tmp_path / "dt" / "SYM"
-        _write_jsonl(dt_dir / "f.jsonl", [_sample_decision_trace()])
+    def test_normalised_fields(self, fake_s3):
+        fake_s3.add("decision_trace", [_sample_decision_trace()], symbol="EURUSD")
 
-        builder = MarketUniverseBuilder(
-            decision_trace_dir=tmp_path / "dt",
-            market_context_dir=tmp_path / "mc",
-        )
+        builder = MarketUniverseBuilder(symbol="EURUSD")
         builder.build()
         r = builder.records[0]
 
@@ -446,35 +458,27 @@ class TestMarketUniverse:
 
 class TestStrategyUniverse:
 
-    def test_build_from_strategy_observations(self, tmp_path):
-        so_dir = tmp_path / "so" / "EURUSD"
-        _write_jsonl(so_dir / "file.jsonl", [
+    def test_build_from_strategy_observations(self, fake_s3):
+        fake_s3.add("strategy_observations", [
             _sample_strategy_obs("EU_1", family="TREND_CONTINUATION"),
             _sample_strategy_obs("EU_2", family="MEAN_REVERSION", status="REJECTED"),
-        ])
+        ], symbol="EURUSD")
 
-        builder = StrategyUniverseBuilder(
-            decision_trace_dir=tmp_path / "dt",  # empty
-            strategy_obs_dir=tmp_path / "so",
-        )
+        builder = StrategyUniverseBuilder(symbol="EURUSD")
         result = builder.build()
 
         assert len(result) == 2
         assert builder.is_built
 
-    def test_family_populations(self, tmp_path):
-        so_dir = tmp_path / "so" / "SYM"
-        _write_jsonl(so_dir / "f.jsonl", [
+    def test_family_populations(self, fake_s3):
+        fake_s3.add("strategy_observations", [
             _sample_strategy_obs("E1", family="TREND_CONTINUATION"),
             _sample_strategy_obs("E2", family="MEAN_REVERSION"),
             _sample_strategy_obs("E3", family="MEAN_REVERSION"),
             _sample_strategy_obs("E4", family="BREAKOUT"),
-        ])
+        ], symbol="EURUSD")
 
-        builder = StrategyUniverseBuilder(
-            decision_trace_dir=tmp_path / "dt",
-            strategy_obs_dir=tmp_path / "so",
-        )
+        builder = StrategyUniverseBuilder(symbol="EURUSD")
         builder.build()
 
         assert len(builder.get_population(Population.ALL_STRATEGIES)) == 4
@@ -482,31 +486,23 @@ class TestStrategyUniverse:
         assert len(builder.get_population(Population.MEAN_REVERSION)) == 2
         assert len(builder.get_population(Population.BREAKOUT)) == 1
 
-    def test_selected_vs_rejected(self, tmp_path):
-        so_dir = tmp_path / "so" / "SYM"
-        _write_jsonl(so_dir / "f.jsonl", [
+    def test_selected_vs_rejected(self, fake_s3):
+        fake_s3.add("strategy_observations", [
             _sample_strategy_obs("E1", status="SELECTED", action="EXECUTE"),
             _sample_strategy_obs("E2", status="REJECTED", action="NO_TRADE"),
             _sample_strategy_obs("E3", status="NOT_MET", action="NO_TRADE"),
-        ])
+        ], symbol="EURUSD")
 
-        builder = StrategyUniverseBuilder(
-            decision_trace_dir=tmp_path / "dt",
-            strategy_obs_dir=tmp_path / "so",
-        )
+        builder = StrategyUniverseBuilder(symbol="EURUSD")
         builder.build()
 
         assert len(builder.get_population(Population.STRATEGY_SELECTED)) == 1
         assert len(builder.get_population(Population.STRATEGY_REJECTED)) == 2
 
-    def test_normalised_fields(self, tmp_path):
-        so_dir = tmp_path / "so" / "SYM"
-        _write_jsonl(so_dir / "f.jsonl", [_sample_strategy_obs()])
+    def test_normalised_fields(self, fake_s3):
+        fake_s3.add("strategy_observations", [_sample_strategy_obs()], symbol="EURUSD")
 
-        builder = StrategyUniverseBuilder(
-            decision_trace_dir=tmp_path / "dt",
-            strategy_obs_dir=tmp_path / "so",
-        )
+        builder = StrategyUniverseBuilder(symbol="EURUSD")
         builder.build()
         r = builder.records[0]
 
@@ -520,33 +516,26 @@ class TestStrategyUniverse:
         assert "regime" in r
         assert "action" in r
 
-    def test_universe_type(self):
-        builder = StrategyUniverseBuilder()
-        assert builder.universe_type == Universe.STRATEGY
-
-    def test_deduplication_prefers_strategy_obs(self, tmp_path):
+    def test_deduplication_prefers_strategy_obs(self, fake_s3):
         """When same entity_id exists in both sources, prefer strategy_obs."""
-        dt_dir = tmp_path / "dt" / "EURUSD"
-        so_dir = tmp_path / "so" / "EURUSD"
-
-        # Same entity_id in both
-        _write_jsonl(dt_dir / "f.jsonl", [
+        fake_s3.add("decision_trace", [
             _sample_decision_trace("EU_SHARED", action="EXECUTE"),
-        ])
-        _write_jsonl(so_dir / "f.jsonl", [
+        ], symbol="EURUSD")
+        fake_s3.add("strategy_observations", [
             _sample_strategy_obs("EU_SHARED", family="MEAN_REVERSION"),
-        ])
+        ], symbol="EURUSD")
 
-        builder = StrategyUniverseBuilder(
-            decision_trace_dir=tmp_path / "dt",
-            strategy_obs_dir=tmp_path / "so",
-        )
+        builder = StrategyUniverseBuilder(symbol="EURUSD")
         builder.build()
 
         # Should only have 1 record (deduped), from strategy_observations
         shared = [r for r in builder.records if r["entity_id"] == "EU_SHARED"]
         assert len(shared) == 1
         assert shared[0]["source"] == "strategy_observations"
+
+    def test_universe_type(self):
+        builder = StrategyUniverseBuilder()
+        assert builder.universe_type == Universe.STRATEGY
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -556,11 +545,10 @@ class TestStrategyUniverse:
 
 class TestMetadata:
 
-    def test_metadata_after_build(self, tmp_path):
-        path = tmp_path / "universe.jsonl"
-        _write_jsonl(path, [_sample_execution_record()])
+    def test_metadata_after_build(self, fake_s3):
+        fake_s3.add("trade_truth", [_sample_trade_truth()], symbol="EURUSD")
 
-        builder = ExecutionUniverseBuilder(source_path=path)
+        builder = ExecutionUniverseBuilder(symbol="EURUSD")
         builder.build()
 
         meta = builder.metadata
@@ -570,11 +558,10 @@ class TestMetadata:
         assert meta.content_hash
         assert meta.generation_timestamp
 
-    def test_metadata_to_dict(self, tmp_path):
-        path = tmp_path / "universe.jsonl"
-        _write_jsonl(path, [_sample_execution_record()])
+    def test_metadata_to_dict(self, fake_s3):
+        fake_s3.add("trade_truth", [_sample_trade_truth()], symbol="EURUSD")
 
-        builder = ExecutionUniverseBuilder(source_path=path)
+        builder = ExecutionUniverseBuilder(symbol="EURUSD")
         builder.build()
 
         d = builder.metadata.to_dict()

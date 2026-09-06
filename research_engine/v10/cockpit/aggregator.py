@@ -526,7 +526,7 @@ class CockpitDataAggregator:
         Compute prop-firm readiness from existing evidence.
 
         Requirements:
-            1. Positive realised expectancy (mean R > 0 from trade_journal)
+            1. Positive realised expectancy (mean R > 0 from the S3 trade journal)
             2. Max drawdown < 10% (prop typical limit)
             3. Max daily loss < 5% (prop typical limit)
             4. Shadow model calibrated (N>=50 matched SR pairs)
@@ -534,42 +534,39 @@ class CockpitDataAggregator:
         """
         reasons = []
 
-        # 1. Realised expectancy from trade_journal
+        # 1. Realised expectancy from the canonical S3 trade journal.
+        #    Authoritative production evidence is read via the shared research
+        #    data-access layer. If S3 fails, the failure is surfaced in the
+        #    readiness reasons — there is NO silent fallback to local logs.
         try:
-            journal_dir = Path("logs/trade_journal")
-            if journal_dir.exists():
-                trades = []
-                for f in journal_dir.rglob("*.jsonl"):
-                    for line in f.read_text(encoding="utf-8").splitlines():
-                        if line.strip():
-                            try:
-                                rec = json.loads(line)
-                                entry = rec.get("entry_price", 0)
-                                exit_p = rec.get("exit_price", 0)
-                                sl = rec.get("initial_sl", 0)
-                                direction = rec.get("direction", "")
-                                risk = abs(entry - sl)
-                                if risk > 0 and direction:
-                                    if direction == "BUY":
-                                        r = (exit_p - entry) / risk
-                                    else:
-                                        r = (entry - exit_p) / risk
-                                    trades.append(r)
-                            except Exception:
-                                pass
+            from research_engine.data_access.s3_source import get_default_source
 
-                data.prop_realised_n = len(trades)
-                if trades:
-                    import statistics
-                    data.prop_realised_expectancy = round(statistics.mean(trades), 4)
-                    if data.prop_realised_expectancy <= 0:
-                        reasons.append(f"Realised expectancy negative: {data.prop_realised_expectancy:+.4f}R (N={len(trades)})")
-                else:
-                    reasons.append("No realised trades to compute expectancy")
+            journal_records = get_default_source().read_dataset("trade_journal")
+            trades = []
+            for rec in journal_records:
+                entry = rec.get("entry_price", 0)
+                exit_p = rec.get("exit_price", 0)
+                sl = rec.get("initial_sl", 0)
+                direction = rec.get("direction", "")
+                risk = abs(entry - sl)
+                if risk > 0 and direction:
+                    if direction == "BUY":
+                        r = (exit_p - entry) / risk
+                    else:
+                        r = (entry - exit_p) / risk
+                    trades.append(r)
+
+            data.prop_realised_n = len(trades)
+            if trades:
+                import statistics
+                data.prop_realised_expectancy = round(statistics.mean(trades), 4)
+                if data.prop_realised_expectancy <= 0:
+                    reasons.append(f"Realised expectancy negative: {data.prop_realised_expectancy:+.4f}R (N={len(trades)})")
             else:
-                reasons.append("No trade journal data")
-        except Exception:
-            reasons.append("Failed to compute realised expectancy")
+                reasons.append("No realised trades to compute expectancy")
+        except Exception as exc:
+            # Loud surfacing — never a silent local fallback.
+            reasons.append(f"Failed to compute realised expectancy from S3: {exc}")
 
         # 2. Shadow calibration (N >= 50 matched pairs)
         data.prop_shadow_calibration_n = data.sr_matched

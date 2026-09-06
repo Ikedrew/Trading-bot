@@ -106,11 +106,18 @@ def enrich_trades(
     source_file: str | None = None,
     output_file: str | None = None,
     reports_dir: str | None = None,
+    decision_trace_dir: str | None = None,
+    execution_results_dir: str | None = None,
 ) -> dict[str, Any]:
     """
     Enrich research-ready trades with decision trace context.
 
     Does NOT modify the source file. Creates a separate enriched output.
+
+    Production evidence (decision_trace, execution_results) is read from the
+    canonical S3 datasets via the shared research data-access layer.
+    ``decision_trace_dir`` / ``execution_results_dir`` are explicit OFFLINE
+    FIXTURE overrides (test/local replay) and are never a production fallback.
 
     Returns:
         Enrichment summary dict.
@@ -127,11 +134,11 @@ def enrich_trades(
     logger.info(f"[ENRICHMENT] Loaded {len(trades)} trades from {src}")
 
     # Load decision traces (EXECUTE only)
-    dt_execute = _load_decision_traces()
+    dt_execute = _load_decision_traces(dt_dir=decision_trace_dir)
     logger.info(f"[ENRICHMENT] Loaded {len(dt_execute)} EXECUTE decision traces")
 
     # Load execution results
-    exec_results = _load_execution_results()
+    exec_results = _load_execution_results(exec_dir=execution_results_dir)
     logger.info(f"[ENRICHMENT] Loaded {len(exec_results)} execution results")
 
     # Build indices
@@ -321,48 +328,70 @@ def _load_jsonl(path: Path) -> list[dict]:
     return trades
 
 
-def _load_decision_traces() -> list[dict]:
-    """Load all EXECUTE decisions from decision trace logs."""
-    dt_dir = Path(_DECISION_TRACE_DIR)
-    if not dt_dir.exists():
-        return []
+def _load_decision_traces(dt_dir: str | Path | None = None) -> list[dict]:
+    """Load all EXECUTE decisions from decision trace.
 
-    execute_decisions = []
-    for f in dt_dir.rglob("*.jsonl"):
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            if '"EXECUTE"' not in line:
-                continue  # Fast filter before JSON parse
-            try:
-                d = json.loads(line)
-                if d.get("action") == "EXECUTE":
-                    execute_decisions.append(d)
-            except json.JSONDecodeError:
-                pass
+    Authoritative source: S3 dataset ``decision_trace`` via the shared research
+    data-access layer. ``dt_dir`` is an explicit OFFLINE FIXTURE override
+    (test/local replay) — never a production fallback.
+    """
+    if dt_dir is not None:
+        base = Path(dt_dir)
+        if not base.exists():
+            return []
+        execute_decisions = []
+        for f in base.rglob("*.jsonl"):
+            for line in f.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                if '"EXECUTE"' not in line:
+                    continue  # Fast filter before JSON parse
+                try:
+                    d = json.loads(line)
+                    if d.get("action") == "EXECUTE":
+                        execute_decisions.append(d)
+                except json.JSONDecodeError:
+                    pass
+        return execute_decisions
 
-    return execute_decisions
+    from research_engine.data_access.s3_source import get_default_source
+
+    return [
+        d for d in get_default_source().read_dataset("decision_trace")
+        if d.get("action") == "EXECUTE"
+    ]
 
 
-def _load_execution_results() -> list[dict]:
-    """Load successful execution results."""
-    exec_dir = Path(_EXECUTION_RESULTS_DIR)
-    if not exec_dir.exists():
-        return []
+def _load_execution_results(exec_dir: str | Path | None = None) -> list[dict]:
+    """Load successful execution results.
 
-    results = []
-    for f in exec_dir.rglob("*.jsonl"):
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            try:
-                e = json.loads(line)
-                if e.get("result_ok") and e.get("correlation_id"):
-                    results.append(e)
-            except json.JSONDecodeError:
-                pass
+    Authoritative source: S3 dataset ``execution_results`` via the shared
+    research data-access layer. ``exec_dir`` is an explicit OFFLINE FIXTURE
+    override (test/local replay) — never a production fallback.
+    """
+    if exec_dir is not None:
+        base = Path(exec_dir)
+        if not base.exists():
+            return []
+        results = []
+        for f in base.rglob("*.jsonl"):
+            for line in f.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    e = json.loads(line)
+                    if e.get("result_ok") and e.get("correlation_id"):
+                        results.append(e)
+                except json.JSONDecodeError:
+                    pass
+        return results
 
-    return results
+    from research_engine.data_access.s3_source import get_default_source
+
+    return [
+        e for e in get_default_source().read_dataset("execution_results")
+        if e.get("result_ok") and e.get("correlation_id")
+    ]
 
 
 def _get_nested(d: dict, dotpath: str) -> Any:

@@ -1,34 +1,53 @@
 """
 ═══════════════════════════════════════════════════════════════════════════════
-NEW-ENGINE CANONICAL QUESTION BANK
+LEGACY NEW-ENGINE QUESTION BANK - RESEARCH-COVERAGE AUDIT INPUT (NOT EXECUTABLE)
 ═══════════════════════════════════════════════════════════════════════════════
 
-This is the SINGLE authoritative research question registry for the new engine.
+CANONICAL ACTIVE QUESTION INVENTORY:
 
-All previous registries are superseded:
-    - research_engine/registry/research_question_registry.py (61 questions, legacy)
-    - research_engine/registry/v10_research_registry.py (23 questions, V10 formal)
-    - research_engine/v10/research_intelligence/question_registry.py (12, Lambda)
+    research_engine.registry.research_question_registry  (REGISTRY)
 
-Those files remain for historical reference ONLY.
-They are NOT runtime dependencies of this registry.
+That registry is the SINGLE authoritative inventory for what the V1 Research
+Engine knows how to ASK and EXECUTE. Proven by execution architecture:
+runner_discovery enumerates runners exclusively from it; run_all(), the
+weekly ResearchCycleRunner, the Gap-4 status contract and the command center
+all consume that discovery path. This module plays NO part in execution.
 
-ID Scheme:
-    E-nnn   = Execution angle primary
-    D-nnn   = Decision angle primary
-    M-nnn   = Market angle primary
-    S-nnn   = Strategy angle primary
-    ED-nnn  = Execution + Decision cross-angle
-    EM-nnn  = Execution + Market cross-angle
-    DM-nnn  = Decision + Market cross-angle
-    DS-nnn  = Decision + Strategy cross-angle
-    MS-nnn  = Market + Strategy cross-angle
-    EDM-nnn = Execution + Decision + Market
-    EDS-nnn = Execution + Decision + Strategy
-    DMS-nnn = Decision + Market + Strategy
-    EDMS-nnn = All four angles
+PURPOSE OF THIS MODULE (narrow, read-only):
+
+    Research-COVERAGE AUDIT input for the universes audit tooling
+    (v10/universes/audit_report.py + verify/baseline scripts). It records the
+    NEW-ENGINE research-INTENT bank (E-nnn/D-nnn/M-nnn/... analysis-angle
+    questions) and checks whether canonical evidence populations could answer
+    them. It defines NO runners and MUST NOT be used to define, register, or
+    execute active research questions. Adding questions here does not make
+    them executable; only the canonical registry can do that.
+
+RELATIONSHIP TO THE CANONICAL REGISTRY (measured, Gap 9):
+
+    - ID schemes are disjoint (E-001-style vs E1-style): 0 shared IDs.
+    - 47 of the 51 bank questions alias into canonical registry IDs via
+      source_intent (the migration mapping).
+    - 4 questions are UNMIGRATED research intents with no canonical runner:
+        D-005 Opportunity Quality Predictive Value
+        D-006 Opportunity Failure Characterisation
+        SD-001 Shadow Counterfactual Expectancy
+        SD-007 Shadow Regime Expectancy
+      Classification per the Gap-9 disposition: conceptually valid but NOT
+      implemented - they remain documented future research intent here and
+      are deliberately NOT registered as executable.
+    - SR-001..SR-005 (shadow-reality comparison) are RETIRED: their
+      V10_PRIMARY/COR-* comparison source was retired; presenting them as
+      READY would claim a data contract the active orchestrator cannot build.
+
+The earlier claim in this header (SINGLE authoritative research question
+registry / All previous registries are superseded) was INCORRECT and has
+been removed - it described a dual-inventory masquerade repaired in Gap 9.
 
 Created: 2026-08-08
+Retired to legacy status: 2026-09-06 (Gap 9 - dual question inventory repair)
+═══════════════════════════════════════════════════════════════════════════════
+
 """
 
 from __future__ import annotations
@@ -44,6 +63,10 @@ from research_engine.v10.universes.models import (
     Universe,
     ViewType,
 )
+
+# The one authoritative active question inventory (importable constant so
+# audit tooling can assert alignment instead of hard-coding module paths).
+CANONICAL_QUESTION_INVENTORY = "research_engine.registry.research_question_registry"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,45 @@
+2026-09-06 02:49:36,423 INFO botocore.tokens: Loading cached SSO token for trading-bot-sso
+2026-09-06 02:49:38,193 INFO botocore.tokens: SSO Token refresh succeeded
+2026-09-06 02:49:41,609 INFO research_engine.data_access.s3_source: [S3_RESEARCH] dataset=shadow_trades symbol=* range=-..- loaded=0 objects=0
+2026-09-06 02:49:41,610 INFO research_engine.data_access.loaders: [RESEARCH_LOADER] loaded 0 shadow trade records (excluded 0 OPEN events)
+2026-09-06 02:49:42,603 INFO research_engine.data_access.s3_source: [S3_RESEARCH] dataset=trade_truth symbol=* range=-..- loaded=12 objects=4
+2026-09-06 02:49:42,603 INFO research_engine.data_access.loaders: [RESEARCH_LOADER] loaded 12 trade truth records
+Traceback (most recent call last):
+  File "C:\Users\ikues\Trading-bot\tools\run_capability_proof.py", line 19, in guarded
+    fn()
+  File "C:\Users\ikues\Trading-bot\tools\run_capability_proof.py", line 27, in q16
+    main()
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 2-3: character maps to <undefined>
+2026-09-06 02:49:48,446 INFO research_engine.data_access.s3_source: [S3_RESEARCH] dataset=shadow_runtime symbol=* range=-..- loaded=3978 objects=20
+2026-09-06 02:49:48,486 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:48,519 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:48,595 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:48,595 INFO research_engine.v10.universes.shadow_outcome_universe: [SHADOW_OUTCOME] Ingested 1253 completed shadow outcomes from s3:shadow_runtime_v1(ingested)
+2026-09-06 02:49:48,665 INFO research_engine.v10.universes.shadow_outcome_universe: [SHADOW_OUTCOME] Built 1253 normalised records (excluded 0: 0 bad_schema, 0 test_data, 0 no_r, 0 normalise_fail)
+2026-09-06 02:49:49,695 INFO research_engine.data_access.s3_source: [S3_RESEARCH] dataset=execution_results symbol=* range=-..- loaded=28 objects=4
+2026-09-06 02:49:54,934 INFO research_engine.data_access.s3_source: [S3_RESEARCH] dataset=decision_trace symbol=* range=-..- loaded=1458 objects=20
+2026-09-06 02:49:55,116 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:55,291 INFO research_engine.data_access.s3_source: [S3_RESEARCH] dataset=research_shadow_trades symbol=* range=-..- loaded=0 objects=0
+2026-09-06 02:49:55,398 INFO research_engine.runner_discovery: [RUNNER_DISCOVERY] Discovered 29 runners from 61 registry entries
+2026-09-06 02:49:55,401 INFO research_engine.experiments.component_reward: [Q1_LINKER] traces=1458 attributed=142 with_outcome=0 join_rate=0.0%
+2026-09-06 02:49:55,519 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:55,584 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:55,658 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:55,711 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:55,751 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:55,757 INFO research_engine.experiments.expected_value: [Q19] trades=1253 ev=-0.0469 win_rate=0.364 pf=0.92 edge=NEGATIVE_EDGE confidence=HIGH
+2026-09-06 02:49:55,796 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:55,834 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:55,877 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:55,888 INFO research_engine.experiments.component_reward: [Q1_LINKER] traces=1458 attributed=142 with_outcome=0 join_rate=0.0%
+2026-09-06 02:49:55,919 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:55,956 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:55,994 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:56,029 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:49:56,066 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:50:00,826 INFO research_engine.data_access.s3_source: [S3_RESEARCH] dataset=decision_ledger symbol=* range=-..- loaded=2718 objects=20
+2026-09-06 02:50:00,855 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:50:00,886 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:50:00,918 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)
+2026-09-06 02:50:05,547 INFO research_engine.data_access.s3_source: [S3_RESEARCH] dataset=execution_context symbol=* range=-..- loaded=2718 objects=20
+2026-09-06 02:50:05,574 INFO research_engine.data_access.shadow_runtime_ingestion: [SHADOW_INGESTION] shadow_runtime_v1 stream: plans=1443 opens=1279 progress=3 closes=1253 \u2192 completed=1253 (incomplete: no_close=26 no_outcome=0 close_without_open=0 bad_schema=0)

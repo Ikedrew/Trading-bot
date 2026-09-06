@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, ".")
 
-from research_engine.v10.universes.question_bank import (
+from research_engine.v10.universes.legacy_question_bank import (
     QUESTION_BANK, get_question, QUESTION_BANK_BY_ID,
 )
 from research_engine.v10.universes.models import QuestionStatus, Universe, Population

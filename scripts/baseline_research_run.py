@@ -16,7 +16,7 @@ from collections import defaultdict
 
 sys.path.insert(0, ".")
 
-from research_engine.v10.universes.question_bank import (
+from research_engine.v10.universes.legacy_question_bank import (
     QUESTION_BANK, QUESTION_BANK_BY_ID, get_question,
 )
 from research_engine.v10.universes.models import (

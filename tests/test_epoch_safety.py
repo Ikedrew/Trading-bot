@@ -14,7 +14,9 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from _s3_fake import install_fake_s3, reset_fake_s3
 from research_engine.experiments.experiment_base import (
     build_fingerprint,
     build_report,
@@ -23,6 +25,90 @@ from research_engine.experiments.experiment_base import (
     ReadinessStatus,
 )
 from research_engine.data_quality.classifier import classify_record, DataEpoch
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# S3 test source — the shared experiment loader reads the canonical shadow
+# runtime ingestion + the live research_shadow_trades dataset via S3.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _current_lifecycle_events() -> list[dict]:
+    """A complete nshadow_* runtime lifecycle that classifies CURRENT."""
+    return [
+        {
+            "schema_version": "shadow_runtime_v1",
+            "event_type": "OPEN",
+            "shadow_trade_id": "nshadow_7_EURUSD_SCALP",
+            "plan_id": "nplan_7_EURUSD_1777700000",
+            "canonical_opportunity_id": "EURUSD*1777700000*HAMMER",
+            "symbol": "EURUSD",
+            "identity": {
+                "entity_id": "EURUSD_1777700000",
+                "cycle_id": 7,
+                "trade_horizon": "SCALP",
+                "evaluated_horizon": "SCALP",
+                "shadow_type": "HORIZON_ALTERNATIVE",
+            },
+            "live_facts": {
+                "v10_action": "NO_TRADE",
+                "v10_rejection_stage": "",
+                "v10_selected_horizon": "INTRADAY",
+                "horizon_selection_status": "ALTERNATIVE",
+                "pattern": "HAMMER",
+                "strategy": "REVERSAL",
+                "score": 0.7,
+                "regime": "TRENDING",
+                "h4_regime": "TRENDING",
+                "h1_bias": "BULLISH",
+                "market_phase": "IMPULSE",
+                "market_phase_confidence": 0.8,
+            },
+            "construction": {
+                "direction": "BUY",
+                "entry_price": 1.08000,
+                "stop_loss": 1.07900,
+                "take_profit": 1.08125,
+                "risk_distance": 0.001,
+                "risk_pips": 10.0,
+                "intended_rr": 1.25,
+            },
+            "market_entry_facts": {},
+        },
+        {
+            "schema_version": "shadow_runtime_v1",
+            "event_type": "CLOSE",
+            "shadow_trade_id": "nshadow_7_EURUSD_SCALP",
+            "symbol": "EURUSD",
+            "exit_reason": "take_profit",
+            "exit_market_time_utc_epoch_s": 1777702400,
+            "bars_held": 4,
+            "outcome": {"pnl_r_multiple": 1.25, "mfe_r": 1.4, "mae_r": -0.2},
+        },
+    ]
+
+
+def _legacy_record() -> dict:
+    """Contaminated strategy suffix + no lineage → LEGACY."""
+    return {"identity": {"entity_id": "", "strategy_id": "CONTINUATION_SCALP"}}
+
+
+def _transitional_record() -> dict:
+    """Entity present + clean strategy, but no regime/canonical → TRANSITIONAL."""
+    return {
+        "identity": {"entity_id": "EURUSD_1777700001", "strategy_id": "REVERSAL"},
+        "decision_snapshot": {"trade_horizon": ""},
+        "simulated_outcome": {"pnl_r_multiple": 0.5},
+    }
+
+
+@pytest.fixture(autouse=True)
+def _fake_s3_source():
+    fake = install_fake_s3()
+    fake.add("shadow_runtime", _current_lifecycle_events(), symbol="EURUSD")
+    fake.add("research_shadow_trades", [_legacy_record(), _transitional_record()],
+             symbol="EURUSD")
+    yield fake
+    reset_fake_s3()
 
 
 class TestDefaultEpochFiltering:

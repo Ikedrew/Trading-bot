@@ -31,6 +31,27 @@ from research_engine.horizon_research import (
     _load_trade_journal_records,
     _TradeRecordProxy,
 )
+from _s3_fake import FakeS3, install_fake_s3, reset_fake_s3
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# S3 test source (production evidence injection)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Trade journal records are production evidence read from the canonical S3
+# dataset via the shared research data-access layer — local ``logs/`` are never
+# a research source. Tests inject an in-memory fake S3 as the default source
+# and seed records through the dataset-aware helper.
+_CURRENT_FAKE: FakeS3 | None = None
+
+
+@pytest.fixture(autouse=True)
+def _fake_s3_source():
+    global _CURRENT_FAKE
+    _CURRENT_FAKE = install_fake_s3()
+    yield _CURRENT_FAKE
+    _CURRENT_FAKE = None
+    reset_fake_s3()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -78,13 +99,18 @@ def _sample_trade_record(
 
 
 def _write_journal_file(tmpdir: Path, records: list[dict]) -> None:
-    """Write records to a trade journal JSONL file in tmpdir."""
-    journal_dir = tmpdir / "logs" / "trade_journal"
-    journal_dir.mkdir(parents=True, exist_ok=True)
-    filepath = journal_dir / "2026-07-23.jsonl"
-    with open(filepath, "w", encoding="utf-8") as f:
-        for r in records:
-            f.write(json.dumps(r) + "\n")
+    """Seed trade journal records into the fake S3 production-evidence source.
+
+    (Historically this wrote ``logs/trade_journal/`` JSONL files; trade journal
+    is now read from the canonical S3 dataset, so tests seed the fake S3 —
+    ``tmpdir`` is retained for call-site compatibility only.)
+    """
+    assert _CURRENT_FAKE is not None, "fake S3 source must be installed"
+    by_symbol: dict[str, list[dict]] = {}
+    for r in records:
+        by_symbol.setdefault(r.get("symbol", "EURUSD"), []).append(r)
+    for symbol, recs in by_symbol.items():
+        _CURRENT_FAKE.add("trade_journal", recs, symbol=symbol)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

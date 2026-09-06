@@ -7,26 +7,29 @@ Transforms accumulated prospective observations into an evidence-backed verdict:
 Uses exclusively PROSPECTIVE observations (after candidate activation).
 Reuses existing validation_harness infrastructure for all statistical tests.
 
-PHASE 1I-C NOTE: the former baseline population (shadow_type == "V10_PRIMARY")
-has been removed from the architecture. Candidate-vs-baseline pairing is
-retired until an honest baseline is defined against the canonical Horizon
-Shadow lineage; evaluations currently resolve to INCONCLUSIVE. The generic
-statistical machinery is preserved for that future work.
+BASELINE (Phase 1I-C repair): the retired ``V10_PRIMARY`` population has been
+replaced by the honest pairing contract in
+``research_engine.lifecycle.candidate_pairing``: each candidate shadow
+(``shadow_type=CANDIDATE_<id>``) is paired with the DEPLOYED logic's realised
+outcome (``trade_truth``) on the SAME opportunity via exact correlation_id.
+This module delegates ALL pairing to that shared contract so the counted
+population and the evaluated population cannot drift.
 
 This module NEVER modifies production V10 or promotes candidates automatically.
 """
 
 from __future__ import annotations
 
-import json
 import statistics
 import uuid
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
+from research_engine.lifecycle.candidate_pairing import (
+    build_prospective_pairs,
+)
 from research_engine.lifecycle.validation_harness import (
     bootstrap_ci,
     permutation_test_paired,
@@ -133,16 +136,24 @@ class CandidateEvaluator:
         *,
         candidate_id: str,
         candidate_activated_at: str,
-        shadow_observations: list[dict[str, Any]],
+        pairs: list[dict[str, Any]] | None = None,
+        candidate_records: list[dict[str, Any]] | None = None,
+        incumbent_records: list[dict[str, Any]] | None = None,
     ) -> CandidateEvaluation:
         """
-        Evaluate a candidate from paired shadow observations.
-        
+        Evaluate a candidate from matched prospective pairs.
+
         Args:
             candidate_id: The candidate being evaluated
-            candidate_activated_at: ISO timestamp — observations before this are excluded
-            shadow_observations: ALL shadow trade records (will be filtered/paired)
-        
+            candidate_activated_at: ISO timestamp — the prospective boundary
+            pairs: Pre-built matched pairs (from candidate_pairing). When None,
+                pairs are built via the shared pairing contract using the
+                injected populations, or the sanctioned S3 loaders when no
+                populations are injected.
+            candidate_records: Optional injected candidate-shadow CLOSE records
+                (dataset ``shadow_trades`` shape) — used instead of an S3 load.
+            incumbent_records: Optional injected trade_truth records.
+
         Returns:
             CandidateEvaluation with decision and full metrics
         """
@@ -154,26 +165,31 @@ class CandidateEvaluator:
             prospective_boundary=candidate_activated_at,
         )
 
-        # ─── STEP 1: FILTER TO PROSPECTIVE ───────────────────────────
-        boundary_ts = self._parse_timestamp(candidate_activated_at)
-        candidate_shadow_type = f"CANDIDATE_{candidate_id}"
+        # ─── STEP 1+2: MATCHED PROSPECTIVE PAIRS (shared contract) ────
+        # All pairing — completeness, lineage, prospectivity, one-to-one,
+        # duplicate/ambiguity handling — is owned by candidate_pairing.
+        if pairs is None:
+            pairing = build_prospective_pairs(
+                candidate_id=candidate_id,
+                candidate_activated_at=candidate_activated_at,
+                candidate_records=candidate_records,
+                incumbent_records=incumbent_records,
+            )
+            pairs = pairing.pairs
+            diag = pairing.diagnostics
+            result.total_observations_raw = (
+                diag.candidate_records_total + diag.incumbent_records_total
+            )
+            result.excluded_unpaired = (
+                diag.unmatched_no_incumbent + diag.symbol_mismatch
+                + diag.horizon_mismatch + diag.candidate_ambiguous
+                + diag.incumbent_ambiguous
+            )
+            result.excluded_pre_boundary = (
+                diag.candidate_before_boundary + diag.incumbent_before_boundary
+            )
 
-        prospective = []
-        excluded_pre = 0
-        for obs in shadow_observations:
-            obs_ts = self._get_timestamp(obs)
-            if obs_ts and obs_ts < boundary_ts:
-                excluded_pre += 1
-                continue
-            prospective.append(obs)
-
-        result.total_observations_raw = len(shadow_observations)
-        result.excluded_pre_boundary = excluded_pre
-
-        # ─── STEP 2: RECONSTRUCT PAIRS ───────────────────────────────
-        pairs = self._build_pairs(prospective, candidate_shadow_type)
         result.eligible_pairs = len(pairs)
-        result.excluded_unpaired = len(prospective) - len(pairs) * 2
 
         # ─── STEP 3: MINIMUM SAMPLE GATE ─────────────────────────────
         result.n = len(pairs)
@@ -259,22 +275,6 @@ class CandidateEvaluator:
 
     # ─── INTERNAL ─────────────────────────────────────────────────────
 
-    def _build_pairs(self, observations: list[dict], candidate_type: str) -> list[dict]:
-        """Build paired baseline/candidate observations by entity_id.
-
-        RETIRED (Phase 1I-C): the legacy baseline population was
-        shadow_type == "V10_PRIMARY", which has been removed from the
-        architecture. The canonical Horizon Shadow lineage is NOT a
-        semantically equivalent baseline (different geometry source,
-        different identity model), so no artificial substitution is made.
-        Pair building therefore yields no pairs until a later phase defines
-        an honest candidate comparison against the canonical lineage;
-        evaluations consequently resolve to INCONCLUSIVE on the
-        minimum-sample gate. The generic pairing/statistical machinery
-        above is preserved for that future work.
-        """
-        return []
-
     def _make_decision(self, result: CandidateEvaluation) -> tuple[str, str, str]:
         """Determine VALIDATED / REJECTED / INCONCLUSIVE."""
         cfg = self._config
@@ -328,36 +328,4 @@ class CandidateEvaluator:
                 f"periods={result.periods_positive}/{result.periods_total}",
                 confidence)
 
-    # ─── FIELD EXTRACTION (handles both v2 and flat schemas) ──────────
 
-    def _get_shadow_type(self, obs: dict) -> str:
-        if "identity" in obs:
-            return obs["identity"].get("shadow_type", "")
-        return obs.get("shadow_type", "")
-
-    def _get_entity_id(self, obs: dict) -> str:
-        if "identity" in obs:
-            return obs["identity"].get("entity_id", "")
-        return obs.get("entity_id", "")
-
-    def _get_r_multiple(self, obs: dict) -> float | None:
-        if "simulated_outcome" in obs:
-            return obs["simulated_outcome"].get("pnl_r_multiple")
-        return obs.get("r_multiple")
-
-    def _get_symbol(self, obs: dict) -> str:
-        if "identity" in obs:
-            return obs["identity"].get("symbol", "")
-        return obs.get("symbol", "")
-
-    def _get_timestamp(self, obs: dict) -> float:
-        if "decision_snapshot" in obs:
-            return obs["decision_snapshot"].get("timestamp_decision_utc", 0) or 0
-        return obs.get("entry_time", 0) or obs.get("timestamp_decision_utc", 0) or 0
-
-    def _parse_timestamp(self, iso_str: str) -> float:
-        try:
-            dt = datetime.fromisoformat(iso_str)
-            return dt.timestamp()
-        except (ValueError, TypeError):
-            return 0

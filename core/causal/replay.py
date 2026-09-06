@@ -55,60 +55,41 @@ logger = logging.getLogger(__name__)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# DATA LOADERS (read-only access to persistence layers)
+# DATA LOADERS (read-only access to persistence layers — S3-backed)
+#
+# Authoritative production evidence is read from the sanctioned S3 research
+# data-access layer (research_engine.data_access.s3_source) via the public
+# loaders in research_engine.data_access.loaders / the shadow_runtime ingestion
+# layer. Local ``logs/`` are NEVER a research source: an S3 read failure raises
+# ResearchDataSourceError (no local fallback); a missing dataset is a real S3
+# collection gap and returns an empty list.
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _load_jsonl_by_field(
-    base_dir: str,
+def _find_record(
+    records: list[dict[str, Any]],
     field: str,
     value: str,
 ) -> dict[str, Any] | None:
-    """Load first record matching field=value from any JSONL file in directory."""
-    path = Path(base_dir)
-    if not path.exists():
-        return None
-    for f in sorted(path.rglob("*.jsonl"), reverse=True):
-        try:
-            for line in f.read_text(encoding="utf-8").strip().split("\n"):
-                if not line.strip():
-                    continue
-                rec = json.loads(line)
-                # Check both flat and nested identity structures
-                if rec.get(field) == value:
-                    return rec
-                identity = rec.get("identity", {})
-                if isinstance(identity, dict) and identity.get(field) == value:
-                    return rec
-        except (json.JSONDecodeError, OSError):
-            continue
+    """Return the first record (or its nested ``identity``) matching field == value."""
+    for rec in records:
+        if rec.get(field) == value:
+            return rec
+        identity = rec.get("identity", {})
+        if isinstance(identity, dict) and identity.get(field) == value:
+            return rec
     return None
 
 
-def _load_shadow_trade(trade_id: str) -> dict[str, Any] | None:
-    """Load a shadow trade record by trade_id."""
-    return _load_jsonl_by_field("logs/shadow_trades", "trade_id", trade_id)
-
-
-def _load_trade_truth(trade_id: str) -> dict[str, Any] | None:
-    """Load a trade_truth record by trade_id."""
-    return _load_jsonl_by_field("logs/trade_truth", "trade_id", trade_id)
-
-
-def _load_jsonl_by_lineage(
-    base_dir: str,
+def _find_record_by_lineage(
+    records: list[dict[str, Any]],
     lineage: dict[str, Any],
 ) -> dict[str, Any] | None:
-    """Load the first record in a dataset matching any available lineage identity.
+    """Return the first record matching any available lineage identity.
 
     Join priority (most authoritative → least): canonical_opportunity_id,
     correlation_id, entity_id, decision_id. Checks both flat and nested-identity
-    record shapes. Returns None when the dataset directory is absent or no match.
+    record shapes. Returns None when no lineage key is present or no match.
     """
-    path = Path(base_dir)
-    if not path.exists():
-        return None
-
-    # Ordered lineage keys to attempt (skip empties).
     join_keys = [
         ("canonical_opportunity_id", lineage.get("canonical_opportunity_id")),
         ("correlation_id", lineage.get("correlation_id")),
@@ -119,20 +100,63 @@ def _load_jsonl_by_lineage(
     if not join_keys:
         return None
 
-    for f in sorted(path.rglob("*.jsonl"), reverse=True):
-        try:
-            for line in f.read_text(encoding="utf-8").strip().split("\n"):
-                if not line.strip():
-                    continue
-                rec = json.loads(line)
-                identity = rec.get("identity", {})
-                identity = identity if isinstance(identity, dict) else {}
-                for key, value in join_keys:
-                    if rec.get(key) == value or identity.get(key) == value:
-                        return rec
-        except (json.JSONDecodeError, OSError):
-            continue
+    for rec in records:
+        identity = rec.get("identity", {})
+        identity = identity if isinstance(identity, dict) else {}
+        for key, value in join_keys:
+            if rec.get(key) == value or identity.get(key) == value:
+                return rec
     return None
+
+
+def _load_shadow_trade(trade_id: str) -> dict[str, Any] | None:
+    """Load a shadow trade record by trade_id from S3-backed production evidence.
+
+    Checks the canonical runtime stream first (shadow_runtime_v1 event stream →
+    completed shadow outcomes in the internal research shape via the shadow
+    ingestion layer), then the historical S3 ``shadow_trades`` dataset (legacy
+    ``shadow_*`` / ``hshadow_*`` IDs). Both are S3-backed; local logs are never read.
+    """
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+    from research_engine.data_access.loaders import load_shadow_trades
+
+    rec = _find_record(ingest_completed_shadow_trades(), "trade_id", trade_id)
+    if rec is not None:
+        return rec
+    return _find_record(load_shadow_trades(outcomes_only=False), "trade_id", trade_id)
+
+
+def _load_trade_truth(trade_id: str) -> dict[str, Any] | None:
+    """Load a trade_truth record by trade_id from the S3 trade_truth dataset."""
+    from research_engine.data_access.loaders import load_trade_truth
+
+    return _find_record(load_trade_truth(), "trade_id", trade_id)
+
+
+def _load_decision_ledger_record(lineage: dict[str, Any]) -> dict[str, Any] | None:
+    """AUTHORITATIVE terminal decision facts (action/reason/lineage).
+
+    Sourced from the retained S3 ``decision_ledger`` dataset — the decision
+    authority. Never inferred from diagnostic trace when a ledger record exists.
+    """
+    from research_engine.data_access.loaders import load_decision_ledger
+
+    return _find_record_by_lineage(load_decision_ledger(), lineage)
+
+
+def _load_decision_trace_record(lineage: dict[str, Any]) -> dict[str, Any] | None:
+    """DIAGNOSTIC reasoning/detail (score/pattern/structure/terminal stage).
+
+    Sourced from the retained S3 ``decision_trace`` dataset, which absorbed the
+    former decision_audit diagnostic fields (structure_ok, entry_timing,
+    trigger_candle, stability_policy, ...). Used only for reasoning the ledger
+    does not own.
+    """
+    from research_engine.data_access.loaders import load_decision_trace
+
+    return _find_record_by_lineage(load_decision_trace(), lineage)
 
 
 def _extract_lineage(shadow: dict[str, Any] | None, truth: dict[str, Any] | None) -> dict[str, Any]:
@@ -152,24 +176,7 @@ def _extract_lineage(shadow: dict[str, Any] | None, truth: dict[str, Any] | None
     }
 
 
-def _load_decision_ledger_record(lineage: dict[str, Any]) -> dict[str, Any] | None:
-    """AUTHORITATIVE terminal decision facts (action/reason/lineage).
 
-    Sourced from the retained ``decision_ledger`` dataset — the decision
-    authority. Never inferred from diagnostic trace when a ledger record exists.
-    """
-    return _load_jsonl_by_lineage("logs/decision_ledger", lineage)
-
-
-def _load_decision_trace_record(lineage: dict[str, Any]) -> dict[str, Any] | None:
-    """DIAGNOSTIC reasoning/detail (score/pattern/structure/terminal stage).
-
-    Sourced from the retained ``decision_trace`` dataset, which absorbed the
-    former decision_audit diagnostic fields (structure_ok, entry_timing,
-    trigger_candle, stability_policy, ...). Used only for reasoning the ledger
-    does not own.
-    """
-    return _load_jsonl_by_lineage("logs/decision_trace", lineage)
 
 
 def _merge_decision_view(
@@ -232,10 +239,16 @@ def _merge_decision_view(
 
 
 def _load_execution_context(correlation_id: str) -> dict[str, Any] | None:
-    """Load execution context by correlation_id."""
+    """Load execution context by correlation_id from S3-backed production evidence.
+
+    Sourced from the sanctioned S3 ``execution_context`` dataset (supporting/execution_context)
+    via the shared research data-access layer. Local ``logs/`` are never read;
+    an S3 read failure surfaces ResearchDataSourceError (no local fallback).
+    """
     if not correlation_id:
         return None
-    return _load_jsonl_by_field("logs/execution_context", "correlation_id", correlation_id)
+    from research_engine.data_access.loaders import load_execution_context
+    return _find_record(load_execution_context(), "correlation_id", correlation_id)
 
 
 def _load_market_events(symbol: str, timestamp: float, window_seconds: int = 300) -> list[dict[str, Any]]:

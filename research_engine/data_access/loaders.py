@@ -67,6 +67,20 @@ def load_shadow_trades(symbol: str | None = None, *, outcomes_only: bool = True)
     return loaded
 
 
+def load_trade_journal(symbol: str | None = None) -> list[dict[str, Any]]:
+    """
+    Load trade journal records (realised trade lifecycle — entry/exit/PnL).
+
+    Source: S3 dataset ``trade_journal`` (projections/trade_journal).
+    Key fields: trade_id, position_ticket, symbol, direction, entry_price,
+                exit_price, initial_sl, initial_tp, net_pnl, close_reason,
+                trade_horizon, correlation_id
+    """
+    records = _read("trade_journal", symbol)
+    logger.info("[RESEARCH_LOADER] loaded %d trade journal records", len(records))
+    return records
+
+
 def load_trade_truth(symbol: str | None = None) -> list[dict[str, Any]]:
     """
     Load trade truth records (actual broker outcomes).
@@ -217,6 +231,68 @@ def load_risk_deviation(symbol: str | None = None) -> list[dict[str, Any]]:
     """
     records = _read("risk_deviation", symbol)
     logger.info("[RESEARCH_LOADER] loaded %d risk deviation records", len(records))
+    return records
+
+
+def load_horizon_candidates(symbol: str | None = None) -> list[dict[str, Any]]:
+    """
+    Load horizon candidate records (every evaluated horizon per opportunity).
+
+    Source: S3 dataset ``horizon_candidates`` (supporting/horizon_candidates).
+    Schema: horizon_candidates_v1. Key fields: candidate_id,
+            canonical_opportunity_id, observation_id, entity_id, correlation_id,
+            cycle_id, horizon, eligible, confidence, reasoning, evidence,
+            selection_status (SELECTED / REJECTED / INELIGIBLE / NOT_APPLICABLE).
+    """
+    records = _read("horizon_candidates", symbol)
+    logger.info("[RESEARCH_LOADER] loaded %d horizon candidate records", len(records))
+    return records
+
+
+def load_strategy_candidates(symbol: str | None = None) -> list[dict[str, Any]]:
+    """
+    Load strategy candidate records (every evaluated strategy candidate).
+
+    Source: S3 dataset ``strategy_candidates`` (supporting/strategy_candidates).
+    Schema: strategy_candidates_v1. Key fields: candidate_id,
+            canonical_opportunity_id, observation_id, strategy_family,
+            confidence, reasoning, supporting_conditions, selected, rank,
+            bar_time.
+    """
+    records = _read("strategy_candidates", symbol)
+    logger.info("[RESEARCH_LOADER] loaded %d strategy candidate records", len(records))
+    return records
+
+
+def load_execution_attempts(symbol: str | None = None) -> list[dict[str, Any]]:
+    """
+    Load execution attempt records (one record per individual broker call).
+
+    Source: S3 dataset ``execution_attempts`` (supporting/execution_attempts).
+    Schema: execution_attempts_v1. Key fields: attempt_id, attempt_number,
+            action_type, retry_reason, broker_result.{ok,retcode,deal,comment},
+            bid/ask/spread_at_attempt, slippage, correlation_id,
+            canonical_opportunity_id, decision_id, trade_id.
+
+    NOTE: attempts are NOT trade outcomes — one trade may have many attempts.
+    """
+    records = _read("execution_attempts", symbol)
+    logger.info("[RESEARCH_LOADER] loaded %d execution attempt records", len(records))
+    return records
+
+
+def load_management_actions(symbol: str | None = None) -> list[dict[str, Any]]:
+    """
+    Load management action records (trade-management layer initiation events).
+
+    Source: S3 dataset ``management_actions`` (supporting/management_actions).
+    Schema: management_actions_v1. Key fields: management_action_id, trade_id,
+            decision_id, canonical_opportunity_id, observation_id,
+            correlation_id, cycle_id, action_type (SLTP_MODIFY / PARTIAL_CLOSE /
+            CLOSE), action_reason, requested_sl, requested_tp, requested_volume.
+    """
+    records = _read("management_actions", symbol)
+    logger.info("[RESEARCH_LOADER] loaded %d management action records", len(records))
     return records
 
 

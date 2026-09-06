@@ -133,12 +133,13 @@ def run_shadow_validation(records: list[ResearchRecord]) -> ShadowValidationResu
     )
     result.directional_accuracy = directional_matches / len(matched)
 
-    # Classification
+    # Classification (thresholds unchanged; correlation may be None for n<3)
+    corr_str = f"{result.correlation:.2f}" if result.correlation is not None else "N/A"
     if result.matched_trades < 10:
         result.confidence = "LOW"
         result.conclusion = (
             f"Only {result.matched_trades} matched trades. "
-            f"Preliminary correlation: {result.correlation:.2f}. "
+            f"Preliminary correlation: {corr_str}. "
             f"Insufficient data for confident validation."
         )
     elif result.matched_trades < 30:
@@ -146,14 +147,14 @@ def run_shadow_validation(records: list[ResearchRecord]) -> ShadowValidationResu
         if result.correlation is not None and result.correlation >= 0.5:
             result.conclusion = (
                 f"Shadow model shows moderate predictive power "
-                f"(r={result.correlation:.2f}, n={result.matched_trades}). "
+                f"(r={corr_str}, n={result.matched_trades}). "
                 f"Directional accuracy: {result.directional_accuracy:.0%}. "
                 f"More data needed for high confidence."
             )
         else:
             result.conclusion = (
                 f"Shadow model shows weak predictive power "
-                f"(r={result.correlation:.2f}, n={result.matched_trades}). "
+                f"(r={corr_str}, n={result.matched_trades}). "
                 f"Shadow may not reliably predict live outcomes."
             )
     else:
@@ -161,21 +162,21 @@ def run_shadow_validation(records: list[ResearchRecord]) -> ShadowValidationResu
         if result.correlation is not None and result.correlation >= 0.7:
             result.conclusion = (
                 f"Shadow model is strongly predictive "
-                f"(r={result.correlation:.2f}, n={result.matched_trades}). "
+                f"(r={corr_str}, n={result.matched_trades}). "
                 f"Directional accuracy: {result.directional_accuracy:.0%}. "
                 f"Shadow-based research findings are trustworthy."
             )
         elif result.correlation is not None and result.correlation >= 0.4:
             result.conclusion = (
                 f"Shadow model is moderately predictive "
-                f"(r={result.correlation:.2f}, n={result.matched_trades}). "
+                f"(r={corr_str}, n={result.matched_trades}). "
                 f"MAE={result.mean_absolute_error:.2f}R. "
                 f"Shadow research usable with caveats."
             )
         else:
             result.conclusion = (
                 f"Shadow model has weak correlation with live outcomes "
-                f"(r={result.correlation:.2f}, n={result.matched_trades}). "
+                f"(r={corr_str}, n={result.matched_trades}). "
                 f"Shadow-based research may be unreliable."
             )
 
@@ -195,81 +196,120 @@ def run_shadow_validation(records: list[ResearchRecord]) -> ShadowValidationResu
 
 def run() -> dict:
     """
-    Run Q16 and persist result using standard research report framework.
+    Run Q16/X4 and persist the result using the standard research report framework.
 
-    Loads matched shadow→live records from default locations.
-    Note: Q16 is typically BLOCKED until live trades with correlation_id exist.
+    Populations (authoritative):
+        shadow  — canonical shadow_runtime_v1 ingestion (nshadow_* completed
+                  outcomes, internal research shape), restricted by the matcher
+                  to PRIMARY_HORIZON_SIMULATION per canonical opportunity.
+        live    — trade_truth_v1 (realised broker outcomes).
+
+    Matching contract: one-to-one on canonical_opportunity_id (see
+    research_engine.correlation.linker.match_shadow_to_live). correlation_id
+    (COR-*) exists only on the live side and is carried onto the matched
+    record as the decision spine, never used as the join key.
     """
-    # Build records from available data
-    records: list[ResearchRecord] = []
-
-    # Attempt to load matched records (shadow + trade_truth joined) from S3
+    from research_engine.correlation.linker import (
+        extract_canonical_opportunity_id,
+        match_shadow_to_live,
+    )
     from research_engine.data_access.s3_source import get_default_source
-
-    _source = get_default_source()
-
-    shadows: dict[str, dict] = {}
     from research_engine.data_access.shadow_runtime_ingestion import (
         ingest_completed_shadow_trades,
     )
 
+    _source = get_default_source()
+
     # Canonical production shadow source: S3 shadow_runtime_v1 event stream,
     # reconstructed into completed shadow outcomes (internal research shape).
-    for rec in ingest_completed_shadow_trades():
-        cor_id = rec.get("identity", {}).get("correlation_id") or rec.get("correlation_id", "")
-        if cor_id:
-            shadows[cor_id] = rec
+    shadows = ingest_completed_shadow_trades()
+    truths = _source.read_dataset("trade_truth")
 
-    truths: dict[str, dict] = {}
-    for rec in _source.read_dataset("trade_truth"):
-        cor_id = rec.get("correlation_id", "")
-        if cor_id:
-            truths[cor_id] = rec
+    # ─── structural gates (source availability / schema sanity) ──────────────
+    if not shadows:
+        return _blocked_report(
+            "Canonical shadow source (shadow_runtime_v1 ingestion) returned NO "
+            "completed outcomes — source unavailable/collection gap."
+        )
+    if not truths:
+        return _blocked_report(
+            "Live source (trade_truth_v1) returned NO records — source "
+            "unavailable/collection gap."
+        )
+    if not any(extract_canonical_opportunity_id(s) for s in shadows):
+        return _blocked_report(
+            "No normalized shadow record carries canonical_opportunity_id — "
+            "schema mismatch between ingestion and matcher."
+        )
+    if not any(extract_canonical_opportunity_id(t) for t in truths):
+        return _blocked_report(
+            "No trade_truth record carries identity.canonical_opportunity_id — "
+            "schema mismatch between live outcomes and matcher."
+        )
 
-    # Match shadow to truth
-    for cor_id, shadow in shadows.items():
-        if cor_id in truths:
-            truth = truths[cor_id]
-            shadow_r = shadow.get("simulated_outcome", {}).get("pnl_r_multiple")
-            live_r = truth.get("r_multiple_realised") or truth.get("pnl_r_multiple")
-            if shadow_r is not None and live_r is not None:
-                records.append(ResearchRecord(
-                    correlation_id=cor_id,
-                    shadow_r_multiple=float(shadow_r),
-                    live_r_multiple=float(live_r),
-                    symbol=shadow.get("identity", {}).get("symbol", ""),
-                    pattern=shadow.get("decision_snapshot", {}).get("pattern", ""),
-                ))
-
+    # ─── canonical one-to-one matching ────────────────────────────────────────
+    records, diagnostics = match_shadow_to_live(shadows, truths)
     result = run_shadow_validation(records)
 
-    # Build canonical report
+
+    # ─── status semantics ─────────────────────────────────────────────────────
+    if result.matched_trades > 0:
+        status = "COMPLETE"
+        finding = result.conclusion
+        if result.correlation and result.correlation >= 0.6:
+            recommendation = "SHADOW_TRUSTED"
+        else:
+            recommendation = "SHADOW_UNRELIABLE"
+    else:
+        # Both populations exist and carry join keys, but genuinely no overlap.
+        status = "INSUFFICIENT_DATA"
+        finding = (
+            "No shadow↔live overlap: "
+            f"{diagnostics.total_shadow} shadow outcomes and "
+            f"{diagnostics.total_live} live outcomes share no "
+            "canonical_opportunity_id. Q16/X4 waits for live trades executed "
+            "on shadow-observed opportunities."
+        )
+        recommendation = "WAIT"
+
     from research_engine.experiments.experiment_base import build_report, build_fingerprint
 
-    if result.matched_trades == 0:
-        recommendation = "BLOCKED"
-        finding = "No matched shadow->live trades found. Q16 requires live trades with correlation_id."
-    elif result.correlation and result.correlation >= 0.6:
-        recommendation = "SHADOW_TRUSTED"
-        finding = result.conclusion
-    else:
-        recommendation = "SHADOW_UNRELIABLE"
-        finding = result.conclusion
+    # Up to 3 real matched-pair lineage examples (join-key proof, not metrics).
+    examples = [
+        {
+            "canonical_opportunity_id": r.canonical_opportunity_id,
+            "live_correlation_id": r.correlation_id,
+            "shadow_r_multiple": r.shadow_r,
+            "live_r_multiple": r.live_r,
+        }
+        for r in records if r.is_matched()
+    ][:3]
 
     report = build_report(
         question_id="Q16",
-        status="COMPLETE" if result.matched_trades > 0 else "BLOCKED",
+        status=status,
         overall={
             "matched_trades": result.matched_trades,
             "correlation": round(result.correlation, 4) if result.correlation else None,
             "mean_absolute_error": round(result.mean_absolute_error, 4),
             "directional_accuracy": round(result.directional_accuracy, 4) if result.directional_accuracy else None,
             "finding": finding,
+            "join_contract": {
+                "join_key": "canonical_opportunity_id",
+                "shadow_population": "shadow_runtime_v1 ingestion (nshadow_*), PRIMARY_HORIZON_SIMULATION",
+                "live_population": "trade_truth_v1 (identity.canonical_opportunity_id)",
+            },
+            "match_diagnostics": diagnostics.to_dict(),
+            "matched_examples": examples,
             **result.to_dict(),
         },
         confidence=result.confidence,
-        dataset={"source": "shadow_trades + trade_truth (matched by correlation_id)", "sample_size": result.matched_trades},
-        fingerprint=build_fingerprint(result.matched_trades, len(shadows) - result.matched_trades, "shadow_trades+trade_truth"),
+        dataset={
+            "source": "shadow_runtime_v1(ingested, nshadow_*) + trade_truth_v1 "
+                      "(matched 1:1 by canonical_opportunity_id)",
+            "sample_size": result.matched_trades,
+        },
+        fingerprint=build_fingerprint(result.matched_trades, diagnostics.unmatched_shadow, "shadow_runtime_v1+trade_truth_v1"),
         recommendation=recommendation,
         provenance={"experiment_module": "research_engine.experiments.shadow_validation", "registry_id": "Q16", "function": "run", "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"},
     )
@@ -281,6 +321,44 @@ def run() -> dict:
     except Exception:
         pass
 
+    return report
+
+
+def _blocked_report(reason: str) -> dict:
+    """Structural BLOCKED report — a wiring/schema/source problem, never 'no evidence'."""
+    from research_engine.experiments.experiment_base import build_report, build_fingerprint
+
+    report = build_report(
+        question_id="Q16",
+        status="BLOCKED",
+        overall={
+            "matched_trades": 0,
+            "correlation": None,
+            "mean_absolute_error": 0.0,
+            "directional_accuracy": None,
+            "finding": reason,
+            "match_diagnostics": {
+                "total_shadow": 0,
+                "total_live": 0,
+                "matched_pairs": 0,
+            },
+            "join_contract": {
+                "join_key": "canonical_opportunity_id",
+                "shadow_population": "shadow_runtime_v1 ingestion (nshadow_*), PRIMARY_HORIZON_SIMULATION",
+                "live_population": "trade_truth_v1 (identity.canonical_opportunity_id)",
+            },
+        },
+        confidence="INSUFFICIENT_DATA",
+        dataset={"source": "shadow_runtime_v1(ingested) + trade_truth_v1", "sample_size": 0},
+        fingerprint=build_fingerprint(0, 0, "shadow_runtime_v1+trade_truth_v1"),
+        recommendation="BLOCKED",
+        provenance={"experiment_module": "research_engine.experiments.shadow_validation", "registry_id": "Q16", "function": "run", "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"},
+    )
+    try:
+        from research_engine.experiments.experiment_base import persist_report as eb_persist
+        eb_persist(report, "q16_shadow_validation.json")
+    except Exception:
+        pass
     return report
 
 

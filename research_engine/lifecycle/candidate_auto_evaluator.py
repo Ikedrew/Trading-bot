@@ -2,7 +2,9 @@
 Candidate Auto-Evaluator — Automatically evaluates SHADOW_TESTING candidates when minimum N is reached.
 
 Called periodically by the research cycle runner. For each candidate in SHADOW_TESTING:
-    1. Counts available paired observations (prospective only)
+    1. Counts available MATCHED PROSPECTIVE PAIRS (candidate shadow ↔ incumbent
+       realised outcome on the same opportunity — see
+       research_engine.lifecycle.candidate_pairing for the pairing contract)
     2. If paired count >= minimum_sample (default 30), triggers evaluation
     3. Evaluation transitions the candidate via the existing bridge
 
@@ -26,19 +28,17 @@ Human governance is still required for promotion.
 
 from __future__ import annotations
 
-import json
 import logging
-from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
+
+from research_engine.lifecycle.candidate_pairing import (
+    count_prospective_pairs,
+)
 
 logger = logging.getLogger(__name__)
 
-# Production-contract dataset names are resolved inside the ingestion layer.
-
-# Minimum number of paired observations before triggering evaluation
+# Minimum number of MATCHED prospective pairs before triggering evaluation
 _DEFAULT_MINIMUM_PAIRS = 30
 
 
@@ -64,26 +64,29 @@ class AutoEvaluationResult:
 def auto_evaluate_candidates(
     *,
     registry_dir: str | None = None,
-    shadow_dir: str | None = None,
     minimum_pairs: int = _DEFAULT_MINIMUM_PAIRS,
     max_evaluations: int = 2,
+    candidate_records: list[dict[str, Any]] | None = None,
+    incumbent_records: list[dict[str, Any]] | None = None,
 ) -> AutoEvaluationResult:
     """
-    Scan SHADOW_TESTING candidates and evaluate those with sufficient paired evidence.
+    Scan SHADOW_TESTING candidates and evaluate those with sufficient matched evidence.
 
     For each candidate in SHADOW_TESTING:
-        1. Count prospective paired observations vs a baseline population
-           (RETIRED in Phase 1I-C: the old V10_PRIMARY baseline no longer
-           exists; pair counting returns 0 until a canonical-lineage baseline
-           is defined, so candidates remain in SHADOW_TESTING)
+        1. Count MATCHED PROSPECTIVE PAIRS via the shared pairing contract
+           (candidate shadow ↔ incumbent realised outcome on the same
+           opportunity; see research_engine.lifecycle.candidate_pairing)
         2. If pairs >= minimum_pairs, call evaluate_candidate()
         3. Let the bridge handle lifecycle transitions
 
     Args:
         registry_dir: Override storage dir for testing
-        shadow_dir: Override shadow observations dir for testing
-        minimum_pairs: Minimum paired observations before evaluation (default 30)
+        minimum_pairs: Minimum matched pairs before evaluation (default 30)
         max_evaluations: Maximum evaluations per cycle (prevents overload)
+        candidate_records: Injected candidate-shadow CLOSE records (testing);
+            loaded via the sanctioned S3 layer when None.
+        incumbent_records: Injected incumbent trade_truth records (testing);
+            loaded via the sanctioned S3 layer when None.
 
     Returns:
         AutoEvaluationResult with details of what happened
@@ -103,12 +106,6 @@ def auto_evaluate_candidates(
         if not shadow_testing:
             return result
 
-        # Load all shadow observations once (shared across candidates)
-        observations = _load_observations(shadow_dir)
-        if not observations:
-            result.candidates_insufficient = len(shadow_testing)
-            return result
-
         evaluated = 0
 
         for candidate in shadow_testing:
@@ -117,11 +114,14 @@ def auto_evaluate_candidates(
                 break
 
             try:
-                # Count prospective pairs for this candidate
-                pair_count = _count_prospective_pairs(
+                # Count MATCHED prospective pairs for this candidate via the
+                # shared pairing contract (same implementation the evaluator
+                # consumes — count and evaluation cannot drift).
+                pair_count = count_prospective_pairs(
                     candidate_id=candidate.candidate_id,
-                    candidate_created_at=candidate.created_at,
-                    observations=observations,
+                    candidate_activated_at=candidate.created_at,
+                    candidate_records=candidate_records,
+                    incumbent_records=incumbent_records,
                 )
 
                 if pair_count < minimum_pairs:
@@ -132,12 +132,15 @@ def auto_evaluate_candidates(
                     )
                     continue
 
-                # Trigger evaluation via the existing bridge
+                # Trigger evaluation via the existing bridge — pass the SAME
+                # injected populations so the evaluator's pair population is
+                # identical to the population just counted.
                 from research_engine.lifecycle.candidate_evaluation_bridge import evaluate_candidate
 
                 evaluation = evaluate_candidate(
                     candidate.candidate_id,
-                    shadow_observations=observations,
+                    candidate_records=candidate_records,
+                    incumbent_records=incumbent_records,
                     registry_dir=registry_dir,
                 )
 
@@ -172,86 +175,9 @@ def auto_evaluate_candidates(
 
     return result
 
-
-def _count_prospective_pairs(
-    *,
-    candidate_id: str,
-    candidate_created_at: str,
-    observations: list[dict[str, Any]],
-) -> int:
-    """
-    Count the number of paired (baseline + candidate) observations available
-    for this candidate, considering only prospective data (after created_at).
-
-    RETIRED (Phase 1I-C): the legacy baseline population was
-    shadow_type == "V10_PRIMARY", which has been removed from the architecture.
-    The canonical Horizon Shadow lineage is NOT a semantically equivalent
-    baseline (different geometry source, different identity model), so no
-    artificial substitution is made. Pair counting therefore always returns 0
-    and candidates simply remain in SHADOW_TESTING pending insufficient
-    evidence. A later phase may define an honest candidate-vs-canonical-lineage
-    comparison.
-
-    Returns 0 unconditionally.
-    """
-    return 0
-
-
-def _load_observations(shadow_dir: str | None = None) -> list[dict[str, Any]]:
-    """Load completed shadow outcomes from the canonical shadow_runtime_v1 stream.
-
-    Canonical production shadow source: S3 shadow_runtime_v1 event stream,
-    reconstructed into completed shadow outcomes via the ingestion layer.
-    The ``shadow_dir`` parameter is retained for signature stability but is no
-    longer used as a data source — S3 is authoritative and there is no local
-    fallback.
-    """
-    from research_engine.data_access.shadow_runtime_ingestion import (
-        ingest_completed_shadow_trades,
-    )
-
-    return list(ingest_completed_shadow_trades())
-
-
-def _parse_timestamp(ts_str: str) -> float:
-    """Parse ISO timestamp to unix epoch. Returns 0.0 on failure."""
-    if not ts_str:
-        return 0.0
-    try:
-        dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-        return dt.timestamp()
-    except Exception:
-        return 0.0
-
-
-def _get_entry_time(obs: dict) -> float | None:
-    """Extract entry timestamp from observation (v2 nested or flat)."""
-    # v2 schema: timestamps.entry_timestamp
-    ts = obs.get("timestamps", {}).get("entry_timestamp")
-    if ts:
-        return float(ts)
-    # Flat schema: entry_time
-    et = obs.get("entry_time")
-    if et:
-        return float(et)
-    return None
-
-
-def _get_entity_id(obs: dict) -> str:
-    """Extract entity_id from observation (v2 nested or flat)."""
-    # v2 schema: identity.entity_id
-    eid = obs.get("identity", {}).get("entity_id")
-    if eid:
-        return eid
-    # Flat schema
-    return obs.get("entity_id", "")
-
-
-def _get_shadow_type(obs: dict) -> str:
-    """Extract shadow_type from observation (v2 nested or flat)."""
-    # v2 schema: identity.shadow_type
-    st = obs.get("identity", {}).get("shadow_type")
-    if st:
-        return st
-    # Flat schema
-    return obs.get("shadow_type", "")
+# NOTE (Phase 1I-C repair): the former _count_prospective_pairs() (unconditional
+# `return 0`), _load_observations() (nshadow_* stream — cannot contain candidate
+# shadows) and the flat/nested field-extraction helpers were removed. Pair
+# counting and pair extraction now live exclusively in
+# research_engine.lifecycle.candidate_pairing, which both this evaluator and
+# the CandidateEvaluator consume — one pairing contract, no drift.

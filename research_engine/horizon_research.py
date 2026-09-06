@@ -6,8 +6,14 @@ Integrates with the existing research engine infrastructure:
     - Uses reports/generator pattern for report persistence
     - Follows standard report schema (question_id, metrics, conclusion)
 
+Header:
+    Data sources (authoritative production evidence): S3 dataset ``trade_journal``
+    via the shared research data-access layer (``research_engine.data_access.s3_source``).
+    Local ``logs/`` are never a research source; an explicit ``journal_dir`` override
+    exists ONLY for offline test fixtures.
+
 Pipeline:
-    Trade Journal JSONL → TradeRecord-like dicts → HorizonObservationBuilder
+    Trade Journal (S3) → TradeRecord-like dicts → HorizonObservationBuilder
     → HorizonResearchReport → JSON report file (research_reports/)
 
 THIS MODULE DOES NOT:
@@ -40,18 +46,37 @@ def _get_project_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-def _load_trade_journal_records() -> list[dict[str, Any]]:
+def _load_trade_journal_records(
+    journal_dir: str | Path | None = None,
+) -> list[dict[str, Any]]:
     """
-    Load all trade journal records from logs/trade_journal/*.jsonl.
+    Load all trade journal records.
 
-    Data source: core/trade_journal.py persist_trade() output.
-    Format: one JSON record per line (TradeRecord fields).
+    Authoritative source: S3 dataset ``trade_journal`` (projections/trade_journal)
+    via the shared research data-access layer. A missing dataset is a real S3
+    collection gap and returns an empty list; an S3 error raises
+    ResearchDataSourceError — there is NO fallback to local logs.
+
+    ``journal_dir`` is an explicit OFFLINE FIXTURE override (test/local replay
+    files only). It is NEVER used as a production fallback.
     """
-    journal_dir = _get_project_root() / _DEFAULT_LOGS_DIR / "trade_journal"
+    if journal_dir is not None:
+        # ── Offline fixture / test resources (NOT authoritative production evidence) ──
+        return _load_trade_journal_records_local(Path(journal_dir))
+
+    from research_engine.data_access.s3_source import get_default_source
+
+    records = get_default_source().read_dataset("trade_journal")
+    logger.info("[HORIZON_RESEARCH] loaded %d trade journal records from S3", len(records))
+    return records
+
+
+def _load_trade_journal_records_local(journal_dir: Path) -> list[dict[str, Any]]:
+    """Read trade journal JSONL from an explicit local directory (offline fixture)."""
     records: list[dict[str, Any]] = []
 
     if not journal_dir.exists():
-        logger.info("[HORIZON_RESEARCH] trade_journal directory not found: %s", journal_dir)
+        logger.info("[HORIZON_RESEARCH] trade journal directory not found: %s", journal_dir)
         return records
 
     for jsonl_file in sorted(journal_dir.glob("*.jsonl")):
@@ -119,12 +144,13 @@ def run_horizon_research(
     *,
     min_sample_size: int = 20,
     persist: bool = True,
+    journal_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     """
     Run the complete horizon research pipeline.
 
     Steps:
-        1. Load completed trades from trade journal.
+        1. Load completed trades from the canonical S3 trade journal.
         2. Group trades by horizon.
         3. Build observations per horizon.
         4. Load matching research contracts.
@@ -134,6 +160,10 @@ def run_horizon_research(
     Args:
         min_sample_size: Minimum trades for valid assessment per horizon.
         persist: Whether to write report to research_reports/ directory.
+        journal_dir: EXPLICIT offline-fixture override (test/local replay files
+                     only). When None (production), trade journal records are
+                     loaded from S3 via the shared research data-access layer
+                     and local logs are NEVER consulted.
 
     Returns:
         Dict with reports for each horizon + metadata.
@@ -146,7 +176,7 @@ def run_horizon_research(
     from core.horizon.research_contract import get_active_contract
 
     # ─── 1. LOAD DATA ─────────────────────────────────────────────────
-    raw_records = _load_trade_journal_records()
+    raw_records = _load_trade_journal_records(journal_dir=journal_dir)
     trades = [_TradeRecordProxy(r) for r in raw_records]
 
     # ─── 2+3. BUILD OBSERVATIONS ──────────────────────────────────────
@@ -192,7 +222,7 @@ def run_horizon_research(
         "question": "How does each horizon's observed behaviour compare to research contract expectations?",
         "generated_at": _now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "data_source": "trade_journal",
-        "data_path": "logs/trade_journal/*.jsonl",
+        "data_path": "s3:trade_journal (projections/trade_journal)",
         "total_trades_loaded": _total_trades,
         "analysis_period": f"{_period_start} to {_period_end}" if _period_start else "no_data",
         "min_sample_size": min_sample_size,

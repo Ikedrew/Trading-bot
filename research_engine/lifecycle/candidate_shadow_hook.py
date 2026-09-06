@@ -21,9 +21,10 @@ PAIRED OBSERVATION MODEL:
     RETIRED (Phase 1I-C): the legacy V10_PRIMARY baseline shadow type is
     removed from the architecture and is no longer created at runtime
     (live_scanner emits only the canonical HORIZON_ALTERNATIVE lineage).
-    Candidate-vs-baseline evaluation is retired until an honest baseline
-    against the canonical Horizon Shadow lineage is defined. Candidate
-    shadows are still opened and collected observationally.
+    Candidate shadows are paired with the DEPLOYED logic's realised outcome
+    (trade_truth) on the same opportunity via the exact execution
+    correlation_id — see research_engine.lifecycle.candidate_pairing for the
+    honest pairing contract used by evaluation.
 
 This module NEVER modifies production V10.
 """

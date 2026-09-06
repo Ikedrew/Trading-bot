@@ -2,12 +2,19 @@
 Synthetic End-to-End Candidate Lifecycle Test.
 
 Proves the complete autonomous flow:
-    PROPOSED → activation → SHADOW_TESTING → paired observations → minimum N → evaluation → decision
+    PROPOSED → activation → SHADOW_TESTING → matched prospective pairs →
+    minimum N → evaluation → decision
 
-Three scenarios:
+Four scenarios:
     1. Positive candidate → READY_FOR_REVIEW (human governance awaits)
     2. Negative candidate → REJECTED
-    3. Insufficient evidence → remains SHADOW_TESTING (INCONCLUSIVE)
+    3. Insufficient evidence → remains SHADOW_TESTING (not evaluated)
+    4. Mixed/noisy evidence → INCONCLUSIVE, remains SHADOW_TESTING
+
+Fixtures are PRODUCTION-SHAPED: candidate shadows in the V1 STR shape
+(dataset shadow_trades, identity.shadow_type=CANDIDATE_<id>) paired against
+incumbent trade_truth records by exact correlation_id — the honest pairing
+contract in research_engine.lifecycle.candidate_pairing.
 
 This test uses ONLY synthetic data. It does NOT:
     - Contact MT5 or any broker
@@ -16,9 +23,7 @@ This test uses ONLY synthetic data. It does NOT:
     - Import MT5Execution, RiskManager, or ExecutionOrchestrator
 """
 
-import json
 import pytest
-from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
 from research_engine.v10.candidates.candidate_registry import CandidateRegistry
@@ -45,71 +50,109 @@ def _make_candidate(candidate_id, change_type="direction_inversion", created_at=
     )
 
 
-def _write_paired_observations(shadow_dir, candidate_id, n_pairs, candidate_better=True, mixed=False):
-    """Write synthetic paired shadow observations to disk."""
+def _candidate_shadow(cor, candidate_r, *, candidate_id, symbol, ts):
+    """Production-shaped candidate shadow CLOSE record (V1 STR)."""
+    return {
+        "schema_version": "shadow_trades_v1",
+        "source": "shadow_trade_engine",
+        "event_type": "CLOSE",
+        "identity": {
+            "trade_id": f"candidate_{candidate_id}_{cor}",
+            "correlation_id": cor,
+            "canonical_opportunity_id": None,
+            "symbol": symbol,
+            "strategy_id": "",
+            "cycle_id": "1",
+            "entity_id": f"{symbol}_{cor}",
+            "shadow_type": f"CANDIDATE_{candidate_id}",
+            "v10_action": "CANDIDATE_SHADOW",
+        },
+        "decision_snapshot": {
+            "timestamp_decision_utc": ts,
+            "entry_intent_price": 1.1,
+            "stop_loss_intent": 1.095,
+            "take_profit_intent": 1.115,
+            "direction": "BUY",
+            "pattern": "ENGULFING",
+            "score": 0.7,
+            "trade_horizon": "",
+        },
+        "simulated_outcome": {
+            "pnl_r_multiple": candidate_r,
+            "mfe_r": max(candidate_r, 0.0),
+            "mae_r": min(candidate_r, 0.0),
+            "exit_reason": "take_profit" if candidate_r > 0 else "stop_loss",
+            "bars_held": 5,
+        },
+    }
+
+
+def _incumbent_truth(cor, baseline_r, *, symbol, ts):
+    """Production-shaped incumbent realised outcome (trade_truth_v1)."""
+    return {
+        "schema_version": "trade_truth_v1",
+        "identity": {
+            "trade_id": f"pos_{cor}",
+            "correlation_id": cor,
+            "canonical_opportunity_id": None,
+            "symbol": symbol,
+        },
+        "execution": {
+            "entry_fill_price": 1.1,
+            "exit_fill_price": 1.1 + baseline_r * 0.005,
+            "volume_executed": 0.1,
+        },
+        "timestamps": {
+            "entry_timestamp_broker": ts,
+            "exit_timestamp_broker": ts + 300.0,
+            "duration_seconds": 300.0,
+        },
+        "outcome": {
+            "r_multiple_realised": baseline_r,
+            "pnl_realised": baseline_r * 10.0,
+            "commission": -1.0,
+            "swap": 0.0,
+            "net_profit": baseline_r * 10.0 - 1.0,
+            "mfe_r": max(baseline_r, 0.0),
+            "mae_r": min(baseline_r, 0.0),
+        },
+        "exit": {"exit_reason": "take_profit" if baseline_r > 0 else "stop_loss"},
+    }
+
+
+def _create_paired_populations(candidate_id, n_pairs, candidate_better=True, mixed=False):
+    """Build n matched (candidate shadow, incumbent truth) populations."""
     base_time = (datetime.now(timezone.utc) - timedelta(days=5)).timestamp()
     symbols = ["EURUSD", "GBPUSD", "USDJPY"]
-    obs = []
+    cand, inc = [], []
     for i in range(n_pairs):
         sym = symbols[i % 3]
-        entity_id = f"{sym}_{int(base_time + i * 300)}"
-        entry_time = base_time + i * 300
+        cor = f"COR-2026-1-{sym}-{i:05d}"
+        ts = base_time + i * 300
 
-        # Baseline observation (V10_PRIMARY)
+        # Incumbent (deployed logic) realised outcome
         baseline_r = 0.3 if i % 3 == 0 else -0.8
-        obs.append({
-            "trade_id": f"shadow_cycle{i}_{sym}",
-            "entity_id": entity_id,
-            "shadow_type": "V10_PRIMARY",
-            "entry_time": entry_time,
-            "symbol": sym,
-            "r_multiple": baseline_r,
-            "direction": "BUY",
-            "entry_price": 1.1000,
-            "stop_loss": 1.0950,
-            "take_profit": 1.1150,
-        })
 
-        # Candidate observation
+        # Candidate prospective outcome
         if mixed:
-            # Tiny random-ish deltas — no signal
+            # Tiny deltas — no signal
             candidate_r = baseline_r + (0.01 if i % 2 == 0 else -0.01)
         elif candidate_better:
             candidate_r = baseline_r + 1.5  # Strong improvement
         else:
             candidate_r = baseline_r - 1.5  # Strong harm
 
-        obs.append({
-            "trade_id": f"candidate_{candidate_id}_cycle{i}_{sym}",
-            "entity_id": entity_id,
-            "shadow_type": f"CANDIDATE_{candidate_id}",
-            "entry_time": entry_time,
-            "symbol": sym,
-            "r_multiple": candidate_r,
-            "direction": "SELL" if candidate_better else "BUY",
-            "entry_price": 1.1000,
-            "stop_loss": 1.1050 if candidate_better else 1.0950,
-            "take_profit": 1.0850 if candidate_better else 1.1150,
-        })
-
-    # Write to JSONL
-    for sym in symbols:
-        sym_dir = shadow_dir / sym
-        sym_dir.mkdir(parents=True, exist_ok=True)
-        sym_obs = [o for o in obs if o["symbol"] == sym]
-        if sym_obs:
-            path = sym_dir / "2026-07-27.jsonl"
-            with open(path, "w", encoding="utf-8") as f:
-                for o in sym_obs:
-                    f.write(json.dumps(o) + "\n")
+        cand.append(_candidate_shadow(cor, candidate_r, candidate_id=candidate_id,
+                                      symbol=sym, ts=ts))
+        inc.append(_incumbent_truth(cor, baseline_r, symbol=sym, ts=ts))
+    return cand, inc
 
 
 class TestE2EPositiveCandidate:
-    """Scenario 1: Candidate that consistently outperforms baseline → READY_FOR_REVIEW."""
+    """Scenario 1: Candidate that consistently outperforms the incumbent → READY_FOR_REVIEW."""
 
     def test_full_lifecycle(self, tmp_path):
         reg_dir = str(tmp_path / "registry")
-        shadow_dir = tmp_path / "shadows"
 
         # ─── STEP 1: Create candidate in PROPOSED ─────────────────────
         reg = CandidateRegistry(storage_dir=reg_dir)
@@ -127,14 +170,15 @@ class TestE2EPositiveCandidate:
         c = reg2.get("OPT-POSITIVE")
         assert c.status == CandidateStatus.SHADOW_TESTING
 
-        # ─── STEP 3: Write sufficient paired observations ─────────────
-        _write_paired_observations(shadow_dir, "OPT-POSITIVE", 60, candidate_better=True)
+        # ─── STEP 3: Accumulate sufficient matched prospective pairs ──
+        cand, inc = _create_paired_populations("OPT-POSITIVE", 60, candidate_better=True)
 
         # ─── STEP 4: Automatic evaluation → READY_FOR_REVIEW ─────────
         result = auto_evaluate_candidates(
             registry_dir=reg_dir,
-            shadow_dir=str(shadow_dir),
             minimum_pairs=30,
+            candidate_records=cand,
+            incumbent_records=inc,
         )
         assert result.candidates_evaluated == 1
         assert result.evaluations[0]["decision"] == "VALIDATED"
@@ -152,7 +196,6 @@ class TestE2ENegativeCandidate:
 
     def test_full_lifecycle(self, tmp_path):
         reg_dir = str(tmp_path / "registry")
-        shadow_dir = tmp_path / "shadows"
 
         # ─── Create and activate ──────────────────────────────────────
         reg = CandidateRegistry(storage_dir=reg_dir)
@@ -163,14 +206,15 @@ class TestE2ENegativeCandidate:
         reg2 = CandidateRegistry(storage_dir=reg_dir)
         assert reg2.get("OPT-NEGATIVE").status == CandidateStatus.SHADOW_TESTING
 
-        # ─── Write harmful observations ───────────────────────────────
-        _write_paired_observations(shadow_dir, "OPT-NEGATIVE", 60, candidate_better=False)
+        # ─── Accumulate harmful matched pairs ────────────────────────
+        cand, inc = _create_paired_populations("OPT-NEGATIVE", 60, candidate_better=False)
 
         # ─── Auto-evaluate → REJECTED ────────────────────────────────
         result = auto_evaluate_candidates(
             registry_dir=reg_dir,
-            shadow_dir=str(shadow_dir),
             minimum_pairs=30,
+            candidate_records=cand,
+            incumbent_records=inc,
         )
         assert result.candidates_evaluated == 1
         assert result.evaluations[0]["decision"] == "REJECTED"
@@ -182,11 +226,10 @@ class TestE2ENegativeCandidate:
 
 
 class TestE2EInsufficientEvidence:
-    """Scenario 3: Not enough pairs → INCONCLUSIVE, stays SHADOW_TESTING."""
+    """Scenario 3: Not enough pairs → not evaluated, stays SHADOW_TESTING."""
 
     def test_full_lifecycle(self, tmp_path):
         reg_dir = str(tmp_path / "registry")
-        shadow_dir = tmp_path / "shadows"
 
         # ─── Create and activate ──────────────────────────────────────
         reg = CandidateRegistry(storage_dir=reg_dir)
@@ -197,14 +240,15 @@ class TestE2EInsufficientEvidence:
         reg2 = CandidateRegistry(storage_dir=reg_dir)
         assert reg2.get("OPT-INSUFF").status == CandidateStatus.SHADOW_TESTING
 
-        # ─── Write INSUFFICIENT observations (10 < 30 minimum) ───────
-        _write_paired_observations(shadow_dir, "OPT-INSUFF", 10, candidate_better=True)
+        # ─── Accumulate INSUFFICIENT pairs (10 < 30 minimum) ─────────
+        cand, inc = _create_paired_populations("OPT-INSUFF", 10, candidate_better=True)
 
         # ─── Auto-evaluate → insufficient, NOT evaluated ─────────────
         result = auto_evaluate_candidates(
             registry_dir=reg_dir,
-            shadow_dir=str(shadow_dir),
             minimum_pairs=30,
+            candidate_records=cand,
+            incumbent_records=inc,
         )
         assert result.candidates_evaluated == 0
         assert result.candidates_insufficient == 1
@@ -221,19 +265,19 @@ class TestE2EMixedEvidence:
 
     def test_full_lifecycle(self, tmp_path):
         reg_dir = str(tmp_path / "registry")
-        shadow_dir = tmp_path / "shadows"
 
         reg = CandidateRegistry(storage_dir=reg_dir)
         reg.create(_make_candidate("OPT-MIXED"))
         activate_eligible_candidates(registry_dir=reg_dir)
 
-        # Write 40 pairs with tiny random deltas (no signal)
-        _write_paired_observations(shadow_dir, "OPT-MIXED", 40, mixed=True)
+        # 40 matched pairs with tiny deltas (no signal)
+        cand, inc = _create_paired_populations("OPT-MIXED", 40, mixed=True)
 
         result = auto_evaluate_candidates(
             registry_dir=reg_dir,
-            shadow_dir=str(shadow_dir),
             minimum_pairs=30,
+            candidate_records=cand,
+            incumbent_records=inc,
         )
         assert result.candidates_evaluated == 1
         assert result.evaluations[0]["decision"] == "INCONCLUSIVE"
@@ -257,6 +301,7 @@ class TestE2EProductionSafety:
             'research_engine/lifecycle/candidate_evaluation_bridge.py',
             'research_engine/lifecycle/candidate_shadow_hook.py',
             'research_engine/lifecycle/candidate_evaluator.py',
+            'research_engine/lifecycle/candidate_pairing.py',
         ]
         forbidden = {'MT5Execution', 'RiskManager', 'ExecutionOrchestrator', 'order_send'}
 

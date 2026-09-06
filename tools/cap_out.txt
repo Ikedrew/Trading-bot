@@ -1,0 +1,63 @@
+
+======================================================================
+1. Q16 SHADOW VALIDATION (main entry)
+======================================================================
+============================================================
+RESEARCH ENGINE — Phase 1: Shadow Validation (Q16)
+============================================================
+
+[1/4] Loading research data...
+FAILED: UnicodeEncodeError: 'charmap' codec can't encode characters in position 2-3: character maps to <undefined>
+
+======================================================================
+2. RESEARCH CYCLE (DETECT_ONLY)
+======================================================================
+{'cycle_id': 'RC-20260906014942-b4f8', 'timestamp': '2026-09-06T01:49:42.651526+00:00', 'status': 'complete', 'findings_scanned': 0, 'triggers_detected': 1, 'triggers_eligible': 1, 'triggers_dismissed': 0, 'investigations_started': 0, 'investigations_completed': 0, 'investigations_failed': 0, 'errors': [], 'dataset_fingerprint': '', 'duration_seconds': 12.368184089660645}
+
+======================================================================
+3. REGISTRY EXPERIMENTS (run_all)
+======================================================================
+  D1: INSUFFICIENT_DATA (n=0)
+  D2: WAIT (n=1253)
+  D3: COMPLETE (n=1253)
+  D4: COMPLETE (n=1253)
+  D5: COMPLETE (n=1412)
+  D6: WAIT (n=0)
+  E1: NEGATIVE_EDGE (n=1253)
+  E2: COMPLETE (n=1253)
+  E3: COMPLETE (n=0)
+  E5: WAIT (n=0)
+  L1: COMPLETE (n=1253)
+  L2: COMPLETE (n=31)
+  L3: INSUFFICIENT_DATA (n=0)
+  L4: COMPLETE (n=12)
+  L7: WAIT (n=0)
+  M1: COMPLETE (n=1253)
+  M10: WAIT (n=0)
+  M9: WAIT (n=0)
+  P1: WAIT (n=0)
+  R1: COMPLETE (n=15)
+  R2: COMPLETE (n=15)
+  R3: WAIT (n=0)
+  R4: WAIT (n=0)
+  R5: WAIT (n=0)
+  S1: COMPLETE (n=0)
+  X1: COMPLETE (n=12)
+  X2: COMPLETE (n=12)
+  X3: COMPLETE (n=2718)
+  X4: BLOCKED (n=0)
+
+======================================================================
+4. CANDIDATE SURFACES
+======================================================================
+candidates on disk: 3
+status distribution: {'PROPOSED': 3}
+auto-evaluation: {'candidates_scanned': 0, 'candidates_evaluated': 0, 'candidates_insufficient': 0, 'candidates_skipped': 0, 'evaluations': []}
+
+======================================================================
+5. GUARDS
+======================================================================
+coverage: 23/23, uncovered=[]
+leakage guard fires correctly: Outcome leakage: field 'r_multiple_realised' is an outcome label from authoritative dataset 'trade_truth'.
+
+CAPABILITY PROOF COMPLETE

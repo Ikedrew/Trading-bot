@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, ".")
 
-from research_engine.v10.universes.question_bank import get_question, QUESTION_BANK
+from research_engine.v10.universes.legacy_question_bank import get_question, QUESTION_BANK
 from research_engine.v10.universes.models import QuestionStatus, Universe, Population, AnalysisType
 from research_engine.v10.runner.primitive_mapping import QUESTION_PARAMETERS, build_full_mapping
 from research_engine.v10.runner.primitives.implementations import build_default_registry

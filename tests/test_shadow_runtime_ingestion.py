@@ -188,6 +188,33 @@ class TestReconstruction:
         records = ingestion.reconstruct_completed_shadow_trades(_full_lifecycle())
         assert records[0]["identity"]["shadow_trade_id"].startswith("nshadow_")
 
+    def test_observation_id_backfilled_from_paired_plan(self):
+        """Older-era OPENs carry no observation_id; the paired PLAN of the SAME
+        lifecycle (matched by plan_id) is canonical same-lifecycle evidence."""
+        plan = _plan_event()
+        open_ev = _open_event()
+        del open_ev["observation_id"]
+        records = ingestion.reconstruct_completed_shadow_trades(
+            [plan, open_ev, _close_event()]
+        )
+        assert len(records) == 1
+        assert records[0]["identity"]["observation_id"] == OBSERVATION_ID
+
+    def test_observation_id_never_cross_joined_across_lifecycles(self):
+        """A PLAN from a DIFFERENT lifecycle must not supply observation_id."""
+        other_plan = _plan_event()
+        other_plan["plan_id"] = "nplan_9_EURUSD_1777700000"
+        other_plan["observation_id"] = "nobs_OTHER_LIFECYCLE"
+        open_ev = _open_event()
+        del open_ev["observation_id"]
+        close_ev = _close_event()
+        del close_ev["observation_id"]
+        records = ingestion.reconstruct_completed_shadow_trades(
+            [other_plan, open_ev, close_ev]
+        )
+        assert len(records) == 1
+        assert records[0]["identity"]["observation_id"] == ""
+
     def test_exit_reason_vocabulary_normalised(self):
         events = _full_lifecycle()
         events[-1]["exit_reason"] = "timeout"

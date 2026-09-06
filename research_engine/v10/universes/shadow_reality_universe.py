@@ -5,10 +5,15 @@ Joins V10_PRIMARY EXECUTE shadow observations to closed trade journal entries
 via correlation_id, producing ShadowRealityComparison records that measure
 shadow-vs-reality correspondence.
 
-SOURCE DATA:
-    logs/shadow_trades/**/*.jsonl     (shadow predictions)
-    logs/trade_journal/**/*.jsonl     (realised outcomes)
-    logs/execution_results/**/*.jsonl (optional: execution slippage enrichment)
+SOURCE DATA (production default — S3 via the shared research data-access layer):
+    shadow_runtime_v1 (ingested into the internal research shape via
+        research_engine.data_access.shadow_runtime_ingestion)   (shadow predictions)
+    trade_journal  (s3 dataset projections/trade_journal)        (realised outcomes)
+    execution_results (s3 dataset core/execution_results)       (optional: slippage)
+
+An explicit offline-fixture override (``shadow_dir`` / ``journal_dir`` /
+``exec_results_dir`` constructor paths) reads local files ONLY for tests/local
+replay — it is never a production fallback.
 
 JOIN KEY:
     correlation_id (format: "COR-{date}-{cycle}-{symbol}-{hash}")
@@ -56,9 +61,10 @@ from research_engine.v10.universes.models import Population, Universe
 
 logger = logging.getLogger(__name__)
 
-_SHADOW_DIR = Path("logs/shadow_trades")
-_JOURNAL_DIR = Path("logs/trade_journal")
-_EXEC_RESULTS_DIR = Path("logs/execution_results")
+# Offline-fixture sentinels: None means "production S3 source".
+_SHADOW_DIR = None  # canonical shadow evidence → S3 shadow_runtime_v1 ingestion
+_JOURNAL_DIR = None  # realised outcomes → S3 dataset trade_journal
+_EXEC_RESULTS_DIR = None  # execution slippage → S3 dataset execution_results
 
 # Exit reason semantic mapping: shadow → journal equivalents
 _EXIT_REASON_MAP = {
@@ -91,6 +97,8 @@ class ShadowRealityUniverseBuilder(UniverseBuilder):
         exec_results_dir: str | Path | None = None,
     ):
         super().__init__()
+        # None (production default) ⇒ canonical S3 sources; explicit path ⇒
+        # offline fixture (test/local replay only, never a production fallback).
         self._shadow_dir = Path(shadow_dir) if shadow_dir else _SHADOW_DIR
         self._journal_dir = Path(journal_dir) if journal_dir else _JOURNAL_DIR
         self._exec_dir = Path(exec_results_dir) if exec_results_dir else _EXEC_RESULTS_DIR
@@ -118,10 +126,28 @@ class ShadowRealityUniverseBuilder(UniverseBuilder):
     # ─── PUBLIC API ───────────────────────────────────────────────────────────
 
     def load(self) -> int:
-        """Load all source data from disk. Returns total raw records loaded."""
-        self._raw_shadows = _load_jsonl_dir(self._shadow_dir)
-        self._raw_journal = _load_jsonl_dir(self._journal_dir)
-        self._raw_exec_results = _load_jsonl_dir(self._exec_dir)
+        """Load all source data. Returns total raw records loaded.
+
+        Production default: all production inputs are S3-backed — canonical
+        shadow evidence comes from the normalized shadow runtime ingestion layer
+        (shadow_runtime_v1 event stream → completed shadow outcomes in the
+        internal research shape), and journal/execution_results come from the
+        sanctioned S3 datasets. Local dirs are read ONLY when explicitly
+        supplied as offline fixtures (tests/local replay).
+        """
+        if self._shadow_dir is None or self._journal_dir is None:
+            from research_engine.data_access.shadow_runtime_ingestion import (
+                ingest_completed_shadow_trades,
+            )
+            from research_engine.data_access.s3_source import get_default_source
+
+            self._raw_shadows = ingest_completed_shadow_trades()
+            self._raw_journal = get_default_source().read_dataset("trade_journal")
+            self._raw_exec_results = get_default_source().read_dataset("execution_results")
+        else:
+            self._raw_shadows = _load_jsonl_dir(self._shadow_dir)
+            self._raw_journal = _load_jsonl_dir(self._journal_dir)
+            self._raw_exec_results = _load_jsonl_dir(self._exec_dir)
         return len(self._raw_shadows) + len(self._raw_journal) + len(self._raw_exec_results)
 
     def build(self) -> list[ShadowRealityComparison]:
@@ -269,11 +295,18 @@ class ShadowRealityUniverseBuilder(UniverseBuilder):
         self._records = [c.to_dict() for c in comparisons
                          if c.comparison_status == ComparisonStatus.MATCHED]
 
-        source_files = tuple(
-            str(p) for p in sorted(self._shadow_dir.rglob("*.jsonl"))[:3]
-        ) + tuple(
-            str(p) for p in sorted(self._journal_dir.rglob("*.jsonl"))[:3]
-        ) if self._shadow_dir.exists() else ()
+        if self._shadow_dir is None:
+            source_files = (
+                "s3:shadow_runtime_v1(ingested)",
+                "s3:trade_journal",
+                "s3:execution_results",
+            )
+        else:
+            source_files = tuple(
+                str(p) for p in sorted(self._shadow_dir.rglob("*.jsonl"))[:3]
+            ) + tuple(
+                str(p) for p in sorted(self._journal_dir.rglob("*.jsonl"))[:3]
+            ) if self._shadow_dir.exists() else ()
 
         self._metadata = self._generate_metadata(
             records=self._records,

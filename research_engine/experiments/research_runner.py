@@ -31,6 +31,66 @@ def _load_jsonl(dataset: str) -> list[dict]:
     return get_default_source().read_dataset(dataset)
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# AUTHORITATIVE STATUS EXTRACTION
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Status ownership (research_engine/experiments/report_contract.py):
+#     report["status"]         — whether the research question actually
+#                                completed with sufficient evidence
+#                                (COMPLETE / WAITING_DATA / BLOCKED /
+#                                INSUFFICIENT_DATA).  AUTHORITATIVE.
+#     report["recommendation"] — what the engine recommends based on that
+#                                result (action/finding label: COMPLETE,
+#                                WAIT, PROMOTE_CALIBRATION, POSITIVE_EDGE,
+#                                NEGATIVE_EDGE, SHADOW_TRUSTED, ...).
+#                                NOT the run status.
+#
+# The summary must report the research result's actual status. It must never
+# silently default to COMPLETE, and a malformed/unknown result shape must be
+# reported explicitly.
+
+
+def _extract_run_status(report: Any) -> tuple[str, str]:
+    """
+    Extract the authoritative research-run status from a runner result.
+
+    Returns (status, status_source) where status_source is one of:
+        "report"         — taken from report["status"] (canonical contract)
+        "recommendation" — legacy report family without a top-level status;
+                           the nested recommendation.status is the only
+                           status-bearing field (explicit, surfaced as such)
+        "error"          — the runner result is not even a dict
+
+    Never fabricates or defaults to COMPLETE.
+    """
+    if not isinstance(report, dict):
+        return "MALFORMED_REPORT", "error"
+
+    status = report.get("status")
+    if isinstance(status, str) and status:
+        return status, "report"
+
+    # Known legacy shape: no top-level status; nested recommendation.status
+    # carries the only status information (see normalize_legacy_report).
+    rec = report.get("recommendation")
+    if isinstance(rec, dict):
+        rec_status = rec.get("status")
+        if isinstance(rec_status, str) and rec_status:
+            return rec_status, "recommendation"
+    return "UNKNOWN_STATUS", "missing"
+
+
+def _extract_sample(report: Any) -> int:
+    """Sample size from the same authoritative result context (no fabrication)."""
+    if not isinstance(report, dict):
+        return 0
+    dataset = report.get("dataset", {})
+    if not isinstance(dataset, dict):
+        return 0
+    return dataset.get("sample_size", 0) or dataset.get("r_multiples_used", 0)
+
+
 def run_all() -> dict[str, dict]:
     """
     Run all experiments using registry-driven runner discovery.
@@ -74,19 +134,17 @@ def run_all() -> dict[str, dict]:
             report = runner()
             # Attach dataset validation to every report
             report["dataset_validation"] = _validation_summary
-            # Extract status
-            rec = report.get("recommendation", {})
-            if isinstance(rec, dict):
-                status_val = rec.get("status", "?")
-            else:
-                status_val = str(rec)
-            sample = (
-                report.get("dataset", {}).get("sample_size", 0)
-                or report.get("dataset", {}).get("r_multiples_used", 0)
-            )
-            results[qid] = {"status": status_val, "sample": sample}
+            # Authoritative research-run status (report["status"]), NEVER the
+            # recommendation/action label. Recommendation carried separately.
+            status_val, status_source = _extract_run_status(report)
+            results[qid] = {
+                "status": status_val,
+                "status_source": status_source,
+                "sample": _extract_sample(report),
+                "recommendation": report.get("recommendation", ""),
+            }
         except Exception as e:
-            results[qid] = {"status": "ERROR", "error": str(e)[:100]}
+            results[qid] = {"status": "ERROR", "status_source": "error", "error": str(e)[:100]}
     return results
 
 
