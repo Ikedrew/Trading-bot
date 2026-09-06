@@ -936,6 +936,10 @@ EX1 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need R-multiple for almost all trades"),
         ValidationRule("sample_size", ">=", 200, "Need sufficient trades for paired comparison"),
     ),
+    runner_module="research_engine.experiments.exit_management",
+    runner_function="run_ex1",
+    report_filename="ex1_exit_efficiency.json",
+
 )
 
 EX2 = ResearchQuestion(
@@ -950,6 +954,10 @@ EX2 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes for comparison"),
         ValidationRule("sample_size", ">=", 200, "Need sufficient trades for statistical test"),
     ),
+    runner_module="research_engine.experiments.exit_management",
+    runner_function="run_ex2",
+    report_filename="ex2_profit_retention.json",
+
 )
 
 EX3 = ResearchQuestion(
@@ -964,6 +972,10 @@ EX3 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need R + MFE for simulation"),
         ValidationRule("sample_size", ">=", 200, "Need sufficient sample per TP level"),
     ),
+    runner_module="research_engine.experiments.exit_management",
+    runner_function="run_ex3",
+    report_filename="ex3_tp_distance.json",
+
 )
 
 EX4 = ResearchQuestion(
@@ -978,6 +990,10 @@ EX4 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need outcome data"),
         ValidationRule("sample_size", ">=", 200, "Need per-SL-variant comparison"),
     ),
+    runner_module="research_engine.experiments.exit_management",
+    runner_function="run_ex4",
+    report_filename="ex4_sl_distance.json",
+
 )
 
 EX5 = ResearchQuestion(
@@ -1069,6 +1085,45 @@ EX10 = ResearchQuestion(
     depends_on=("EX1", "EX2"),
 )
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY — TRADE MANAGEMENT (MGMT)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+MGMT1 = ResearchQuestion(
+    id="MGMT-1",
+    category=QuestionCategory.TRADE_MANAGEMENT,
+    title="Does trade management appear to help or harm outcomes?",
+    description="Observational association between management actions and realised outcomes. NOT causal.",
+    required_fields=("action_type", "trade_id", "r_multiple_realised"),
+    data_sources=(DataSource.MANAGEMENT_ACTIONS, DataSource.TRADE_TRUTH),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required for managed/unmanaged comparison"),
+        ValidationRule("sample_size", ">=", 30, "Minimum for managed-vs-unmanaged comparison"),
+    ),
+    runner_module="research_engine.experiments.management_research",
+    runner_function="run_mgmt1",
+    report_filename="mgmt1_management_effectiveness.json",
+)
+
+MGMT2 = ResearchQuestion(
+    id="MGMT-2",
+    category=QuestionCategory.TRADE_MANAGEMENT,
+    title="Which management action types appear helpful, harmful, or neutral?",
+    description="Per-action-type outcome analysis (SLTP_MODIFY, PARTIAL_CLOSE, CLOSE). OBSERVATIONAL.",
+    required_fields=("action_type", "action_reason", "trade_id", "r_multiple_realised"),
+    data_sources=(DataSource.MANAGEMENT_ACTIONS, DataSource.TRADE_TRUTH),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required for action-type analysis"),
+        ValidationRule("sample_size", ">=", 15, "Minimum per action type"),
+    ),
+    runner_module="research_engine.experiments.management_research",
+    runner_function="run_mgmt2",
+    report_filename="mgmt2_action_type_analysis.json",
+)
+
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # REGISTRY
@@ -1095,6 +1150,8 @@ REGISTRY: tuple[ResearchQuestion, ...] = (
     P1,
     # Exit Management
     EX1, EX2, EX3, EX4, EX5, EX6, EX7, EX8, EX9, EX10,
+    # Trade Management
+    MGMT1, MGMT2,
 )
 
 REGISTRY_BY_ID: dict[str, ResearchQuestion] = {q.id: q for q in REGISTRY}

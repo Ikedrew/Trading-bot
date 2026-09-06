@@ -27,6 +27,7 @@ class QuestionCategory(str, Enum):
     DATA_GOVERNANCE = "DATA_GOVERNANCE"   # G: Lineage, validity, research confidence
     PROMOTION_INTELLIGENCE = "PROMOTION_INTELLIGENCE"  # P: Promotion impact and readiness
     EXIT_MANAGEMENT = "EXIT_MANAGEMENT"   # EX: Exit policy optimisation and validation
+    TRADE_MANAGEMENT = "TRADE_MANAGEMENT"  # MGMT: Trade management effectiveness
 
 
 class QuestionStatus(str, Enum):
@@ -51,6 +52,7 @@ class DataSource(str, Enum):
     SHADOW_TRADES = "shadow_trades"
     DECISION_TRACE = "decision_trace"
     TRADE_TRUTH = "trade_truth"
+    MANAGEMENT_ACTIONS = "management_actions"
     MARKET_CONTEXT = "market_context"
     EXECUTION_CONTEXT = "execution_context"
     EQUITY_CURVE = "equity_curve"

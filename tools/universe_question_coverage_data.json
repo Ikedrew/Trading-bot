@@ -1,0 +1,2663 @@
+{
+  "canonical_questions": [
+    {
+      "id": "E1",
+      "title": "True system expectancy",
+      "category": "SYSTEM_EDGE",
+      "description": "What is the true expectancy of the production decision pipeline measured by R-multiple per trade?",
+      "runner_module": "research_engine.experiments.expected_value",
+      "runner_function": "run",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q19"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "entity_id",
+        "pattern",
+        "score",
+        "r_multiple",
+        "exit_reason"
+      ],
+      "validation_rules": [
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need entity_id to link decision context to outcomes"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Nearly all records must have R-multiple"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "q19_expected_value.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "E2",
+      "title": "Pattern expectancy",
+      "category": "SYSTEM_EDGE",
+      "description": "Which candlestick patterns contain positive expectancy across all conditions?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q05",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q5",
+        "Q24"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "pattern",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "pattern_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "At least 50% of records must have pattern"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Nearly all records must have outcome"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "q5_pattern_degradation.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "E3",
+      "title": "Strategy expectancy",
+      "category": "SYSTEM_EDGE",
+      "description": "Which strategy types (REVERSAL/CONTINUATION/FALSE_BREAK) contain positive expectancy?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q24",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q24"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "strategy",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Clean strategy field required (not combined with horizon)"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome data required"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "q24_strategy_edge.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "E4",
+      "title": "Strategy \u00d7 pattern combinations",
+      "category": "SYSTEM_EDGE",
+      "description": "Which strategy \u00d7 pattern combinations produce edge? (e.g. REVERSAL + TWEEZER_TOP)",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "E2",
+        "E3"
+      ],
+      "required_fields": [
+        "strategy",
+        "pattern",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Clean strategy required"
+        },
+        {
+          "field": "pattern_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Pattern required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "E5",
+      "title": "Out-of-sample validation",
+      "category": "SYSTEM_EDGE",
+      "description": "Does the measured edge survive on unseen market data using walk-forward testing with rolling windows?",
+      "runner_module": "research_engine.experiments.out_of_sample_validation",
+      "runner_function": "run_out_of_sample_validation",
+      "has_runner": true,
+      "legacy_ids": [],
+      "depends_on": [
+        "E1"
+      ],
+      "required_fields": [
+        "r_multiple",
+        "entry_time",
+        "pattern"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Full outcomes needed for walk-forward split"
+        },
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need decision context to prevent lookahead"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "e5_out_of_sample.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "M1",
+      "title": "H4 regime predicts outcomes",
+      "category": "MARKET_CONTEXT",
+      "description": "Does H4 regime classification (TRENDING/RANGING/TRANSITIONAL) predict trade R-multiple?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q06",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q6",
+        "Q23"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "h4_regime",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "h4_regime_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "H4 regime must be populated in most records"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "q6_regime_accuracy.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "M2",
+      "title": "H4 regime edge by strategy",
+      "category": "MARKET_CONTEXT",
+      "description": "Which H4 regimes produce edge for each strategy type?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "M1",
+        "E3"
+      ],
+      "required_fields": [
+        "h4_regime",
+        "strategy",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "h4_regime_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "H4 regime required"
+        },
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Clean strategy required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "M3",
+      "title": "Phase improves prediction beyond regime",
+      "category": "MARKET_CONTEXT",
+      "description": "Does market_phase (IMPULSE/PULLBACK/CONSOLIDATION/EXHAUSTION/REVERSAL) improve prediction beyond H4 regime alone?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "M1"
+      ],
+      "required_fields": [
+        "h4_regime",
+        "market_phase",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "h4_regime_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "H4 regime required"
+        },
+        {
+          "field": "market_phase_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Phase must be populated"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "M4",
+      "title": "Regime \u00d7 phase \u00d7 strategy edge",
+      "category": "MARKET_CONTEXT",
+      "description": "Which regime \u00d7 phase \u00d7 strategy combinations produce edge?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "M1",
+        "M3",
+        "E3"
+      ],
+      "required_fields": [
+        "h4_regime",
+        "market_phase",
+        "strategy",
+        "pattern",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "h4_regime_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "H4 regime required"
+        },
+        {
+          "field": "market_phase_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Phase required"
+        },
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Clean strategy required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "M5",
+      "title": "Phase transitions predict drawdown",
+      "category": "MARKET_CONTEXT",
+      "description": "Do rapid phase transitions predict drawdown periods?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "market_phase",
+        "timestamp"
+      ],
+      "validation_rules": [
+        {
+          "field": "market_phase_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Phase history required"
+        }
+      ],
+      "priority": "P2",
+      "report_filename": null,
+      "data_sources": [
+        "market_context",
+        "equity_curve"
+      ]
+    },
+    {
+      "id": "M6",
+      "title": "Market phase expectancy",
+      "category": "MARKET_CONTEXT",
+      "description": "Which market phases (IMPULSE/PULLBACK/CONSOLIDATION/EXHAUSTION/REVERSAL) contain real edge?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "market_phase",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "market_phase_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Phase must be populated"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "M7",
+      "title": "Regime + phase interaction",
+      "category": "MARKET_CONTEXT",
+      "description": "Does combining regime and phase improve predictive power beyond either alone?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "M1",
+        "M6"
+      ],
+      "required_fields": [
+        "h4_regime",
+        "market_phase",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "h4_regime_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "H4 regime required"
+        },
+        {
+          "field": "market_phase_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Phase required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "M8",
+      "title": "Phase transition behaviour",
+      "category": "MARKET_CONTEXT",
+      "description": "Do market phase transitions (e.g. IMPULSE\u2192EXHAUSTION) predict future trade outcomes?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "market_phase",
+        "entry_time",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "market_phase_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Phase history required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P2",
+      "report_filename": null,
+      "data_sources": [
+        "market_context",
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "M9",
+      "title": "Phase-appropriate pattern classification",
+      "category": "MARKET_CONTEXT",
+      "description": "For each market phase (IMPULSE, PULLBACK, CONSOLIDATION, EXHAUSTION, REVERSAL), which patterns or behaviours actually belong there and produce positive expectancy?",
+      "runner_module": "research_engine.experiments.m9_phase_pattern",
+      "runner_function": "run_m9_phase_pattern",
+      "has_runner": true,
+      "legacy_ids": [],
+      "depends_on": [
+        "M6",
+        "E2"
+      ],
+      "required_fields": [
+        "market_phase",
+        "pattern",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "market_phase_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Phase must be populated to stratify by phase"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "m9_phase_pattern.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "M10",
+      "title": "Strategy family required per phase",
+      "category": "MARKET_CONTEXT",
+      "description": "Does each market phase require a different strategy family (reversal, continuation, momentum, breakout) rather than different pattern weighting within one family?",
+      "runner_module": "research_engine.experiments.m10_strategy_family_per_phase",
+      "runner_function": "run_m10_strategy_family_per_phase",
+      "has_runner": true,
+      "legacy_ids": [],
+      "depends_on": [
+        "M9",
+        "S1"
+      ],
+      "required_fields": [
+        "market_phase",
+        "strategy",
+        "pattern",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "market_phase_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Phase required for stratification"
+        },
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Clean strategy labels needed"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "m10_strategy_family_per_phase.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "M11",
+      "title": "Context predictive value vs pattern",
+      "category": "MARKET_CONTEXT",
+      "description": "Does market context (regime + phase + bias) provide more predictive value for trade outcomes than the pattern identity itself?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "M1",
+        "M9"
+      ],
+      "required_fields": [
+        "h4_regime",
+        "market_phase",
+        "pattern",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "h4_regime_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Regime required"
+        },
+        {
+          "field": "market_phase_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Phase required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        },
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need decision context linked to outcomes"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades",
+        "decision_trace"
+      ]
+    },
+    {
+      "id": "D1",
+      "title": "Scoring components predict R",
+      "category": "DECISION_QUALITY",
+      "description": "Which of the 10 scoring components best predict actual R-multiple outcomes?",
+      "runner_module": "research_engine.experiments.component_reward",
+      "runner_function": "run",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q1"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "score",
+        "components",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need entity_id join to link scores to outcomes"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "q1_component_reward.json",
+      "data_sources": [
+        "shadow_trades",
+        "decision_trace"
+      ]
+    },
+    {
+      "id": "D2",
+      "title": "Confidence calibration",
+      "category": "DECISION_QUALITY",
+      "description": "Is the system's predicted probability (p_success) calibrated to actual win rate?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q04",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q4",
+        "Q20"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "score",
+        "p_success",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need trace\u2192outcome join"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "q4_confidence_calibration.json",
+      "data_sources": [
+        "decision_trace",
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "D3",
+      "title": "EV filtering value",
+      "category": "DECISION_QUALITY",
+      "description": "Does enabling the EV gate (blocking negative-EV trades) improve realised expectancy?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q21",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q21",
+        "Q22"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "ev",
+        "r_multiple",
+        "policy_trade_allowed"
+      ],
+      "validation_rules": [
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need decision context linked to outcomes"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": "q21_calibration_ev_impact.json",
+      "data_sources": [
+        "shadow_trades",
+        "decision_trace"
+      ]
+    },
+    {
+      "id": "D4",
+      "title": "Optimal thresholds by context",
+      "category": "DECISION_QUALITY",
+      "description": "Are score thresholds optimal when segmented by regime and market state?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q02",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q2"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "score",
+        "h4_regime",
+        "market_state",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need trace join"
+        },
+        {
+          "field": "h4_regime_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Regime required for segmentation"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": "q2_regime_threshold.json",
+      "data_sources": [
+        "shadow_trades",
+        "decision_trace"
+      ]
+    },
+    {
+      "id": "D5",
+      "title": "Missed opportunity cost",
+      "category": "DECISION_QUALITY",
+      "description": "Which rejected decisions would have succeeded if allowed through?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q03",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q3"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "entity_id",
+        "terminal_stage",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need trace\u2192shadow join for rejected-but-would-have-won"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Shadow outcomes for rejected signals"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": "q3_missed_opportunity.json",
+      "data_sources": [
+        "decision_trace",
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "D6",
+      "title": "Portfolio ranking quality",
+      "category": "DECISION_QUALITY",
+      "description": "When multiple trades are available simultaneously, is the ranking model consistently choosing the highest expectancy opportunity?",
+      "runner_module": "research_engine.experiments.portfolio_ranking",
+      "runner_function": "run_portfolio_ranking",
+      "has_runner": true,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "entity_id",
+        "r_multiple",
+        "cycle_id"
+      ],
+      "validation_rules": [
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need full decision lineage for ranking evaluation"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required to measure ranking accuracy"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": "d6_portfolio_ranking.json",
+      "data_sources": [
+        "shadow_trades",
+        "decision_trace"
+      ]
+    },
+    {
+      "id": "S1",
+      "title": "Strategy expectancy by type",
+      "category": "STRATEGY_HORIZON",
+      "description": "Does each strategy type (REVERSAL/CONTINUATION/FALSE_BREAK) have positive expectancy independently?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q24",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q24"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "strategy",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Clean strategy values required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "q24_strategy_edge.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "S2",
+      "title": "Horizon affects expectancy",
+      "category": "STRATEGY_HORIZON",
+      "description": "Does trade horizon (SCALP/INTRADAY/EXTENDED) independently affect expectancy?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "trade_horizon",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "horizon_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Separate horizon field required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "S3",
+      "title": "Strategy \u00d7 horizon combinations",
+      "category": "STRATEGY_HORIZON",
+      "description": "Which strategy \u00d7 horizon combinations work? (e.g. REVERSAL+SCALP vs CONTINUATION+EXTENDED)",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "S1",
+        "S2"
+      ],
+      "required_fields": [
+        "strategy",
+        "trade_horizon",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Clean strategy required"
+        },
+        {
+          "field": "horizon_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Separate horizon required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "S4",
+      "title": "Strategies specialised for phases",
+      "category": "STRATEGY_HORIZON",
+      "description": "Are strategies specialised for certain market phases? (e.g. REVERSAL only in EXHAUSTION)",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "E3",
+        "M3"
+      ],
+      "required_fields": [
+        "strategy",
+        "market_phase",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Clean strategy required"
+        },
+        {
+          "field": "market_phase_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Phase required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "S5",
+      "title": "Strategy identity expectancy",
+      "category": "STRATEGY_HORIZON",
+      "description": "Which strategy identities (REVERSAL/CONTINUATION/FALSE_BREAK) contain real expectancy independently of horizon?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "strategy",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Clean strategy required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "S6",
+      "title": "Horizon expectancy",
+      "category": "STRATEGY_HORIZON",
+      "description": "Which trade horizons (SCALP/INTRADAY/EXTENDED) contain real expectancy independently of strategy?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "trade_horizon",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "horizon_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Separate horizon field required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "S7",
+      "title": "Strategy \u00d7 horizon interaction",
+      "category": "STRATEGY_HORIZON",
+      "description": "Are strategies profitable only at specific horizons? (e.g. REVERSAL works at SCALP but not EXTENDED)",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "S5",
+        "S6"
+      ],
+      "required_fields": [
+        "strategy",
+        "trade_horizon",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Clean strategy required"
+        },
+        {
+          "field": "horizon_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Separate horizon required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "X1",
+      "title": "Slippage model",
+      "category": "EXECUTION",
+      "description": "What is the real slippage model per symbol per session?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q11",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q11"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "symbol",
+        "slippage",
+        "session"
+      ],
+      "validation_rules": [],
+      "priority": "P2",
+      "report_filename": "q11_slippage_model.json",
+      "data_sources": [
+        "slippage_journal",
+        "trade_truth"
+      ]
+    },
+    {
+      "id": "X2",
+      "title": "Broker failure patterns",
+      "category": "EXECUTION",
+      "description": "Are broker rejections/failures predictable by time, symbol, or market condition?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q12",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q12"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "retcode",
+        "symbol",
+        "timestamp"
+      ],
+      "validation_rules": [],
+      "priority": "P2",
+      "report_filename": "q12_broker_reliability.json",
+      "data_sources": [
+        "execution_context"
+      ]
+    },
+    {
+      "id": "X3",
+      "title": "Session execution quality",
+      "category": "EXECUTION",
+      "description": "Which trading sessions produce the best execution quality (lowest slippage, fewest rejects)?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q09",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q9"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "symbol",
+        "session",
+        "slippage",
+        "fill_latency"
+      ],
+      "validation_rules": [],
+      "priority": "P2",
+      "report_filename": "q9_spread_fill_quality.json",
+      "data_sources": [
+        "slippage_journal",
+        "execution_context"
+      ]
+    },
+    {
+      "id": "X4",
+      "title": "Edge lost in execution",
+      "category": "EXECUTION",
+      "description": "How much theoretical edge (from shadow R) is lost during real execution?",
+      "runner_module": "research_engine.experiments.shadow_validation",
+      "runner_function": "run",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q16"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "entity_id",
+        "shadow_r_multiple",
+        "live_r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need shadow\u2194live outcome join"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": "q16_shadow_validation.json",
+      "data_sources": [
+        "shadow_trades",
+        "trade_truth"
+      ]
+    },
+    {
+      "id": "X5",
+      "title": "Execution leakage",
+      "category": "EXECUTION",
+      "description": "How much expected edge is lost between decision (shadow R) and execution (live R)?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "entity_id",
+        "r_multiple",
+        "ev"
+      ],
+      "validation_rules": [
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need shadow\u2194live join"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades",
+        "trade_truth"
+      ]
+    },
+    {
+      "id": "X6",
+      "title": "Execution stability",
+      "category": "EXECUTION",
+      "description": "Under what conditions (symbol, session, spread, volatility) does execution quality degrade?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "symbol",
+        "slippage",
+        "spread"
+      ],
+      "validation_rules": [],
+      "priority": "P2",
+      "report_filename": null,
+      "data_sources": [
+        "slippage_journal",
+        "execution_context"
+      ]
+    },
+    {
+      "id": "R1",
+      "title": "Risk model effectiveness",
+      "category": "RISK_MANAGEMENT",
+      "description": "Does the risk layer (guards, daily loss limit, exposure) improve overall expectancy and survival?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q10",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q10"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "entity_id",
+        "r_multiple",
+        "terminal_stage"
+      ],
+      "validation_rules": [
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need decision\u2192outcome lineage"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Outcomes for both allowed and blocked trades"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": "q10_guard_efficacy.json",
+      "data_sources": [
+        "decision_trace",
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "R2",
+      "title": "Guard value analysis",
+      "category": "RISK_MANAGEMENT",
+      "description": "Did each individual guard (spread, correlation, regime, daily loss) improve final expectancy?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q10",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q10"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "entity_id",
+        "terminal_stage",
+        "terminal_reason",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need trace\u2192shadow join for counterfactual"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Shadow outcomes for rejected signals needed"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": "q10_guard_efficacy.json",
+      "data_sources": [
+        "decision_trace",
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "R3",
+      "title": "Probability of ruin",
+      "category": "RISK_MANAGEMENT",
+      "description": "Given the measured edge, win rate, variance and position sizing, what is the probability that this system eventually reaches catastrophic drawdown?",
+      "runner_module": "research_engine.experiments.probability_of_ruin",
+      "runner_function": "run_probability_of_ruin",
+      "has_runner": true,
+      "legacy_ids": [],
+      "depends_on": [
+        "E1"
+      ],
+      "required_fields": [
+        "r_multiple",
+        "win_rate",
+        "position_size"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Nearly all records must have R-multiple for variance estimation"
+        },
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need full lifecycle for accurate win rate"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "r3_probability_of_ruin.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "R4",
+      "title": "Drawdown halt threshold",
+      "category": "RISK_MANAGEMENT",
+      "description": "At what realised drawdown should the system automatically suspend trading because historical recovery probability becomes unacceptable?",
+      "runner_module": "research_engine.experiments.drawdown_threshold",
+      "runner_function": "run_drawdown_threshold",
+      "has_runner": true,
+      "legacy_ids": [],
+      "depends_on": [
+        "R3"
+      ],
+      "required_fields": [
+        "r_multiple",
+        "entry_time"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Full outcome history required for drawdown modelling"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "r4_drawdown_threshold.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "R5",
+      "title": "Position sizing optimisation",
+      "category": "RISK_MANAGEMENT",
+      "description": "What position sizing model (fixed risk, Kelly, half-Kelly, fractional Kelly, fixed lot, dynamic) maximises long-term growth while respecting acceptable drawdown?",
+      "runner_module": "research_engine.experiments.position_sizing",
+      "runner_function": "run_position_sizing",
+      "has_runner": true,
+      "legacy_ids": [],
+      "depends_on": [
+        "E1",
+        "R3"
+      ],
+      "required_fields": [
+        "r_multiple",
+        "win_rate"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Full outcome distribution required for Kelly calculation"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": "r5_position_sizing.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "L1",
+      "title": "Pattern degradation",
+      "category": "SYSTEM_LEARNING",
+      "description": "Are patterns degrading in performance over time?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q05",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q5"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "pattern",
+        "r_multiple",
+        "entry_time"
+      ],
+      "validation_rules": [
+        {
+          "field": "pattern_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Pattern required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P2",
+      "report_filename": "q5_pattern_degradation.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "L2",
+      "title": "System improvement tracking",
+      "category": "SYSTEM_LEARNING",
+      "description": "Does the system improve after architecture changes? (compare pre/post periods)",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q15",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q15"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "r_multiple",
+        "entry_time",
+        "schema_version"
+      ],
+      "validation_rules": [],
+      "priority": "P3",
+      "report_filename": "q15_learning_velocity.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "L3",
+      "title": "Architecture assumptions valid",
+      "category": "SYSTEM_LEARNING",
+      "description": "Are the scoring weight assumptions, regime classifications, and strategy mappings still correct?",
+      "runner_module": "research_engine.experiments.component_reward",
+      "runner_function": "run",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q1"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "components",
+        "strategy",
+        "regime",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need decision context linked to outcomes"
+        },
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Clean strategy required"
+        }
+      ],
+      "priority": "P2",
+      "report_filename": "q1_component_reward.json",
+      "data_sources": [
+        "shadow_trades",
+        "decision_trace"
+      ]
+    },
+    {
+      "id": "L4",
+      "title": "Market behaviour drift",
+      "category": "SYSTEM_LEARNING",
+      "description": "Does market behaviour change over time in ways that invalidate strategy assumptions?",
+      "runner_module": "research_engine.experiments.legacy_canonical",
+      "runner_function": "run_q17",
+      "has_runner": true,
+      "legacy_ids": [
+        "Q17"
+      ],
+      "depends_on": [],
+      "required_fields": [
+        "h4_regime",
+        "pattern",
+        "r_multiple",
+        "entry_time"
+      ],
+      "validation_rules": [
+        {
+          "field": "h4_regime_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Regime history required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P3",
+      "report_filename": "q17_drawdown_precursors.json",
+      "data_sources": [
+        "shadow_trades",
+        "market_context"
+      ]
+    },
+    {
+      "id": "L5",
+      "title": "Model drift detection",
+      "category": "SYSTEM_LEARNING",
+      "description": "Do patterns, strategies, or market assumptions lose predictive power over time?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "pattern",
+        "strategy",
+        "r_multiple",
+        "entry_time"
+      ],
+      "validation_rules": [
+        {
+          "field": "pattern_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Pattern required"
+        },
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Strategy required"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required"
+        }
+      ],
+      "priority": "P2",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "L6",
+      "title": "Research confidence scoring",
+      "category": "SYSTEM_LEARNING",
+      "description": "How trustworthy is each research conclusion given dataset validity, coverage, and sample size?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "r_multiple",
+        "pattern"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Outcome required for confidence assessment"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "L7",
+      "title": "Shadow A/B validation",
+      "category": "SYSTEM_LEARNING",
+      "description": "Does a proposed strategy change outperform the currently promoted version when evaluated in shadow mode with statistical significance?",
+      "runner_module": "research_engine.experiments.shadow_ab_validation",
+      "runner_function": "run_shadow_ab_validation",
+      "has_runner": true,
+      "legacy_ids": [],
+      "depends_on": [
+        "E1",
+        "E5"
+      ],
+      "required_fields": [
+        "r_multiple",
+        "strategy",
+        "schema_version"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Full outcomes needed for significance testing"
+        },
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Clean strategy labels needed to separate control vs candidate"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "l7_shadow_ab_validation.json",
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "G1",
+      "title": "Dataset completeness",
+      "category": "DATA_GOVERNANCE",
+      "description": "Is the current dataset suitable for the intended research questions? (field coverage, source type, sample size)",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "At least half of records must have outcomes"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "G2",
+      "title": "Lineage coverage",
+      "category": "DATA_GOVERNANCE",
+      "description": "What percentage of trades have valid decision-to-outcome lineage (entity_id join)?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "entity_id",
+        "r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "At least 50% lineage for this meta-question"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades",
+        "decision_trace"
+      ]
+    },
+    {
+      "id": "G3",
+      "title": "Research validity assessment",
+      "category": "DATA_GOVERNANCE",
+      "description": "Can research conclusions be trusted given current validation status, coverage percentages, and sample sizes?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "r_multiple",
+        "pattern"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Strong outcome coverage needed for validity assessment"
+        },
+        {
+          "field": "pattern_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Pattern coverage needed"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "P1",
+      "title": "Promotion impact analysis",
+      "category": "PROMOTION_INTELLIGENCE",
+      "description": "If a specific recommendation is promoted into production, what measurable improvement in EV, win rate, drawdown, trade frequency, and risk is expected?",
+      "runner_module": "research_engine.experiments.promotion_impact",
+      "runner_function": "run_promotion_impact",
+      "has_runner": true,
+      "legacy_ids": [],
+      "depends_on": [
+        "E1",
+        "E5",
+        "R3"
+      ],
+      "required_fields": [
+        "r_multiple",
+        "strategy",
+        "pattern",
+        "entry_time"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Full outcomes needed for impact estimation"
+        },
+        {
+          "field": "lineage_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need decision context for change modelling"
+        },
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Clean strategy required for segmentation"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": "p1_promotion_impact.json",
+      "data_sources": [
+        "shadow_trades",
+        "decision_trace"
+      ]
+    },
+    {
+      "id": "EX1",
+      "title": "Exit policy improves EV",
+      "category": "EXIT_MANAGEMENT",
+      "description": "Does modifying exit policy (trailing stop, reduced TP, time-based) improve system expected value compared to the current max_bars timeout?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "pnl_r_multiple",
+        "mfe_r",
+        "mae_r",
+        "exit_reason",
+        "bars_held",
+        "trade_state_progression"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Need R-multiple for almost all trades"
+        },
+        {
+          "field": "sample_size",
+          "op": ">=",
+          "threshold": 200,
+          "description": "Need sufficient trades for paired comparison"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "EX2",
+      "title": "Trailing stop improves MFE capture",
+      "category": "EXIT_MANAGEMENT",
+      "description": "Does a trailing stop mechanism capture more of the available MFE than the current exit, using bar-by-bar sequential simulation?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "mfe_r",
+        "pnl_r_multiple",
+        "trade_state_progression"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Need outcomes for comparison"
+        },
+        {
+          "field": "sample_size",
+          "op": ">=",
+          "threshold": 200,
+          "description": "Need sufficient trades for statistical test"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "EX3",
+      "title": "Optimal TP distance",
+      "category": "EXIT_MANAGEMENT",
+      "description": "What take-profit distance maximises expectancy? Tests TP at 0.25R through 3.0R using MFE data to determine reachability.",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "mfe_r",
+        "mae_r",
+        "pnl_r_multiple"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Need R + MFE for simulation"
+        },
+        {
+          "field": "sample_size",
+          "op": ">=",
+          "threshold": 200,
+          "description": "Need sufficient sample per TP level"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "EX4",
+      "title": "Optimal SL distance",
+      "category": "EXIT_MANAGEMENT",
+      "description": "Does the current SL distance preserve signal quality, or does widening/tightening SL improve outcomes?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "mae_r",
+        "mfe_r",
+        "pnl_r_multiple",
+        "exit_reason"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Need outcome data"
+        },
+        {
+          "field": "sample_size",
+          "op": ">=",
+          "threshold": 200,
+          "description": "Need per-SL-variant comparison"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "EX5",
+      "title": "Horizon changes optimal exit",
+      "category": "EXIT_MANAGEMENT",
+      "description": "Does trade horizon (SCALP/INTRADAY/EXTENDED) require a different exit policy? Tests trailing parameters per horizon.",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "EX2"
+      ],
+      "required_fields": [
+        "trade_horizon",
+        "mfe_r",
+        "pnl_r_multiple",
+        "trade_state_progression"
+      ],
+      "validation_rules": [
+        {
+          "field": "horizon_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Need horizon field populated"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Need outcomes"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "EX6",
+      "title": "Exit depends on strategy family",
+      "category": "EXIT_MANAGEMENT",
+      "description": "Does each strategy family (REVERSAL/MOMENTUM/CONTINUATION) require a different exit policy?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "EX2"
+      ],
+      "required_fields": [
+        "strategy",
+        "pattern",
+        "mfe_r",
+        "pnl_r_multiple",
+        "trade_state_progression"
+      ],
+      "validation_rules": [
+        {
+          "field": "strategy_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Need strategy field for segmentation"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Need outcomes"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "EX7",
+      "title": "Exit depends on market regime",
+      "category": "EXIT_MANAGEMENT",
+      "description": "Does market regime (TRENDING/RANGING/TRANSITIONAL) require a different exit policy?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "EX2"
+      ],
+      "required_fields": [
+        "h4_regime",
+        "mfe_r",
+        "pnl_r_multiple",
+        "trade_state_progression"
+      ],
+      "validation_rules": [
+        {
+          "field": "h4_regime_coverage",
+          "op": ">=",
+          "threshold": 0.8,
+          "description": "Need regime for segmentation"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Need outcomes"
+        }
+      ],
+      "priority": "P1",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "EX8",
+      "title": "Exit depends on pattern type",
+      "category": "EXIT_MANAGEMENT",
+      "description": "Do different candlestick patterns require different exit policies based on their MFE/MAE profiles?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "EX2"
+      ],
+      "required_fields": [
+        "pattern",
+        "mfe_r",
+        "mae_r",
+        "pnl_r_multiple",
+        "trade_state_progression"
+      ],
+      "validation_rules": [
+        {
+          "field": "pattern_coverage",
+          "op": ">=",
+          "threshold": 0.5,
+          "description": "Need pattern field"
+        },
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Need outcomes"
+        }
+      ],
+      "priority": "P2",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "EX9",
+      "title": "Exit reduces timeout losses",
+      "category": "EXIT_MANAGEMENT",
+      "description": "Does the proposed exit policy reduce the timeout exit rate and convert timeout losses into captured profits?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [],
+      "required_fields": [
+        "exit_reason",
+        "bars_held",
+        "mfe_r",
+        "pnl_r_multiple",
+        "trade_state_progression"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Need exit_reason + outcome"
+        },
+        {
+          "field": "sample_size",
+          "op": ">=",
+          "threshold": 200,
+          "description": "Need sufficient trades"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    },
+    {
+      "id": "EX10",
+      "title": "Exit survives walk-forward",
+      "category": "EXIT_MANAGEMENT",
+      "description": "Does the exit policy improvement hold on out-of-sample data using time-ordered walk-forward validation?",
+      "runner_module": null,
+      "runner_function": null,
+      "has_runner": false,
+      "legacy_ids": [],
+      "depends_on": [
+        "EX1",
+        "EX2"
+      ],
+      "required_fields": [
+        "pnl_r_multiple",
+        "trade_state_progression",
+        "entry_time"
+      ],
+      "validation_rules": [
+        {
+          "field": "outcome_coverage",
+          "op": ">=",
+          "threshold": 0.95,
+          "description": "Need outcomes for train/test split"
+        },
+        {
+          "field": "sample_size",
+          "op": ">=",
+          "threshold": 200,
+          "description": "Need sufficient sample for temporal split"
+        }
+      ],
+      "priority": "P0",
+      "report_filename": null,
+      "data_sources": [
+        "shadow_trades"
+      ]
+    }
+  ],
+  "runners": {
+    "research_engine.experiments.component_reward": {
+      "file": "research_engine/experiments/component_reward.py",
+      "loaders_used": [
+        "read_dataset"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "distribution",
+        "edge",
+        "pattern",
+        "regime",
+        "shadow",
+        "strategy",
+        "symbol",
+        "threshold",
+        "time"
+      ],
+      "line_count": 566
+    },
+    "research_engine.experiments.drawdown_threshold": {
+      "file": "research_engine/experiments/drawdown_threshold.py",
+      "loaders_used": [
+        "load_shadow_trades"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "distribution",
+        "drawdown",
+        "edge",
+        "recovery",
+        "risk",
+        "shadow",
+        "threshold",
+        "time"
+      ],
+      "line_count": 208
+    },
+    "research_engine.experiments.ev_analysis": {
+      "file": "research_engine/experiments/ev_analysis.py",
+      "loaders_used": [
+        "read_dataset"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "direction",
+        "filtering",
+        "h1_bias",
+        "h4_regime",
+        "horizon",
+        "market_phase",
+        "pattern",
+        "regime",
+        "shadow",
+        "strategy",
+        "time"
+      ],
+      "line_count": 480
+    },
+    "research_engine.experiments.expected_value": {
+      "file": "research_engine/experiments/expected_value.py",
+      "loaders_used": [
+        "ingest_completed_shadow_trades",
+        "read_dataset"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "distribution",
+        "edge",
+        "pattern",
+        "shadow",
+        "time",
+        "variance"
+      ],
+      "line_count": 424
+    },
+    "research_engine.experiments.experiment_base": {
+      "file": "research_engine/experiments/experiment_base.py",
+      "loaders_used": [
+        "ingest_completed_shadow_trades",
+        "load_shadow_trades",
+        "read_dataset"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "edge",
+        "filtering",
+        "shadow",
+        "strategy",
+        "threshold",
+        "time"
+      ],
+      "line_count": 346
+    },
+    "research_engine.experiments.horizon_controlled": {
+      "file": "research_engine/experiments/horizon_controlled.py",
+      "loaders_used": [
+        "load_shadow_trades"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "horizon",
+        "management",
+        "shadow",
+        "time"
+      ],
+      "line_count": 433
+    },
+    "research_engine.experiments.legacy_canonical": {
+      "file": "research_engine/experiments/legacy_canonical.py",
+      "loaders_used": [
+        "ingest_completed_shadow_trades",
+        "load_shadow_trades",
+        "read_dataset"
+      ],
+      "analysis_dimensions": [
+        "calibration",
+        "confidence",
+        "degradation",
+        "direction",
+        "distribution",
+        "drawdown",
+        "edge",
+        "opportunity",
+        "pattern",
+        "regime",
+        "risk",
+        "session",
+        "shadow",
+        "slippage",
+        "spread",
+        "strategy",
+        "symbol",
+        "terminal_stage",
+        "threshold",
+        "time"
+      ],
+      "line_count": 497
+    },
+    "research_engine.experiments.m10_strategy_family_per_phase": {
+      "file": "research_engine/experiments/m10_strategy_family_per_phase.py",
+      "loaders_used": [
+        "load_shadow_trades"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "direction",
+        "distribution",
+        "edge",
+        "market_phase",
+        "pattern",
+        "shadow",
+        "strategy"
+      ],
+      "line_count": 338
+    },
+    "research_engine.experiments.m9_phase_pattern": {
+      "file": "research_engine/experiments/m9_phase_pattern.py",
+      "loaders_used": [
+        "load_shadow_trades"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "direction",
+        "edge",
+        "market_phase",
+        "pattern",
+        "shadow"
+      ],
+      "line_count": 275
+    },
+    "research_engine.experiments.out_of_sample_validation": {
+      "file": "research_engine/experiments/out_of_sample_validation.py",
+      "loaders_used": [
+        "load_shadow_trades"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "edge",
+        "shadow",
+        "threshold"
+      ],
+      "line_count": 196
+    },
+    "research_engine.experiments.portfolio_ranking": {
+      "file": "research_engine/experiments/portfolio_ranking.py",
+      "loaders_used": [
+        "load_shadow_trades"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "edge",
+        "opportunity",
+        "portfolio",
+        "shadow",
+        "time"
+      ],
+      "line_count": 169
+    },
+    "research_engine.experiments.position_sizing": {
+      "file": "research_engine/experiments/position_sizing.py",
+      "loaders_used": [
+        "load_shadow_trades"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "distribution",
+        "drawdown",
+        "edge",
+        "position_sizing",
+        "risk",
+        "shadow"
+      ],
+      "line_count": 154
+    },
+    "research_engine.experiments.probability_of_ruin": {
+      "file": "research_engine/experiments/probability_of_ruin.py",
+      "loaders_used": [
+        "load_shadow_trades"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "distribution",
+        "drawdown",
+        "edge",
+        "horizon",
+        "risk",
+        "shadow",
+        "threshold",
+        "variance"
+      ],
+      "line_count": 327
+    },
+    "research_engine.experiments.promotion_impact": {
+      "file": "research_engine/experiments/promotion_impact.py",
+      "loaders_used": [
+        "load_shadow_trades"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "drawdown",
+        "edge",
+        "filtering",
+        "pattern",
+        "risk",
+        "shadow",
+        "strategy",
+        "threshold"
+      ],
+      "line_count": 217
+    },
+    "research_engine.experiments.report_contract": {
+      "file": "research_engine/experiments/report_contract.py",
+      "loaders_used": [],
+      "analysis_dimensions": [
+        "calibration",
+        "confidence",
+        "edge",
+        "time"
+      ],
+      "line_count": 208
+    },
+    "research_engine.experiments.research_runner": {
+      "file": "research_engine/experiments/research_runner.py",
+      "loaders_used": [
+        "ingest_completed_shadow_trades",
+        "read_dataset"
+      ],
+      "analysis_dimensions": [
+        "calibration",
+        "edge",
+        "shadow",
+        "time"
+      ],
+      "line_count": 154
+    },
+    "research_engine.experiments.score_calibration": {
+      "file": "research_engine/experiments/score_calibration.py",
+      "loaders_used": [
+        "read_dataset"
+      ],
+      "analysis_dimensions": [
+        "calibration",
+        "confidence",
+        "edge",
+        "pattern",
+        "shadow",
+        "strategy"
+      ],
+      "line_count": 318
+    },
+    "research_engine.experiments.shadow_ab_validation": {
+      "file": "research_engine/experiments/shadow_ab_validation.py",
+      "loaders_used": [
+        "load_shadow_trades"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "drawdown",
+        "edge",
+        "shadow",
+        "strategy",
+        "threshold",
+        "variance"
+      ],
+      "line_count": 172
+    },
+    "research_engine.experiments.shadow_validation": {
+      "file": "research_engine/experiments/shadow_validation.py",
+      "loaders_used": [
+        "ingest_completed_shadow_trades",
+        "read_dataset"
+      ],
+      "analysis_dimensions": [
+        "confidence",
+        "direction",
+        "distribution",
+        "edge",
+        "horizon",
+        "opportunity",
+        "shadow",
+        "threshold",
+        "time"
+      ],
+      "line_count": 367
+    }
+  },
+  "universe_builders": {
+    "UniverseBuilder": {
+      "file": "research_engine/v10/universes/base.py",
+      "loaders_used": []
+    },
+    "DecisionUniverseBuilder": {
+      "file": "research_engine/v10/universes/decision_universe.py",
+      "loaders_used": []
+    },
+    "ExecutionUniverseBuilder": {
+      "file": "research_engine/v10/universes/execution_universe.py",
+      "loaders_used": []
+    },
+    "MarketUniverseBuilder": {
+      "file": "research_engine/v10/universes/market_universe.py",
+      "loaders_used": []
+    },
+    "OutcomeUniverseBuilder": {
+      "file": "research_engine/v10/universes/outcome_universe.py",
+      "loaders_used": []
+    },
+    "RiskUniverseBuilder": {
+      "file": "research_engine/v10/universes/risk_universe.py",
+      "loaders_used": []
+    },
+    "ShadowOutcomeUniverseBuilder": {
+      "file": "research_engine/v10/universes/shadow_outcome_universe.py",
+      "loaders_used": [
+        "ingest_completed_shadow_trades"
+      ]
+    },
+    "ShadowRealityUniverseBuilder": {
+      "file": "research_engine/v10/universes/shadow_reality_universe.py",
+      "loaders_used": [
+        "ingest_completed_shadow_trades"
+      ]
+    },
+    "StrategyUniverseBuilder": {
+      "file": "research_engine/v10/universes/strategy_universe.py",
+      "loaders_used": []
+    }
+  },
+  "evidence_consumers": {
+    "base": {
+      "loaders_used": []
+    },
+    "execution_attempts": {
+      "loaders_used": [
+        "load_execution_attempts"
+      ]
+    },
+    "horizon_candidates": {
+      "loaders_used": [
+        "load_horizon_candidates"
+      ]
+    },
+    "management_actions": {
+      "loaders_used": [
+        "load_management_actions"
+      ]
+    },
+    "registry": {
+      "loaders_used": []
+    },
+    "strategy_candidates": {
+      "loaders_used": [
+        "load_strategy_candidates"
+      ]
+    }
+  },
+  "shadow_ingestion": {
+    "canonical_source": "shadow_runtime_v1",
+    "ingestion_module": "research_engine/data_access/shadow_runtime_ingestion.py",
+    "normalized_shape": [
+      "identity",
+      "decision_snapshot",
+      "simulated_outcome"
+    ],
+    "primary_horizon_tag": "PRIMARY_HORIZON_SIMULATION",
+    "horizon_alternative_tag": "HORIZON_ALTERNATIVE"
+  }
+}

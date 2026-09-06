@@ -1,0 +1,37 @@
+{
+  "experiment_name": "shadow_validation",
+  "question_id": "Q16",
+  "question": "How well do shadow R-multiples predict live R-multiples?",
+  "timestamp_utc": "2026-09-06T19:47:33.407Z",
+  "timestamp_unix": 1788724053.407,
+  "dataset_sources": [
+    "s3:shadow_runtime_v1(ingested, nshadow_*)",
+    "s3:trade_truth"
+  ],
+  "sample_count": 1,
+  "metrics": {
+    "total_shadow_trades": 1,
+    "total_live_trades": 1,
+    "matched_trades": 1,
+    "avg_shadow_r": 1.5,
+    "avg_live_r": 1.2,
+    "avg_prediction_error": 0.3,
+    "mean_absolute_error": 0.3,
+    "correlation": null,
+    "shadow_win_rate": 1.0,
+    "live_win_rate": 1.0,
+    "directional_accuracy": 1.0,
+    "conclusion": "Only 1 matched trades. Preliminary correlation: N/A. Insufficient data for confident validation.",
+    "confidence": "LOW"
+  },
+  "conclusion": "Only 1 matched trades. Preliminary correlation: N/A. Insufficient data for confident validation.",
+  "confidence": "LOW",
+  "metadata": {
+    "total_shadow_trades": 1,
+    "total_live_trades": 1,
+    "shadow_only_count": 0,
+    "live_only_count": 0
+  },
+  "research_engine_version": "0.1.0",
+  "reproducible": true
+}
