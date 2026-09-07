@@ -166,8 +166,53 @@ class TestSymbolResolution:
     def test_valid_symbols_pass(self):
         """All symbols resolving passes."""
         mock_info = MagicMock(visible=True)
-        with patch("core.startup_self_test.mt5_call", return_value=mock_info):
+        with patch("core.startup_self_test.mt5_call", return_value=mock_info), \
+             patch("core.startup_self_test.resolve_broker_symbol", side_effect=lambda s: s):
             _check_symbol_resolution(["EURUSD", "GBPUSD"])
+
+    def test_alias_uses_broker_symbol_but_reports_canonical(self):
+        info = MagicMock()
+        info.visible = True
+        info.trade_mode = 0
+        info.volume_min = 0.10
+        info.volume_max = 250.0
+        info.volume_step = 0.10
+        info.point = 0.01
+        info.digits = 2
+        info.trade_stops_level = 0
+        info.trade_freeze_level = 0
+        info.filling_mode = 2
+        info.trade_exemode = 2
+        info.trade_contract_size = 1.0
+        with patch("core.startup_self_test.resolve_broker_symbol", return_value="USTEC"), \
+             patch("core.startup_self_test.mt5_call", return_value=info) as mt5_call:
+            statuses = _check_symbol_resolution(["NAS100"])
+        assert mt5_call.call_args.args[1] == "USTEC"
+        assert statuses["NAS100"].canonical == "NAS100"
+        assert statuses["NAS100"].broker == "USTEC"
+        assert statuses["NAS100"].executable is False
+        assert statuses["NAS100"].reason == "TRADE_MODE_DISABLED;VOLUME_BELOW_MIN"
+
+    def test_blocked_symbol_does_not_prevent_compatible_symbol_checks(self):
+        from core.startup_self_test import StartupSymbolStatus
+
+        statuses = {
+            "EURUSD": StartupSymbolStatus("EURUSD", "EURUSD"),
+            "NAS100": StartupSymbolStatus(
+                "NAS100", "USTEC", False,
+                "TRADE_MODE_DISABLED;VOLUME_BELOW_MIN",
+            ),
+        }
+        rates = [MagicMock()]
+        tick = MagicMock(bid=1.1, ask=1.1001)
+        with patch("core.startup_self_test.mt5_call", return_value=rates) as candle_call:
+            _check_candle_retrieval(statuses)
+        assert candle_call.call_count == 1
+        assert candle_call.call_args.args[1] == "EURUSD"
+        with patch("core.startup_self_test.mt5_call", return_value=tick) as tick_call:
+            _check_tick_data(statuses)
+        assert tick_call.call_count == 1
+        assert tick_call.call_args.args[1] == "EURUSD"
 
 
 # --- TEST: CANDLE RETRIEVAL ---------------------------------------------------
@@ -304,6 +349,7 @@ class TestFullSuite:
         hb_path = tmp_path / "heartbeat.json"
 
         with patch("core.startup_self_test.mt5_call", side_effect=_side_effect), \
+             patch("core.startup_self_test.resolve_broker_symbol", side_effect=lambda s: s), \
              patch("core.startup_self_test.mt5.version", return_value=("5",)), \
              patch("core.startup_self_test.mt5.symbol_select", return_value=True), \
              patch("risk.daily_loss_guard._get_state_path", return_value=tmp_path / "dl.json"), \

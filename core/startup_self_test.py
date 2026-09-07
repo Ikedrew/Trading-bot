@@ -23,14 +23,25 @@ from __future__ import annotations
 
 import logging
 import time as _time
+from dataclasses import dataclass
 from typing import Any
 
 import MetaTrader5 as mt5
 
 from core.mt5_timeout import mt5_call
 from core.heartbeat import write_heartbeat, read_heartbeat, STATUS_STARTING
+from core.mt5_symbol_spec import MT5SymbolSpec, validate_volume
+from core.symbol_resolver import resolve_broker_symbol
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class StartupSymbolStatus:
+    canonical: str
+    broker: str
+    executable: bool = True
+    reason: str = ""
 
 
 # ─── ERRORS ───────────────────────────────────────────────────────────────────
@@ -112,15 +123,15 @@ def run_startup_self_test(*, symbols: list[str] | None = None) -> None:
 
         # 4. Symbol Resolution
         sym_list = symbols or _get_symbols()
-        _check_symbol_resolution(sym_list)
+        symbol_status = _check_symbol_resolution(sym_list)
         results["Symbols"] = "PASS"
 
         # 5. Market Data Retrieval
-        _check_candle_retrieval(sym_list)
+        _check_candle_retrieval(symbol_status)
         results["Candles"] = "PASS"
 
         # 6. Tick Data Availability
-        _check_tick_data(sym_list)
+        _check_tick_data(symbol_status)
         results["Ticks"] = "PASS"
 
         # 7. Position Query Verification
@@ -233,21 +244,59 @@ def _check_account() -> None:
     _pass("Account validation")
 
 
-def _check_symbol_resolution(symbols: list[str]) -> None:
+def _check_symbol_resolution(symbols: list[str]) -> dict[str, StartupSymbolStatus]:
     """Verify all configured symbols resolve in MT5."""
     try:
+        from core import config
+
+        statuses: dict[str, StartupSymbolStatus] = {}
+        fixed_lot = float(getattr(config, "FIXED_LOT", 0.0))
         for symbol in symbols:
-            info = mt5_call(mt5.symbol_info, symbol)
+            try:
+                broker_symbol = resolve_broker_symbol(symbol)
+            except (ValueError, RuntimeError) as exc:
+                _fail("SYMBOL_RESOLUTION", str(exc), symbol=symbol)
+
+            info = mt5_call(mt5.symbol_info, broker_symbol)
             if info is None:
-                _fail("SYMBOL_RESOLUTION", f"symbol_info returned None", symbol=symbol)
+                _fail(
+                    "SYMBOL_RESOLUTION",
+                    f"resolved broker symbol {broker_symbol!r} returned no symbol_info",
+                    symbol=symbol,
+                )
 
             # Ensure symbol is visible (selected in Market Watch)
             if not info.visible:
                 # Try to select it
-                if not mt5.symbol_select(symbol, True):
+                if not mt5.symbol_select(broker_symbol, True):
                     _fail("SYMBOL_RESOLUTION", "Cannot select symbol in Market Watch", symbol=symbol)
 
-            _pass(f"{symbol} resolved")
+            spec = MT5SymbolSpec.from_info(broker_symbol, info)
+            reasons: list[str] = []
+            raw_trade_mode = getattr(info, "trade_mode", None)
+            if isinstance(raw_trade_mode, (int, float)) and spec.trade_mode == 0:
+                reasons.append("TRADE_MODE_DISABLED")
+            if all(
+                isinstance(getattr(info, field, None), (int, float))
+                for field in ("volume_min", "volume_max", "volume_step")
+            ):
+                volume_reason = validate_volume(spec, fixed_lot)
+                if volume_reason:
+                    reasons.append(volume_reason)
+            status = StartupSymbolStatus(
+                canonical=symbol,
+                broker=broker_symbol,
+                executable=not reasons,
+                reason=";".join(reasons),
+            )
+            statuses[symbol] = status
+            if status.executable:
+                _pass(f"{symbol} resolved", f"broker={broker_symbol}")
+            else:
+                logger.warning(
+                    "[SELF_TEST_SYMBOL_BLOCKED] canonical=%s broker=%s reason=%s",
+                    symbol, broker_symbol, status.reason,
+                )
 
     except StartupSelfTestError:
         raise
@@ -255,21 +304,43 @@ def _check_symbol_resolution(symbols: list[str]) -> None:
         _fail("SYMBOL_RESOLUTION", str(exc))
 
     _pass("Symbol resolution", f"{len(symbols)} symbols")
+    return statuses
 
 
-def _check_candle_retrieval(symbols: list[str]) -> None:
+def _check_candle_retrieval(
+    symbols: list[str] | dict[str, StartupSymbolStatus],
+) -> None:
     """Verify candle data is available for all symbols."""
     try:
         from core import config
 
         timeframe = getattr(config, "TIMEFRAME", mt5.TIMEFRAME_M5)
 
-        for symbol in symbols:
-            rates = mt5_call(mt5.copy_rates_from_pos, symbol, timeframe, 0, 1)
+        statuses = _as_symbol_statuses(symbols)
+        passed = 0
+        unavailable: list[str] = []
+        for symbol, status in statuses.items():
+            if not status.executable:
+                continue
+            rates = mt5_call(mt5.copy_rates_from_pos, status.broker, timeframe, 0, 1)
             if rates is None or len(rates) == 0:
-                _fail("CANDLE_RETRIEVAL", "copy_rates returned None or empty", symbol=symbol)
+                status.executable = False
+                status.reason = "CANDLE_DATA_UNAVAILABLE"
+                logger.warning(
+                    "[SELF_TEST_SYMBOL_BLOCKED] canonical=%s broker=%s reason=%s",
+                    symbol, status.broker, status.reason,
+                )
+                unavailable.append(f"{symbol}: CANDLE_DATA_UNAVAILABLE")
+                continue
 
             _pass(f"{symbol} candle retrieval")
+            passed += 1
+
+        if passed == 0:
+            _fail(
+                "CANDLE_RETRIEVAL",
+                "No executable symbol returned candle data; " + "; ".join(unavailable),
+            )
 
     except StartupSelfTestError:
         raise
@@ -279,18 +350,46 @@ def _check_candle_retrieval(symbols: list[str]) -> None:
     _pass("Candle retrieval", f"{len(symbols)} symbols")
 
 
-def _check_tick_data(symbols: list[str]) -> None:
+def _check_tick_data(
+    symbols: list[str] | dict[str, StartupSymbolStatus],
+) -> None:
     """Verify tick data is available for all symbols."""
     try:
-        for symbol in symbols:
-            tick = mt5_call(mt5.symbol_info_tick, symbol)
+        statuses = _as_symbol_statuses(symbols)
+        passed = 0
+        unavailable: list[str] = []
+        for symbol, status in statuses.items():
+            if not status.executable:
+                continue
+            tick = mt5_call(mt5.symbol_info_tick, status.broker)
             if tick is None:
-                _fail("TICK_DATA", "symbol_info_tick returned None", symbol=symbol)
+                status.executable = False
+                status.reason = "TICK_DATA_UNAVAILABLE"
+                logger.warning(
+                    "[SELF_TEST_SYMBOL_BLOCKED] canonical=%s broker=%s reason=%s",
+                    symbol, status.broker, status.reason,
+                )
+                unavailable.append(f"{symbol}: TICK_DATA_UNAVAILABLE")
+                continue
 
             if float(tick.bid) <= 0 or float(tick.ask) <= 0:
-                _fail("TICK_DATA", f"Invalid tick: bid={tick.bid} ask={tick.ask}", symbol=symbol)
+                status.executable = False
+                status.reason = f"Invalid tick: bid={tick.bid} ask={tick.ask}"
+                logger.warning(
+                    "[SELF_TEST_SYMBOL_BLOCKED] canonical=%s broker=%s reason=%s",
+                    symbol, status.broker, status.reason,
+                )
+                unavailable.append(f"{symbol}: {status.reason}")
+                continue
 
             _pass(f"{symbol} tick data")
+            passed += 1
+
+        if passed == 0:
+            _fail(
+                "TICK_DATA",
+                "No executable symbol returned valid tick data; " + "; ".join(unavailable),
+            )
 
     except StartupSelfTestError:
         raise
@@ -298,6 +397,17 @@ def _check_tick_data(symbols: list[str]) -> None:
         _fail("TICK_DATA", str(exc))
 
     _pass("Tick data", f"{len(symbols)} symbols")
+
+
+def _as_symbol_statuses(
+    symbols: list[str] | dict[str, StartupSymbolStatus],
+) -> dict[str, StartupSymbolStatus]:
+    if isinstance(symbols, dict):
+        return symbols
+    return {
+        symbol: StartupSymbolStatus(canonical=symbol, broker=symbol)
+        for symbol in symbols
+    }
 
 
 def _check_position_query() -> None:
