@@ -304,6 +304,9 @@ S2 = ResearchQuestion(
         ValidationRule("horizon_coverage", ">=", 0.50, "Separate horizon field required"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
     ),
+    runner_module="research_engine.experiments.selection_research",
+    runner_function="run_s2",
+    report_filename="s2_horizon_expectancy.json",
 )
 
 S3 = ResearchQuestion(
@@ -320,6 +323,9 @@ S3 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
     ),
     depends_on=("S1", "S2"),
+    runner_module="research_engine.experiments.selection_research",
+    runner_function="run_s3",
+    report_filename="s3_strategy_horizon_combinations.json",
 )
 
 S4 = ResearchQuestion(
@@ -336,6 +342,9 @@ S4 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
     ),
     depends_on=("E3", "M3"),
+    runner_module="research_engine.experiments.selection_research",
+    runner_function="run_s4",
+    report_filename="s4_strategy_phase_specialisation.json",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -347,13 +356,13 @@ X1 = ResearchQuestion(
     category=QuestionCategory.EXECUTION,
     title="Slippage model",
     description="What is the real slippage model per symbol per session?",
-    required_fields=("symbol", "slippage", "session"),
-    data_sources=(DataSource.SLIPPAGE_JOURNAL, DataSource.TRADE_TRUTH),
+    required_fields=("correlation_id", "symbol", "slippage", "session_state"),
+    data_sources=(DataSource.EXECUTION_RESULTS, DataSource.EXECUTION_CONTEXT),
     priority=QuestionPriority.P2,
     validation_rules=(),
-    runner_module="research_engine.experiments.legacy_canonical",
-    runner_function="run_q11",
-    report_filename="q11_slippage_model.json",
+    runner_module="research_engine.experiments.execution_protection_research",
+    runner_function="run_x1",
+    report_filename="w4_x1_slippage.json",
     legacy_ids=("Q11",),
 )
 
@@ -362,13 +371,13 @@ X2 = ResearchQuestion(
     category=QuestionCategory.EXECUTION,
     title="Broker failure patterns",
     description="Are broker rejections/failures predictable by time, symbol, or market condition?",
-    required_fields=("retcode", "symbol", "timestamp"),
-    data_sources=(DataSource.EXECUTION_CONTEXT,),
+    required_fields=("retcode", "symbol", "result_ok"),
+    data_sources=(DataSource.EXECUTION_RESULTS, DataSource.EXECUTION_ATTEMPTS),
     priority=QuestionPriority.P2,
     validation_rules=(),
-    runner_module="research_engine.experiments.legacy_canonical",
-    runner_function="run_q12",
-    report_filename="q12_broker_reliability.json",
+    runner_module="research_engine.experiments.execution_protection_research",
+    runner_function="run_x2",
+    report_filename="w4_x2_broker_failures.json",
     legacy_ids=("Q12",),
 )
 
@@ -377,13 +386,13 @@ X3 = ResearchQuestion(
     category=QuestionCategory.EXECUTION,
     title="Session execution quality",
     description="Which trading sessions produce the best execution quality (lowest slippage, fewest rejects)?",
-    required_fields=("symbol", "session", "slippage", "fill_latency"),
-    data_sources=(DataSource.SLIPPAGE_JOURNAL, DataSource.EXECUTION_CONTEXT),
+    required_fields=("correlation_id", "session_state", "slippage"),
+    data_sources=(DataSource.EXECUTION_CONTEXT, DataSource.EXECUTION_RESULTS),
     priority=QuestionPriority.P2,
     validation_rules=(),
-    runner_module="research_engine.experiments.legacy_canonical",
-    runner_function="run_q09",
-    report_filename="q9_spread_fill_quality.json",
+    runner_module="research_engine.experiments.execution_protection_research",
+    runner_function="run_x3",
+    report_filename="w4_x3_session_quality.json",
     legacy_ids=("Q9",),
 )
 
@@ -402,6 +411,52 @@ X4 = ResearchQuestion(
     runner_function="run",
     report_filename="q16_shadow_validation.json",
     legacy_ids=("Q16",),
+)
+X5 = ResearchQuestion(
+    id="X5",
+    category=QuestionCategory.EXECUTION,
+    title="Execution leakage",
+    description="How much of the theoretical EV from decision_trace survives into realised R?",
+    required_fields=("canonical_opportunity_id", "ev", "r_multiple_realised"),
+    data_sources=(DataSource.DECISION_TRACE, DataSource.TRADE_TRUTH),
+    priority=QuestionPriority.P1,
+    validation_rules=(),
+    runner_module="research_engine.experiments.execution_protection_research",
+    runner_function="run_x5",
+    report_filename="w4_x5_execution_leakage.json",
+    legacy_ids=(),
+)
+
+EXEC1 = ResearchQuestion(
+    id="EXEC1",
+    category=QuestionCategory.EXECUTION,
+    title="Execution failures",
+    description="Do execution failures or adverse conditions degrade otherwise valid opportunities?",
+    required_fields=("correlation_id", "result_ok", "retcode", "slippage"),
+    data_sources=(DataSource.EXECUTION_RESULTS, DataSource.EXECUTION_CONTEXT,
+                  DataSource.TRADE_TRUTH),
+    priority=QuestionPriority.P1,
+    validation_rules=(),
+    runner_module="research_engine.experiments.execution_protection_research",
+    runner_function="run_exec1",
+    report_filename="w4_exec1_execution_failures.json",
+    legacy_ids=(),
+)
+
+PROT1 = ResearchQuestion(
+    id="PROT1",
+    category=QuestionCategory.EXECUTION,
+    title="Protection integrity",
+    description="Are positions retaining the protection (SL/TP) the system intended?",
+    required_fields=("correlation_id", "protection_status", "broker_confirmed_sl",
+                     "broker_confirmed_tp", "requested_sl", "requested_tp"),
+    data_sources=(DataSource.PROTECTION_AUDIT, DataSource.EXECUTION_RESULTS),
+    priority=QuestionPriority.P1,
+    validation_rules=(),
+    runner_module="research_engine.experiments.execution_protection_research",
+    runner_function="run_prot1",
+    report_filename="w4_prot1_protection_integrity.json",
+    legacy_ids=(),
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -573,23 +628,10 @@ S7 = ResearchQuestion(
     depends_on=("S5", "S6"),
 )
 
+# ADDITIONAL EXECUTION — X6 (intent-only, runner deferred)
 # ═══════════════════════════════════════════════════════════════════════════════
-# ADDITIONAL EXECUTION (X5–X6)
+# ADDITIONAL EXECUTION — X6 (intent-only, runner deferred)
 # ═══════════════════════════════════════════════════════════════════════════════
-
-X5 = ResearchQuestion(
-    id="X5",
-    category=QuestionCategory.EXECUTION,
-    title="Execution leakage",
-    description="How much expected edge is lost between decision (shadow R) and execution (live R)?",
-    required_fields=("entity_id", "r_multiple", "ev"),
-    data_sources=(DataSource.SHADOW_TRADES, DataSource.TRADE_TRUTH),
-    priority=QuestionPriority.P1,
-    validation_rules=(
-        ValidationRule("lineage_coverage", ">=", 0.80, "Need shadow↔live join"),
-        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
-    ),
-)
 
 X6 = ResearchQuestion(
     id="X6",
@@ -772,6 +814,21 @@ R5 = ResearchQuestion(
     runner_module="research_engine.experiments.position_sizing",
     runner_function="run_position_sizing",
     report_filename="r5_position_sizing.json",
+)
+RISK1 = ResearchQuestion(
+    id="RISK-1",
+    category=QuestionCategory.RISK_MANAGEMENT,
+    title="Risk control fidelity",
+    description="When the bot realises a loss, does the realised loss magnitude respect the 1-R planned-risk definition? How often do realised losses exceed the plan (ELEVATED/CRITICAL)?",
+    required_fields=("trade_id", "risk_classification", "risk_deviation",
+                     "actual_risk_R", "planned_risk_R"),
+    data_sources=(DataSource.RISK_DEVIATION,),
+    priority=QuestionPriority.P1,
+    validation_rules=(),
+    depends_on=(),
+    runner_module="research_engine.experiments.risk_research",
+    runner_function="run_risk1",
+    report_filename="w5_risk1_control_fidelity.json",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1123,6 +1180,57 @@ MGMT2 = ResearchQuestion(
     report_filename="mgmt2_action_type_analysis.json",
 )
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY — SELECTION QUALITY (Wave 3)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+HORIZON1 = ResearchQuestion(
+    id="HORIZON-1",
+    category=QuestionCategory.STRATEGY_HORIZON,
+    title="Was the selected horizon better than the alternatives?",
+    description=(
+        "Within-opportunity comparison: for each canonical opportunity with "
+        "simulated outcomes for the selected horizon AND >=1 alternative "
+        "horizon, was the selection supported by subsequent evidence? "
+        "Simulated counterfactuals on shadow-observed opportunities."
+    ),
+    required_fields=("canonical_opportunity_id", "evaluated_horizon",
+                     "shadow_type", "pnl_r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES, DataSource.HORIZON_CANDIDATES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("sample_size", ">=", 30,
+                       "Minimum comparable opportunities"),
+    ),
+    runner_module="research_engine.experiments.selection_research",
+    runner_function="run_horizon1",
+    report_filename="horizon1_selection_quality.json",
+)
+
+STRAT1 = ResearchQuestion(
+    id="STRAT-1",
+    category=QuestionCategory.STRATEGY_HORIZON,
+    title="Does strategy-ranking confidence predict outcome quality?",
+    description=(
+        "Ranking/monotonicity analysis of pre-decision strategy-selection "
+        "confidence against subsequent primary-horizon shadow outcomes. "
+        "NOT calibration (confidence is a relative score). Rejected "
+        "strategies have no simulated outcomes — selection optimality "
+        "cannot yet be proven."
+    ),
+    required_fields=("canonical_opportunity_id", "candidate_id",
+                     "confidence", "selected"),
+    data_sources=(DataSource.STRATEGY_CANDIDATES, DataSource.SHADOW_TRADES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("sample_size", ">=", 30,
+                       "Minimum matched confidence/outcome pairs"),
+    ),
+    runner_module="research_engine.experiments.selection_research",
+    runner_function="run_strat1",
+    report_filename="strat1_confidence_predictive_value.json",
+)
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1139,9 +1247,11 @@ REGISTRY: tuple[ResearchQuestion, ...] = (
     # Strategy & Horizon
     S1, S2, S3, S4, S5, S6, S7,
     # Execution
-    X1, X2, X3, X4, X5, X6,
+    X1, X2, X3, X4, X6,
     # Risk Management
     R1, R2, R3, R4, R5,
+    # Risk Management (Wave 5)
+    RISK1,
     # System Learning
     L1, L2, L3, L4, L5, L6, L7,
     # Data Governance
@@ -1152,6 +1262,10 @@ REGISTRY: tuple[ResearchQuestion, ...] = (
     EX1, EX2, EX3, EX4, EX5, EX6, EX7, EX8, EX9, EX10,
     # Trade Management
     MGMT1, MGMT2,
+    # Selection Quality (Wave 3)
+    HORIZON1, STRAT1,
+    # Execution + Protection (Wave 4)
+    X5, EXEC1, PROT1,
 )
 
 REGISTRY_BY_ID: dict[str, ResearchQuestion] = {q.id: q for q in REGISTRY}

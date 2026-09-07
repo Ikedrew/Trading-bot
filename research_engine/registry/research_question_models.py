@@ -53,10 +53,16 @@ class DataSource(str, Enum):
     DECISION_TRACE = "decision_trace"
     TRADE_TRUTH = "trade_truth"
     MANAGEMENT_ACTIONS = "management_actions"
+    HORIZON_CANDIDATES = "horizon_candidates"
+    STRATEGY_CANDIDATES = "strategy_candidates"
     MARKET_CONTEXT = "market_context"
     EXECUTION_CONTEXT = "execution_context"
     EQUITY_CURVE = "equity_curve"
     SLIPPAGE_JOURNAL = "slippage_journal"
+    EXECUTION_RESULTS = "execution_results_v1"
+    PROTECTION_AUDIT = "protection_audit_v1"
+    EXECUTION_ATTEMPTS = "execution_attempts_v1"
+    RISK_DEVIATION = "risk_deviation_v1"
 
 
 @dataclass(frozen=True)

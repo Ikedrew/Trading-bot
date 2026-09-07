@@ -360,7 +360,7 @@ class TestArchitecture:
             assert qid not in [k for k in runners if k != qid] or True  # uniqueness by dict
         # count
         ex_runners = [k for k in runners if k.startswith("EX")]
-        assert len(ex_runners) == 4
+        assert len(ex_runners) == 5
 
     def test_report_status_is_gap4_compliant(self, monkeypatch):
         _install(_make_n(40), monkeypatch)
