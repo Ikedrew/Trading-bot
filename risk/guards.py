@@ -11,6 +11,7 @@ import MetaTrader5 as mt5
 
 from core import config
 from core.mt5_timeout import mt5_call
+from core.symbol_resolver import broker_symbol_for
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ def count_bot_positions(symbol: str, magic: int) -> int:
     strict = getattr(config, "STRICT_EXPOSURE_GUARDS", True)
 
     try:
-        rows = mt5_call(mt5.positions_get, symbol=symbol)
+        rows = mt5_call(mt5.positions_get, symbol=broker_symbol_for(symbol))
     except Exception as exc:
         _guard_failure_count += 1
         logger.error(

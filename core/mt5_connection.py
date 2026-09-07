@@ -14,6 +14,7 @@ import MetaTrader5 as mt5
 
 from core import config
 from core.mt5_timeout import mt5_call
+from core.symbol_resolver import broker_symbol_for
 from core.trade_management.position import PositionStatus
 
 if TYPE_CHECKING:
@@ -91,7 +92,7 @@ def resync_positions(trade_manager: "TradeStateManager | None", symbol: str, mag
         logger.info("[MT5_RESYNC_START] symbol=%s", symbol)
 
         # Fetch broker positions for this symbol + magic
-        broker_positions = mt5_call(mt5.positions_get, symbol=symbol)
+        broker_positions = mt5_call(mt5.positions_get, symbol=broker_symbol_for(symbol))
         if broker_positions is None:
             broker_positions = []
 
@@ -180,7 +181,7 @@ def reconcile_state_sanity(trade_manager: "TradeStateManager | None", symbol: st
                 internal_tickets[pos.mt5_ticket] = pos.position_id
 
         # Broker positions
-        broker_positions = mt5_call(mt5.positions_get, symbol=symbol)
+        broker_positions = mt5_call(mt5.positions_get, symbol=broker_symbol_for(symbol))
         if broker_positions is None:
             broker_positions = []
         broker_tickets: set[int] = set()

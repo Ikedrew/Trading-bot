@@ -63,6 +63,7 @@ def initialize_symbol_states(
     from core.runtime.live_scanner import _LiveSymbolState
 
     symbol_list = symbols or getattr(config, "CANONICAL_SYMBOLS", None) or getattr(config, "SYMBOLS", [])
+    _canonical_by_broker: dict[str, str] = {}
 
     # ─── SYMBOL RESOLUTION (canonical → broker) ──────────────────────
     _canonical_list = getattr(config, "CANONICAL_SYMBOLS", None)
@@ -72,6 +73,7 @@ def initialize_symbol_states(
             _symbol_map = resolve_all(_canonical_list, fail_mode="skip")
             if _symbol_map:
                 symbol_list = list(_symbol_map.values())
+                _canonical_by_broker = {broker: canonical for canonical, broker in _symbol_map.items()}
                 logger.info(
                     "[SYMBOL_RESOLUTION] resolved %d/%d canonical → broker: %s",
                     len(_symbol_map), len(_canonical_list),
@@ -109,6 +111,7 @@ def initialize_symbol_states(
 
     for sym_hint in symbol_list:
         try:
+            canonical = _canonical_by_broker.get(sym_hint, sym_hint)
             # Force symbol activation in Market Watch before resolution
             try:
                 import MetaTrader5 as _mt5_sel
@@ -133,25 +136,26 @@ def initialize_symbol_states(
             _tf_cache = None
             if getattr(config, "MTF_ENABLED", False):
                 from core.timeframes.cache import TimeframeCache
-                _tf_cache = TimeframeCache(symbol=resolved, feed=feed, config=config)
+                _tf_cache = TimeframeCache(symbol=canonical, feed=feed, config=config)
 
             # Market Context: create builder if enabled
             _mc_builder = None
             if getattr(config, "MARKET_CONTEXT_ENABLED", False):
                 try:
                     from core.market_context.builder import MarketContextBuilder
-                    _mc_builder = MarketContextBuilder(symbol=resolved)
+                    _mc_builder = MarketContextBuilder(symbol=canonical)
                 except Exception:
                     pass  # Market context unavailable — proceed without
 
             states.append(_LiveSymbolState(
-                symbol=resolved,
+                symbol=canonical,
+                broker_symbol=resolved,
                 feed=feed,
-                engine_state=load_engine_state(resolved) or EngineState(),
+                engine_state=load_engine_state(canonical) or EngineState(),
                 event_state=EventState(),
                 risk=_build_risk_manager(),
                 trade_manager=tm,
-                stale_monitor=StaleDataMonitor(resolved, config),
+                stale_monitor=StaleDataMonitor(canonical, config),
                 tf_cache=_tf_cache,
                 market_context_builder=_mc_builder,
             ))
@@ -162,7 +166,8 @@ def initialize_symbol_states(
                     from core.runtime.startup_recovery import recover_positions_on_startup
                     recover_positions_on_startup(
                         trade_manager=tm,
-                        symbol=resolved,
+                        symbol=canonical,
+                        broker_symbol=resolved,
                         magic=config.BOT_MAGIC,
                     )
                 except Exception as _rec_exc:

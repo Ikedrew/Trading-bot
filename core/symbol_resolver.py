@@ -23,8 +23,30 @@ import MetaTrader5 as mt5
 
 logger = logging.getLogger(__name__)
 
+_resolved_symbols: dict[str, str] = {}
 
-def resolve_broker_symbol(canonical: str) -> str:
+
+def register_resolved_symbol(canonical: str, broker_symbol: str) -> None:
+    """Register the process-local canonical -> MT5 boundary mapping."""
+    _resolved_symbols[str(canonical)] = str(broker_symbol)
+
+
+def broker_symbol_for(canonical: str) -> str:
+    """Return a previously resolved MT5 name, or the input for exact brokers."""
+    return _resolved_symbols.get(str(canonical), str(canonical))
+
+
+def clear_resolved_symbols() -> None:
+    """Test/startup helper; does not alter the terminal or persisted state."""
+    _resolved_symbols.clear()
+
+
+def resolve_broker_symbol(
+    canonical: str,
+    *,
+    aliases: dict[str, tuple[str, ...] | list[str] | set[str]] | None = None,
+    select: bool = True,
+) -> str:
     """
     Map a canonical symbol (EURUSD) to the broker's actual MT5 symbol.
 
@@ -50,38 +72,62 @@ def resolve_broker_symbol(canonical: str) -> str:
             f"MT5 returned no symbols — connection not ready: {mt5.last_error()}"
         )
 
+    names = [s.name for s in symbols]
+
+    def _finish(name: str) -> str:
+        if select and not mt5.symbol_select(name, True):
+            raise RuntimeError(f"symbol_select failed for {name}: {mt5.last_error()}")
+        register_resolved_symbol(canonical, name)
+        return name
+
     # 1. Exact match (broker uses bare symbol names)
     for s in symbols:
         if s.name == canonical:
-            mt5.symbol_select(canonical, True)
-            return canonical
+            return _finish(canonical)
 
     # 2. Prefix match (broker adds suffix: _SB, .c, _CFD, m, etc.)
-    matches = [s.name for s in symbols if s.name.startswith(canonical)]
+    matches = [name for name in names if name.startswith(canonical)]
 
     if len(matches) == 1:
-        resolved = matches[0]
-        mt5.symbol_select(resolved, True)
-        return resolved
+        return _finish(matches[0])
 
     if len(matches) > 1:
         # Try to disambiguate: prefer shortest match (closest to canonical)
         matches_sorted = sorted(matches, key=len)
         # If shortest is canonical + single suffix token, use it
-        if len(matches_sorted[0]) <= len(canonical) + 4:
+        shortest_length = len(matches_sorted[0])
+        shortest = [name for name in matches_sorted if len(name) == shortest_length]
+        if len(shortest) == 1 and shortest_length <= len(canonical) + 4:
             resolved = matches_sorted[0]
-            mt5.symbol_select(resolved, True)
             logger.info(
                 "[SYMBOL_RESOLVER] canonical=%s matched=%s (shortest of %d candidates)",
                 canonical, resolved, len(matches),
             )
-            return resolved
+            return _finish(resolved)
         raise ValueError(
             f"Ambiguous symbol mapping for '{canonical}': {matches}. "
             f"Add explicit mapping or check broker symbol names."
         )
 
-    # 3. Not found
+    # 3. Explicit aliases only (never fuzzy-match arbitrary server symbols).
+    if aliases is None:
+        try:
+            from core import config
+            aliases = getattr(config, "SYMBOL_ALIASES", {})
+        except Exception:
+            aliases = {}
+    configured = aliases.get(canonical, ()) if aliases else ()
+    available = [name for name in configured if name in names]
+    if isinstance(configured, set) and len(available) > 1:
+        raise ValueError(
+            f"Ambiguous alias mapping for '{canonical}': {sorted(available)}; "
+            "configure an ordered alias preference"
+        )
+    if available:
+        # tuple/list order is the explicit deterministic preference.
+        return _finish(available[0])
+
+    # 4. Not found
     raise ValueError(
         f"No MT5 symbol found for canonical '{canonical}'. "
         f"Available count: {len(symbols)}. Check broker supports this instrument."

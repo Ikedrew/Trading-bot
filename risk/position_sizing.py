@@ -7,6 +7,7 @@ import logging
 import MetaTrader5 as mt5
 
 from core.mt5_timeout import mt5_call
+from core.symbol_resolver import broker_symbol_for
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,8 @@ def volume_for_risk(
         logger.debug("[POSITION_SIZING] risk_money=%.2f (invalid) balance=%.2f pct=%.2f", risk_money, balance, risk_percent)
         return None
 
-    loss_for_one_lot = mt5_call(mt5.order_calc_profit, order_type, symbol, 1.0, price_open, price_sl)
+    broker_symbol = broker_symbol_for(symbol)
+    loss_for_one_lot = mt5_call(mt5.order_calc_profit, order_type, broker_symbol, 1.0, price_open, price_sl)
     if loss_for_one_lot is None:
         logger.warning("[POSITION_SIZING] order_calc_profit returned None symbol=%s", symbol)
         return None
@@ -54,7 +56,7 @@ def volume_for_risk(
         return None
 
     raw = risk_money / loss_abs
-    sym = mt5_call(mt5.symbol_info, symbol)
+    sym = mt5_call(mt5.symbol_info, broker_symbol)
     if sym is None:
         logger.warning("[POSITION_SIZING] symbol_info unavailable symbol=%s", symbol)
         return None

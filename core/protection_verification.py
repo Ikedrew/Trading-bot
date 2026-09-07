@@ -350,7 +350,8 @@ def _query_broker_position(
             return float(pos.sl), float(pos.tp), True, attempt + 1, "ticket_match"
 
         # Method 2: Symbol scan (handles ticket numbering differences)
-        positions = mt5_call(mt5.positions_get, symbol=symbol)
+        from core.symbol_resolver import broker_symbol_for
+        positions = mt5_call(mt5.positions_get, symbol=broker_symbol_for(symbol))
         if positions is not None and len(positions) > 0:
             # Try exact ticket match within symbol results
             for pos in positions:

@@ -164,7 +164,8 @@ def _best_effort_tick(symbol: str) -> tuple[float, float]:
     try:
         import MetaTrader5 as mt5
         from core.mt5_timeout import mt5_call
-        tick = mt5_call(mt5.symbol_info_tick, symbol)
+        from core.symbol_resolver import broker_symbol_for
+        tick = mt5_call(mt5.symbol_info_tick, broker_symbol_for(symbol))
         if tick is not None:
             bid = getattr(tick, "bid", None)
             ask = getattr(tick, "ask", None)

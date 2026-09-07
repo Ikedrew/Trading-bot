@@ -31,6 +31,7 @@ def recover_positions_on_startup(
     *,
     trade_manager: "TradeStateManager | None",
     symbol: str,
+    broker_symbol: str | None = None,
     magic: int,
 ) -> int:
     """
@@ -41,7 +42,8 @@ def recover_positions_on_startup(
 
     Args:
         trade_manager: TradeStateManager instance (None = no-op)
-        symbol: Resolved symbol name
+        symbol: Canonical symbol identity
+        broker_symbol: Resolved MT5 name (defaults to ``symbol``)
         magic: BOT_MAGIC filter
 
     Returns:
@@ -51,7 +53,7 @@ def recover_positions_on_startup(
         return 0
 
     try:
-        broker_positions = mt5_call(mt5.positions_get, symbol=symbol)
+        broker_positions = mt5_call(mt5.positions_get, symbol=broker_symbol or symbol)
     except Exception as exc:
         logger.warning(
             "[STARTUP_POSITION_RECOVERY] symbol=%s error=positions_get_failed detail=%s",
@@ -95,7 +97,7 @@ def recover_positions_on_startup(
 
         # ─── IDENTITY RESTORATION: search execution_results for original identity ─
         _restored_identity = _restore_identity_from_logs(
-            symbol=str(bp.symbol),
+            symbol=symbol,
             ticket=ticket,
             entry_price=float(bp.price_open),
         )

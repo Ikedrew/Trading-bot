@@ -86,6 +86,7 @@ class _LiveSymbolState:
     risk: RiskManager
     trade_manager: TradeStateManager | None
     stale_monitor: StaleDataMonitor
+    broker_symbol: str = ""
     tf_cache: "TimeframeCache | None" = None  # MTF: None when MTF_ENABLED=False
     market_context_builder: Any = None  # MarketContext: None when MARKET_CONTEXT_ENABLED=False
     last_closed_time: int | None = None

@@ -112,7 +112,8 @@ def _get_point_size(symbol: str) -> float:
     try:
         import MetaTrader5 as mt5
         from core.mt5_timeout import mt5_call
-        info = mt5_call(mt5.symbol_info, symbol)
+        from core.symbol_resolver import broker_symbol_for
+        info = mt5_call(mt5.symbol_info, broker_symbol_for(symbol))
         if info is not None and hasattr(info, "point"):
             return float(info.point)
     except Exception:

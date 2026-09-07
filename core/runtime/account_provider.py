@@ -96,7 +96,9 @@ def get_broker_context(
         server = str(getattr(terminal_info, "company", ""))
 
         # Symbol info
-        sym_info = mt5_call(mt5.symbol_info, symbol)
+        from core.symbol_resolver import broker_symbol_for
+        broker_symbol = broker_symbol_for(symbol)
+        sym_info = mt5_call(mt5.symbol_info, broker_symbol)
         if sym_info is None:
             return BrokerContext(connected=True, server=server, terminal_name=terminal_name,
                                 symbol=symbol, symbol_available=False)
@@ -108,7 +110,7 @@ def get_broker_context(
         # Pricing
         spread_price = abs(ask - bid) if ask > 0 and bid > 0 else 0.0
         if spread_price == 0.0:
-            tick = mt5_call(mt5.symbol_info_tick, symbol)
+            tick = mt5_call(mt5.symbol_info_tick, broker_symbol)
             if tick is not None:
                 bid = float(tick.bid)
                 ask = float(tick.ask)

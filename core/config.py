@@ -48,6 +48,13 @@ CANONICAL_SYMBOLS = [
     "XAUUSD",
 ]
 
+# Ordered, explicit broker aliases.  Canonical names remain the identity used
+# by strategy, research, persistence, and lineage.  Only the MT5 boundary may
+# use one of these names.  Ordering is an intentional broker preference.
+SYMBOL_ALIASES = {
+    "NAS100": ("USTEC", "USTECH100M"),
+}
+
 
 TIMEFRAME: int = mt5.TIMEFRAME_M5
 

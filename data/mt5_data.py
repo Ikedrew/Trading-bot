@@ -232,6 +232,7 @@ def _persist_candles_to_cache(symbol: str, timeframe: int, candles: list[Candle]
 class MT5DataFeed:
     def __init__(self, symbol_hint: str) -> None:
         self._symbol_hint = symbol_hint
+        self._broker_symbol: str | None = None
 
     def connect(self) -> None:
         if _is_centralised_init():
@@ -289,6 +290,7 @@ class MT5DataFeed:
                 if not mt5.symbol_select(s.name, True):
                     raise RuntimeError(f"symbol_select failed for {s.name}: {mt5.last_error()}")
                 logger.debug("[DATA_SYMBOL] requested=%s resolved=%s match=exact", hint, s.name)
+                self._broker_symbol = s.name
                 return s.name
 
         # 2. Case-insensitive exact match
@@ -298,9 +300,19 @@ class MT5DataFeed:
                 if not mt5.symbol_select(s.name, True):
                     raise RuntimeError(f"symbol_select failed for {s.name}: {mt5.last_error()}")
                 logger.debug("[DATA_SYMBOL] requested=%s resolved=%s match=case_insensitive", hint, s.name)
+                self._broker_symbol = s.name
                 return s.name
 
         # 3. No match — fail explicitly
+        from core.symbol_resolver import resolve_broker_symbol
+        try:
+            resolved = resolve_broker_symbol(hint)
+            self._broker_symbol = resolved
+            logger.debug("[DATA_SYMBOL] requested=%s resolved=%s match=configured", hint, resolved)
+            return resolved
+        except ValueError:
+            pass
+
         logger.error("[DATA_SYMBOL] resolution failed requested=%s available_count=%d", hint, len(symbols))
         raise ValueError(
             f"Symbol {hint!r} not found in MT5 (exact match required). "
@@ -315,7 +327,8 @@ class MT5DataFeed:
     ) -> list[Candle]:
         """Return last `count` bars (last bar may still be forming)."""
         t0 = _time.perf_counter()
-        rates = mt5_call(mt5.copy_rates_from_pos, symbol, timeframe, 0, count)
+        mt5_symbol = self._broker_symbol or symbol
+        rates = mt5_call(mt5.copy_rates_from_pos, mt5_symbol, timeframe, 0, count)
         latency_ms = int((_time.perf_counter() - t0) * 1000)
 
         if rates is None or len(rates) == 0:
@@ -385,7 +398,8 @@ class MT5DataFeed:
         return candles
 
     def last_tick(self, symbol: str) -> tuple[float, float, int]:
-        t = mt5_call(mt5.symbol_info_tick, symbol)
+        mt5_symbol = self._broker_symbol or symbol
+        t = mt5_call(mt5.symbol_info_tick, mt5_symbol)
         if t is None:
             raise RuntimeError(f"No tick for {symbol}: {mt5.last_error()}")
 

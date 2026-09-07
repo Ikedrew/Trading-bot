@@ -34,6 +34,7 @@ from risk.levels import build_sl_tp, RiskRejection, _log_rejection
 from risk.metrics import risk_metrics
 from risk.models import OrderIntent
 from risk.position_sizing import volume_for_risk
+from core.instrument_utils import get_pip_size
 from strategy.signals import Side, Signal
 
 logger = logging.getLogger(__name__)
@@ -102,7 +103,7 @@ def _compute_adaptive_min_sl(
             return 5.0
 
     # ─── ADAPTIVE MODE ────────────────────────────────────────────────
-    _pip_size = 0.01 if "JPY" in symbol.upper() else 0.0001
+    _pip_size = get_pip_size(symbol)
 
     # Component 1: Absolute floor (safety net)
     try:
@@ -419,7 +420,7 @@ class RiskManager:
 
         if _min_sl_enabled:
             _sl_distance_price = abs(entry - sl)
-            _pip_size = 0.01 if "JPY" in symbol.upper() else 0.0001
+            _pip_size = get_pip_size(symbol)
             _sl_pips = _sl_distance_price / _pip_size
 
             _min_sl_required = _compute_adaptive_min_sl(symbol, candles, signal.bar_index, bid, ask)

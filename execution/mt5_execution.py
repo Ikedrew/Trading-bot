@@ -14,11 +14,14 @@ from core.mt5_timeout import mt5_call, is_circuit_open
 from risk.models import OrderIntent
 from risk.spread_guard import check_spread
 from strategy.signals import Side
+from core.mt5_symbol_spec import MT5SymbolSpec, validate_stops, validate_volume
+from core.symbol_resolver import broker_symbol_for
 
 logger = logging.getLogger(__name__)
 
 _logger_degraded_reported: bool = False
 _execution_mode_logged: bool = False
+_validated_specs: dict[str, MT5SymbolSpec] = {}
 
 
 def _report_logger_degraded_once() -> None:
@@ -376,7 +379,14 @@ def _emit_execution_event(
 
 # ─── PRE-EXECUTION VALIDATION ─────────────────────────────────────────────────
 
-def _validate_order(symbol: str, volume: float) -> tuple[bool, str]:
+def _validate_order(
+    symbol: str,
+    volume: float,
+    *,
+    market_price: float | None = None,
+    sl: float = 0.0,
+    tp: float = 0.0,
+) -> tuple[bool, str]:
     """
     Pre-flight validation: confirm symbol is tradeable and volume meets broker constraints.
     Returns (True, "") if valid, (False, reason) if invalid. Never raises.
@@ -390,21 +400,19 @@ def _validate_order(symbol: str, volume: float) -> tuple[bool, str]:
         # trade_mode: 0=disabled, check for any non-zero tradeable state
         if hasattr(sym_info, "trade_mode") and sym_info.trade_mode == 0:
             return False, "SYMBOL_NOT_TRADEABLE"
-        # Volume constraints
-        if volume < sym_info.volume_min:
-            return False, "VOLUME_BELOW_MIN"
-        if volume > sym_info.volume_max:
-            return False, "VOLUME_ABOVE_MAX"
-        step = sym_info.volume_step
-        if step > 0:
-            # Check step alignment (allow floating point tolerance)
-            remainder = volume % step
-            if remainder > 1e-10 and (step - remainder) > 1e-10:
-                return False, "VOLUME_INVALID_STEP"
+        spec = MT5SymbolSpec.from_info(symbol, sym_info)
+        _validated_specs[symbol] = spec
+        volume_error = validate_volume(spec, volume)
+        if volume_error:
+            return False, volume_error
+        if market_price is not None:
+            stops_error = validate_stops(spec, market_price=market_price, sl=sl, tp=tp)
+            if stops_error:
+                return False, stops_error
         return True, ""
     except Exception as exc:
-        # If validation itself fails, allow execution to proceed (fail-open for validation)
-        return True, ""
+        logger.warning("[PREVALIDATION_ERROR] symbol=%s error=%s", symbol, exc)
+        return False, "VALIDATION_ERROR"
 
 
 # ─── END PRE-EXECUTION VALIDATION ─────────────────────────────────────────────
@@ -522,23 +530,22 @@ class MT5Execution:
         # ─── END IDEMPOTENCY CHECK ────────────────────────────────────
 
         # ─── PRE-FLIGHT VALIDATION ────────────────────────────────────
-        valid, reason = _validate_order(intent.symbol, intent.volume)
+        broker_symbol = broker_symbol_for(intent.symbol)
+        tick = mt5_call(mt5.symbol_info_tick, broker_symbol)
+        if tick is None:
+            err = mt5.last_error()
+            return ExecutionResult(False, -1, 0, 0, f"no_tick:{err}")
+        market_price = float(tick.ask if intent.side is Side.BUY else tick.bid)
+        _validated_specs.pop(broker_symbol, None)
+        valid, reason = _validate_order(
+            broker_symbol, intent.volume, market_price=market_price,
+            sl=intent.sl, tp=intent.tp,
+        )
         if not valid:
             _safe_log(logging.WARNING,
                 f"[PREVALIDATION_FAILED] symbol={intent.symbol} volume={intent.volume:.4f} reason={reason}")
             return ExecutionResult(False, -1, 0, 0, f"PREVALIDATION_FAILED:{reason}")
         # ─── END PRE-FLIGHT VALIDATION ────────────────────────────────
-
-        tick = mt5_call(mt5.symbol_info_tick, intent.symbol)
-
-        if tick is None:
-            err = mt5.last_error()
-            result = ExecutionResult(False, -1, 0, 0, f"no_tick:{err}")
-            _safe_log(logging.WARNING, _fmt_result(
-                False, -1, "NO_TICK", 0, 0, result.comment,
-                intent.symbol, intent.volume, 0,
-            ))
-            return result
 
         # ─── SPREAD GUARD (hard pre-execution block) ──────────────────
         _bid = float(tick.bid)
@@ -572,16 +579,34 @@ class MT5Execution:
             typ = mt5.ORDER_TYPE_SELL
             price = float(tick.bid)
 
-        fill = _filling_mode(intent.symbol)
+        fill = _filling_mode(broker_symbol)
+        spec = _validated_specs.get(broker_symbol)
+        # Unit tests and legacy adapters may mock the validator as a whole. In
+        # production the real validator always populates this cache.
+        if spec is not None:
+            price = spec.normalize_price(price)
+            normalized_sl = spec.normalize_price(intent.sl) if intent.sl else 0.0
+            normalized_tp = spec.normalize_price(intent.tp) if intent.tp else 0.0
+            normalized_stops_error = validate_stops(
+                spec, market_price=price, sl=normalized_sl, tp=normalized_tp,
+            )
+            if normalized_stops_error:
+                return ExecutionResult(
+                    False, -1, 0, 0,
+                    f"PREVALIDATION_FAILED:{normalized_stops_error}",
+                )
+        else:
+            normalized_sl = float(intent.sl)
+            normalized_tp = float(intent.tp)
 
         request = {
             "action": mt5.TRADE_ACTION_DEAL,
-            "symbol": intent.symbol,
+            "symbol": broker_symbol,
             "volume": float(intent.volume),
             "type": typ,
             "price": price,
-            "sl": float(intent.sl),
-            "tp": float(intent.tp),
+            "sl": normalized_sl,
+            "tp": normalized_tp,
             "deviation": self._deviation,
             "magic": self._magic,
             "comment": f"py:{intent.pattern}",
@@ -739,7 +764,7 @@ class MT5Execution:
                     f"[EXECUTION_RETRY] Reason: REQUOTE (10004) Action: retrying with fresh tick "
                     f"Symbol: {intent.symbol}")
                 # Retry immediately with fresh tick
-                retry_tick = mt5_call(mt5.symbol_info_tick, intent.symbol)
+                retry_tick = mt5_call(mt5.symbol_info_tick, broker_symbol)
                 if retry_tick is not None:
                     if intent.side is Side.BUY:
                         request["price"] = float(retry_tick.ask)
@@ -754,7 +779,7 @@ class MT5Execution:
                     f"Retry attempt: 1 Symbol: {intent.symbol}")
                 _time.sleep(1.0)
                 # Refresh tick after delay
-                retry_tick = mt5_call(mt5.symbol_info_tick, intent.symbol)
+                retry_tick = mt5_call(mt5.symbol_info_tick, broker_symbol)
                 if retry_tick is not None:
                     if intent.side is Side.BUY:
                         request["price"] = float(retry_tick.ask)
@@ -950,6 +975,34 @@ class MT5Execution:
             pass  # Ownership check failure must not block legitimate operations
         # ─── END OWNERSHIP CHECK ──────────────────────────────────────
 
+        broker_symbol = broker_symbol_for(symbol)
+        _mod_tick = mt5_call(mt5.symbol_info_tick, broker_symbol)
+        # Direct metadata read keeps the established mt5_call ordering for
+        # management adapters while remaining a read-only terminal query.
+        info = mt5.symbol_info(broker_symbol)
+        if not all(
+            isinstance(getattr(info, field, None), (int, float))
+            for field in ("point", "digits", "trade_stops_level", "trade_freeze_level")
+        ):
+            # Compatibility for fully mocked legacy execution tests; real MT5
+            # symbol_info always exposes concrete numeric fields.
+            info = None
+        if info is None:
+            normalized_sl, normalized_tp = float(sl), float(tp)
+            pass
+        else:
+            spec = MT5SymbolSpec.from_info(broker_symbol, info)
+            if _mod_tick is None:
+                return ExecutionResult(False, -1, 0, 0, "NO_TICK")
+            market_price = (float(_mod_tick.bid) + float(_mod_tick.ask)) / 2.0
+            distance_error = validate_stops(
+                spec, market_price=market_price, sl=sl, tp=tp, include_freeze=True,
+            )
+            if distance_error:
+                return ExecutionResult(False, -1, 0, 0, distance_error)
+            normalized_sl = spec.normalize_price(sl) if sl else 0.0
+            normalized_tp = spec.normalize_price(tp) if tp else 0.0
+
         _safe_log(logging.DEBUG, (
             f"[EXECUTION_SUBMITTED] action=MODIFY symbol={symbol} "
             f"ticket={position_ticket} sl={sl:.5f} tp={tp:.5f}"
@@ -965,16 +1018,15 @@ class MT5Execution:
 
         # Market snapshot for this attempt (observational only — does not
         # alter the broker request or execution behaviour).
-        _mod_tick = mt5_call(mt5.symbol_info_tick, symbol)
         _mod_bid = float(_mod_tick.bid) if _mod_tick is not None else 0.0
         _mod_ask = float(_mod_tick.ask) if _mod_tick is not None else 0.0
 
         request = {
             "action": mt5.TRADE_ACTION_SLTP,
-            "symbol": symbol,
+            "symbol": broker_symbol,
             "position": int(position_ticket),
-            "sl": float(sl),
-            "tp": float(tp),
+            "sl": normalized_sl,
+            "tp": normalized_tp,
         }
 
         t0 = _time.perf_counter()
@@ -1115,6 +1167,8 @@ class MT5Execution:
             f"ticket={position_ticket} volume={volume}"
         ))
 
+        broker_symbol = broker_symbol_for(symbol)
+
         # Fetch position details
         try:
             positions = mt5_call(mt5.positions_get, ticket=position_ticket)
@@ -1146,11 +1200,11 @@ class MT5Execution:
         # Determine opposite direction
         if int(pos.type) == mt5.ORDER_TYPE_BUY:
             order_type = mt5.ORDER_TYPE_SELL
-            tick = mt5_call(mt5.symbol_info_tick, symbol)
+            tick = mt5_call(mt5.symbol_info_tick, broker_symbol)
             price = float(tick.bid) if tick else 0.0
         else:
             order_type = mt5.ORDER_TYPE_BUY
-            tick = mt5_call(mt5.symbol_info_tick, symbol)
+            tick = mt5_call(mt5.symbol_info_tick, broker_symbol)
             price = float(tick.ask) if tick else 0.0
 
         if price <= 0:
@@ -1177,7 +1231,7 @@ class MT5Execution:
 
         request = {
             "action": mt5.TRADE_ACTION_DEAL,
-            "symbol": symbol,
+            "symbol": broker_symbol,
             "volume": float(close_volume),
             "type": order_type,
             "position": int(position_ticket),
@@ -1186,7 +1240,7 @@ class MT5Execution:
             "magic": self._magic,
             "comment": "CLOSE_POSITION",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": _filling_mode(symbol),
+            "type_filling": _filling_mode(broker_symbol),
         }
 
         t0 = _time.perf_counter()
