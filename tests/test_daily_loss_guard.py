@@ -53,10 +53,17 @@ def use_temp_state(tmp_path):
         yield state_file
 
 
-def _mock_equity(equity: float):
+def _mock_equity(
+    equity: float,
+    *,
+    login: int = 1001,
+    server: str = "Broker-Demo",
+):
     """Create a mock MT5 account_info with given equity."""
     acct = MagicMock()
     acct.equity = equity
+    acct.login = login
+    acct.server = server
     return acct
 
 
@@ -163,6 +170,8 @@ class TestPersistence:
             daily_start_equity=100000.0,
             limit_triggered=True,
             last_updated=time.time(),
+            account_login=1001,
+            account_server="Broker-Demo",
         )
         _persist_state(state)
 
@@ -198,6 +207,8 @@ class TestDayReset:
             daily_start_equity=100000.0,
             limit_triggered=True,
             last_updated=time.time(),
+            account_login=1001,
+            account_server="Broker-Demo",
         )
         _persist_state(state)
 
@@ -221,6 +232,8 @@ class TestDayReset:
             daily_start_equity=100000.0,
             limit_triggered=False,
             last_updated=time.time(),
+            account_login=1001,
+            account_server="Broker-Demo",
         )
         _persist_state(state)
 
@@ -272,3 +285,55 @@ class TestRestartSimulation:
             r2 = guard2.check()
             assert r2.allowed is False
             assert r2.reason == REJECT_DAILY_LOSS_EXCEEDED
+
+
+class TestAccountIsolation:
+    def _persist_triggered(self, *, login=1001, server="Broker-Demo"):
+        _persist_state(_DailyLossState(
+            date=_today_str(),
+            daily_start_equity=100000.0,
+            limit_triggered=True,
+            last_updated=time.time(),
+            account_login=login,
+            account_server=server,
+        ))
+
+    def test_same_account_same_day_restores_state(self, use_temp_state):
+        self._persist_triggered()
+        with patch("risk.daily_loss_guard.mt5_call", return_value=_mock_equity(95000.0)):
+            result = DailyLossGuard().check()
+        assert result.allowed is False
+        assert result.daily_start_equity == 100000.0
+
+    def test_different_login_establishes_own_baseline(self, use_temp_state):
+        self._persist_triggered()
+        with patch("risk.daily_loss_guard.mt5_call", return_value=_mock_equity(10000.0, login=2002)):
+            guard = DailyLossGuard()
+            result = guard.check()
+        assert result.allowed is True
+        assert result.daily_start_equity == 10000.0
+        assert guard.is_triggered is False
+
+    def test_different_server_establishes_own_baseline(self, use_temp_state):
+        self._persist_triggered()
+        with patch("risk.daily_loss_guard.mt5_call", return_value=_mock_equity(10000.0, server="Other-Demo")):
+            result = DailyLossGuard().check()
+        assert result.allowed is True
+        assert result.daily_start_equity == 10000.0
+
+    def test_legacy_unscoped_latch_cannot_block_account(self, use_temp_state):
+        use_temp_state.write_text(json.dumps({
+            "date": _today_str(),
+            "daily_start_equity": 52327.89,
+            "limit_triggered": True,
+            "last_updated": time.time(),
+        }))
+        with patch("risk.daily_loss_guard.mt5_call", return_value=_mock_equity(10000.0, login=5055599469, server="MetaQuotes-Demo")):
+            guard = DailyLossGuard()
+            result = guard.check()
+        assert result.allowed is True
+        assert result.daily_start_equity == 10000.0
+        assert guard.is_triggered is False
+        saved = json.loads(use_temp_state.read_text())
+        assert saved["account_login"] == 5055599469
+        assert saved["account_server"] == "MetaQuotes-Demo"

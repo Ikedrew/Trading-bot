@@ -74,6 +74,8 @@ class _DailyLossState:
     daily_start_equity: float
     limit_triggered: bool
     last_updated: float
+    account_login: int | None = None
+    account_server: str | None = None
 
 
 def _today_str() -> str:
@@ -106,6 +108,8 @@ def _load_state() -> _DailyLossState | None:
             daily_start_equity=float(equity_val),
             limit_triggered=bool(data.get("limit_triggered", False)),
             last_updated=float(data.get("last_updated", 0)),
+            account_login=(int(data["account_login"]) if data.get("account_login") is not None else None),
+            account_server=(str(data["account_server"]) if data.get("account_server") is not None else None),
         )
     except Exception as exc:
         logger.warning("[DAILY_LOSS_GUARD] state_load_error=%s", exc)
@@ -122,6 +126,8 @@ def _persist_state(state: _DailyLossState) -> bool:
             "daily_start_equity": round(state.daily_start_equity, 4),
             "limit_triggered": state.limit_triggered,
             "last_updated": _time.time(),
+            "account_login": state.account_login,
+            "account_server": state.account_server,
         }
         json_bytes = json.dumps(data, indent=2).encode("utf-8")
         fd, tmp_path = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp", prefix="daily_")
@@ -167,13 +173,6 @@ class DailyLossGuard:
                 )
                 self._state = None
                 self._limit_logged = False
-            elif self._state.limit_triggered:
-                logger.warning(
-                    "[DAILY_LOSS_LIMIT_ACTIVE] restored_from_disk date=%s "
-                    "daily_start_equity=%.2f limit_triggered=true",
-                    self._state.date, self._state.daily_start_equity,
-                )
-                self._limit_logged = True
 
     @property
     def daily_start_equity(self) -> float:
@@ -212,7 +211,35 @@ class DailyLossGuard:
             )
 
         current_equity = float(info.equity)
+        account_login = int(info.login)
+        account_server = str(info.server)
         today = _today_str()
+
+        # Daily risk state is valid only for the broker account that created it.
+        # Legacy unscoped state is deliberately not reusable because same-account
+        # continuity cannot be proven without both stable identity fields.
+        if self._state is not None and (
+            self._state.account_login != account_login
+            or self._state.account_server != account_server
+        ):
+            logger.warning(
+                "[DAILY_LOSS_ACCOUNT_CHANGED] previous_server=%r previous_login=%r "
+                "current_server=%r current_login=%r — establishing account baseline",
+                self._state.account_server,
+                self._state.account_login,
+                account_server,
+                account_login,
+            )
+            self._state = None
+            self._limit_logged = False
+
+        if self._state is not None and self._state.limit_triggered and not self._limit_logged:
+            logger.warning(
+                "[DAILY_LOSS_LIMIT_ACTIVE] restored_from_disk date=%s "
+                "daily_start_equity=%.2f limit_triggered=true",
+                self._state.date, self._state.daily_start_equity,
+            )
+            self._limit_logged = True
 
         # ─── DAY BOUNDARY DETECTION ───────────────────────────────────
         if self._state is None or self._state.date != today:
@@ -222,6 +249,8 @@ class DailyLossGuard:
                 daily_start_equity=current_equity,
                 limit_triggered=False,
                 last_updated=_time.time(),
+                account_login=account_login,
+                account_server=account_server,
             )
             _persist_state(self._state)
             self._limit_logged = False
@@ -255,6 +284,8 @@ class DailyLossGuard:
                     daily_start_equity=start_equity,
                     limit_triggered=True,
                     last_updated=_time.time(),
+                    account_login=account_login,
+                    account_server=account_server,
                 )
                 _persist_state(self._state)
                 logger.critical(
@@ -292,6 +323,8 @@ class DailyLossGuard:
             daily_start_equity=equity,
             limit_triggered=False,
             last_updated=_time.time(),
+            account_login=(self._state.account_login if self._state else None),
+            account_server=(self._state.account_server if self._state else None),
         )
         _persist_state(self._state)
         self._limit_logged = False

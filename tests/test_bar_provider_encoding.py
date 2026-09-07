@@ -155,7 +155,8 @@ def test_fetch_bar_completes_under_cp1252_redirected_stdout(
     now = int(time.time())
     bar_time = now - feed_age_s  # recent -> HEALTHY
     candles = [_make_candle(bar_time - 5 * 60 + 60 * i) for i in range(6)]
-    closed_i = len(candles) - 1
+    candles.append(_make_candle(bar_time + 300))  # current forming M5 bar
+    closed_i = len(candles) - 2
     closed_time = candles[closed_i].time
 
     config = _make_config()
@@ -197,7 +198,8 @@ def test_bar_stall_warning_is_ascii_safe(
     now = int(time.time())
     bar_time = now - 30  # new bar -> not FEED_STALE
     candles = [_make_candle(bar_time - 5 * 60 + 60 * i) for i in range(6)]
-    closed_i = len(candles) - 1
+    candles.append(_make_candle(bar_time + 300))  # current forming M5 bar
+    closed_i = len(candles) - 2
     closed_time = candles[closed_i].time
 
     config = _make_config()
@@ -242,7 +244,8 @@ def test_downstream_pattern_gate_reachable_after_fetch_bar(
     now = int(time.time())
     bar_time = now - 60  # HEALTHY, new bar
     candles = [_make_candle(bar_time - 5 * 60 + 60 * i) for i in range(6)]
-    closed_i = len(candles) - 1
+    candles.append(_make_candle(bar_time + 300))  # current forming M5 bar
+    closed_i = len(candles) - 2
     last_time = candles[closed_i - 1].time
 
     config = _make_config()

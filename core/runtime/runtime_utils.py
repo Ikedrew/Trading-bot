@@ -20,17 +20,16 @@ def _closed_bar_index(candles: list[Candle]) -> int | None:
 
     MT5 copy_rates_from_pos(symbol, timeframe, 0, count) returns bars including
     the current forming bar as the last element — BUT only when the market is
-    actively ticking into that bar. During low-activity periods or at market open,
-    MT5 may return only fully closed bars.
-
-    Strategy: Use the LAST bar in the array. The engine's pattern detection and
-    scoring already handle the case where the last bar is still forming (via
-    candle body quality checks). The bar dedup (last_closed_time) ensures we
-    don't re-process the same bar twice regardless.
+    actively ticking into that bar. Canonical M5 observations represent completed
+    bars, so the forming row is never eligible for decision evaluation. This is
+    the same boundary used by the CANDLE persistence path.
     """
     if len(candles) < 2:
         return None
-    return len(candles) - 1
+    # The last MT5 row is the current forming bar.  Select the same final
+    # completed row that the canonical CANDLE persistence path writes via
+    # ``candles[:-1]``.
+    return len(candles) - 2
 
 
 def _build_trade_management_config() -> TradeManagementConfig:

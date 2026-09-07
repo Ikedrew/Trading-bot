@@ -78,7 +78,7 @@ class TestValidBarReturned:
         now = int(time.time())
         # Bar is 60 seconds old (well within HEALTHY threshold)
         bar_time = now - 60
-        candles = [_make_candle(bar_time - 300), _make_candle(bar_time)]
+        candles = [_make_candle(bar_time - 300), _make_candle(bar_time), _make_candle(bar_time + 300)]
 
         config = _make_config()
         sym_state = _make_sym_state(last_closed_time=bar_time - 300)
@@ -102,7 +102,7 @@ class TestValidBarReturned:
     def test_state_updated_on_new_bar(self, mock_shadow):
         now = int(time.time())
         bar_time = now - 60
-        candles = [_make_candle(bar_time - 300), _make_candle(bar_time)]
+        candles = [_make_candle(bar_time - 300), _make_candle(bar_time), _make_candle(bar_time + 300)]
 
         config = _make_config()
         sym_state = _make_sym_state(last_closed_time=bar_time - 300, iterations=5)
@@ -125,7 +125,7 @@ class TestDuplicateBarRejected:
     def test_duplicate_bar_returns_none(self, mock_shadow):
         now = int(time.time())
         bar_time = now - 60
-        candles = [_make_candle(bar_time - 300), _make_candle(bar_time)]
+        candles = [_make_candle(bar_time - 300), _make_candle(bar_time), _make_candle(bar_time + 300)]
 
         config = _make_config()
         # Last closed time same as current bar
@@ -164,7 +164,7 @@ class TestFeedStaleBlock:
         now = int(time.time())
         # Bar is 2000 seconds old (>1800 = FEED_STALE)
         bar_time = now - 2000
-        candles = [_make_candle(bar_time - 300), _make_candle(bar_time)]
+        candles = [_make_candle(bar_time - 300), _make_candle(bar_time), _make_candle(bar_time + 300)]
 
         config = _make_config()
         sym_state = _make_sym_state(last_closed_time=bar_time - 300)
@@ -185,7 +185,7 @@ class TestFeedStateClassification:
     def test_healthy_under_600s(self, mock_shadow):
         now = int(time.time())
         bar_time = now - 300  # 5 min old
-        candles = [_make_candle(bar_time - 300), _make_candle(bar_time)]
+        candles = [_make_candle(bar_time - 300), _make_candle(bar_time), _make_candle(bar_time + 300)]
 
         config = _make_config()
         sym_state = _make_sym_state(last_closed_time=bar_time - 300)
@@ -203,7 +203,7 @@ class TestFeedStateClassification:
     def test_slow_between_600_and_1200s(self, mock_shadow):
         now = int(time.time())
         bar_time = now - 800  # 13 min old
-        candles = [_make_candle(bar_time - 300), _make_candle(bar_time)]
+        candles = [_make_candle(bar_time - 300), _make_candle(bar_time), _make_candle(bar_time + 300)]
 
         config = _make_config()
         sym_state = _make_sym_state(last_closed_time=bar_time - 300)
@@ -225,7 +225,7 @@ class TestStaleDataMonitor:
     def test_critically_stale_candle_returns_none(self, mock_shadow):
         now = int(time.time())
         bar_time = now - 60
-        candles = [_make_candle(bar_time - 300), _make_candle(bar_time)]
+        candles = [_make_candle(bar_time - 300), _make_candle(bar_time), _make_candle(bar_time + 300)]
 
         config = _make_config()
         sym_state = _make_sym_state(last_closed_time=bar_time - 300)
