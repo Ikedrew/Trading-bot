@@ -1,0 +1,89 @@
+{
+  "reason": "forming_bar_decision_defect",
+  "defect_boundary": {
+    "first_affected": "2026-09-01T00:22:27Z",
+    "fix_commit": "060127f1",
+    "fix_committed": "2026-09-07T15:28:07Z"
+  },
+  "class_a": [
+    {
+      "dataset": "opportunities",
+      "prefix": "core/opportunities/schema_version=opportunities_v1/",
+      "objects": 40,
+      "records": 40
+    },
+    {
+      "dataset": "assessments",
+      "prefix": "core/assessments/schema_version=assessments_v1/",
+      "objects": 33,
+      "records": 33
+    },
+    {
+      "dataset": "decision_ledger",
+      "prefix": "core/decision_ledger/schema_version=decision_ledger_v1/",
+      "objects": 40,
+      "records": 40
+    },
+    {
+      "dataset": "decision_trace",
+      "prefix": "supporting/decision_trace/schema_version=decision_trace_v1/",
+      "objects": 40,
+      "records": 40
+    },
+    {
+      "dataset": "execution_context",
+      "prefix": "supporting/execution_context/schema_version=execution_context_v1/",
+      "objects": 30,
+      "records": 30
+    },
+    {
+      "dataset": "strategy_observations",
+      "prefix": "supporting/strategy_observations/schema_version=strategy_observation_v1/",
+      "objects": 30,
+      "records": 30
+    },
+    {
+      "dataset": "strategy_candidates",
+      "prefix": "supporting/strategy_candidates/schema_version=strategy_candidates_v1/",
+      "objects": 14,
+      "records": 14
+    },
+    {
+      "dataset": "horizon_candidates",
+      "prefix": "supporting/horizon_candidates/schema_version=horizon_candidates_v1/",
+      "objects": 30,
+      "records": 30
+    },
+    {
+      "dataset": "portfolio_rankings",
+      "prefix": "supporting/portfolio_rankings/schema_version=portfolio_ranking_v1/",
+      "objects": 4,
+      "records": 4
+    },
+    {
+      "dataset": "shadow_runtime",
+      "prefix": "supporting/shadow_runtime/schema_version=shadow_runtime_v1/",
+      "objects": 40,
+      "records": 40
+    },
+    {
+      "dataset": "portfolio_shadow",
+      "prefix": "projections/portfolio_shadow/schema_version=portfolio_shadow_v1/",
+      "objects": 1,
+      "records": 1
+    }
+  ],
+  "class_b": [
+    "events",
+    "market_context"
+  ],
+  "class_c": [
+    "execution_results",
+    "trade_truth",
+    "execution_attempts",
+    "protection_audit",
+    "management_actions",
+    "risk_deviation",
+    "trade_journal"
+  ]
+}

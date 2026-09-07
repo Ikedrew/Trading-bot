@@ -1,0 +1,18 @@
+{
+  "defect": "forming_bar_decision_defect",
+  "class": "C",
+  "semantics": "Broker/trade facts are factually valid; the DECISION that produced them was made on a forming M5 bar (defect 2026-09-01..2026-09-07). Research must treat realized broker outcomes as true but NOT as clean evidence of the corrected closed-bar strategy.",
+  "boundary": {
+    "first_affected": "2026-09-01T00:22:27Z",
+    "fix_commit": "060127f1"
+  },
+  "datasets": {
+    "execution_results": 4,
+    "trade_truth": 4,
+    "execution_attempts": 4,
+    "protection_audit": 4,
+    "management_actions": 4,
+    "risk_deviation": 4,
+    "trade_journal": 4
+  }
+}
