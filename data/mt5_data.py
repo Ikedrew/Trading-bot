@@ -94,8 +94,32 @@ class Candle:
         )
 
 
-def _rows_to_candles(rates: Any) -> list[Candle]:
-    return [Candle.from_mt5_row(rates[i]) for i in range(len(rates))]
+def _ensure_broker_utc_offset(mt5_symbol: str) -> int:
+    """Measure the broker-clock offset from a current tick before rate ingest."""
+    if not _TICK_OFFSET_MEASURED:
+        tick = mt5_call(mt5.symbol_info_tick, mt5_symbol)
+        if tick is None:
+            raise RuntimeError(
+                f"cannot establish broker UTC offset for {mt5_symbol}: {mt5.last_error()}"
+            )
+        _normalise_tick_time(int(tick.time))
+    return _TICK_UTC_OFFSET_SECONDS
+
+
+def _rows_to_candles(rates: Any, *, utc_offset_seconds: int = 0) -> list[Candle]:
+    """Convert broker rows to candles whose time is canonical UTC bar-open epoch."""
+    result = []
+    for i in range(len(rates)):
+        candle = Candle.from_mt5_row(rates[i])
+        result.append(Candle(
+            time=candle.time - int(utc_offset_seconds),
+            open=candle.open,
+            high=candle.high,
+            low=candle.low,
+            close=candle.close,
+            tick_volume=candle.tick_volume,
+        ))
+    return result
 
 
 def _get_last_cached_timestamp(filepath: Path) -> int | None:
@@ -146,7 +170,13 @@ def _get_last_cached_timestamp(filepath: Path) -> int | None:
         return None
 
 
-def _persist_candles_to_cache(symbol: str, timeframe: int, candles: list[Candle]) -> None:
+def _persist_candles_to_cache(
+    symbol: str,
+    timeframe: int,
+    candles: list[Candle],
+    *,
+    source_utc_offset_seconds: int = 0,
+) -> None:
     """
     Persist only NEW candles to disk (incremental append-only).
 
@@ -215,6 +245,7 @@ def _persist_candles_to_cache(symbol: str, timeframe: int, candles: list[Candle]
         out_dir.mkdir(parents=True, exist_ok=True)
         filepath = out_dir / "dedup.jsonl"
         marker_path = out_dir / "dedup_initialized"
+        utc_marker_path = out_dir / "dedup_timestamp_utc_v1"
 
         # Get last persisted timestamp for deduplication (persistent across dates)
         last_ts = _get_last_cached_timestamp(filepath)
@@ -237,9 +268,21 @@ def _persist_candles_to_cache(symbol: str, timeframe: int, candles: list[Candle]
                 )
             return
 
-        # Always exclude the last candle in the array (it may still be forming).
-        # MT5's copy_rates_from_pos includes the current forming bar as the last element.
-        closed_candles = candles[:-1] if len(candles) > 1 else []
+        # One-time compatibility transition. Before this fix, replay timestamps
+        # were broker-server epochs while new Candle.time values are canonical
+        # UTC epochs. Adjust only the recovered watermark; historical rows stay
+        # untouched. The sidecar prevents subtracting the offset again later.
+        if last_ts is not None and not utc_marker_path.exists():
+            last_ts -= int(source_utc_offset_seconds) * 1000
+
+        # Select by the actual UTC close boundary, not a positional assumption.
+        from core.constants.timeframes import TIMEFRAME_SECONDS
+        timeframe_seconds = int(TIMEFRAME_SECONDS.get(timeframe, 60))
+        now_s = _time.time()
+        closed_candles = [
+            c for c in candles[:-1]
+            if c.time + timeframe_seconds <= now_s
+        ] if len(candles) > 1 else []
         if not closed_candles:
             return
 
@@ -252,6 +295,11 @@ def _persist_candles_to_cache(symbol: str, timeframe: int, candles: list[Candle]
         if not marker_path.exists():
             try:
                 marker_path.touch()
+            except Exception:
+                pass
+        if not utc_marker_path.exists():
+            try:
+                utc_marker_path.touch()
             except Exception:
                 pass
 
@@ -449,7 +497,8 @@ class MT5DataFeed:
                     f"at index {i}: time={int(rates[i]['time'])} > {int(rates[i + 1]['time'])}"
                 )
 
-        candles = _rows_to_candles(rates)
+        utc_offset_seconds = _ensure_broker_utc_offset(mt5_symbol)
+        candles = _rows_to_candles(rates, utc_offset_seconds=utc_offset_seconds)
 
         # ─── MARKET_INGEST_AUDIT ──────────────────────────────────────
         # Emits once per fetch to verify live broker data is the source.
@@ -461,9 +510,9 @@ class MT5DataFeed:
         try:
             from datetime import datetime, timezone as _tz
             from core import config as _audit_cfg
-            _latest = rates[-1]
+            _latest = candles[-1]
             _now_utc = datetime.now(_tz.utc)
-            _bar_utc = datetime.fromtimestamp(int(_latest["time"]), _tz.utc)
+            _bar_utc = datetime.fromtimestamp(int(_latest.time), _tz.utc)
             _delta_s = (_now_utc - _bar_utc).total_seconds()
             logger.info(
                 "[MARKET_INGEST_AUDIT] %s",
@@ -474,11 +523,11 @@ class MT5DataFeed:
                     "bars_returned": returned,
                     "now_utc": _now_utc.isoformat(),
                     "latest_candle_utc": _bar_utc.isoformat(),
-                    "open": float(_latest["open"]),
-                    "high": float(_latest["high"]),
-                    "low": float(_latest["low"]),
-                    "close": float(_latest["close"]),
-                    "tick_volume": int(_latest["tick_volume"]),
+                    "open": _latest.open,
+                    "high": _latest.high,
+                    "low": _latest.low,
+                    "close": _latest.close,
+                    "tick_volume": _latest.tick_volume,
                     "delta_seconds": round(_delta_s, 1),
                     "latency_ms": latency_ms,
                     "replay_mode": bool(getattr(_audit_cfg, "REPLAY_MODE", False)),
@@ -491,7 +540,10 @@ class MT5DataFeed:
             pass  # Audit log must never affect data delivery
         # ─── END MARKET_INGEST_AUDIT ──────────────────────────────────
 
-        _persist_candles_to_cache(symbol, timeframe, candles)
+        _persist_candles_to_cache(
+            symbol, timeframe, candles,
+            source_utc_offset_seconds=utc_offset_seconds,
+        )
         return candles
 
     def last_tick(self, symbol: str) -> tuple[float, float, int]:

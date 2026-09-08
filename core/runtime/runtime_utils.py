@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 from core import config
 from core.constants.timeframes import TIMEFRAME_SECONDS
 from core.trade_management import TradeManagementConfig
@@ -14,7 +16,11 @@ def _timeframe_seconds(timeframe: int) -> int:
     return TIMEFRAME_SECONDS.get(timeframe, 60)
 
 
-def _closed_bar_index(candles: list[Candle]) -> int | None:
+def _closed_bar_index(
+    candles: list[Candle],
+    timeframe_seconds: int = 60,
+    now_s: float | None = None,
+) -> int | None:
     """
     Return the index of the last CLOSED bar in the candle array.
 
@@ -24,12 +30,13 @@ def _closed_bar_index(candles: list[Candle]) -> int | None:
     bars, so the forming row is never eligible for decision evaluation. This is
     the same boundary used by the CANDLE persistence path.
     """
-    if len(candles) < 2:
-        return None
-    # The last MT5 row is the current forming bar.  Select the same final
-    # completed row that the canonical CANDLE persistence path writes via
-    # ``candles[:-1]``.
-    return len(candles) - 2
+    boundary = time.time() if now_s is None else float(now_s)
+    # MT5 returns oldest→newest and position zero is the current bar. Keep the
+    # established last-row exclusion, then independently prove close time.
+    for index in range(len(candles) - 2, -1, -1):
+        if candles[index].time + int(timeframe_seconds) <= boundary:
+            return index
+    return None
 
 
 def _build_trade_management_config() -> TradeManagementConfig:

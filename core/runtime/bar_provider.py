@@ -33,7 +33,7 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-from core.runtime.runtime_utils import _closed_bar_index
+from core.runtime.runtime_utils import _closed_bar_index, _timeframe_seconds
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +48,9 @@ class BarResult:
     closed_i: int
     """Index of the closed bar."""
     closed_time: int
-    """Raw broker-local bar close timestamp (used for entity_id, dedup)."""
+    """Canonical UTC bar-open timestamp (used for entity_id and dedup)."""
     closed_time_utc: int
-    """UTC-converted bar close timestamp (used for age comparisons)."""
+    """Same canonical UTC bar-open timestamp (used for age comparisons)."""
     feed_state: str
     """Feed health classification: HEALTHY, SLOW, SUSPICIOUS."""
     is_new_bar: bool
@@ -106,7 +106,8 @@ class BarProvider:
             return None
 
         # ─── 2. BAR INDEX SELECTION ───────────────────────────────────
-        closed_i = _closed_bar_index(candles)
+        timeframe_seconds = _timeframe_seconds(self._config.TIMEFRAME)
+        closed_i = _closed_bar_index(candles, timeframe_seconds)
         if closed_i is None:
             return None
         closed_time = candles[closed_i].time
@@ -116,11 +117,9 @@ class BarProvider:
             print(f"[CANDLE SELECT] {sym_state.symbol} | [-3]={candles[-3].time} [-2]={candles[-2].time} [-1]={candles[-1].time} | closed_i={closed_i} selected={closed_time} last={sym_state.last_closed_time}")
 
         # ─── 4. UTC CONVERSION ────────────────────────────────────────
-        try:
-            from data.mt5_data import _TICK_UTC_OFFSET_SECONDS
-            _closed_time_utc = closed_time - _TICK_UTC_OFFSET_SECONDS
-        except Exception:
-            _closed_time_utc = closed_time  # Fallback: use raw if offset unavailable
+        # Candle.time is normalised once at MT5 ingestion and is already the
+        # canonical UTC epoch of bar open. Never apply a second offset here.
+        _closed_time_utc = closed_time
 
         # ─── 5. SHADOW TRADE EVALUATE (fire-and-forget, independent) ──
         try:

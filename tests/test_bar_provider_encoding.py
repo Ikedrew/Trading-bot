@@ -140,7 +140,7 @@ def test_original_arrow_character_causes_unicode_error_under_cp1252(
 # ─── FETCH_BAR COMPLETION UNDER REDIRECTED cp1252 STDOUT ──────────────────────
 
 
-@pytest.mark.parametrize("feed_age_s", [0, 300, 599])
+@pytest.mark.parametrize("feed_age_s", [0, 150, 299])
 def test_fetch_bar_completes_under_cp1252_redirected_stdout(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -153,7 +153,7 @@ def test_fetch_bar_completes_under_cp1252_redirected_stdout(
     symbol was silently skipped every cycle.
     """
     now = int(time.time())
-    bar_time = now - feed_age_s  # recent -> HEALTHY
+    bar_time = now - 300 - feed_age_s  # completed M5 open -> HEALTHY
     candles = [_make_candle(bar_time - 5 * 60 + 60 * i) for i in range(6)]
     candles.append(_make_candle(bar_time + 300))  # current forming M5 bar
     closed_i = len(candles) - 2
@@ -196,7 +196,7 @@ def test_bar_stall_warning_is_ascii_safe(
     """The [BAR STALL] branch (previously containing a warning-sign emoji) must
     not raise UnicodeEncodeError under cp1252 stdout either."""
     now = int(time.time())
-    bar_time = now - 30  # new bar -> not FEED_STALE
+    bar_time = now - 330  # completed M5 open -> not FEED_STALE
     candles = [_make_candle(bar_time - 5 * 60 + 60 * i) for i in range(6)]
     candles.append(_make_candle(bar_time + 300))  # current forming M5 bar
     closed_i = len(candles) - 2
@@ -242,7 +242,7 @@ def test_downstream_pattern_gate_reachable_after_fetch_bar(
     from core.runtime.pre_engine_gates import evaluate_pre_engine_gates, GateResult
 
     now = int(time.time())
-    bar_time = now - 60  # HEALTHY, new bar
+    bar_time = now - 360  # completed M5 open, HEALTHY, new bar
     candles = [_make_candle(bar_time - 5 * 60 + 60 * i) for i in range(6)]
     candles.append(_make_candle(bar_time + 300))  # current forming M5 bar
     closed_i = len(candles) - 2

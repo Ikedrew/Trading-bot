@@ -16,14 +16,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+from unittest.mock import patch
 
 import core.config
-from data.mt5_data import Candle, _get_last_cached_timestamp, _persist_candles_to_cache
+from data.mt5_data import (
+    Candle, _get_last_cached_timestamp, _persist_candles_to_cache,
+    reset_candle_dedup_for_tests,
+)
 
 
 @pytest.fixture
 def replay_dir(tmp_path):
     """Redirect replay cache to temp dir and enable it."""
+    reset_candle_dedup_for_tests()
     original_enable = core.config.ENABLE_CANDLE_REPLAY_CACHE
     original_dir = core.config.REPLAY_CACHE_DIR
     core.config.ENABLE_CANDLE_REPLAY_CACHE = True
@@ -33,8 +38,12 @@ def replay_dir(tmp_path):
     core.config.REPLAY_CACHE_DIR = original_dir
 
 
-def _make_candles(start_ts: int = 1719388500, count: int = 5, interval: int = 300) -> list[Candle]:
+def _make_candles(start_ts: int | None = None, count: int = 5, interval: int = 300) -> list[Candle]:
     """Generate sequential M5 candles."""
+    if start_ts is None:
+        now = int(datetime.now(tz=timezone.utc).timestamp())
+        current_open = now - (now % interval)
+        start_ts = current_open - (count - 1) * interval
     candles = []
     for i in range(count):
         ts = start_ts + (i * interval)
@@ -51,8 +60,7 @@ def _make_candles(start_ts: int = 1719388500, count: int = 5, interval: int = 30
 
 def _read_file_lines(replay_dir: Path, symbol: str = "EURUSD", tf: int = 5) -> list[dict]:
     """Read all JSONL records from today's replay file."""
-    date_str = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
-    filepath = replay_dir / symbol / str(tf) / f"{date_str}.jsonl"
+    filepath = replay_dir / symbol / str(tf) / "dedup.jsonl"
     if not filepath.exists():
         return []
     lines = filepath.read_text(encoding="utf-8").strip().split("\n")
@@ -94,7 +102,8 @@ class TestIncrementalPersist:
             time=candles[-1].time + 300,
             open=1.080, high=1.082, low=1.079, close=1.081, tick_volume=200,
         )]
-        _persist_candles_to_cache("EURUSD", 5, candles_next)
+        with patch("data.mt5_data._time.time", return_value=candles[-1].time + 300):
+            _persist_candles_to_cache("EURUSD", 5, candles_next)
         records = _read_file_lines(replay_dir)
 
         assert len(records) == count_before + 1
