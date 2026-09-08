@@ -157,13 +157,38 @@ def _persist_candles_to_cache(symbol: str, timeframe: int, candles: list[Candle]
     candle identity.
 
     Also maintains an in-memory dedup tracker as a secondary guard against
-    repeated emissions within the same process session. This prevents the
-    date-rollover re-emission entirely and catches any other dedup bypass.
+    repeated emissions within the same process session.
+
+    Lost/corrupt persistent-state recovery:
+        A tiny durable marker file (dedup_initialized) records that this
+        symbol/timeframe has previously established emission state.
+
+            marker missing + no valid dedup state  → genuine first-ever startup
+                                                     (emit closed window, create marker)
+            marker missing + valid dedup state     → legacy deployment upgrade
+                                                     (no re-emission, create marker)
+            marker present + valid dedup state     → normal operation
+                                                     (emit only genuinely new candles)
+            marker present + NO valid dedup state  → persistent state was lost,
+                                                     emptied, corrupted, or became
+                                                     unreadable AFTER prior
+                                                     initialization.
+                                                     FAIL SAFE: emit nothing.
+                                                     Re-emitting the historical MT5
+                                                     window could attach conflicting
+                                                     OHLCV to already-persisted
+                                                     canonical candle identities.
+                                                     Candle gaps are visible and
+                                                     backfillable; OHLCV conflicts
+                                                     are permanent. A CRITICAL log
+                                                     is raised once per
+                                                     symbol/timeframe/session.
 
     Schema (one line per candle):
         {"ts": 1719388800, "o": 1.07423, "h": 1.07456, "l": 1.07401, "c": 1.07445, "v": 342}
 
     Path: replay_data/{SYMBOL}/{TIMEFRAME}/dedup.jsonl
+    Marker: replay_data/{SYMBOL}/{TIMEFRAME}/dedup_initialized
 
     Never raises — failures are logged and swallowed.
     """
@@ -188,15 +213,46 @@ def _persist_candles_to_cache(symbol: str, timeframe: int, candles: list[Candle]
         out_dir = Path(cache_dir) / symbol / str(timeframe)
         out_dir.mkdir(parents=True, exist_ok=True)
         filepath = out_dir / "dedup.jsonl"
+        marker_path = out_dir / "dedup_initialized"
 
         # Get last persisted timestamp for deduplication (persistent across dates)
         last_ts = _get_last_cached_timestamp(filepath)
+
+        # Fail-safe: persistent dedup state lost/corrupt AFTER prior
+        # initialization. Never reinterpret this as a first-ever startup.
+        if marker_path.exists() and last_ts is None:
+            state_key = (symbol, timeframe)
+            if state_key not in _dedup_state_loss_reported:
+                _dedup_state_loss_reported.add(state_key)
+                logger.critical(
+                    "[DATA_REPLAY] dedup_state_lost symbol=%s timeframe=%d "
+                    "file=%s action=skipping_emission reason="
+                    "'persistent dedup state missing/empty/malformed/unreadable "
+                    "after prior initialization; refusing to re-emit historical "
+                    "closed-candle window (would risk conflicting canonical "
+                    "candle identities). Repair or restore %s, then backfill "
+                    "any candle gap from broker history.'",
+                    symbol, timeframe, filepath, filepath,
+                )
+            return
 
         # Always exclude the last candle in the array (it may still be forming).
         # MT5's copy_rates_from_pos includes the current forming bar as the last element.
         closed_candles = candles[:-1] if len(candles) > 1 else []
         if not closed_candles:
             return
+
+        # Durable initialization marker: state is now established — persistent
+        # dedup is valid (normal/legacy adoption) or is about to be written
+        # (genuine first-ever startup). Created BEFORE the no-new-candles
+        # early return so legacy adoption with nothing new is still marked.
+        # Once present, a future lost/corrupt dedup file can never be
+        # misinterpreted as a genuine first-ever startup.
+        if not marker_path.exists():
+            try:
+                marker_path.touch()
+            except Exception:
+                pass
 
         # Filter to only new candles (strictly newer than last persisted)
         if last_ts is not None:
@@ -258,10 +314,15 @@ def _persist_candles_to_cache(symbol: str, timeframe: int, candles: list[Candle]
 # session. Resettable for test isolation.
 _candle_emitted_set: set[tuple[str, int, int]] = set()
 
+# Tracks (symbol, timeframe) pairs for which a lost/corrupt persistent dedup
+# state CRITICAL has already been reported this session (log-once semantics).
+_dedup_state_loss_reported: set[tuple[str, int]] = set()
+
 
 def reset_candle_dedup_for_tests() -> None:
-    """Reset in-memory dedup tracker (test isolation)."""
+    """Reset in-memory dedup tracker and state-loss reporting (test isolation)."""
     _candle_emitted_set.clear()
+    _dedup_state_loss_reported.clear()
 
 
 class MT5DataFeed:
