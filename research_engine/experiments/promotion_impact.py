@@ -41,7 +41,7 @@ def _estimate_pattern_removal_impact(
     r_values_by_pattern: dict[str, list[float]],
     patterns_to_remove: list[str],
 ) -> dict[str, Any]:
-    """Estimate impact of removing specific patterns."""
+    """Estimate historical/in-sample impact of removing specific patterns."""
     removed_r: list[float] = []
     kept_r: list[float] = []
     for pattern, rs in r_values_by_pattern.items():
@@ -74,7 +74,7 @@ def _estimate_threshold_change_impact(
     current_threshold: float,
     new_threshold: float,
 ) -> dict[str, Any]:
-    """Estimate impact of changing score threshold."""
+    """Estimate historical/in-sample impact of changing score threshold."""
     if not r_values or not scores or len(r_values) != len(scores):
         return {"ev_change": 0, "feasible": False}
 
@@ -156,7 +156,7 @@ def run_promotion_impact(shadow_trades: list[dict[str, Any]] | None = None) -> d
 
     pattern_analysis.sort(key=lambda p: p["ev"])
 
-    # Impact estimates
+    # Historical/in-sample impact estimates
     impact_remove_worst = _estimate_pattern_removal_impact(r_by_pattern, negative_patterns)
 
     # Threshold impact (test raising threshold from 0.35 to 0.45)
@@ -177,13 +177,13 @@ def run_promotion_impact(shadow_trades: list[dict[str, Any]] | None = None) -> d
     # Recommendation
     if best_ev_change > 0.10 and confidence in ("HIGH", "MEDIUM"):
         recommendation = "PROMOTE"
-        finding = f"Promotion candidate identified: removing {len(negative_patterns)} patterns improves EV by {impact_remove_worst.get('ev_change', 0):+.4f}R."
+        finding = f"Promotion candidate identified: historically, removing {len(negative_patterns)} patterns would have increased EV by {impact_remove_worst.get('ev_change', 0):+.4f}R."
     elif best_ev_change > 0:
         recommendation = "WAIT"
-        finding = f"Small improvement possible ({best_ev_change:+.4f}R) but not yet confident enough."
+        finding = f"Small historical EV lift observed ({best_ev_change:+.4f}R) but not yet confident enough."
     else:
         recommendation = "REJECT"
-        finding = "No promotion candidate improves EV. Current configuration is near-optimal."
+        finding = "No tested promotion candidate increased historical EV. No optimality claim is supported."
 
     report = build_report(
         question_id="P1", status=ReadinessStatus.COMPLETE,
@@ -201,7 +201,7 @@ def run_promotion_impact(shadow_trades: list[dict[str, Any]] | None = None) -> d
         dataset={"total_records": len(shadow_trades), "r_multiples_used": n, "patterns_found": len(r_by_pattern), "coverage": coverage},
         fingerprint=build_fingerprint(n, len(shadow_trades) - n),
         recommendation=recommendation,
-        assumptions=["Pattern removal: excludes all trades from negative-EV patterns", "Threshold change: 0.35 → 0.45 minimum score", "Impact estimated from historical shadow trades"],
+        assumptions=["Pattern removal estimate: excludes historical trades from negative-EV patterns", "Threshold change estimate: 0.35 to 0.45 minimum score on historical shadow trades", "Impact is in-sample and descriptive; promotion still requires separate validation"],
         warnings=[w for w in [f"High contamination in dataset" if coverage.get("contamination_rate", 0) > 0.1 else "", f"Few patterns with sufficient data" if len(pattern_analysis) < 5 else ""] if w],
         provenance={"experiment_module": "research_engine.experiments.promotion_impact", "registry_id": "P1", "function": "run_promotion_impact", "pipeline": "Question → Experiment → Dataset → Output → Knowledge → Command Centre"},
     )

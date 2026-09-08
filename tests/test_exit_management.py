@@ -42,6 +42,7 @@ def _shadow(
     mae_r: float | None = -0.5,
     exit_reason: str = "take_profit",
     bars_held: int = 12,
+    trade_state_progression: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Production-shaped shadow record from canonical ingestion."""
     return {
@@ -69,6 +70,10 @@ def _shadow(
             "exit_reason": exit_reason,
             "exit_price": 1.105,
             "bars_held": bars_held,
+            "trade_state_progression": trade_state_progression or [],
+            "trade_state_progression_status": (
+                "PRESENT" if trade_state_progression else "MISSING"
+            ),
         },
     }
 
@@ -125,6 +130,16 @@ class TestExitPopulation:
         _install(shadows, monkeypatch)
         pop = _load_exit_population()
         assert len(pop) == 2
+
+    def test_trade_state_progression_available_to_exit_population(self, monkeypatch):
+        path = [
+            {"bar": 1, "r": -0.2, "close": 1.0798},
+            {"bar": 2, "r": 0.7, "close": 1.0807},
+        ]
+        _install([_shadow(trade_state_progression=path)], monkeypatch)
+        pop = _load_exit_population()
+        assert pop[0]["trade_state_progression"] == path
+        assert pop[0]["trade_state_progression_status"] == "PRESENT"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -358,9 +373,9 @@ class TestArchitecture:
         for qid in ("EX1", "EX2", "EX3", "EX4"):
             assert qid in runners, f"{qid} not discovered"
             assert qid not in [k for k in runners if k != qid] or True  # uniqueness by dict
-        # count
+        # count (Wave 9: EX5-EX10 now have runners = 10 EX + EXEC1 = 11)
         ex_runners = [k for k in runners if k.startswith("EX")]
-        assert len(ex_runners) == 5
+        assert len(ex_runners) == 11, f"Expected 11 EX runners, got {len(ex_runners)}: {ex_runners}"
 
     def test_report_status_is_gap4_compliant(self, monkeypatch):
         _install(_make_n(40), monkeypatch)

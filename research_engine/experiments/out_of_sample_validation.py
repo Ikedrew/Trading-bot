@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from research_engine.experiments.experiment_base import (
     ReadinessStatus,
+    _deep_get,
     build_fingerprint,
     build_report,
     check_readiness,
@@ -40,6 +41,28 @@ _MIN_SAMPLES = 80  # Need enough for meaningful train/test split
 _TRAIN_FRACTION = 0.60
 _NUM_ROLLING_WINDOWS = 5
 _STABILITY_THRESHOLD = 0.70  # 70% of windows must show positive EV
+
+
+def _temporal_key(record: dict[str, Any]) -> tuple[int, float, str]:
+    """Canonical chronology for temporal validation; missing timestamps sort last."""
+    for path in (
+        ("decision_snapshot", "entry_time"),
+        ("decision_snapshot", "timestamp_decision_utc"),
+        ("identity", "entry_time"),
+        ("simulated_outcome", "exit_timestamp"),
+        ("timestamp_utc",),
+    ):
+        value = _deep_get(record, *path)
+        if value is None:
+            continue
+        if isinstance(value, (int, float)):
+            return (0, float(value), "")
+        if isinstance(value, str) and value:
+            try:
+                return (0, float(value), "")
+            except ValueError:
+                return (0, 0.0, value)
+    return (1, 0.0, "")
 
 
 def _compute_window_ev(r_values: list[float]) -> dict[str, Any]:
@@ -120,7 +143,8 @@ def run_out_of_sample_validation(shadow_trades: list[dict[str, Any]] | None = No
             fingerprint=build_fingerprint(0, len(shadow_trades)), recommendation="WAIT", warnings=[reason],
         )
 
-    r_values = extract_r_multiples(shadow_trades)
+    ordered_trades = sorted(shadow_trades, key=_temporal_key)
+    r_values = extract_r_multiples(ordered_trades)
     n = len(r_values)
     if n < _MIN_SAMPLES:
         return build_report(

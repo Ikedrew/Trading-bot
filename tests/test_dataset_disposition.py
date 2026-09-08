@@ -276,6 +276,17 @@ class TestTemporalAvailability:
         assert temporal_availability("decision_ledger") == TemporalAvailability.BEFORE_DECISION
         assert temporal_availability("opportunities") == TemporalAvailability.BEFORE_DECISION
 
+    def test_opportunities_are_decision_derived_not_raw_market_fact(self):
+        """Opportunities are pre-decision-safe but still system-created evidence."""
+        events = require_disposition("events")
+        market = require_disposition("market_context")
+        opps = require_disposition("opportunities")
+
+        assert "raw market" in events.reason.lower()
+        assert "factual market-state" in market.reason.lower()
+        assert "decision-derived" in opps.reason.lower()
+        assert "not raw market fact" in opps.reason.lower()
+
 
 class TestLeakageGuard:
     """Phase 5: outcome fields must never be consumable as pre-decision features."""

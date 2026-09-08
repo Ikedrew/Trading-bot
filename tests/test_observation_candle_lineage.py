@@ -8,6 +8,7 @@ import pytest
 
 from core.identity.canonical import mint_observation_id
 from core.runtime.runtime_utils import _closed_bar_index
+from data import mt5_data as _mt5_data
 from data.mt5_data import Candle, _persist_candles_to_cache
 
 
@@ -30,6 +31,7 @@ def _persist(symbol, candles, tmp_path, emitted):
 
 @pytest.mark.parametrize("symbol", SYMBOLS)
 def test_all_canonical_symbols_decide_on_persisted_closed_bar(symbol, tmp_path):
+    _mt5_data.reset_candle_dedup_for_tests()
     candles = [_bar(1_000), _bar(1_300), _bar(1_600)]  # final row is forming
     emitted = []
     _persist(symbol, candles, tmp_path, emitted)
@@ -47,6 +49,7 @@ def test_all_canonical_symbols_decide_on_persisted_closed_bar(symbol, tmp_path):
 
 
 def test_rollover_restart_and_duplicate_fetch_preserve_one_observation(tmp_path):
+    _mt5_data.reset_candle_dedup_for_tests()
     emitted = []
     first = [_bar(1_000), _bar(1_300), _bar(1_600)]
     _persist("EURUSD", first, tmp_path, emitted)
@@ -76,6 +79,7 @@ def test_rollover_restart_and_duplicate_fetch_preserve_one_observation(tmp_path)
 
 
 def test_nas100_identity_remains_canonical_at_persistence_boundary(tmp_path):
+    _mt5_data.reset_candle_dedup_for_tests()
     emitted = []
     _persist("NAS100", [_bar(1_000), _bar(1_300), _bar(1_600)], tmp_path, emitted)
     assert {symbol for symbol, _ in emitted} == {"NAS100"}

@@ -15,11 +15,11 @@ SCIENTIFIC BOUNDARY:
         - whether spread/slippage would alter an alternative exit.
 
     All EX1–EX4 conclusions are therefore OBSERVATIONAL, not simulated
-    counterfactual results. The raw shadow_runtime_v1 CLOSE event carries
-    `trade_state_progression` (ordered per-bar {bar, r, close}), but the
-    current normalised research record does not preserve it. Until ordered
-    path data is surfaced into the research population, no runner in this
-    module may claim a simulated counterfactual result.
+    counterfactual results. The normalised research record preserves
+    `trade_state_progression` when the raw shadow_runtime_v1 CLOSE event
+    carries it (ordered per-bar {bar, r, close}), but these foundation runners
+    do not perform policy simulation. No runner in this module may claim a
+    simulated counterfactual result.
 
 Populations come exclusively from the canonical shadow_runtime_v1 ingestion
 (`ingest_completed_shadow_trades()`). No local fallback, no parallel path.
@@ -47,7 +47,8 @@ def _load_exit_population() -> list[dict[str, Any]]:
 
     Returns a list of flat dicts, one per completed shadow lifecycle, with:
         shadow_trade_id, canonical_opportunity_id, symbol, pattern, direction,
-        trade_horizon, pnl_r, mfe_r, mae_r, exit_reason, bars_held
+        trade_horizon, pnl_r, mfe_r, mae_r, exit_reason, bars_held,
+        trade_state_progression and path status.
 
     Excludes records with missing/None MFE or MAE (exit research requires
     both). Records with None pnl_r are retained (exit analysis is valid
@@ -90,6 +91,10 @@ def _load_exit_population() -> list[dict[str, Any]]:
             "mae_r": float(mae),
             "exit_reason": str(sim.get("exit_reason", "")),
             "bars_held": sim.get("bars_held"),
+            "trade_state_progression": list(sim.get("trade_state_progression") or []),
+            "trade_state_progression_status": sim.get(
+                "trade_state_progression_status", "MISSING"
+            ),
             "h4_regime": snap.get("h4_regime", ""),
             "market_phase": snap.get("market_phase", ""),
         })
@@ -435,13 +440,13 @@ def run_ex2() -> dict[str, Any]:
         assumptions=[
             "MFE is the peak favourable excursion — trades that reached this level retained at least this much at some point",
             "Retention = realised_r / mfe_r (only for trades with mfe_r >= 0.5R)",
-            "NO trailing-stop simulation performed — path ordering is unavailable in the normalised research record",
+            "NO trailing-stop simulation performed — this runner does not consume the normalised path progression",
             "A low retention ratio indicates the trade gave back peak excursion but does NOT prove a trailing stop would have retained more",
         ],
         warnings=[
-            "Observational analysis — the raw shadow_runtime_v1 CLOSE event carries "
-            "trade_state_progression (ordered per-bar data) that could support true "
-            "trailing-stop simulation, but it is not preserved in the normalised record",
+            "Observational analysis — normalised trade_state_progression can support "
+            "future path-aware simulation, but this runner does not simulate a "
+            "trailing-stop policy",
         ],
     )
 

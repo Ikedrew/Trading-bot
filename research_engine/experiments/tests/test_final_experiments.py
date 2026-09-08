@@ -267,6 +267,22 @@ class TestE5OutOfSample:
         result = run_out_of_sample_validation(_positive_edge_records(200))
         assert len(result["overall"]["rolling_windows"]) >= 3
 
+    @patch("research_engine.experiments.out_of_sample_validation.persist_report")
+    @patch("research_engine.experiments.out_of_sample_validation.update_knowledge_map")
+    def test_uses_timestamp_chronology_not_input_order(self, mock_km, mock_persist):
+        records = []
+        for i in range(200):
+            r = 2.0 if i < 120 else -1.0
+            rec = _make_shadow_record(r_multiple=r, entity_id=f"E5_{i}", cycle_id=str(i))
+            rec["decision_snapshot"]["timestamp_decision_utc"] = 1_700_000_000 + i
+            records.append(rec)
+
+        result = run_out_of_sample_validation(list(reversed(records)))
+
+        assert result["overall"]["in_sample_ev"] > 0
+        assert result["overall"]["out_of_sample_ev"] < 0
+        assert result["overall"]["edge_survives"] is False
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TEST: D6 — PORTFOLIO RANKING
@@ -345,6 +361,22 @@ class TestL7ShadowAB:
         assert "control" in result["overall"]
         assert "candidate" in result["overall"]
         assert "z_statistic" in result["overall"]
+
+    @patch("research_engine.experiments.shadow_ab_validation.persist_report")
+    @patch("research_engine.experiments.shadow_ab_validation.update_knowledge_map")
+    def test_uses_timestamp_chronology_not_input_order(self, mock_km, mock_persist):
+        records = []
+        for i in range(200):
+            r = -0.5 if i < 100 else 2.0
+            rec = _make_shadow_record(r_multiple=r, entity_id=f"L7_{i}", cycle_id=str(i))
+            rec["decision_snapshot"]["timestamp_decision_utc"] = 1_700_000_000 + i
+            records.append(rec)
+
+        result = run_shadow_ab_validation(list(reversed(records)))
+
+        assert result["overall"]["control"]["ev"] < 0
+        assert result["overall"]["candidate"]["ev"] > 0
+        assert result["overall"]["winner"] == "CANDIDATE"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -89,6 +89,9 @@ E4 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
     ),
     depends_on=("E2", "E3"),
+    runner_module="research_engine.experiments.edge_depth",
+    runner_function="run_e4",
+    report_filename="e4_strategy_pattern_combinations.json",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -127,6 +130,9 @@ M2 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
     ),
     depends_on=("M1", "E3"),
+    runner_module="research_engine.experiments.market_research",
+    runner_function="run_m2",
+    report_filename="m2_regime_strategy_edge.json",
 )
 
 M3 = ResearchQuestion(
@@ -143,6 +149,9 @@ M3 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
     ),
     depends_on=("M1",),
+    runner_module="research_engine.experiments.market_research",
+    runner_function="run_m3",
+    report_filename="m3_phase_vs_regime.json",
 )
 
 M4 = ResearchQuestion(
@@ -160,19 +169,30 @@ M4 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
     ),
     depends_on=("M1", "M3", "E3"),
+    runner_module="research_engine.experiments.market_research",
+    runner_function="run_m4",
+    report_filename="m4_regime_phase_strategy.json",
 )
 
 M5 = ResearchQuestion(
     id="M5",
     category=QuestionCategory.MARKET_CONTEXT,
     title="Phase transitions predict drawdown",
-    description="Do rapid phase transitions predict drawdown periods?",
-    required_fields=("market_phase", "timestamp"),
-    data_sources=(DataSource.MARKET_CONTEXT, DataSource.EQUITY_CURVE),
+    description=(
+        "Do rapid phase transitions predict subsequent realised strategy "
+        "drawdown in cumulative R? This is not account-equity or "
+        "mark-to-market drawdown."
+    ),
+    required_fields=("market_phase", "entry_time", "exit_timestamp", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
     priority=QuestionPriority.P2,
     validation_rules=(
         ValidationRule("market_phase_coverage", ">=", 0.80, "Phase history required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Closed outcome R required"),
     ),
+    runner_module="research_engine.experiments.market_temporal",
+    runner_function="run_m5",
+    report_filename="m5_phase_transitions_drawdown.json",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -548,6 +568,9 @@ M6 = ResearchQuestion(
         ValidationRule("market_phase_coverage", ">=", 0.80, "Phase must be populated"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
     ),
+    runner_module="research_engine.experiments.market_research",
+    runner_function="run_m6",
+    report_filename="m6_phase_expectancy.json",
 )
 
 M7 = ResearchQuestion(
@@ -564,6 +587,9 @@ M7 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
     ),
     depends_on=("M1", "M6"),
+    runner_module="research_engine.experiments.market_research",
+    runner_function="run_m7",
+    report_filename="m7_regime_phase_interaction.json",
 )
 
 M8 = ResearchQuestion(
@@ -578,6 +604,9 @@ M8 = ResearchQuestion(
         ValidationRule("market_phase_coverage", ">=", 0.80, "Phase history required"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
     ),
+    runner_module="research_engine.experiments.market_temporal",
+    runner_function="run_m8",
+    report_filename="m8_phase_transition_behaviour.json",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -701,6 +730,10 @@ L5 = ResearchQuestion(
         ValidationRule("strategy_coverage", ">=", 0.50, "Strategy required"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
     ),
+    depends_on=("L1", "L4", "E5"),
+    runner_module="research_engine.experiments.edge_depth",
+    runner_function="run_l5",
+    report_filename="l5_model_drift_detection.json",
 )
 
 L6 = ResearchQuestion(
@@ -861,17 +894,59 @@ D6 = ResearchQuestion(
     id="D6",
     category=QuestionCategory.DECISION_QUALITY,
     title="Portfolio ranking quality",
-    description="When multiple trades are available simultaneously, is the ranking model consistently choosing the highest expectancy opportunity?",
-    required_fields=("entity_id", "r_multiple", "cycle_id"),
-    data_sources=(DataSource.SHADOW_TRADES, DataSource.DECISION_TRACE),
+    description="Does the portfolio ranker's ordering of candidates (by rank_position) match realised/shadow outcomes — i.e., do higher-ranked candidates genuinely outperform lower-ranked ones?",
+    required_fields=("cycle_id", "rank_position", "selection_status", "rank_score"),
+    data_sources=(DataSource.PORTFOLIO_RANKINGS, DataSource.SHADOW_TRADES),
     priority=QuestionPriority.P1,
     validation_rules=(
-        ValidationRule("lineage_coverage", ">=", 0.80, "Need full decision lineage for ranking evaluation"),
-        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required to measure ranking accuracy"),
+        ValidationRule("ranking_rows", ">=", 10, "Need ranking cycles for rank distribution"),
+        ValidationRule("ranked_candidates", ">=", 30, "Need candidate rows for ranking analysis"),
     ),
     runner_module="research_engine.experiments.portfolio_ranking",
     runner_function="run_portfolio_ranking",
     report_filename="d6_portfolio_ranking.json",
+)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WAVE 6 — PORTFOLIO SELECTION (PORT-1)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+PORT_1 = ResearchQuestion(
+    id="PORT-1",
+    category=QuestionCategory.PORTFOLIO_SELECTION,
+    title="Portfolio selection quality",
+    description="Did the portfolio/ranking layer select the best available opportunity from the ranked candidate set? Evaluates whether the selected candidate's outcome is competitive with the best-ranked candidate in the same cycle.",
+    required_fields=("cycle_id", "rank_position", "selection_status", "rank_score"),
+    data_sources=(DataSource.PORTFOLIO_RANKINGS, DataSource.SHADOW_TRADES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("ranking_cycles", ">=", 5, "Need cycles with rankings for selection analysis"),
+    ),
+    runner_module="research_engine.experiments.portfolio_ranking",
+    runner_function="run_port_1",
+    report_filename="port1_portfolio_selection.json",
+)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WAVE 6 — OPPORTUNITY SELECTION (OPP-1)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+OPP_1 = ResearchQuestion(
+    id="OPP-1",
+    category=QuestionCategory.OPPORTUNITY_SELECTION,
+    title="Opportunity selection quality",
+    description="Were the opportunities promoted into the decision pipeline better than the opportunities rejected or filtered out?",
+    required_fields=("opportunity_id", "state", "overall_score"),
+    data_sources=(DataSource.SHADOW_TRADES, DataSource.HORIZON_CANDIDATES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("assessed_opportunities", ">=", 10, "Need opportunities with shadow outcomes"),
+    ),
+    runner_module="research_engine.experiments.opportunity_selection",
+    runner_function="run_opp_1",
+    report_filename="opp1_opportunity_selection.json",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -975,6 +1050,9 @@ M11 = ResearchQuestion(
         ValidationRule("lineage_coverage", ">=", 0.80, "Need decision context linked to outcomes"),
     ),
     depends_on=("M1", "M9"),
+    runner_module="research_engine.experiments.market_research",
+    runner_function="run_m11",
+    report_filename="m11_context_vs_pattern.json",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1066,6 +1144,9 @@ EX5 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
     ),
     depends_on=("EX2",),
+    runner_module="research_engine.experiments.exit_depth",
+    runner_function="run_ex5",
+    report_filename="ex5_horizon_exit.json",
 )
 
 EX6 = ResearchQuestion(
@@ -1081,6 +1162,9 @@ EX6 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
     ),
     depends_on=("EX2",),
+    runner_module="research_engine.experiments.exit_depth",
+    runner_function="run_ex6",
+    report_filename="ex6_strategy_exit.json",
 )
 
 EX7 = ResearchQuestion(
@@ -1096,6 +1180,9 @@ EX7 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
     ),
     depends_on=("EX2",),
+    runner_module="research_engine.experiments.exit_depth",
+    runner_function="run_ex7",
+    report_filename="ex7_regime_exit.json",
 )
 
 EX8 = ResearchQuestion(
@@ -1111,6 +1198,9 @@ EX8 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
     ),
     depends_on=("EX2",),
+    runner_module="research_engine.experiments.exit_depth",
+    runner_function="run_ex8",
+    report_filename="ex8_pattern_exit.json",
 )
 
 EX9 = ResearchQuestion(
@@ -1125,6 +1215,9 @@ EX9 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need exit_reason + outcome"),
         ValidationRule("sample_size", ">=", 200, "Need sufficient trades"),
     ),
+    runner_module="research_engine.experiments.exit_depth",
+    runner_function="run_ex9",
+    report_filename="ex9_timeout_loss.json",
 )
 
 EX10 = ResearchQuestion(
@@ -1140,6 +1233,9 @@ EX10 = ResearchQuestion(
         ValidationRule("sample_size", ">=", 200, "Need sufficient sample for temporal split"),
     ),
     depends_on=("EX1", "EX2"),
+    runner_module="research_engine.experiments.exit_depth",
+    runner_function="run_ex10",
+    report_filename="ex10_walk_forward.json",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1262,10 +1358,12 @@ REGISTRY: tuple[ResearchQuestion, ...] = (
     EX1, EX2, EX3, EX4, EX5, EX6, EX7, EX8, EX9, EX10,
     # Trade Management
     MGMT1, MGMT2,
-    # Selection Quality (Wave 3)
+        # Selection Quality (Wave 3)
     HORIZON1, STRAT1,
     # Execution + Protection (Wave 4)
     X5, EXEC1, PROT1,
+    # Portfolio + Opportunity Selection (Wave 6)
+    PORT_1, OPP_1,
 )
 
 REGISTRY_BY_ID: dict[str, ResearchQuestion] = {q.id: q for q in REGISTRY}

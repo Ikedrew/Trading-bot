@@ -37,6 +37,28 @@ _MIN_SAMPLES_PER_ARM = 30
 _SIGNIFICANCE_THRESHOLD = 1.96  # z for 95% confidence
 
 
+def _temporal_key(record: dict[str, Any]) -> tuple[int, float, str]:
+    """Canonical chronology for A/B windows; missing timestamps sort last."""
+    for path in (
+        ("decision_snapshot", "entry_time"),
+        ("decision_snapshot", "timestamp_decision_utc"),
+        ("identity", "entry_time"),
+        ("simulated_outcome", "exit_timestamp"),
+        ("timestamp_utc",),
+    ):
+        value = _deep_get(record, *path)
+        if value is None:
+            continue
+        if isinstance(value, (int, float)):
+            return (0, float(value), "")
+        if isinstance(value, str) and value:
+            try:
+                return (0, float(value), "")
+            except ValueError:
+                return (0, 0.0, value)
+    return (1, 0.0, "")
+
+
 def _two_sample_z_test(a: list[float], b: list[float]) -> tuple[float, bool]:
     """Two-sample z-test for difference in means. Returns (z_stat, significant)."""
     na, nb = len(a), len(b)
@@ -97,9 +119,10 @@ def run_shadow_ab_validation(
             fingerprint=build_fingerprint(0, len(shadow_trades)), recommendation="WAIT", warnings=[reason],
         )
 
-    # Split into control (first half) vs candidate (second half) chronologically
-    # This simulates "old strategy" vs "new strategy" comparison
-    r_values = extract_r_multiples(shadow_trades)
+    # Split into control (first half) vs candidate (second half) by canonical
+    # timestamps. Input/listing order is never temporal truth.
+    ordered_trades = sorted(shadow_trades, key=_temporal_key)
+    r_values = extract_r_multiples(ordered_trades)
     n = len(r_values)
     if n < _MIN_SAMPLES_PER_ARM * 2:
         return build_report(

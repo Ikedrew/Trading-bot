@@ -245,6 +245,51 @@ class TestReconstruction:
         )
         assert len(records) == 1
 
+    def test_trade_state_progression_preserved_in_source_order(self):
+        close = _close_event()
+        close["trade_state_progression"] = [
+            {"bar": 2, "r": -0.2, "close": 1.07980},
+            {"bar": 10, "r": 0.8, "close": 1.08080},
+            {"bar": 3, "r": 0.1, "close": 1.08010},
+        ]
+        records = ingestion.reconstruct_completed_shadow_trades(
+            [_plan_event(), _open_event(), close]
+        )
+        path = records[0]["simulated_outcome"]["trade_state_progression"]
+        assert path == close["trade_state_progression"]
+        assert [step["bar"] for step in path] == [2, 10, 3]
+        assert records[0]["simulated_outcome"]["trade_state_progression_status"] == "PRESENT"
+
+    def test_trade_state_progression_preserves_parent_lineage(self):
+        close = _close_event()
+        close["trade_state_progression"] = [{"bar": 1, "r": 0.4, "close": 1.08040}]
+        records = ingestion.reconstruct_completed_shadow_trades(
+            [_plan_event(), _open_event(), close]
+        )
+        rec = records[0]
+        assert rec["identity"]["shadow_trade_id"] == TRADE_ID
+        assert rec["identity"]["canonical_opportunity_id"] == ROOT
+        assert rec["identity"]["entity_id"] == "EURUSD_1777700000"
+        assert rec["identity"]["plan_id"] == PLAN_ID
+        assert rec["identity"]["observation_id"] == OBSERVATION_ID
+        assert rec["simulated_outcome"]["trade_state_progression"][0]["r"] == 0.4
+
+    def test_missing_trade_state_progression_marked_missing(self):
+        records = ingestion.reconstruct_completed_shadow_trades(_full_lifecycle())
+        outcome = records[0]["simulated_outcome"]
+        assert outcome["trade_state_progression"] == []
+        assert outcome["trade_state_progression_status"] == "MISSING"
+
+    def test_invalid_trade_state_progression_marked_invalid(self):
+        close = _close_event()
+        close["trade_state_progression"] = [{"bar": 1, "r": 0.1}, "bad-step"]
+        records = ingestion.reconstruct_completed_shadow_trades(
+            [_plan_event(), _open_event(), close]
+        )
+        outcome = records[0]["simulated_outcome"]
+        assert outcome["trade_state_progression"] == []
+        assert outcome["trade_state_progression_status"] == "INVALID"
+
     def test_non_canonical_ids_excluded(self):
         open_ev = _open_event()
         open_ev["shadow_trade_id"] = "shadow_32547_EURUSD"

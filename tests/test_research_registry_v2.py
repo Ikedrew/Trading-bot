@@ -259,6 +259,7 @@ class TestRegistryLookup:
 
     def test_registry_has_expected_questions(self):
         assert len(REGISTRY) > 0
+        assert len(REGISTRY) == 70
         assert len(REGISTRY) == len(set(q.id for q in REGISTRY))  # All unique IDs
 
     def test_registry_by_id_matches(self):
@@ -307,8 +308,7 @@ class TestNewCategories:
 
     def test_risk_management_category_exists(self):
         risk = get_questions_by_category(QuestionCategory.RISK_MANAGEMENT)
-        assert len(risk) == 5  # R1-R5
-        assert all(q.id.startswith("R") for q in risk)
+        assert {q.id for q in risk} == {"R1", "R2", "R3", "R4", "R5", "RISK-1"}
 
     def test_data_governance_category_exists(self):
         gov = get_questions_by_category(QuestionCategory.DATA_GOVERNANCE)
@@ -322,11 +322,16 @@ class TestNewCategories:
 
     def test_strategy_horizon_expanded(self):
         sh = get_questions_by_category(QuestionCategory.STRATEGY_HORIZON)
-        assert len(sh) == 7  # S1-S7
+        assert {q.id for q in sh} == {
+            "S1", "S2", "S3", "S4", "S5", "S6", "S7",
+            "HORIZON-1", "STRAT-1",
+        }
 
     def test_execution_expanded(self):
         ex = get_questions_by_category(QuestionCategory.EXECUTION)
-        assert len(ex) == 6  # X1-X6
+        assert {q.id for q in ex} == {
+            "X1", "X2", "X3", "X4", "X5", "X6", "EXEC1", "PROT1",
+        }
 
     def test_learning_expanded(self):
         learn = get_questions_by_category(QuestionCategory.SYSTEM_LEARNING)

@@ -149,14 +149,21 @@ def _persist_candles_to_cache(symbol: str, timeframe: int, candles: list[Candle]
     """
     Persist only NEW candles to disk (incremental append-only).
 
-    Deduplication: reads the last persisted timestamp for this symbol/timeframe/day
-    and only appends candles with timestamp > last_saved. Guarantees idempotency
-    across bot restarts and overlapping fetches.
+    Deduplication: uses a single dedup file per symbol/timeframe (NOT per date)
+    to ensure `last_ts` correctly crosses date boundaries. Without this, a
+    date rollover creates a fresh file with last_ts=None, causing ALL closed
+    candles to be re-emitted — including any that the broker revised between
+    the two emissions, producing conflicting OHLCV for the same canonical
+    candle identity.
+
+    Also maintains an in-memory dedup tracker as a secondary guard against
+    repeated emissions within the same process session. This prevents the
+    date-rollover re-emission entirely and catches any other dedup bypass.
 
     Schema (one line per candle):
         {"ts": 1719388800, "o": 1.07423, "h": 1.07456, "l": 1.07401, "c": 1.07445, "v": 342}
 
-    Path: replay_data/{SYMBOL}/{TIMEFRAME}/{YYYY-MM-DD}.jsonl
+    Path: replay_data/{SYMBOL}/{TIMEFRAME}/dedup.jsonl
 
     Never raises — failures are logged and swallowed.
     """
@@ -168,17 +175,21 @@ def _persist_candles_to_cache(symbol: str, timeframe: int, candles: list[Candle]
         if not candles:
             return
 
-        from core.clock import now_date, candle_ts_to_ms
+        from core.clock import candle_ts_to_ms
 
         cache_dir = getattr(_cfg, "REPLAY_CACHE_DIR", "replay_data")
-        date_str = now_date()
 
-        # Build path: replay_data/EURUSD_SB/5/2026-06-26.jsonl
+        # Build path: replay_data/EURUSD/5/dedup.jsonl  (NOT date-partitioned)
+        # Using a single dedup file per symbol/timeframe is CRITICAL for
+        # correct cross-date-boundary deduplication. A date-partitioned file
+        # would reset last_ts to None on every new day, causing re-emission
+        # of all closed candles and potential OHLCV conflicts when the broker
+        # revises recently-closed candle data.
         out_dir = Path(cache_dir) / symbol / str(timeframe)
         out_dir.mkdir(parents=True, exist_ok=True)
-        filepath = out_dir / f"{date_str}.jsonl"
+        filepath = out_dir / "dedup.jsonl"
 
-        # Get last persisted timestamp for deduplication
+        # Get last persisted timestamp for deduplication (persistent across dates)
         last_ts = _get_last_cached_timestamp(filepath)
 
         # Always exclude the last candle in the array (it may still be forming).
@@ -191,8 +202,21 @@ def _persist_candles_to_cache(symbol: str, timeframe: int, candles: list[Candle]
         if last_ts is not None:
             new_candles = [c for c in closed_candles if candle_ts_to_ms(c.time) > last_ts]
         else:
-            # First write of the day — persist all closed candles
+            # First call for this symbol/timeframe — persist all closed candles
             new_candles = closed_candles
+
+        # Secondary in-memory dedup: filter out any candle whose timestamp
+        # was already emitted in this session (guards against dedup file
+        # missing, corrupted, or read failure).
+        def _not_already_emitted(c: Candle) -> bool:
+            ts_ms = candle_ts_to_ms(c.time)
+            key = (symbol, timeframe, ts_ms)
+            if key in _candle_emitted_set:
+                return False
+            _candle_emitted_set.add(key)
+            return True
+
+        new_candles = [c for c in new_candles if _not_already_emitted(c)]
 
         if not new_candles:
             return
@@ -227,6 +251,17 @@ def _persist_candles_to_cache(symbol: str, timeframe: int, candles: list[Candle]
 
     except Exception as exc:
         logger.warning("[DATA_REPLAY] failed_to_persist symbol=%s error=%s", symbol, exc)
+
+
+# ─── In-memory candle dedup tracker (module-level, survives session) ─────
+# Prevents re-emission of the same candle timestamp within one process
+# session. Resettable for test isolation.
+_candle_emitted_set: set[tuple[str, int, int]] = set()
+
+
+def reset_candle_dedup_for_tests() -> None:
+    """Reset in-memory dedup tracker (test isolation)."""
+    _candle_emitted_set.clear()
 
 
 class MT5DataFeed:

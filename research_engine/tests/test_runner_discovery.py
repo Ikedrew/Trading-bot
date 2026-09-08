@@ -55,10 +55,14 @@ class TestDiscoverRunners:
     def test_skips_questions_without_metadata(self):
         """Questions without runner_module are not discovered."""
         runners = discover_runners()
-        # E4, M2-M8, S2-S7 etc don't have runner_module set
-        assert "E4" not in runners
-        assert "M2" not in runners
+        # E4 now has runner metadata (Wave 8)
+        assert "E4" in runners, "E4 should now have a runner (Wave 8)"
         assert "G1" not in runners
+        # M2-M8, M11 now have runner metadata (Wave 7)
+        for qid in ("M2", "M3", "M4", "M6", "M7", "M8", "M11"):
+            assert qid in runners, f"Missing runner for {qid} (Wave 7)"
+        # L5 now has runner metadata (Wave 8)
+        assert "L5" in runners, "L5 should now have a runner (Wave 8)"
 
     def test_missing_module_does_not_crash(self):
         """A missing module produces a warning, not a crash."""

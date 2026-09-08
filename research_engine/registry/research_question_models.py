@@ -20,7 +20,7 @@ class QuestionCategory(str, Enum):
     SYSTEM_EDGE = "SYSTEM_EDGE"           # E: Overall system expectancy
     MARKET_CONTEXT = "MARKET_CONTEXT"     # M: Regime, phase, HTF interactions
     DECISION_QUALITY = "DECISION_QUALITY" # D: Scoring, calibration, thresholds
-    STRATEGY_HORIZON = "STRATEGY_HORIZON" # S: Strategy × horizon performance
+    STRATEGY_HORIZON = "STRATEGY_HORIZON" # S: Strategy x horizon performance
     EXECUTION = "EXECUTION"               # X: Slippage, fills, broker
     SYSTEM_LEARNING = "SYSTEM_LEARNING"   # L: Degradation, improvement, drift
     RISK_MANAGEMENT = "RISK_MANAGEMENT"   # R: Guard effectiveness, risk layer value
@@ -28,6 +28,8 @@ class QuestionCategory(str, Enum):
     PROMOTION_INTELLIGENCE = "PROMOTION_INTELLIGENCE"  # P: Promotion impact and readiness
     EXIT_MANAGEMENT = "EXIT_MANAGEMENT"   # EX: Exit policy optimisation and validation
     TRADE_MANAGEMENT = "TRADE_MANAGEMENT"  # MGMT: Trade management effectiveness
+    PORTFOLIO_SELECTION = "PORTFOLIO_SELECTION"  # PORT: Portfolio ranking / selection quality
+    OPPORTUNITY_SELECTION = "OPPORTUNITY_SELECTION"  # OPP: Opportunity-level selection quality
 
 
 class QuestionStatus(str, Enum):
@@ -63,6 +65,8 @@ class DataSource(str, Enum):
     PROTECTION_AUDIT = "protection_audit_v1"
     EXECUTION_ATTEMPTS = "execution_attempts_v1"
     RISK_DEVIATION = "risk_deviation_v1"
+    PORTFOLIO_RANKINGS = "portfolio_rankings"
+    PORTFOLIO_SHADOW = "portfolio_shadow"
 
 
 @dataclass(frozen=True)
@@ -99,29 +103,29 @@ class ResearchQuestion:
     from dataset validation results.
     """
 
-    # ─── IDENTITY ─────────────────────────────────────────────────────
+    # --- IDENTITY ---
     id: str                             # e.g. "E1", "M4", "S2"
     category: QuestionCategory
     title: str
     description: str
 
-    # ─── REQUIREMENTS ─────────────────────────────────────────────────
+    # --- REQUIREMENTS ---
     required_fields: tuple[str, ...]    # Fields that MUST exist in the dataset
     data_sources: tuple[DataSource, ...]  # Which datasets are needed
     priority: QuestionPriority
 
-    # ─── VALIDATION ───────────────────────────────────────────────────
+    # --- VALIDATION ---
     validation_rules: tuple[ValidationRule, ...] = ()
 
-    # ─── DEPENDENCIES ─────────────────────────────────────────────────
+    # --- DEPENDENCIES ---
     depends_on: tuple[str, ...] = ()    # Other question IDs that must complete first
 
-    # ─── RUNNER ───────────────────────────────────────────────────────
+    # --- RUNNER ---
     runner_module: str = ""             # e.g. "research_engine.experiments.probability_of_ruin"
     runner_function: str = ""           # e.g. "run_probability_of_ruin"
     report_filename: str = ""           # e.g. "r3_probability_of_ruin.json"
 
-    # ─── LEGACY MAPPING ───────────────────────────────────────────────
+    # --- LEGACY MAPPING ---
     legacy_ids: tuple[str, ...] = ()    # Old Q1-Q25 IDs this replaces
 
     def to_dict(self) -> dict:

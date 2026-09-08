@@ -29,7 +29,8 @@ Rules enforced here:
 Field mapping (canonical runtime → internal research shape), preserving:
     shadow_trade_id, plan_id, observation_id, canonical_opportunity_id,
     symbol, horizon, direction, entry/stop/target, close timestamp,
-    pnl_r_multiple, mfe_r, mae_r.
+    pnl_r_multiple, mfe_r, mae_r, and observed per-bar state progression when
+    present on the CLOSE event.
 
 This module is:
     - READ ONLY (never modifies source data)
@@ -236,6 +237,7 @@ def _map_to_research_record(
 
     exit_reason_raw = str(close_ev.get("exit_reason", "") or "")
     horizon = str(open_identity.get("evaluated_horizon", "") or "")
+    path, path_status = _normalise_trade_state_progression(close_ev)
 
     return {
         "schema_version": _RESEARCH_SCHEMA_VERSION,
@@ -306,6 +308,37 @@ def _map_to_research_record(
             "bars_held": close_ev.get("bars_held"),
             "risk_distance": outcome.get("risk_distance"),
             "intended_rr": outcome.get("intended_rr"),
+            "trade_state_progression": path,
+            "trade_state_progression_status": path_status,
         },
     }
+
+
+def _normalise_trade_state_progression(
+    close_ev: dict[str, Any],
+) -> tuple[list[dict[str, Any]], str]:
+    """
+    Preserve CLOSE-event path observations without reordering or inventing bars.
+
+    Runtime currently writes a forward-appended list of per-bar dictionaries,
+    typically {"bar": n, "r": current_r, "close": price}. The normaliser keeps
+    the source order exactly; counterfactual simulators must still inspect the
+    available fields before making stronger claims about timestamps or intrabar
+    SL/TP ordering.
+    """
+    raw = close_ev.get("trade_state_progression")
+    if raw is None:
+        return [], "MISSING"
+    if not isinstance(raw, list):
+        return [], "INVALID"
+
+    path: list[dict[str, Any]] = []
+    for step in raw:
+        if not isinstance(step, dict):
+            return [], "INVALID"
+        path.append(dict(step))
+
+    if not path:
+        return [], "EMPTY"
+    return path, "PRESENT"
 
