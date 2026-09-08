@@ -53,7 +53,7 @@ _PROFILES: dict[str, CanonicalProfile] = {
         dataset="events", schema_version=current_schema("events"),
         generation=current_generation("events"),
         required_fields=("ts_utc_ms", "type", "schema_version", "event_layout_version"),
-        optional_fields=("symbol", "source", "payload", "feature_version"),
+        optional_fields=("symbol", "source", "payload", "feature_version", "timeframe"),
         version_fields=("event_layout_version",),
     ),
     "market_context": CanonicalProfile(

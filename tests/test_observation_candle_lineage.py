@@ -25,7 +25,7 @@ def _bar(ts: int) -> Candle:
 def _persist(symbol, candles, tmp_path, emitted):
     with patch("core.config.ENABLE_CANDLE_REPLAY_CACHE", True), \
          patch("core.config.REPLAY_CACHE_DIR", str(tmp_path)), \
-         patch("core.event_stream.emit_candle", side_effect=lambda s, p, source=None: emitted.append((s, p)) or True):
+         patch("core.event_stream.emit_candle", side_effect=lambda s, p, source=None, timeframe=None: emitted.append((s, p)) or True):
         _persist_candles_to_cache(symbol, 5, candles)
 
 

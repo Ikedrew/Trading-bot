@@ -449,6 +449,7 @@ def emit(
     payload: dict[str, Any] | None = None,
     *,
     source: str | None = None,
+    timeframe: str | None = None,
 ) -> bool:
     """
     Emit a single event into the unified stream.
@@ -494,6 +495,9 @@ def emit(
 
         if symbol is not None:
             event["symbol"] = symbol
+
+        if timeframe is not None:
+            event["timeframe"] = timeframe
 
         if payload:
             event["payload"] = payload
@@ -553,9 +557,16 @@ def emit(
 # ─── OBSERVATION EMITTERS (typed shortcuts for each family) ───────────────────
 
 # MARKET_DATA
-def emit_candle(symbol: str, payload: dict[str, Any], *, source: str = "mt5_data") -> bool:
-    """Emit a CANDLE observation (OHLCV per closed bar)."""
-    return emit("CANDLE", symbol, payload, source=source)
+def emit_candle(symbol: str, payload: dict[str, Any], *, timeframe: str | None = None, source: str = "mt5_data") -> bool:
+    """Emit a CANDLE observation (OHLCV per closed bar).
+
+    ``timeframe`` is the canonical textual timeframe name (e.g. "M5"). It is
+    persisted at the top level so the canonical identity
+    (symbol, timeframe, bar_timestamp) is reconstructable from every new CANDLE
+    event. Historical timeframe-less CANDLE events remain valid: timeframe is
+    omitted when None and is never silently defaulted to M5.
+    """
+    return emit("CANDLE", symbol, payload, source=source, timeframe=timeframe)
 
 
 # FEATURE_STATE

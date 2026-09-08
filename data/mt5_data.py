@@ -14,6 +14,7 @@ from typing import Any
 import MetaTrader5 as mt5
 
 from core.mt5_timeout import mt5_call
+from core.constants.timeframes import timeframe_name
 
 logger = logging.getLogger(__name__)
 
@@ -293,7 +294,7 @@ def _persist_candles_to_cache(symbol: str, timeframe: int, candles: list[Candle]
                 # Unified event bus
                 try:
                     from core.event_stream import emit_candle
-                    emit_candle(symbol, record, source="mt5_data")
+                    emit_candle(symbol, record, timeframe=timeframe_name(timeframe), source="mt5_data")
                 except Exception:
                     pass
 
