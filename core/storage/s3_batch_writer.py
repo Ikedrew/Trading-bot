@@ -5,14 +5,15 @@ Buffers events in memory per (symbol, date) partition and flushes
 as multi-line JSONL files to S3 using Hive-compatible partitioning.
 
 S3 Key Structure:
-    events/symbol={SYMBOL}/date={YYYY-MM-DD}/part-{NNNN}.jsonl
+    events/symbol={SYMBOL}/date={YYYY-MM-DD}/part-{SESSION}-{NNNNNNNN}.jsonl
 
 Flush Strategy:
     - Buffer >= max_buffer_size events (default: 100)
     - OR time >= flush_interval seconds since last flush (default: 30)
 
 Guarantees:
-    - Atomic flush per batch (one put_object = one complete JSONL file)
+    - Atomic, create-only flush per batch (one put_object = one complete JSONL file)
+    - Collision-safe object names across process/VM restarts
     - Deterministic replay (events in file are ts_utc_ms ordered)
     - No single-event files (minimum batch of 1, typically 50-100)
     - Non-blocking: flush runs in background thread
@@ -34,13 +35,21 @@ import logging
 import os
 import threading
 import time as _time
+import uuid
 from collections import defaultdict
+from datetime import datetime, timezone
 from typing import Any
 
 from core.config import NEW_RUNTIME_S3_BUCKET
 from core.production_data_contract import s3_base_prefix
 
 logger = logging.getLogger(__name__)
+
+
+def _new_session_id() -> str:
+    """Return a sortable, non-secret identifier unique to this writer instance."""
+    started = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    return f"{started}-{uuid.uuid4().hex}"
 
 
 class S3BatchWriter:
@@ -61,12 +70,18 @@ class S3BatchWriter:
         flush_interval: float = 30.0,
         max_buffer_size: int = 100,
         dataset: str = "events",
+        session_id: str | None = None,
     ) -> None:
         self._bucket = bucket
         self._prefix = base_prefix
         self._dataset = dataset
         self._flush_interval = flush_interval
         self._max_buffer = max_buffer_size
+        # A process-local counter alone is unsafe: it returns to one after every
+        # restart and would reuse an existing part-0001.jsonl key.  Prefix every
+        # leaf with a new writer-instance ID, then use the counter only for
+        # ordering batches within that instance.
+        self._session_id = session_id or _new_session_id()
 
         # Buffers: (symbol, date) → list of JSON lines
         self._buffers: dict[tuple[str, str], list[str]] = defaultdict(list)
@@ -166,10 +181,15 @@ class S3BatchWriter:
         part_num = self._part_counters[key]
         self._last_flush[key] = _time.time()
 
-        # Build S3 key from the central contract (schema-versioned, Hive-compatible)
+        # Build S3 key from the central contract (schema-versioned, Hive-compatible).
+        # The session component makes the leaf collision-resistant across every
+        # process/VM restart without listing the partition.
         from core.production_data_contract import canonical_s3_key
         s3_key = canonical_s3_key(
-            self._dataset, symbol=symbol, date=date_str, part=f"part-{part_num:04d}.jsonl"
+            self._dataset,
+            symbol=symbol,
+            date=date_str,
+            part=f"part-{self._session_id}-{part_num:08d}.jsonl",
         )
 
         # Build body (JSONL — one event per line)
@@ -198,6 +218,10 @@ class S3BatchWriter:
                     Key=key,
                     Body=body,
                     ContentType="application/x-ndjson",
+                    # S3 must reject an astronomically unlikely generated-name
+                    # collision instead of replacing an existing production
+                    # object (HTTP 412 PreconditionFailed).
+                    IfNoneMatch="*",
                 )
                 self._total_flushed += event_count
                 self._total_batches += 1
@@ -209,6 +233,22 @@ class S3BatchWriter:
                     pass
                 return
             except Exception as exc:
+                response = getattr(exc, "response", {}) or {}
+                error = response.get("Error", {}) or {}
+                if str(error.get("Code", "")) in {"412", "PreconditionFailed"}:
+                    self._total_errors += 1
+                    logger.critical(
+                        "[S3_BATCH] object_key_collision key=%s action=rejected "
+                        "reason='create-only If-None-Match precondition failed; "
+                        "existing production object preserved'",
+                        key,
+                    )
+                    try:
+                        from core.s3_write_observability import record_s3_failure
+                        record_s3_failure(self._dataset, exc)
+                    except Exception:
+                        pass
+                    return
                 if attempt == max_retries:
                     self._total_errors += 1
                     # Final retry exhausted — surface visibly (not just debug).
