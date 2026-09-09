@@ -26,6 +26,38 @@ logger = logging.getLogger(__name__)
 _resolved_symbols: dict[str, str] = {}
 
 
+class AccountSymbolResolver:
+    """Strict resolver for isolated account workers; never uses the legacy map.
+
+    A single instance belongs to one pinned (account, broker, server, login).
+    Multiple candidates require an explicit account-specific mapping, including
+    when the broker offers both a bare symbol and suffixed variants.
+    """
+
+    def __init__(self, account_identity: tuple, names, *, explicit=None, aliases=None):
+        self.account_identity = tuple(account_identity)
+        self._names = frozenset(names)
+        self._explicit = dict(explicit or {})
+        self._aliases = dict(aliases or {})
+        self._cache: dict[tuple, dict] = {}
+
+    def resolve(self, canonical: str) -> dict:
+        key = (*self.account_identity, canonical)
+        if key not in self._cache:
+            explicit = self._explicit.get(canonical)
+            candidates = ([explicit] if explicit in self._names else []) if explicit else sorted(
+                n for n in self._names
+                if n.startswith(canonical) or n in self._aliases.get(canonical, ())
+            )
+            status = 'available' if len(candidates) == 1 else ('ambiguous' if candidates else 'unavailable')
+            self._cache[key] = {
+                'canonical_symbol': canonical, 'status': status,
+                'broker_symbol': candidates[0] if len(candidates) == 1 else None,
+                'candidates': tuple(candidates),
+            }
+        return dict(self._cache[key])
+
+
 def register_resolved_symbol(canonical: str, broker_symbol: str) -> None:
     """Register the process-local canonical -> MT5 boundary mapping."""
     _resolved_symbols[str(canonical)] = str(broker_symbol)
