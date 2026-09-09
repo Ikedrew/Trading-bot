@@ -40,6 +40,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
@@ -450,7 +451,7 @@ class DecisionLedgerWriter:
             logger.debug("[DECISION_LEDGER] local_write_failed: %s", exc)
 
     def _write_s3(self, symbol: str, date_str: str, lines: list[str]) -> None:
-        """Append lines to S3 partition. Fire-and-forget. Never raises."""
+        """Create an immutable batch in the S3 partition. Never raises."""
         try:
             from core import config as _cfg
             if not getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
@@ -470,20 +471,20 @@ class DecisionLedgerWriter:
                 ),
             )
             from core.production_data_contract import canonical_s3_key
-            key = canonical_s3_key("decision_ledger", symbol=symbol, date=date_str)
+            # Match the event writer's immutable/create-only model. A fresh UUID
+            # per batch avoids shared counters across threads, writers or restarts.
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+            key = canonical_s3_key(
+                "decision_ledger", symbol=symbol, date=date_str,
+                part=f"part-{stamp}-{uuid4().hex}.jsonl",
+            )
             body = "".join(lines)
-
-            # Read-append-write (acceptable for decision ledger volume)
-            try:
-                existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
-                body = existing["Body"].read().decode("utf-8") + body
-            except Exception:
-                pass  # New file
 
             s3.put_object(
                 Bucket=_S3_BUCKET, Key=key,
                 Body=body.encode("utf-8"),
                 ContentType="application/x-ndjson",
+                IfNoneMatch="*",  # A collision must fail, never replace data.
             )
             from core.s3_write_observability import record_s3_success
             record_s3_success("decision_ledger")
