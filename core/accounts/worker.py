@@ -126,11 +126,12 @@ class AccountReader:
         if include_symbol_inventory:
             result['symbol_inventory'] = [
                 {'broker_symbol': s.name, **{k: getattr(s, k, None)
-                 for k in (*SPEC_FIELDS, *SYMBOL_DESCRIPTION_FIELDS)}} for s in symbols
+                 for k in (*SPEC_FIELDS, 'trade_tick_value', *SYMBOL_DESCRIPTION_FIELDS)}} for s in symbols
             ]
         for canonical in CANONICAL_SYMBOLS:
             row = resolver.resolve(canonical)
             row.update({k: None for k in SPEC_FIELDS})
+            row['trade_tick_value'] = None
             row.update({k: None for k in SYMBOL_DESCRIPTION_FIELDS})
             row['contract_size'] = None
             if row['status'] == 'available':
@@ -139,6 +140,7 @@ class AccountReader:
                     row['status'] = 'unavailable'
                 else:
                     row.update({k: getattr(info, k, None) for k in SPEC_FIELDS})
+                    row['trade_tick_value'] = getattr(info, 'trade_tick_value', None)
                     row.update({k: getattr(info, k, None) for k in SYMBOL_DESCRIPTION_FIELDS})
                     row['contract_size'] = getattr(info, 'trade_contract_size', None)
                     if info.name != row['broker_symbol'] or not valid_spec(info):
@@ -146,6 +148,7 @@ class AccountReader:
                     else:
                         infos[canonical] = info
             result['symbols'].append(row)
+
 
         # Account-owned snapshots; no legacy risk, ownership or ticket caches.
         now = datetime.now(timezone.utc)
