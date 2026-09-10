@@ -154,7 +154,10 @@ def main() -> None:
     if mt5_owned:
         import MetaTrader5 as mt5
         # Try explicit path first (handles multiple terminal installations)
-        if not mt5.initialize(path=config.MT5_TERMINAL_PATH):
+        _init_opts = {'path': config.MT5_TERMINAL_PATH}
+        if getattr(config, 'MT5_TERMINAL_PORTABLE', False):
+            _init_opts['portable'] = True
+        if not mt5.initialize(**_init_opts):
             # Fallback: try default path
             if not mt5.initialize():
                 logger.critical("[MT5_LIFECYCLE] initialize failed: %s", mt5.last_error())

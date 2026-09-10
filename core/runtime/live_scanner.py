@@ -40,6 +40,7 @@ from execution.execution_orchestrator import ExecutionOrchestrator
 from execution.post_execution_handler import emit_post_trade_success, emit_post_trade_failure
 from core.runtime.engine_outcome_handler import handle_no_trade_outcome
 from core.runtime.engine_execution_handler import prepare_execution
+from core.runtime.fanout_execution import dispatch_execution, multi_account_fanout_enabled
 from core.runtime.scanner_init import initialize_symbol_states
 from core.runtime.runtime_state_classifier import RuntimeStateClassifier
 from core.runtime.tick_monitor import TickMonitor
@@ -116,6 +117,10 @@ def run_live_scanner(
 
     _mode = "PAPER" if getattr(execution, "DRY_RUN", True) else "LIVE"
     logger.info("[LIVE_SCANNER] ENGINE_START | mode=%s | symbols=%d", _mode, len(states))
+    logger.info(
+        "[MULTI_ACCOUNT_FANOUT] feature_flag=%s (MULTI_ACCOUNT_FANOUT_ENABLED)",
+        "ON" if multi_account_fanout_enabled() else "OFF",
+    )
 
     # ─── V10 CODE VERSION VERIFICATION ────────────────────────────────
     try:
@@ -1720,7 +1725,12 @@ def run_live_scanner(
                 except Exception:
                     pass
                 # ─── END EXEC TRACE ───────────────────────────────────
-                _exec_outcome = _exec_orchestrator.execute_trade(
+                # ─── MULTI-ACCOUNT FAN-OUT GATE (D boundary) ──────────
+                # ONE canonical decision → exactly one execution route:
+                #   fanout ON  → per-account workers (legacy never runs)
+                #   fanout OFF → legacy single-account path (unchanged)
+                # NO_TRADE / PATTERN_REJECT / RISK_BLOCK never reach here.
+                _exec_outcome = dispatch_execution(
                     intent=decision.intent,
                     symbol=sym_state.symbol,
                     cycle_id=cycle_id,
@@ -1729,14 +1739,29 @@ def run_live_scanner(
                     entity_id=_new_result.get("entity_id", "") if "_new_result" in dir() else "",
                     observation_id=_observation_id_cycle,
                     canonical_opportunity_id=_canonical_opp_id,
-                    # Phase 3 Step 4: execution-moment feed facts + planned
-                    # risk geometry, derived from this cycle's tick/intent.
-                    bid_at_execution=bid if "bid" in dir() else 0.0,
-                    ask_at_execution=ask if "ask" in dir() else 0.0,
-                    risk_distance=abs(
-                        float(decision.intent.entry_reference) - float(decision.intent.sl)
-                    ) if getattr(decision.intent, "sl", 0.0) else 0.0,
-                    mt5_state=mt5_state,
+                    strategy_family=str(
+                        _new_result.get("strategy_family") or _new_result.get("strategy") or ""
+                    ) if "_new_result" in dir() else "",
+                    bid=bid if "bid" in dir() else 0.0,
+                    ask=ask if "ask" in dir() else 0.0,
+                    legacy_execute=lambda: _exec_orchestrator.execute_trade(
+                        intent=decision.intent,
+                        symbol=sym_state.symbol,
+                        cycle_id=cycle_id,
+                        decision_id=_decision_id,
+                        correlation_id=_cor_id if "_cor_id" in dir() else "",
+                        entity_id=_new_result.get("entity_id", "") if "_new_result" in dir() else "",
+                        observation_id=_observation_id_cycle,
+                        canonical_opportunity_id=_canonical_opp_id,
+                        # Phase 3 Step 4: execution-moment feed facts + planned
+                        # risk geometry, derived from this cycle's tick/intent.
+                        bid_at_execution=bid if "bid" in dir() else 0.0,
+                        ask_at_execution=ask if "ask" in dir() else 0.0,
+                        risk_distance=abs(
+                            float(decision.intent.entry_reference) - float(decision.intent.sl)
+                        ) if getattr(decision.intent, "sl", 0.0) else 0.0,
+                        mt5_state=mt5_state,
+                    ),
                 )
                 if not _exec_outcome.executed:
                     # ─── EXEC TRACE: Order failed ─────────────────────

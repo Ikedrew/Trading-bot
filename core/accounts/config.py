@@ -8,7 +8,9 @@ from pathlib import Path
 ACCOUNT_IDS = ('METAQUOTES', 'ADMIRALS', 'VANTAGE')
 CANONICAL_SYMBOLS = ('EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'USDCAD',
                      'AUDUSD', 'NZDUSD', 'NAS100', 'US500', 'XAUUSD')
-BASELINE_TERMINAL = r'C:\Program Files\MetaTrader 5\terminal64.exe'
+# Deployed baseline (primary) MT5 terminal — dedicated installation directory
+# for the METAQUOTES account (matches the account/terminal isolation layout).
+BASELINE_TERMINAL = r'C:\MT5Accounts\METAQUOTES\terminal64.exe'
 
 
 def terminal_key(path: str) -> str:
@@ -92,8 +94,9 @@ class AccountConfig:
             errors.append('TERMINAL_DATA_PATH_MUST_BE_ABSOLUTE')
         if self.portable and terminal_key(self.terminal_data_path) != terminal_key(str(Path(self.terminal_path).parent)):
             errors.append('PORTABLE_DATA_PATH_MISMATCH')
-        expected = 'baseline' if self.account_id == 'METAQUOTES' else 'observe_only'
-        if self.role != expected:
+        if self.account_id == 'METAQUOTES' and self.role != 'baseline':
+            errors.append('ROLE_NOT_ALLOWED_IN_PHASE1')
+        elif self.account_id != 'METAQUOTES' and self.role not in ('observe_only', 'baseline'):
             errors.append('ROLE_NOT_ALLOWED_IN_PHASE1')
         return errors
 

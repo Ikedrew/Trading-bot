@@ -95,6 +95,17 @@ class ExecutionResult:
     order: int
     comment: str
     fill_price: float | None = None
+    ownership: "PositionOwnership | None" = None
+
+    @classmethod
+    def from_account_result(cls, result):
+        """Convert an A–F worker result without changing its execution outcome."""
+        from core.position_ownership import PositionOwnership
+        raw = result.get('ownership')
+        return cls(bool(result.get('ok')), int(result.get('retcode', -1)),
+                   int(result.get('deal') or 0), int(result.get('order') or 0),
+                   str(result.get('comment', '')), result.get('fill_price'),
+                   PositionOwnership(**raw) if raw else None)
 
 
 # ─── IDEMPOTENCY GUARD ────────────────────────────────────────────────────────
@@ -927,402 +938,73 @@ class MT5Execution:
             comment=result.comment,
         )
 
-        return result
-
-    def position_modify_sl_tp(
-        self,
-        *,
-        symbol: str,
-        position_ticket: int,
-        sl: float,
-        tp: float,
-        # — Observational lineage (optional, propagated when available) —
-        decision_id: str = "",
-        correlation_id: str = "",
-        cycle_id: int = 0,
-        canonical_opportunity_id: str = "",
-        observation_id: str = "",
-        trade_id: str = "",
-    ) -> ExecutionResult:
-        """
-        Update SL/TP on an open position (e.g. trailing / break-even).
-        Layer 9 trade management calls this; entry path unchanged.
-        """
-        # ─── KILL SWITCH SAFETY NET (execution boundary) ──────────────
-        from core.kill_switch import is_kill_switch_active
-        if is_kill_switch_active():
-            _safe_log(logging.WARNING,
-                f"[EXECUTION_BLOCKED] reason=KILL_SWITCH action=MODIFY "
-                f"symbol={symbol} ticket={position_ticket}")
-            return ExecutionResult(False, -1, 0, 0, "KILL_SWITCH_BLOCKED")
-        # ─── END KILL SWITCH SAFETY NET ───────────────────────────────
-
-        # ─── B4: POSITION OWNERSHIP CHECK ─────────────────────────────
-        try:
-            from core.position_ownership import enforce_position_ownership
-            _pos_info = mt5_call(mt5.positions_get, ticket=position_ticket)
-            if _pos_info and len(_pos_info) > 0:
-                _pos_magic = int(_pos_info[0].magic)
-                if not enforce_position_ownership(
-                    position_magic=_pos_magic,
-                    action="MODIFY_SL_TP",
-                    symbol=symbol,
-                    ticket=position_ticket,
-                    expected_magic=self._magic,
-                ):
-                    return ExecutionResult(False, -1, 0, 0, "OWNERSHIP_VIOLATION")
-        except Exception:
-            pass  # Ownership check failure must not block legitimate operations
-        # ─── END OWNERSHIP CHECK ──────────────────────────────────────
-
-        broker_symbol = broker_symbol_for(symbol)
-        _mod_tick = mt5_call(mt5.symbol_info_tick, broker_symbol)
-        # Direct metadata read keeps the established mt5_call ordering for
-        # management adapters while remaining a read-only terminal query.
-        info = mt5.symbol_info(broker_symbol)
-        if not all(
-            isinstance(getattr(info, field, None), (int, float))
-            for field in ("point", "digits", "trade_stops_level", "trade_freeze_level")
-        ):
-            # Compatibility for fully mocked legacy execution tests; real MT5
-            # symbol_info always exposes concrete numeric fields.
-            info = None
-        if info is None:
-            normalized_sl, normalized_tp = float(sl), float(tp)
-            pass
-        else:
-            spec = MT5SymbolSpec.from_info(broker_symbol, info)
-            if _mod_tick is None:
-                return ExecutionResult(False, -1, 0, 0, "NO_TICK")
-            market_price = (float(_mod_tick.bid) + float(_mod_tick.ask)) / 2.0
-            distance_error = validate_stops(
-                spec, market_price=market_price, sl=sl, tp=tp, include_freeze=True,
-            )
-            if distance_error:
-                return ExecutionResult(False, -1, 0, 0, distance_error)
-            normalized_sl = spec.normalize_price(sl) if sl else 0.0
-            normalized_tp = spec.normalize_price(tp) if tp else 0.0
-
-        _safe_log(logging.DEBUG, (
-            f"[EXECUTION_SUBMITTED] action=MODIFY symbol={symbol} "
-            f"ticket={position_ticket} sl={sl:.5f} tp={tp:.5f}"
-        ))
-
-        if self.DRY_RUN:
-            result = ExecutionResult(True, 0, 0, 0, "dry_run_modify")
-            _safe_log(logging.DEBUG, _fmt_result(
-                True, 0, "DRY_RUN", 0, 0, "dry_run_modify",
-                symbol, 0.0, 0, action="MODIFY",
-            ))
-            return result
-
-        # Market snapshot for this attempt (observational only — does not
-        # alter the broker request or execution behaviour).
-        _mod_bid = float(_mod_tick.bid) if _mod_tick is not None else 0.0
-        _mod_ask = float(_mod_tick.ask) if _mod_tick is not None else 0.0
-
-        request = {
-            "action": mt5.TRADE_ACTION_SLTP,
-            "symbol": broker_symbol,
-            "position": int(position_ticket),
-            "sl": normalized_sl,
-            "tp": normalized_tp,
-        }
-
-        t0 = _time.perf_counter()
-        mt5_result = mt5_call(mt5.order_send, request)
-        latency_ms = int((_time.perf_counter() - t0) * 1000)
-
-        if mt5_result is None:
-            result = ExecutionResult(False, -1, 0, 0, f"modify_none:{mt5.last_error()}")
-            _persist_attempt(
-                symbol=symbol,
-                side="",
-                volume=0.0,
-                entry_reference=0.0,
-                sl=sl,
-                tp=tp,
-                bid=_mod_bid,
-                ask=_mod_ask,
-                broker_ok=False,
-                retcode=-1,
-                deal=0,
-                order_ticket=0,
-                comment=result.comment,
-                fill_price=None,
-                attempt_number=1,
-                retry_reason=None,
-                action_type="SLTP_MODIFY",
-                cycle_id=cycle_id,
-                canonical_opportunity_id=canonical_opportunity_id,
-                observation_id=observation_id,
-                decision_id=decision_id,
-                correlation_id=correlation_id,
-                trade_id=trade_id,
-            )
-            _safe_log(logging.WARNING, _fmt_result(
-                False, -1, "ORDER_SEND_NONE", 0, 0, result.comment,
-                symbol, 0.0, latency_ms, action="MODIFY",
-            ))
-            return result
-
-        ok = int(mt5_result.retcode) == mt5.TRADE_RETCODE_DONE
-        result = ExecutionResult(
-            ok,
-            int(mt5_result.retcode),
-            int(mt5_result.deal),
-            int(mt5_result.order),
-            str(mt5_result.comment),
-        )
-
-        _persist_attempt(
-            symbol=symbol,
-            side="",
-            volume=0.0,
-            entry_reference=0.0,
-            sl=sl,
-            tp=tp,
-            bid=_mod_bid,
-            ask=_mod_ask,
-            broker_ok=ok,
-            retcode=result.retcode,
-            deal=result.deal,
-            order_ticket=result.order,
-            comment=result.comment,
-            fill_price=None,
-            attempt_number=1,
-            retry_reason=None,
-            action_type="SLTP_MODIFY",
-            cycle_id=cycle_id,
-            canonical_opportunity_id=canonical_opportunity_id,
-            observation_id=observation_id,
-            decision_id=decision_id,
-            correlation_id=correlation_id,
-            trade_id=trade_id,
-        )
-
-        _safe_log(
-            logging.DEBUG if ok else logging.WARNING,
-            _fmt_result(
-                ok, result.retcode, describe_retcode(result.retcode),
-                result.deal, result.order, result.comment,
-                symbol, 0.0, latency_ms, action="MODIFY",
-            ),
-        )
-        return result
-
-    def close_position(
-        self,
-        symbol: str,
-        position_ticket: int,
-        volume: float | None = None,
-        # — Observational lineage (optional, propagated when available) —
-        decision_id: str = "",
-        correlation_id: str = "",
-        cycle_id: int = 0,
-        canonical_opportunity_id: str = "",
-        observation_id: str = "",
-        trade_id: str = "",
-    ) -> ExecutionResult:
-        """
-        Close (or partially close) an open position by ticket.
-        If volume is None, closes the full position volume.
-        """
-        # ─── POSITION_CLOSE_ENABLED GATE ──────────────────────────────
-        if not getattr(_cfg, "POSITION_CLOSE_ENABLED", True):
-            _safe_log(logging.INFO, f"[CLOSE_DISABLED] symbol={symbol} — POSITION_CLOSE_ENABLED=False")
-            return ExecutionResult(False, -1, 0, 0, "POSITION_CLOSE_DISABLED")
-        # ─── END POSITION_CLOSE_ENABLED GATE ──────────────────────────
-
-        # ─── KILL SWITCH SAFETY NET (execution boundary) ──────────────
-        from core.kill_switch import is_kill_switch_active
-        if is_kill_switch_active():
-            _safe_log(logging.WARNING,
-                f"[EXECUTION_BLOCKED] reason=KILL_SWITCH action=CLOSE "
-                f"symbol={symbol} ticket={position_ticket}")
-            return ExecutionResult(False, -1, 0, 0, "KILL_SWITCH_BLOCKED")
-        # ─── END KILL SWITCH SAFETY NET ───────────────────────────────
-
-        # ─── B4: POSITION OWNERSHIP CHECK ─────────────────────────────
-        try:
-            from core.position_ownership import enforce_position_ownership
-            _pos_info = mt5_call(mt5.positions_get, ticket=position_ticket)
-            if _pos_info and len(_pos_info) > 0:
-                _pos_magic = int(_pos_info[0].magic)
-                _action = "PARTIAL_CLOSE" if volume is not None else "CLOSE"
-                if not enforce_position_ownership(
-                    position_magic=_pos_magic,
-                    action=_action,
-                    symbol=symbol,
-                    ticket=position_ticket,
-                    expected_magic=self._magic,
-                ):
-                    return ExecutionResult(False, -1, 0, 0, "OWNERSHIP_VIOLATION")
-        except Exception:
-            pass  # Ownership check failure must not block legitimate operations
-        # ─── END OWNERSHIP CHECK ──────────────────────────────────────
-
-        _safe_log(logging.INFO, (
-            f"[EXECUTION_SUBMITTED] action=CLOSE symbol={symbol} "
-            f"ticket={position_ticket} volume={volume}"
-        ))
-
-        broker_symbol = broker_symbol_for(symbol)
-
-        # Fetch position details
-        try:
-            positions = mt5_call(mt5.positions_get, ticket=position_ticket)
-        except Exception as exc:
-            result = ExecutionResult(False, -1, 0, 0, f"positions_get_error:{exc}")
-            _safe_log(logging.WARNING, _fmt_result(
-                False, -1, "POSITIONS_GET_ERROR", 0, 0, result.comment,
-                symbol, 0.0, 0, action="CLOSE",
-            ))
+        if result.ok and result.order:
             try:
-                _dl = getattr(_cfg, "_discord_logger", None)
-                if _dl is not None:
-                    _dl.event("TRADE_CLOSED", {"symbol": symbol, "ticket": position_ticket, "reason": "execution_failure", "details": {"error_type": type(exc).__name__, "message": str(exc)[:200], "close_type": "error"}})
-            except Exception:
-                pass
-            return result
-
-        if positions is None or len(positions) == 0:
-            result = ExecutionResult(False, -1, 0, 0, "POSITION_NOT_FOUND")
-            _safe_log(logging.WARNING, _fmt_result(
-                False, -1, "POSITION_NOT_FOUND", 0, 0, result.comment,
-                symbol, 0.0, 0, action="CLOSE",
-            ))
-            return result
-
-        pos = positions[0]
-        close_volume = volume if volume is not None else float(pos.volume)
-
-        # Determine opposite direction
-        if int(pos.type) == mt5.ORDER_TYPE_BUY:
-            order_type = mt5.ORDER_TYPE_SELL
-            tick = mt5_call(mt5.symbol_info_tick, broker_symbol)
-            price = float(tick.bid) if tick else 0.0
-        else:
-            order_type = mt5.ORDER_TYPE_BUY
-            tick = mt5_call(mt5.symbol_info_tick, broker_symbol)
-            price = float(tick.ask) if tick else 0.0
-
-        if price <= 0:
-            result = ExecutionResult(False, -1, 0, 0, "no_tick_for_close")
-            _safe_log(logging.WARNING, _fmt_result(
-                False, -1, "NO_TICK", 0, 0, result.comment,
-                symbol, close_volume, 0, action="CLOSE",
-            ))
-            return result
-
-        # Observational lineage helpers for attempt persistence
-        _close_action_type = "PARTIAL_CLOSE" if volume is not None else "CLOSE"
-        _close_side = pos.side.name if hasattr(pos, "side") else ""
-        _close_bid = float(tick.bid) if tick else 0.0
-        _close_ask = float(tick.ask) if tick else 0.0
-
-        if self.DRY_RUN:
-            result = ExecutionResult(True, 0, 0, 0, "dry_run_close")
-            _safe_log(logging.INFO, _fmt_result(
-                True, 0, "DRY_RUN", 0, 0, "dry_run_close",
-                symbol, close_volume, 0, action="CLOSE",
-            ))
-            return result
-
-        request = {
-            "action": mt5.TRADE_ACTION_DEAL,
-            "symbol": broker_symbol,
-            "volume": float(close_volume),
-            "type": order_type,
-            "position": int(position_ticket),
-            "price": price,
-            "deviation": self._deviation,
-            "magic": self._magic,
-            "comment": "CLOSE_POSITION",
-            "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": _filling_mode(broker_symbol),
-        }
-
-        t0 = _time.perf_counter()
-        mt5_result = mt5_call(mt5.order_send, request)
-        latency_ms = int((_time.perf_counter() - t0) * 1000)
-
-        if mt5_result is None:
-            result = ExecutionResult(False, -1, 0, 0, f"close_send_none:{mt5.last_error()}")
-            _persist_attempt(
-                symbol=symbol,
-                side=_close_side,
-                volume=close_volume,
-                entry_reference=0.0,
-                sl=0.0,
-                tp=0.0,
-                bid=_close_bid,
-                ask=_close_ask,
-                broker_ok=False,
-                retcode=-1,
-                deal=0,
-                order_ticket=0,
-                comment=result.comment,
-                fill_price=None,
-                attempt_number=1,
-                retry_reason=None,
-                action_type=_close_action_type,
-                cycle_id=cycle_id,
-                canonical_opportunity_id=canonical_opportunity_id,
-                observation_id=observation_id,
-                decision_id=decision_id,
-                correlation_id=correlation_id,
-                trade_id=trade_id,
-            )
-            _safe_log(logging.WARNING, _fmt_result(
-                False, -1, "ORDER_SEND_NONE", 0, 0, result.comment,
-                symbol, close_volume, latency_ms, action="CLOSE",
-            ))
-            return result
-
-        ok = int(mt5_result.retcode) == mt5.TRADE_RETCODE_DONE
-        fill_price = getattr(mt5_result, "price", None)
-        result = ExecutionResult(
-            ok,
-            int(mt5_result.retcode),
-            int(mt5_result.deal),
-            int(mt5_result.order),
-            str(mt5_result.comment),
-            fill_price=float(fill_price) if fill_price is not None else None,
-        )
-
-        _persist_attempt(
-            symbol=symbol,
-            side=_close_side,
-            volume=close_volume,
-            entry_reference=0.0,
-            sl=0.0,
-            tp=0.0,
-            bid=_close_bid,
-            ask=_close_ask,
-            broker_ok=ok,
-            retcode=result.retcode,
-            deal=result.deal,
-            order_ticket=result.order,
-            comment=result.comment,
-            fill_price=result.fill_price,
-            attempt_number=1,
-            retry_reason=None,
-            action_type=_close_action_type,
-            cycle_id=cycle_id,
-            canonical_opportunity_id=canonical_opportunity_id,
-            observation_id=observation_id,
-            decision_id=decision_id,
-            correlation_id=correlation_id,
-            trade_id=trade_id,
-        )
-
-        _safe_log(
-            logging.INFO if ok else logging.WARNING,
-            _fmt_result(
-                ok, result.retcode, describe_retcode(result.retcode),
-                result.deal, result.order, result.comment,
-                symbol, close_volume, latency_ms, action="CLOSE",
-            ) + (f" fill_price={fill_price}" if fill_price is not None else ""),
-        )
+                from dataclasses import replace
+                from core.accounts.lifecycle import LifecycleRouter
+                from core.accounts.worker import AccountReader
+                from core.accounts.position_state import ownership_from_fill, save
+                # This existing entry adapter is the explicit baseline terminal
+                # path. Verify that named account, never infer from a ticket.
+                account = LifecycleRouter().account("METAQUOTES")
+                reader = AccountReader(account, mt5)
+                reader.verify()
+                owner = ownership_from_fill(account, reader, result, symbol=intent.symbol,
+                    broker_symbol=broker_symbol, magic=self._magic,
+                    canonical_opportunity_id=canonical_opportunity_id,
+                    correlation_id=correlation_id, decision_id=decision_id)
+                result = replace(result, ownership=owner)
+                if owner:
+                    save(owner, pattern=intent.pattern, trade_horizon=intent.metadata.get("horizon", "SCALP"),
+                         sl=intent.sl, tp=intent.tp, status="open")
+            except Exception as exc:
+                _safe_log(logging.ERROR, "[POSITION_OWNERSHIP_UNRESOLVED] " + type(exc).__name__)
         return result
+
+    def _owned_operation(self, operation, *, symbol, position_ticket,
+                         ownership=None, account_id="", broker="", broker_server="",
+                         broker_symbol="", **arguments):
+        from core.accounts.lifecycle import LifecycleRouter, legacy_owner
+        from core.accounts.worker import AccountReadError
+        from core.kill_switch import is_kill_switch_active
+        if is_kill_switch_active():
+            return ExecutionResult(False, -1, 0, 0, "KILL_SWITCH_BLOCKED")
+        if operation == "close" and not getattr(_cfg, "POSITION_CLOSE_ENABLED", True):
+            return ExecutionResult(False, -1, 0, 0, "POSITION_CLOSE_DISABLED")
+        try:
+            router = getattr(self, "lifecycle_router", None) or LifecycleRouter()
+            if ownership is None:
+                ownership = legacy_owner(ticket=position_ticket, symbol=symbol,
+                    broker_symbol=broker_symbol or broker_symbol_for(symbol), mt5=mt5,
+                    accounts=router.accounts)
+            if (ownership.position_ticket != position_ticket or
+                    ownership.canonical_symbol != symbol or
+                    (account_id and ownership.account_id != account_id) or
+                    (broker and ownership.broker != broker) or
+                    (broker_server and ownership.broker_server != broker_server) or
+                    (broker_symbol and ownership.broker_symbol != broker_symbol)):
+                raise AccountReadError("OWNERSHIP_ACCOUNT_MISMATCH")
+            value = router.read(ownership, operation, magic=self._magic,
+                deviation=self._deviation, allowed=True, dry_run=self.DRY_RUN,
+                **arguments)
+            return ExecutionResult(**value, ownership=ownership)
+        except Exception as exc:
+            # Unknown account, failed verification, IPC timeout and unavailable
+            # reads never fall back to another connection or mean 'closed'.
+            return ExecutionResult(False, -1, 0, 0, "OWNERSHIP_OR_WORKER_FAILED:" + str(exc))
+
+    def position_modify_sl_tp(self, *, symbol, position_ticket, sl, tp,
+                              ownership=None, account_id="", broker="", broker_server="",
+                              broker_symbol="", decision_id="", correlation_id="",
+                              cycle_id=0, canonical_opportunity_id="", observation_id="", trade_id=""):
+        return self._owned_operation("modify", symbol=symbol, position_ticket=position_ticket,
+            ownership=ownership, account_id=account_id, broker=broker, broker_server=broker_server,
+            broker_symbol=broker_symbol, sl=sl, tp=tp)
+
+    def close_position(self, symbol, position_ticket, volume=None,
+                       ownership=None, account_id="", broker="", broker_server="",
+                       broker_symbol="", decision_id="", correlation_id="", cycle_id=0,
+                       canonical_opportunity_id="", observation_id="", trade_id=""):
+        return self._owned_operation("close", symbol=symbol, position_ticket=position_ticket,
+            ownership=ownership, account_id=account_id, broker=broker, broker_server=broker_server,
+            broker_symbol=broker_symbol, volume=volume)

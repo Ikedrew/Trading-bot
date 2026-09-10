@@ -157,7 +157,11 @@ ENABLE_EV_GATE = False                   # When True, only positive-EV trades ar
 
 # --- MT5 runtime lifecycle ---
 MT5_CENTRALISED_INIT = True     # When True, main.py owns mt5.initialize/shutdown (single authority)
-MT5_TERMINAL_PATH = r"C:\Program Files\MetaTrader 5\terminal64.exe"
+# Baseline (primary) terminal — derived from the accounts layout constant so the
+# bot and the account configuration can never point at different installations.
+from core.accounts.config import BASELINE_TERMINAL as _MT5_BASELINE_TERMINAL  # noqa: E402
+MT5_TERMINAL_PATH = _MT5_BASELINE_TERMINAL
+MT5_TERMINAL_PORTABLE = True    # Use portable mode so the terminal loads its local account config
 MT5_RECONNECT_COOLDOWN_SECONDS = 10.0  # Base seconds between reconnect attempts
 MT5_RECONNECT_MAX_COOLDOWN_SECONDS = 60.0  # Maximum backoff cap (seconds)
 OBSERVABILITY_VALIDATION_ENABLED = False  # When True, trade event buffer collects events for validation

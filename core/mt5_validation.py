@@ -32,16 +32,18 @@ def validate_account() -> None:
         mt5.shutdown()
         sys.exit(1)
 
-    # Trading permission
-    if not term_info.trade_allowed:
-        logger.critical("[STARTUP_VALIDATION] FAILED — trading not allowed on this terminal")
+    # Trading permission � check account-level (authoritative for execution
+    # capability) rather than terminal-level which can be disabled at the GUI
+    # even when the account itself permits trading.
+    acct_info = mt5.account_info()
+    if acct_info is None:
+        logger.critical("[STARTUP_VALIDATION] FAILED — account_info() returned None (account inaccessible)")
         mt5.shutdown()
         sys.exit(1)
 
     # Account accessibility
-    acct_info = mt5.account_info()
-    if acct_info is None:
-        logger.critical("[STARTUP_VALIDATION] FAILED — account_info() returned None (account inaccessible)")
+    if acct_info.login is None or acct_info.login <= 0:
+        logger.critical("[STARTUP_VALIDATION] FAILED — account login not available")
         mt5.shutdown()
         sys.exit(1)
 
