@@ -67,8 +67,19 @@ def route_executions(
                 results[index] = {**routed[index], "executed": False,
                                   "status": "WORKER_TIMEOUT" if "timeout" in type(exc).__name__.lower() else "WORKER_FAILED",
                                   "comment": type(exc).__name__}
-    return [r if r is not None else {**routed[i], "executed": False, "status": "SKIPPED", "comment": "NO_RESULT"}
-            for i, r in enumerate(results)]
+    outcomes = [r if r is not None else {**routed[i], "executed": False, "status": "SKIPPED", "comment": "NO_RESULT"}
+                for i, r in enumerate(results)]
+    # Phase G consumes successful children after D–F has finished routing.
+    # Neither outcome nor eligibility/sizing/entry routing is changed here.
+    from .lifecycle_registration import accept_account_execution
+    import logging
+    for outcome in outcomes:
+        try:
+            accept_account_execution(outcome)
+        except Exception as exc:
+            logging.getLogger(__name__).error("[LIFECYCLE_REGISTRATION_FAILED] account=%s error=%s",
+                                             outcome.get("account_id"), exc)
+    return outcomes
 
 
 def _guarded_execute(execute_one: Callable[[dict], dict], item: dict) -> dict:

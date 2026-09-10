@@ -44,8 +44,9 @@ _S3_EXCURSION_PREFIX = "runtime_state/position_excursion"
 _S3_SCHEMA_VERSION = "position_excursion_v1"
 
 
-def _s3_key(ticket: int) -> str:
-    return f"{_S3_EXCURSION_PREFIX}/schema_version={_S3_SCHEMA_VERSION}/ticket={int(ticket)}.json"
+def _s3_key(ticket: int, account_id: str = "") -> str:
+    scope = f"account_id={account_id}/" if account_id else ""
+    return f"{_S3_EXCURSION_PREFIX}/schema_version={_S3_SCHEMA_VERSION}/{scope}ticket={int(ticket)}.json"
 
 
 def _s3_mirror_enabled() -> bool:
@@ -62,7 +63,7 @@ def _s3_client():
     )
 
 
-def _s3_persist_excursion(ticket: int, payload: bytes) -> None:
+def _s3_persist_excursion(ticket: int, payload: bytes, account_id: str = "") -> None:
     """Overwrite the per-ticket S3 checkpoint with the SAME bytes written locally.
 
     Secondary + non-blocking. Any failure is swallowed after a warning so local
@@ -74,7 +75,7 @@ def _s3_persist_excursion(ticket: int, payload: bytes) -> None:
         s3 = _s3_client()
         s3.put_object(
             Bucket=_S3_BUCKET,
-            Key=_s3_key(ticket),
+            Key=_s3_key(ticket, account_id),
             Body=payload,
             ContentType="application/json",
         )
@@ -82,7 +83,7 @@ def _s3_persist_excursion(ticket: int, payload: bytes) -> None:
         logger.warning("[EXCURSION_STATE_S3_SAVE] mirror failed ticket=%s: %s", ticket, exc)
 
 
-def _s3_load_excursion(ticket: int) -> dict[str, Any] | None:
+def _s3_load_excursion(ticket: int, account_id: str = "") -> dict[str, Any] | None:
     """Load the per-ticket checkpoint from S3. Returns validated dict or None.
 
     Applies the same ticket-identity + staleness guards as the local reader.
@@ -92,22 +93,22 @@ def _s3_load_excursion(ticket: int) -> dict[str, Any] | None:
         return None
     try:
         s3 = _s3_client()
-        obj = s3.get_object(Bucket=_S3_BUCKET, Key=_s3_key(ticket))
+        obj = s3.get_object(Bucket=_S3_BUCKET, Key=_s3_key(ticket, account_id))
         data = json.loads(obj["Body"].read().decode("utf-8"))
-        return _validate_snapshot(data, ticket)
+        return _validate_snapshot(data, ticket, account_id)
     except Exception as exc:
         logger.debug("[EXCURSION_STATE_S3_LOAD] miss/fail ticket=%s: %s", ticket, exc)
         return None
 
 
-def _rehydrate_local(ticket: int, snapshot: dict[str, Any]) -> None:
+def _rehydrate_local(ticket: int, snapshot: dict[str, Any], account_id: str = "") -> None:
     """Re-create the local checkpoint from a validated S3 snapshot.
 
     Lets subsequent reads/restarts on this (replacement) machine use the normal
     local-first path. Best-effort: never raises, never affects trading.
     """
     try:
-        d = _get_dir()
+        d = _get_dir() / account_id if account_id else _get_dir()
         d.mkdir(parents=True, exist_ok=True)
         filepath = d / f"{int(ticket)}.json"
         payload = json.dumps(snapshot, default=str).encode("utf-8")
@@ -122,12 +123,14 @@ def _rehydrate_local(ticket: int, snapshot: dict[str, Any]) -> None:
         logger.debug("[EXCURSION_STATE_REHYDRATE] failed ticket=%s: %s", ticket, exc)
 
 
-def _validate_snapshot(data: Any, ticket: int) -> dict[str, Any] | None:
+def _validate_snapshot(data: Any, ticket: int, account_id: str = "") -> dict[str, Any] | None:
     """Shared validation for local + S3 snapshots: exact ticket + not stale."""
     if not isinstance(data, dict):
         return None
     if int(data.get("position_ticket", 0) or 0) != int(ticket):
         return None  # stale/mismatched — never attach to the wrong trade
+    if (data.get("account_id") or "") != account_id:
+        return None
     age = time.time() - float(data.get("updated_at_unix", 0) or 0)
     if age > _max_age_seconds():
         logger.debug("[EXCURSION_STATE_LOAD] stale ticket=%s age=%.0f", ticket, age)
@@ -157,12 +160,14 @@ def persist_excursion(position: Any) -> None:
         if not ticket or int(ticket) <= 0:
             return  # no durable broker key → cannot prove association on restart
 
+        account_id = getattr(position, "account_id", "")
         identity = getattr(position, "trade_identity", None)
         side = getattr(position, "side", None)
         side_name = side.name if side is not None and hasattr(side, "name") else str(side)
 
         snapshot: dict[str, Any] = {
             "position_ticket": int(ticket),
+            "account_id": account_id,
             "trade_id": getattr(position, "position_id", ""),
             "symbol": getattr(position, "symbol", ""),
             "side": side_name,
@@ -175,7 +180,7 @@ def persist_excursion(position: Any) -> None:
             "updated_at_unix": time.time(),
         }
 
-        d = _get_dir()
+        d = _get_dir() / account_id if account_id else _get_dir()
         d.mkdir(parents=True, exist_ok=True)
         filepath = d / f"{int(ticket)}.json"
 
@@ -190,12 +195,12 @@ def persist_excursion(position: Any) -> None:
 
         # Secondary durable copy → S3 (same bytes). Non-blocking: local write has
         # already succeeded above; a mirror failure never propagates.
-        _s3_persist_excursion(int(ticket), payload)
+        _s3_persist_excursion(int(ticket), payload, account_id)
     except Exception as exc:
         logger.debug("[EXCURSION_STATE_SAVE] failed: %s", exc)
 
 
-def load_excursion(ticket: int) -> dict[str, Any] | None:
+def load_excursion(ticket: int, account_id: str = "") -> dict[str, Any] | None:
     """Load persisted excursion extremes for a broker position ticket.
 
     Returns the snapshot dict, or None when absent/stale/invalid. Never raises.
@@ -208,10 +213,11 @@ def load_excursion(ticket: int) -> dict[str, Any] | None:
     # 1) LOCAL FIRST — same-machine normal path.
     local = None
     try:
-        filepath = _get_dir() / f"{int(ticket)}.json"
+        directory = _get_dir() / account_id if account_id else _get_dir()
+        filepath = directory / f"{int(ticket)}.json"
         if filepath.exists():
             with open(filepath, "r", encoding="utf-8") as f:
-                local = _validate_snapshot(json.load(f), int(ticket))
+                local = _validate_snapshot(json.load(f), int(ticket), account_id)
     except Exception as exc:
         logger.debug("[EXCURSION_STATE_LOAD] local failed ticket=%s: %s", ticket, exc)
         local = None
@@ -220,10 +226,10 @@ def load_excursion(ticket: int) -> dict[str, Any] | None:
 
     # 2) S3 FALLBACK — local missing / unreadable / invalid / stale. Used after
     #    VM restart, disk loss, instance replacement or machine migration.
-    s3_snapshot = _s3_load_excursion(int(ticket))
+    s3_snapshot = _s3_load_excursion(int(ticket), account_id)
     if s3_snapshot is not None:
         logger.info("[EXCURSION_STATE_LOAD] restored from S3 fallback ticket=%s", ticket)
-        _rehydrate_local(int(ticket), s3_snapshot)  # so subsequent reads use local-first
+        _rehydrate_local(int(ticket), s3_snapshot, account_id)  # so subsequent reads use local-first
         return s3_snapshot
 
     # 3) Neither local nor S3 → caller falls back to legacy recovery_seeded.

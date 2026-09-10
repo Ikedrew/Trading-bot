@@ -15,6 +15,9 @@ from core.trade_management.events import (
     TradeLifecycleListener,
 )
 from core.trade_management.position import Position, PositionStatus
+from core.position_ownership import PositionOwnership
+from core.accounts.position_state import position_key
+from core.accounts.lifecycle import LifecycleRouter
 from core.trade_management.sl_tp_rules import (
     check_exit_trigger,
     maybe_break_even_sl,
@@ -49,6 +52,12 @@ class _SltpRetryEntry:
     canonical_opportunity_id: str = ""
     observation_id: str = ""
     trade_id: str = ""
+    ownership: PositionOwnership | None = None
+    # PHASE H: Account-specific retry identity
+    account_id: str = ""
+    broker: str = ""
+    broker_server: str = ""
+    broker_symbol: str = ""
 
 
 @dataclass
@@ -70,6 +79,12 @@ class _CloseRetryEntry:
     canonical_opportunity_id: str = ""
     observation_id: str = ""
     trade_id: str = ""
+    ownership: PositionOwnership | None = None
+    # PHASE H: Account-specific retry identity
+    account_id: str = ""
+    broker: str = ""
+    broker_server: str = ""
+    broker_symbol: str = ""
 
 
 def _lineage_from_pos(pos: "Position") -> dict:
@@ -82,6 +97,10 @@ def _lineage_from_pos(pos: "Position") -> dict:
     Lineage fields fall back to empty when no trade_identity is available
     (e.g. recovered positions); ``trade_id`` itself is always available from
     the position.
+
+    Phase G/H: account-specific identity (account_id, broker, broker_server,
+    position_ticket, broker_symbol) is extracted from the position's ownership
+    so management-action records are account-scoped.
     """
     ti = getattr(pos, "trade_identity", None)
     lineage: dict[str, Any] = {"trade_id": getattr(pos, "position_id", "") or ""}
@@ -92,6 +111,17 @@ def _lineage_from_pos(pos: "Position") -> dict:
             "cycle_id": int(ti.cycle_id) if ti.cycle_id else 0,
             "canonical_opportunity_id": ti.canonical_opportunity_id or "",
             "observation_id": ti.observation_id or "",
+        })
+    # Phase G/H: account-specific identity from ownership
+    # Note: position_ticket is NOT included here because it is already passed
+    # explicitly to execution methods (close_position, position_modify_sl_tp).
+    owner = getattr(pos, "ownership", None)
+    if owner is not None:
+        lineage.update({
+            "account_id": owner.account_id or "",
+            "broker": owner.broker or "",
+            "broker_server": owner.broker_server or "",
+            "broker_symbol": owner.broker_symbol or "",
         })
     return lineage
 
@@ -129,6 +159,12 @@ def _persist_management_action(
             requested_sl=requested_sl,
             requested_tp=requested_tp,
             requested_volume=requested_volume,
+            # PHASE H: Account-specific management identity
+            account_id=str(_lineage.get("account_id", "") or ""),
+            broker=str(_lineage.get("broker", "") or ""),
+            broker_server=str(_lineage.get("broker_server", "") or ""),
+            position_ticket=int(_lineage.get("position_ticket", 0) or 0),
+            broker_symbol=str(_lineage.get("broker_symbol", "") or ""),
         )
     except Exception:
         pass
@@ -146,16 +182,71 @@ class TradeStateManager:
         listener: TradeLifecycleListener | None = None,
         *,
         execution: Any | None = None,
+        lifecycle_router=None,
     ) -> None:
         self._cfg = config
         self._listener = listener
         self._execution = execution
+        self.lifecycle_router = lifecycle_router or LifecycleRouter()
+        if execution is not None:
+            execution.lifecycle_router = self.lifecycle_router
         self._by_id: dict[str, Position] = {}
-        self._sltp_retry_queue: dict[int, _SltpRetryEntry] = {}  # keyed by position_ticket
+        self._sltp_retry_queue: dict[str, _SltpRetryEntry] = {}  # keyed by position_ticket
         self._close_retry_queue: dict[str, _CloseRetryEntry] = {}  # keyed by position_id
 
     def positions_open(self) -> list[Position]:
         return [p for p in self._by_id.values() if p.status in (PositionStatus.OPEN, PositionStatus.PARTIAL)]
+
+    def get_position(self, *, account_id: str, position_ticket: int):
+        self.lifecycle_router.account(account_id)
+        import json
+        return self._by_id.get(json.dumps([account_id, int(position_ticket)], separators=(',', ':')))
+
+    def add_position(self, pos):
+        self.lifecycle_router.validate(pos.ownership)
+        key = position_key(pos.ownership)
+        if pos.mt5_ticket != pos.ownership.position_ticket:
+            raise ValueError("POSITION_TICKET_MISMATCH")
+        if key in self._by_id:
+            return self._by_id[key]
+        pos.position_id = key
+        self._by_id[key] = pos
+        self._checkpoint(pos)
+        return pos
+
+    def _checkpoint(self, pos):
+        if not pos.ownership:
+            return
+        from core.accounts.position_state import save
+        try:
+            save(pos.ownership, status=pos.status.value, pattern=pos.pattern_tag,
+                 trade_horizon=pos.trade_horizon, sl=pos.stop_loss, tp=pos.take_profit,
+                 initial_sl=pos.initial_sl, initial_tp=pos.initial_tp)
+        except Exception as exc:
+            logger.error("[POSITION_CHECKPOINT_FAILED] account=%s error=%s", pos.account_id, exc)
+
+    def register_account_result(self, result, intent, *, magic):
+        """Consume an existing A?F success; never changes fan-out or submits entry."""
+        from dataclasses import replace
+        from core.trade_identity import TradeIdentity
+        execution = ExecutionResult.from_account_result(result)
+        if not execution.ok or not execution.ownership:
+            return None
+        owner = execution.ownership
+        target = result.get('target')
+        # The per-account size/SL/TP already computed by D?F remain authoritative.
+        if target is not None:
+            volume = result.get('volume')
+            volume = getattr(volume, 'volume', volume)
+            intent = replace(intent, symbol=owner.canonical_symbol,
+                volume=float(volume), sl=target.sl, tp=target.tp)
+        identity = TradeIdentity(correlation_id=owner.correlation_id or '',
+            decision_id=owner.decision_id or '', canonical_opportunity_id=owner.canonical_opportunity_id or '',
+            observation_id=getattr(target, 'observation_id', ''), cycle_id=0,
+            strategy='', pattern=intent.pattern, decision_ts_utc=0.)
+        return self.register_from_execution(intent, magic=magic, execution=execution,
+            entry_fill_price=execution.fill_price or intent.entry_reference, trade_identity=identity,
+            bid=float(result["lifecycle_bid"]), ask=float(result["lifecycle_ask"]))
 
     def _resolve_config_for_position(self, pos: Position) -> TradeManagementConfig:
         """
@@ -217,7 +308,15 @@ class TradeStateManager:
             return None
 
         ts = open_time_s if open_time_s is not None else time.time()
-        pid = f"pos_{execution.deal}" if execution.deal else f"pos_{uuid.uuid4().hex[:12]}"
+        owner = execution.ownership
+        if owner is None:
+            raise ValueError("MISSING_POSITION_OWNERSHIP")
+        self.lifecycle_router.validate(owner)
+        if owner.canonical_symbol != intent.symbol:
+            raise ValueError("POSITION_SYMBOL_MISMATCH")
+        pid = position_key(owner)
+        if pid in self._by_id:
+            return self._by_id[pid]
         mfe0 = bid if intent.side is Side.BUY else ask
         # MAE seed = same open-tick price on the tracked side as MFE (first
         # observation). Observational only.
@@ -236,7 +335,8 @@ class TradeStateManager:
             volume=intent.volume,
             open_time=ts,
             status=PositionStatus.OPEN,
-            mt5_ticket=execution.deal if execution.deal else None,
+            mt5_ticket=owner.position_ticket,
+            ownership=owner,
             deal_id=execution.deal,
             order_id=execution.order,
             pattern_tag=intent.pattern,
@@ -245,7 +345,7 @@ class TradeStateManager:
             max_adverse_price=mae0,
             trade_identity=trade_identity,
         )
-        self._by_id[pid] = pos
+        self.add_position(pos)
         self._emit(
             TradeLifecycleEvent.ON_TRADE_OPEN,
             pos,
@@ -264,7 +364,11 @@ class TradeStateManager:
                 continue
             if pos.status == PositionStatus.CLOSED:
                 continue
-            self._process_one_position(pos, bid, ask, ts)
+            try:
+                self._process_one_position(pos, bid, ask, ts)
+            except Exception as exc:
+                logger.error("[POSITION_MANAGEMENT_FAILED] account=%s ticket=%s error=%s",
+                             pos.account_id, pos.mt5_ticket, exc)
 
     def _emit(
         self,
@@ -307,6 +411,7 @@ class TradeStateManager:
         if self._execution is None or pos.mt5_ticket is None or pos.mt5_ticket <= 0:
             return
         ticket = int(pos.mt5_ticket)
+        key = position_key(pos.ownership) if pos.ownership else pos.position_id
         # Observational: persist the initiated management action BEFORE the
         # broker call, so a rejected/failed modify still leaves a record.
         _persist_management_action(
@@ -322,11 +427,12 @@ class TradeStateManager:
             position_ticket=ticket,
             sl=pos.stop_loss,
             tp=pos.take_profit,
+            ownership=pos.ownership,
             **_lineage_from_pos(pos),
         )
         if result.ok:
             # Success — remove from retry queue if previously queued
-            self._sltp_retry_queue.pop(ticket, None)
+            self._sltp_retry_queue.pop(key, None)
         else:
             # Failed — queue for retry
             entry = _SltpRetryEntry(
@@ -336,9 +442,10 @@ class TradeStateManager:
                 tp=pos.take_profit,
                 retry_count=0,
                 last_attempt_time=time.time(),
-                **_lineage_from_pos(pos),
+                ownership=pos.ownership,
+            **_lineage_from_pos(pos),
             )
-            self._sltp_retry_queue[ticket] = entry
+            self._sltp_retry_queue[key] = entry
             logger.info(
                 "[SLTP_RETRY_QUEUED] ticket=%d symbol=%s sl=%.5f tp=%.5f reason=%s",
                 ticket, pos.symbol, pos.stop_loss, pos.take_profit, result.comment,
@@ -353,7 +460,8 @@ class TradeStateManager:
             return
 
         completed: list[int] = []
-        for ticket, entry in list(self._sltp_retry_queue.items()):
+        for key, entry in list(self._sltp_retry_queue.items()):
+            ticket = entry.position_ticket
             # Observational: each retried SLTP modify is its own management action.
             _persist_management_action(
                 action_type="SLTP_MODIFY",
@@ -381,9 +489,10 @@ class TradeStateManager:
                 canonical_opportunity_id=entry.canonical_opportunity_id,
                 observation_id=entry.observation_id,
                 trade_id=entry.trade_id,
+                ownership=entry.ownership,
             )
             if result.ok:
-                completed.append(ticket)
+                completed.append(key)
                 logger.info(
                     "[SLTP_RETRY_SUCCESS] ticket=%d symbol=%s sl=%.5f tp=%.5f attempts=%d",
                     ticket, entry.symbol, entry.sl, entry.tp, entry.retry_count + 1,
@@ -392,7 +501,7 @@ class TradeStateManager:
                 entry.retry_count += 1
                 entry.last_attempt_time = time.time()
                 if entry.retry_count >= _MAX_RETRIES:
-                    completed.append(ticket)
+                    completed.append(key)
                     logger.warning(
                         "[SLTP_RETRY_FAILED_FINAL] ticket=%d symbol=%s sl=%.5f tp=%.5f attempts=%d reason=%s",
                         ticket, entry.symbol, entry.sl, entry.tp, entry.retry_count, result.comment,
@@ -583,7 +692,8 @@ class TradeStateManager:
                 symbol=pos.symbol,
                 position_ticket=int(pos.mt5_ticket),
                 volume=close_vol,
-                **_lineage_from_pos(pos),
+                ownership=pos.ownership,
+            **_lineage_from_pos(pos),
             )
             if not result.ok:
                 # Broker partial close failed — queue for retry, do NOT modify local state
@@ -638,7 +748,8 @@ class TradeStateManager:
                 symbol=pos.symbol,
                 position_ticket=int(pos.mt5_ticket),
                 volume=None,  # Full close
-                **_lineage_from_pos(pos),
+                ownership=pos.ownership,
+            **_lineage_from_pos(pos),
             )
             if not result.ok:
                 # POSITION_NOT_FOUND means broker already closed it (server-side SL/TP/manual)
@@ -673,6 +784,7 @@ class TradeStateManager:
         # Broker confirmed (or position_not_found or no execution layer / no ticket)
         pos.status = PositionStatus.CLOSED
         pos.closed_time = ts
+        self._checkpoint(pos)
         self._emit(kind, pos, prices, ts, detail)
 
         # Enrich detail with close_reason for ON_TRADE_CLOSE event (used by journal persistence)
@@ -718,25 +830,9 @@ class TradeStateManager:
             from core.mt5_timestamp import normalize_mt5_timestamp
             from datetime import datetime, timezone
 
-            # MT5 identity: history_deals_get(position=...) keys on the MT5
-            # POSITION id, which for a market entry equals the order ticket
-            # (pos.order_id), NOT the deal ticket. pos.mt5_ticket / deal_id hold
-            # the ENTRY DEAL ticket (a different MT5 namespace). Passing the deal
-            # ticket here makes MT5 return an unrelated position's deal set, and
-            # the previous "first entry==1" pick then selected a foreign deal —
-            # the source of the bogus constant P&L. Use the position id and match
-            # each deal's own position_id to this trade.
-            position_id = int(pos.order_id) if getattr(pos, "order_id", 0) else 0
-            if position_id <= 0:
-                # Fallback to the legacy field only if order_id is unavailable.
-                position_id = int(pos.mt5_ticket) if pos.mt5_ticket else 0
-            if position_id <= 0:
-                return None
-
-            # Search recent history for exit deal matching this position
-            from_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
-            to_time = datetime(2030, 1, 1, tzinfo=timezone.utc)
-            deals = mt5_call(mt5.history_deals_get, from_time, to_time, position=position_id)
+            self.lifecycle_router.validate(pos.ownership)
+            position_id = pos.ownership.position_ticket
+            deals = self.lifecycle_router.read(pos.ownership, "history_deals_get")
 
             if not deals:
                 return None
@@ -789,8 +885,9 @@ class TradeStateManager:
                     reason = _DEAL_REASON_MAP.get(deal_reason_int, "")
 
                     # Fallback: parse comment if deal.reason unavailable or unknown
+                    _deal_comment = getattr(deal, "comment", "") or ""
                     if not reason:
-                        comment = str(deal.comment) if deal.comment else ""
+                        comment = str(_deal_comment)
                         if "[sl" in comment.lower():
                             reason = "stop_loss"
                         elif "[tp" in comment.lower():
@@ -798,7 +895,7 @@ class TradeStateManager:
                         else:
                             reason = "broker_close"
                     else:
-                        comment = str(deal.comment) if deal.comment else ""
+                        comment = str(_deal_comment)
 
                     # Normalize broker timestamp to UTC
                     exit_time_utc = normalize_mt5_timestamp(float(deal.time))
@@ -848,6 +945,7 @@ class TradeStateManager:
             detail=dict(detail),
             retry_count=0,
             last_attempt_time=time.time(),
+            ownership=pos.ownership,
             **_lineage_from_pos(pos),
         )
         self._close_retry_queue[pos.position_id] = entry
@@ -903,6 +1001,7 @@ class TradeStateManager:
                 canonical_opportunity_id=entry.canonical_opportunity_id,
                 observation_id=entry.observation_id,
                 trade_id=entry.trade_id,
+                ownership=entry.ownership,
             )
 
             if result.ok:

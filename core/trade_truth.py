@@ -102,6 +102,12 @@ def build_trade_truth(
     trade_id: str,
     correlation_id: str,
     symbol: str,
+    # PHASE H: Account-specific execution identity
+    account_id: str = "",
+    broker: str = "",
+    broker_server: str = "",
+    position_ticket: int = 0,
+    broker_symbol: str = "",
     # Execution (real broker data)
     entry_fill_price: float,
     exit_fill_price: float,
@@ -154,6 +160,12 @@ def build_trade_truth(
             "correlation_id": correlation_id,
             "canonical_opportunity_id": canonical_opportunity_id,
             "symbol": symbol,
+            # PHASE H: Account-specific execution identity
+            "account_id": account_id,
+            "broker": broker,
+            "broker_server": broker_server,
+            "position_ticket": position_ticket,
+            "broker_symbol": broker_symbol,
         },
 
         # Domain 2: Execution (real only)

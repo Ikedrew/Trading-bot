@@ -107,6 +107,11 @@ class RiskDeviationResult:
     # recovered/legacy trades — never fabricated.
     canonical_opportunity_id: str = ""
 
+    # PHASE H: Account-specific risk identity (default fields)
+    account_id: str = ""
+    broker: str = ""
+    broker_server: str = ""
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
@@ -125,6 +130,10 @@ def compute_risk_deviation(
     exit_price: float,
     initial_sl: float,
     canonical_opportunity_id: str = "",
+    # PHASE H: Account-specific risk identity
+    account_id: str = "",
+    broker: str = "",
+    broker_server: str = "",
 ) -> RiskDeviationResult:
     """
     Compute risk deviation for a completed trade.
@@ -166,6 +175,9 @@ def compute_risk_deviation(
             risk_distance=0.0,
             pnl_distance=0.0,
             timestamp_utc=timestamp,
+            account_id=account_id,
+            broker=broker,
+            broker_server=broker_server,
         )
 
     # Compute actual R-multiple (same formula as trade_truth.compute_r_multiple)
@@ -209,6 +221,9 @@ def compute_risk_deviation(
         risk_distance=round(risk_distance, 8),
         pnl_distance=round(pnl_distance, 8),
         timestamp_utc=timestamp,
+        account_id=account_id,
+        broker=broker,
+        broker_server=broker_server,
     )
 
 

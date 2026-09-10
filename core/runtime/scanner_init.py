@@ -162,6 +162,8 @@ def initialize_symbol_states(
 
             # D3: Recover open broker positions into TradeStateManager
             if tm is not None:
+                from core.accounts.lifecycle_registration import attach_manager
+                attach_manager(canonical, tm)
                 try:
                     from core.runtime.startup_recovery import recover_positions_on_startup
                     recover_positions_on_startup(

@@ -85,6 +85,12 @@ def persist_management_action(
     timestamp_utc: str = "",
     timestamp_unix: float = 0.0,
     engine: str = "V10",
+    # PHASE H: Account-specific management identity
+    account_id: str = "",
+    broker: str = "",
+    broker_server: str = "",
+    position_ticket: int = 0,
+    broker_symbol: str = "",
 ) -> bool:
     """Persist one management action to local JSONL + S3 mirror.
 
@@ -118,6 +124,12 @@ def persist_management_action(
             "timestamp_utc": timestamp_utc,
             "timestamp_unix": timestamp_unix,
             "engine": engine,
+            # PHASE H: Account-specific management identity
+            "account_id": account_id or None,
+            "broker": broker or None,
+            "broker_server": broker_server or None,
+            "position_ticket": position_ticket or None,
+            "broker_symbol": broker_symbol or None,
         }
 
         path = Path(_LOCAL_DIR) / symbol / f"{date_str}.jsonl"

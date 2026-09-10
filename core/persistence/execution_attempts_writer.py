@@ -103,6 +103,12 @@ def persist_execution_attempt(
     broker_confirmed_sl: float | None = None,
     broker_confirmed_tp: float | None = None,
     engine: str = "V10",
+    # PHASE H: Account-specific execution identity
+    account_id: str = "",
+    broker: str = "",
+    broker_server: str = "",
+    position_ticket: int = 0,
+    broker_symbol: str = "",
 ) -> bool:
     """Persist one execution attempt to local JSONL + S3 mirror."""
     try:
@@ -155,6 +161,12 @@ def persist_execution_attempt(
             "broker_confirmed_sl": broker_confirmed_sl,
             "broker_confirmed_tp": broker_confirmed_tp,
             "engine": engine,
+            # PHASE H: Account-specific execution identity
+            "account_id": account_id or None,
+            "broker": broker or None,
+            "broker_server": broker_server or None,
+            "position_ticket": position_ticket or None,
+            "broker_symbol": broker_symbol or None,
         }
 
         path = Path(_LOCAL_DIR) / symbol / f"{date_str}.jsonl"

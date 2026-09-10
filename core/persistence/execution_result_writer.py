@@ -58,6 +58,12 @@ def persist_execution_result(
     entity_id: str = "",
     observation_id: str = "",
     canonical_opportunity_id: str = "",
+    # PHASE H: Account identity for account-specific execution records
+    account_id: str = "",
+    broker: str = "",
+    broker_server: str = "",
+    position_ticket: int = 0,
+    broker_symbol: str = "",
     # Execution metadata
     decision_ts_utc_ms: int = 0,
     slippage: float = 0.0,
@@ -158,6 +164,12 @@ def persist_execution_result(
                 "tp": "submitted_tp",
                 "signal_score": "not_present",
             },
+            # PHASE H: Account identity (account-specific execution records)
+            "account_id": account_id or None,
+            "broker": broker or None,
+            "broker_server": broker_server or None,
+            "position_ticket": position_ticket or None,
+            "broker_symbol": broker_symbol or None,
             # Protection verification (Phase 1 hardening)
             "requested_sl": requested_sl,
             "broker_confirmed_sl": broker_confirmed_sl,

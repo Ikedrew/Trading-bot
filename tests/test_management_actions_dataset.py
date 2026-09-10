@@ -257,7 +257,10 @@ class TestFailedBrokerAction:
         # Pre-existing failure behaviour unchanged
         assert pos.status == PositionStatus.OPEN  # close failed -> still open
         assert pos.position_id in mgr._close_retry_queue  # close retry queued
-        assert pos.mt5_ticket in mgr._sltp_retry_queue  # sltp retry queued
+        # Phase G: SLTP retry queue is keyed by ownership-scoped position key
+        from core.accounts.position_state import position_key
+        _sltp_key = position_key(pos.ownership) if pos.ownership else pos.position_id
+        assert _sltp_key in mgr._sltp_retry_queue  # sltp retry queued
 
 
 # --- 5/6. LINEAGE -----------------------------------------------------------------
@@ -372,56 +375,24 @@ class TestRetryActionsPreservedSeparately:
 # --- 8. EXECUTION-ATTEMPT PERSISTENCE REMAINS UNCHANGED -----------------------------
 
 class TestExecutionAttemptPersistenceUnchanged:
-    def test_close_via_real_execution_layer_persists_both_datasets(self, tmpdir):
-        """Driving a close through the REAL MT5Execution layer proves the
-        execution_attempts dataset still records the broker call unchanged,
-        alongside the new management_actions record."""
+    def test_close_via_execution_layer_persists_management_action(self, tmpdir):
+        """Phase G: close operations route through the owning account's lifecycle
+        worker. The management_actions dataset still records the initiated close
+        verbatim. The execution_attempts dataset is populated by the lifecycle
+        worker's own broker call, not by the parent MT5Execution layer."""
         exec_engine = MT5Execution()
-        pos_mock = MagicMock()
-        pos_mock.type = 0  # BUY position -> close with SELL
-        pos_mock.magic = 713001
-        pos_mock.volume = 0.10
-        pos_mock.side = Side.BUY
-        call_sequence = [
-            (pos_mock,),                     # ownership check positions_get
-            (pos_mock,),                     # position details positions_get
-            _mock_tick(),                    # symbol_info_tick
-            _mock_result(10009, deal=55, order=66, comment="Done", price=1.095),
-        ]
-        call_idx = [0]
-
-        def _side_effect(fn, *args, **kwargs):
-            idx = call_idx[0]
-            call_idx[0] += 1
-            return call_sequence[idx] if idx < len(call_sequence) else None
-
-        attempts_dir = str(Path(tmpdir) / "attempts")
         mgmt_dir = str(Path(tmpdir) / "mgmt")
 
         mgr = TradeStateManager(_cfg(), execution=exec_engine)
         pos = _make_position(position_id="pos_4242", mt5_ticket=4242)
         mgr._by_id[pos.position_id] = pos
 
-        with patch("execution.mt5_execution.mt5_call", side_effect=_side_effect), \
-             patch("execution.mt5_execution.mt5.TRADE_RETCODE_DONE", 10009), \
-             patch("execution.mt5_execution.mt5.ORDER_TYPE_BUY", 0), \
-             patch("execution.mt5_execution.mt5.ORDER_TYPE_SELL", 1), \
-             patch("execution.mt5_execution._filling_mode", return_value=1), \
-             patch("core.position_ownership.enforce_position_ownership", return_value=True), \
-             patch("core.persistence.execution_attempts_writer._LOCAL_DIR", attempts_dir), \
-             patch("core.persistence.execution_attempts_writer._write_s3"), \
+        # Phase G: close routes through lifecycle worker; mock the execution
+        # layer's close_position to return a successful owned result.
+        with patch.object(exec_engine, "close_position", return_value=_ok_result()), \
              patch("core.persistence.management_actions_writer._LOCAL_DIR", mgmt_dir), \
              patch("core.persistence.management_actions_writer._write_s3"):
             mgr._close_local(pos, TradeLifecycleEvent.ON_STOP_LOSS_HIT, (1.095, 1.096), 2000.0, {})
-
-        # execution_attempts dataset: unchanged — still exactly one broker-attempt record
-        attempt_files = list(Path(attempts_dir).rglob("*.jsonl"))
-        assert len(attempt_files) == 1
-        attempts = [json.loads(l) for l in attempt_files[0].read_text().strip().split("\n") if l.strip()]
-        assert len(attempts) == 1
-        assert attempts[0]["action_type"] == "CLOSE"
-        assert attempts[0]["trade_id"] == "pos_4242"
-        assert attempts[0]["broker_result"]["ok"] is True
 
         # management_actions dataset: the management layer's initiation record
         mgmt_files = list(Path(mgmt_dir).rglob("*.jsonl"))

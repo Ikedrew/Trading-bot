@@ -82,73 +82,58 @@ class CloseReason(str, Enum):
 class TradeRecord:
     """Immutable record of a completed trade."""
 
-    # Identity
+    # Identity (non-default - required fields first)
     trade_id: str
     position_ticket: int | None
     symbol: str
     magic: int
-
-    # Strategy
+    # Strategy (non-default)
     pattern_name: str
     direction: str  # "BUY" or "SELL"
-
-    # Timing
+    # Timing (non-default)
     entry_time: float  # unix timestamp
     exit_time: float   # unix timestamp
     duration_seconds: float
-
-    # Prices
+    # Prices (non-default)
     entry_price: float
     exit_price: float
-
-    # Volume
+    # Volume (non-default)
     initial_volume: float
     final_volume: float
-
-    # P&L (account currency). None = UNKNOWN (broker/runtime did not prove it).
-    # A measured 0.0 is preserved as 0.0 and distinguished via *_status below.
+    # P&L (non-default)
     realised_pnl: float
+    # PHASE H: Account-specific identity (default fields - added for multi-account support)
+    account_id: str = ""
+    broker: str = ""
+    broker_server: str = ""
+    broker_symbol: str = ""
+    # Additional lineage fields (from original TradeRecord)
+    recorded_at_utc: str = ""
+    correlation_id: str = ""
+    canonical_opportunity_id: str = ""
+    observation_id: str = ""
+    decision_id: str = ""
+    trade_horizon: str = "SCALP"
+    # Optional P&L fields
     commission: float | None = None
     swap: float | None = None
     net_pnl: float | None = None  # realised_pnl + swap + commission (raw MT5 signs; None if any unknown)
-
     # Outcome provenance status: "unknown" | "measured_zero" | "measured_nonzero".
     commission_status: str = "unknown"
     swap_status: str = "unknown"
     pnl_status: str = "measured_nonzero"
-
     # Context
     close_reason: str = ""
     initial_sl: float = 0.0
     initial_tp: float = 0.0
     max_favourable_price: float = 0.0
-
     # Adverse excursion (observational). None = unknown (never fabricated).
     max_adverse_price: float | None = None
     # Excursion in R (null-aware): None when geometry/observation unavailable.
     mfe_r: float | None = None
     mae_r: float | None = None
-    # Excursion provenance: full_lifecycle | recovery_seeded | unknown.
-    excursion_provenance: str = "full_lifecycle"
-
-    # Metadata
-    recorded_at_utc: str = ""  # ISO format
-
-    # Trade Identity (from Position.trade_identity — never from thread-local context)
-    correlation_id: str = ""
-
-    # Canonical lineage (remediation) — THE authoritative opportunity root,
-    # carried frozen from Position.trade_identity.
-    canonical_opportunity_id: str = ""
-
-    # Full lineage identity (carried frozen from Position.trade_identity).
-    # Propagated so the close projection preserves the exact original lineage
-    # of the trade that opened the position — including across restart recovery.
-    observation_id: str = ""
-    decision_id: str = ""
-
-    # Horizon Identity (from Position.trade_horizon — set at execution time)
-    trade_horizon: str = "SCALP"
+    # Excursion provenance: full_lifecycle | recovery_seeded | unknown
+    excursion_provenance: str = "unknown"
 
 
 def _compute_pnl(
@@ -355,6 +340,13 @@ def build_trade_record(
     _observation_id = _identity.observation_id if _identity is not None else ""
     _decision_id = _identity.decision_id if _identity is not None else ""
 
+    # PHASE H: Extract account-specific identity from position ownership
+    _owner = getattr(position, "ownership", None)
+    _account_id = _owner.account_id if _owner is not None else ""
+    _broker = _owner.broker if _owner is not None else ""
+    _broker_server = _owner.broker_server if _owner is not None else ""
+    _broker_symbol = _owner.broker_symbol if _owner is not None else ""
+
     return TradeRecord(
         trade_id=position.position_id,
         position_ticket=position.mt5_ticket,
@@ -390,6 +382,11 @@ def build_trade_record(
         observation_id=_observation_id,
         decision_id=_decision_id,
         trade_horizon=getattr(position, "trade_horizon", "SCALP"),
+        # PHASE H: Account-specific trade identity
+        account_id=_account_id,
+        broker=_broker,
+        broker_server=_broker_server,
+        broker_symbol=_broker_symbol,
     )
 
 

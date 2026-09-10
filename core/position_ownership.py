@@ -185,3 +185,132 @@ def validate_ownership_config() -> list[str]:
     if magic <= 0:
         errors.append(f"BOT_MAGIC must be > 0 for ownership validation (got {magic})")
     return errors
+
+# ═══════════════════════════════════════════════════════════════════════════════════
+# PHASE G: ACCOUNT-OWNED POSITION IDENTITY (account_id + position_ticket)
+# ═══════════════════════════════════════════════════════════════════════════════════
+#
+# A broker ticket alone is NOT a sufficient position identity.
+# The ownership boundary is (account_id, position_ticket).
+#
+
+from typing import NamedTuple
+
+
+class PositionOwnership(NamedTuple):
+    """Account-scoped position identity for management routing."""
+    account_id: str
+    broker: str
+    broker_server: str
+    position_ticket: int
+    order_ticket: int | None = None
+    deal_ticket: int | None = None
+    canonical_symbol: str | None = None
+    broker_symbol: str | None = None
+    canonical_opportunity_id: str | None = None
+    correlation_id: str | None = None
+    decision_id: str | None = None
+    account_execution_id: str | None = None
+    trade_id: str | None = None
+
+def validate_account_position_ownership(
+    position: PositionOwnership,
+    expected_account_id: str,
+    expected_broker: str | None = None,
+    expected_broker_server: str | None = None,
+) -> bool:
+    """
+    Validate that a position belongs to the expected account.
+
+    The ownership boundary is (account_id, position_ticket).
+    A broker ticket alone is NOT sufficient — same numeric ticket on
+    different accounts must represent distinct positions.
+    """
+    if not position.account_id or position.position_ticket <= 0:
+        return False
+    if position.account_id != expected_account_id:
+        return False
+    if expected_broker and position.broker != expected_broker:
+        return False
+    if expected_broker_server and position.broker_server != expected_broker_server:
+        return False
+    return True
+
+
+
+def enforce_account_position_ownership(
+    *,
+    position: PositionOwnership,
+    expected_account_id: str,
+    action: str,
+    symbol: str = "",
+    strict: bool = True,
+) -> bool:
+    """
+    Enforce account-owned position ownership before any management action.
+    """
+    if validate_account_position_ownership(position, expected_account_id):
+        return True
+    if strict:
+        logger.critical(
+            "[OWNERSHIP_VIOLATION] Account=%s attempted to %s position "
+            "ticket=%d owned by account=%s broker=%s server=%s "
+            "Action: BLOCKED symbol=%s",
+            expected_account_id, action, position.position_ticket,
+            position.account_id, position.broker, position.broker_server,
+            symbol,
+        )
+        return False
+    else:
+        logger.warning(
+            "[OWNERSHIP_WARNING] Account=%s attempted to %s position "
+            "ticket=%d owned by account=%s broker=%s server=%s "
+            "Action: ALLOWED (strict mode disabled) symbol=%s",
+            expected_account_id, action, position.position_ticket,
+            position.account_id, position.broker, position.broker_server,
+            symbol,
+        )
+        return True
+
+def build_position_ownership(
+    *,
+    account_id: str,
+    broker: str,
+    broker_server: str,
+    position_ticket: int,
+    order_ticket: int | None = None,
+    deal_ticket: int | None = None,
+    canonical_symbol: str | None = None,
+    broker_symbol: str | None = None,
+    canonical_opportunity_id: str | None = None,
+    correlation_id: str | None = None,
+    decision_id: str | None = None,
+    account_execution_id: str | None = None,
+    trade_id: str | None = None,
+) -> PositionOwnership:
+    """Build a PositionOwnership record from available lifecycle data."""
+    return PositionOwnership(
+        account_id=account_id,
+        broker=broker,
+        broker_server=broker_server,
+        position_ticket=position_ticket,
+        order_ticket=order_ticket,
+        deal_ticket=deal_ticket,
+        canonical_symbol=canonical_symbol,
+        broker_symbol=broker_symbol,
+        canonical_opportunity_id=canonical_opportunity_id,
+        correlation_id=correlation_id,
+        decision_id=decision_id,
+        account_execution_id=account_execution_id,
+        trade_id=trade_id,
+    )
+
+
+def position_identity_key(position: PositionOwnership) -> tuple:
+    """Return the ownership identity key: (account_id, position_ticket)."""
+    return (position.account_id, position.position_ticket)
+
+
+def positions_equal_by_identity(pos1: PositionOwnership, pos2: PositionOwnership) -> bool:
+    """Check if two positions represent the same owned position."""
+    return position_identity_key(pos1) == position_identity_key(pos2)

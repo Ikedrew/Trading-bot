@@ -84,6 +84,15 @@ class Position:
     trade_identity: "TradeIdentity | None" = None
 
     _meta: dict = field(default_factory=dict)
+    ownership: "PositionOwnership | None" = None
+
+    @property
+    def account_id(self) -> str:
+        return self.ownership.account_id if self.ownership else ""
+
+    @property
+    def broker_symbol(self) -> str:
+        return self.ownership.broker_symbol if self.ownership else ""
 
     @property
     def correlation_id(self) -> str:

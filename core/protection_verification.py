@@ -103,6 +103,14 @@ class ProtectionVerificationResult:
     correction_success: bool
     correction_detail: str
 
+    # PHASE H: Account-specific protection identity (default fields)
+    account_id: str = ""
+    broker: str = ""
+    broker_server: str = ""
+    broker_symbol: str = ""
+    trade_id: str = ""
+    decision_id: str = ""
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
@@ -119,6 +127,7 @@ def verify_protection(
     requested_tp: float,
     correlation_id: str = "",
     execution_module: Any = None,
+    ownership=None, lifecycle_router=None, magic: int = 713001,
 ) -> ProtectionVerificationResult:
     """
     Verify that broker-side SL/TP protection exists on a filled position.
@@ -146,6 +155,8 @@ def verify_protection(
     now = datetime.now(timezone.utc)
 
     # Default result (will be overwritten on success)
+    # PHASE H: extract account identity from ownership if available
+    _owner = ownership
     result = ProtectionVerificationResult(
         symbol=symbol,
         position_ticket=position_ticket,
@@ -162,13 +173,20 @@ def verify_protection(
         correction_attempted=False,
         correction_success=False,
         correction_detail="",
+        # PHASE H: Account-specific protection identity
+        account_id=_owner.account_id if _owner else "",
+        broker=_owner.broker if _owner else "",
+        broker_server=_owner.broker_server if _owner else "",
+        broker_symbol=_owner.broker_symbol if _owner else "",
+        trade_id=_owner.trade_id if _owner else "",
+        decision_id=_owner.decision_id if _owner else "",
     )
 
     try:
         # ─── QUERY BROKER FOR POSITION STATE ──────────────────────────
         broker_sl, broker_tp, found, attempts, match_method = _query_broker_position(
             position_ticket=position_ticket,
-            symbol=symbol,
+            symbol=symbol, ownership=ownership, lifecycle_router=lifecycle_router, magic=magic,
         )
         result.attempts = attempts
 
@@ -235,7 +253,7 @@ def verify_protection(
             position_ticket=position_ticket,
             target_sl=requested_sl,
             target_tp=requested_tp,
-            execution_module=execution_module,
+            execution_module=execution_module, ownership=ownership,
         )
         result.correction_success = correction_ok
 
@@ -243,7 +261,7 @@ def verify_protection(
             # Re-verify after correction
             broker_sl2, broker_tp2, found2, _, _ = _query_broker_position(
                 position_ticket=position_ticket,
-                symbol=symbol,
+                symbol=symbol, ownership=ownership, lifecycle_router=lifecycle_router, magic=magic,
             )
             if found2:
                 result.broker_confirmed_sl = broker_sl2
@@ -309,90 +327,25 @@ def verify_protection(
 # INTERNAL HELPERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _query_broker_position(
-    *,
-    position_ticket: int,
-    symbol: str,
-    volume: float = 0.0,
-    magic: int = 0,
-) -> tuple[float, float, bool, int, str]:
-    """
-    Query MT5 for position SL/TP state with multi-method matching.
-
-    Matching strategy:
-        1. Exact ticket match (mt5.positions_get(ticket=))
-        2. Symbol scan + ticket match
-        3. Symbol + volume + magic fallback (for ticket mismatch scenarios)
-
-    Retry timing: 0ms, 500ms, 1500ms, 3000ms (progressive backoff).
-
-    Returns: (broker_sl, broker_tp, found, attempts, match_method)
-        match_method: "ticket_match" | "symbol_ticket_match" | "symbol_volume_match" | "not_found"
-    """
-    _RETRY_DELAYS = [0.0, 0.5, 1.5, 3.0]  # Progressive backoff
-    max_attempts = len(_RETRY_DELAYS)
-
-    for attempt in range(max_attempts):
-        if attempt > 0:
-            time.sleep(_RETRY_DELAYS[attempt])
-
-        # Method 1: Exact ticket lookup
-        positions = mt5_call(mt5.positions_get, ticket=position_ticket)
-        if positions is not None and len(positions) > 0:
-            pos = positions[0]
-            logger.info(
-                "[PROTECTION_VERIFY] symbol=%s expected_ticket=%d "
-                "found_ticket=%d method=ticket_match attempt=%d "
-                "broker_sl=%.5f broker_tp=%.5f volume=%.2f",
-                symbol, position_ticket, int(pos.ticket),
-                attempt + 1, float(pos.sl), float(pos.tp), float(pos.volume),
-            )
-            return float(pos.sl), float(pos.tp), True, attempt + 1, "ticket_match"
-
-        # Method 2: Symbol scan (handles ticket numbering differences)
+def _query_broker_position(*, position_ticket, symbol, volume=0., magic=713001,
+                           ownership=None, lifecycle_router=None):
+    from core.accounts.lifecycle import LifecycleRouter, legacy_owner
+    from core.accounts.worker import AccountReadError
+    router = lifecycle_router or LifecycleRouter()
+    if ownership is None:
         from core.symbol_resolver import broker_symbol_for
-        positions = mt5_call(mt5.positions_get, symbol=broker_symbol_for(symbol))
-        if positions is not None and len(positions) > 0:
-            # Try exact ticket match within symbol results
-            for pos in positions:
-                if int(pos.ticket) == position_ticket:
-                    logger.info(
-                        "[PROTECTION_VERIFY] symbol=%s expected_ticket=%d "
-                        "found_ticket=%d method=symbol_ticket_match attempt=%d",
-                        symbol, position_ticket, int(pos.ticket), attempt + 1,
-                    )
-                    return float(pos.sl), float(pos.tp), True, attempt + 1, "symbol_ticket_match"
-
-            # Method 3: Volume + magic fallback (ticket mismatch scenario)
-            if volume > 0:
-                for pos in positions:
-                    vol_match = abs(float(pos.volume) - volume) < 0.001
-                    magic_match = (magic == 0 or int(pos.magic) == magic)
-                    if vol_match and magic_match:
-                        logger.warning(
-                            "[PROTECTION_VERIFY] symbol=%s expected_ticket=%d "
-                            "actual_ticket=%d method=symbol_volume_match attempt=%d "
-                            "matched_by=volume(%.2f)+magic(%d)",
-                            symbol, position_ticket, int(pos.ticket),
-                            attempt + 1, float(pos.volume), int(pos.magic),
-                        )
-                        return float(pos.sl), float(pos.tp), True, attempt + 1, "symbol_volume_match"
-
-            # Log what WAS found for diagnostics
-            _found_tickets = [int(p.ticket) for p in positions]
-            logger.info(
-                "[PROTECTION_VERIFY] symbol=%s expected_ticket=%d "
-                "broker_positions_found=%s attempt=%d match=false",
-                symbol, position_ticket, _found_tickets, attempt + 1,
-            )
-
-    # All attempts exhausted
-    logger.warning(
-        "[PROTECTION_VERIFY] symbol=%s expected_ticket=%d "
-        "NOT_FOUND after %d attempts",
-        symbol, position_ticket, max_attempts,
-    )
-    return 0.0, 0.0, False, max_attempts, "not_found"
+        ownership = legacy_owner(ticket=position_ticket, symbol=symbol,
+            broker_symbol=broker_symbol_for(symbol), mt5=mt5, accounts=router.accounts)
+    if ownership.position_ticket != position_ticket or ownership.canonical_symbol != symbol:
+        raise AccountReadError('POSITION_IDENTITY_MISMATCH')
+    for attempt, delay in enumerate((0., .5, 1.5, 3.), 1):
+        if delay:
+            time.sleep(delay)
+        positions = router.read(ownership, 'positions_get', magic=magic)
+        if positions:
+            pos = positions[0]
+            return float(pos.sl), float(pos.tp), True, attempt, 'account_ticket_match'
+    return 0., 0., False, 4, 'not_found'
 
 
 def _values_match(actual: float, expected: float, tolerance: float) -> bool:
@@ -409,6 +362,7 @@ def _attempt_correction(
     target_sl: float,
     target_tp: float,
     execution_module: Any,
+    ownership=None,
 ) -> bool:
     """
     Attempt to apply SL/TP to position via position_modify_sl_tp.
@@ -428,6 +382,7 @@ def _attempt_correction(
             position_ticket=position_ticket,
             sl=target_sl,
             tp=target_tp,
+            ownership=ownership,
         )
         if result.ok:
             logger.info(

@@ -81,8 +81,28 @@ def execute_pinned(request: dict, mt5) -> dict:
                 "status": "FAILED", "comment": "order_send_none",
                 **_lineage(target)}
     ok = int(getattr(result, "retcode", -1)) == int(mt5.TRADE_RETCODE_DONE)
+    ownership = None
+    if ok:
+        from .position_state import ownership_from_fill, save
+        try:
+            ownership = ownership_from_fill(account, reader, result,
+                symbol=target["canonical_symbol"], broker_symbol=broker_symbol,
+                magic=int(broker_request["magic"]),
+                **{key: target.get(key, "") for key in ("canonical_opportunity_id",
+                    "correlation_id", "decision_id", "account_execution_id", "trade_id")})
+            if ownership is not None:
+                save(ownership, pattern=target.get("pattern", ""),
+                     trade_horizon=target.get("metadata", {}).get("horizon", "SCALP"),
+                     sl=broker_request["sl"], tp=broker_request["tp"], status="open")
+        except Exception:
+            # Entry outcome is immutable. A failed identity read/checkpoint does
+            # not turn an executed order into a retryable entry failure.
+            pass
     return {"account_id": account.account_id, "executed": True,
             "status": "FILLED" if ok else "REJECTED",
+            "ownership": ownership._asdict() if ownership else None,
+            "lifecycle_side": side,
+            "lifecycle_bid": float(tick.bid), "lifecycle_ask": float(tick.ask),
             "ok": ok, "retcode": int(getattr(result, "retcode", -1)),
             "deal": int(getattr(result, "deal", 0) or 0),
             "order": int(getattr(result, "order", 0) or 0),

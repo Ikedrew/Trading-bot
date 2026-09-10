@@ -1915,7 +1915,7 @@ def run_live_scanner(
                         from core.protection_verification import verify_protection
                         # MT5 position ticket = order ticket (NOT deal ticket)
                         # result.deal = transaction ID, result.order = position ticket
-                        _position_ticket = result.order if result.order else 0
+                        _position_ticket = result.ownership.position_ticket if result.ownership else 0
                         if _position_ticket > 0:
                             _prot_result = verify_protection(
                                 symbol=sym_state.symbol,
@@ -1924,10 +1924,14 @@ def run_live_scanner(
                                 requested_tp=decision.intent.tp,
                                 correlation_id=_cor_id if "_cor_id" in dir() else "",
                                 execution_module=_exec_orchestrator._execution,
+                                ownership=result.ownership,
+                                lifecycle_router=sym_state.trade_manager.lifecycle_router if sym_state.trade_manager else None,
+                                magic=config.BOT_MAGIC,
                             )
                             # Persist protection fields to execution record
                             try:
                                 from core.persistence.execution_result_writer import persist_execution_result
+                                _owner = result.ownership
                                 persist_execution_result(
                                     symbol=sym_state.symbol,
                                     cycle_id=cycle_id,
@@ -1947,6 +1951,12 @@ def run_live_scanner(
                                     entity_id=_new_result.get("entity_id", "") if "_new_result" in dir() else "",
                                     observation_id=_observation_id_cycle,
                                     canonical_opportunity_id=_canonical_opp_id,
+                                    # Phase G/H: account-specific execution identity
+                                    account_id=_owner.account_id if _owner else "",
+                                    broker=_owner.broker if _owner else "",
+                                    broker_server=_owner.broker_server if _owner else "",
+                                    position_ticket=_owner.position_ticket if _owner else 0,
+                                    broker_symbol=_owner.broker_symbol if _owner else "",
                                     requested_sl=_prot_result.requested_sl,
                                     broker_confirmed_sl=_prot_result.broker_confirmed_sl,
                                     requested_tp=_prot_result.requested_tp,

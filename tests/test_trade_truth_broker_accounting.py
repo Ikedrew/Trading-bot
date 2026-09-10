@@ -119,11 +119,12 @@ def test_missing_broker_costs_leave_net_unknown():
 
 def test_query_broker_close_history_uses_order_id_not_deal_ticket():
     """Static guard: the close-history query must key on the MT5 position ticket
-    (pos.order_id), never the deal-ticket field, and must filter to the
-    position's own deals. Prevents regression to the foreign-deal defect."""
+    (pos.ownership.position_ticket), never the deal-ticket field, and must filter
+    to the position's own deals. Prevents regression to the foreign-deal defect
+    and ensures account-scoped history access."""
     import inspect
     from core.trade_management import manager as m
     src = inspect.getsource(m.TradeStateManager._query_broker_close_history)
-    assert "pos.order_id" in src, "must query by the MT5 position ticket (order_id)"
-    assert "position=position_id" in src
+    assert "pos.ownership.position_ticket" in src, "must query by the account-owned MT5 position ticket"
     assert "position_id" in src and "own_deals" in src, "must filter to this position's deals"
+    assert "lifecycle_router.read" in src or "lifecycle_router.validate" in src, "must route through owning account"
