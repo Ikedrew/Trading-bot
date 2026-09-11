@@ -24,11 +24,32 @@ def recover_positions_on_startup(*, trade_manager, symbol, magic, broker_symbol=
     enabled = [a for a in router.accounts if a.enabled]
     legacy = len(enabled) == 1 and enabled[0].account_id == "METAQUOTES"
     count = 0
+    # Broker-agnostic capability contract per (account, canonical_symbol).
+    # Read live MT5 terminals only when needed, never to decide the skip:
+    #   SUPPORTED   -> recover using the account's live worker-side resolution
+    #                  (explicit map entry when present, else the worker's
+    #                  dynamic AccountSymbolResolver). May still fail closed
+    #                  worker-side as SYMBOL_UNAVAILABLE_OR_AMBIGUOUS.
+    #   UNSUPPORTED -> explicit per-account configuration: clean INFO skip,
+    #                  not an error; no worker call, no terminal touch.
+    #   INVALID     -> malformed/inconsistent config or request: fail closed.
+    targets = []
+    for account in enabled:
+        state = account.capability(symbol)
+        if state == 'UNSUPPORTED':
+            logger.info("[ACCOUNT_RECOVERY_SKIPPED] account=%s symbol=%s reason=UNSUPPORTED_SYMBOL",
+                        account.account_id, symbol)
+            continue
+        if state != 'SUPPORTED':
+            logger.error("[ACCOUNT_RECOVERY_FAILED] account=%s error=%s",
+                         account.account_id, 'SYMBOL_UNAVAILABLE_OR_AMBIGUOUS')
+            continue
+        targets.append(account)
     # Each IPC call has its own bounded subprocess timeout. Failure is local;
     # successful accounts are consumed as soon as their workers return.
-    with ThreadPoolExecutor(max_workers=max(1, len(enabled))) as pool:
+    with ThreadPoolExecutor(max_workers=max(1, len(targets))) as pool:
         futures = {pool.submit(router.call, a.account_id, 'recover',
-                               symbol=symbol, magic=magic): a for a in enabled}
+                               symbol=symbol, magic=magic): a for a in targets}
         for future in as_completed(futures):
             account = futures[future]
             try:

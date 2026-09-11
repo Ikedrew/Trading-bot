@@ -114,6 +114,67 @@ def test_wrong_worker_identity_still_rejected(tmp_path):
 
 
 
+def test_capability_contract_and_startup_skip(tmp_path, caplog):
+    """Broker-agnostic: SUPPORTED recovers, UNSUPPORTED skips, INVALID fails closed."""
+    import logging
+    from dataclasses import replace
+    base = _accounts(tmp_path)
+    meta = replace(_by_id(base, 'METAQUOTES'),
+                   symbol_map=(('EURUSD', 'EURUSD'), ('NAS100', 'NAS100'),
+                               ('US500', 'US500'), ('XAUUSD', 'XAUUSD')))
+    vant = replace(_by_id(base, 'VANTAGE'),
+                   symbol_map=(('EURUSD', 'EURUSD.v'),))
+    adm = replace(_by_id(base, 'ADMIRALS'),
+                  symbol_map=(('EURUSD', 'EURUSD.adm'),),
+                  unsupported_symbols=('NAS100', 'US500', 'XAUUSD'))
+    assert meta.capability('NAS100') == 'SUPPORTED'
+    assert adm.capability('NAS100') == 'UNSUPPORTED'
+    assert adm.capability('EURUSD') == 'SUPPORTED'
+    # No explicit statement: SUPPORTED by contract; worker-side dynamic
+    # resolution still decides live availability/ambiguity and fails closed.
+    assert vant.capability('NAS100') == 'SUPPORTED'
+    assert not adm.errors() and not meta.errors()
+
+    called = []
+
+    def transport(account, request):
+        called.append(account.account_id)
+        return _identity_response(account, verified=True, value=[])
+
+    router = LifecycleRouter((meta, vant, adm), transport=transport)
+    with caplog.at_level(logging.INFO):
+        count = recover_positions_on_startup(
+            trade_manager=_stub_manager(), symbol='NAS100', magic=MAGIC,
+            lifecycle_router=router)
+    assert count == 0
+    # ADMIRALS never touched a worker: clean skip, not an error.
+    assert set(called) == {'METAQUOTES', 'VANTAGE'}
+    assert 'ACCOUNT_RECOVERY_SKIPPED' in caplog.text
+    assert 'account=ADMIRALS' in caplog.text
+    # Fail-closed INVALID is covered by the dedicated capability tests
+    # (conflict / malformed / unknown never silently skip).
+    assert 'WORKER_RESPONSE_IDENTITY_MISMATCH' not in caplog.text
+
+
+def test_capability_conflict_and_bad_names_fail_closed(tmp_path):
+    """Overlap or unknown names can never silently become UNSUPPORTED."""
+    import json
+    from core.accounts.config import load_accounts
+    base_env = {}
+    for i, aid in enumerate(('METAQUOTES', 'VANTAGE', 'ADMIRALS'), 1):
+        base_env.update({
+            f'MT5_{aid}_ENABLED': 'true', f'MT5_{aid}_LOGIN': str(i),
+            f'MT5_{aid}_SERVER': aid + '-Demo',
+            f'MT5_{aid}_TERMINAL_PATH': str(tmp_path / aid / 'terminal64.exe'),
+        })
+    conflict = dict(base_env, MT5_ADMIRALS_SYMBOL_MAP=json.dumps({'NAS100': 'NAS100.x'}),
+                    MT5_ADMIRALS_UNSUPPORTED_SYMBOLS=json.dumps(['NAS100']))
+    assert 'INVALID_SYMBOL_CAPABILITY_CONFLICT' in load_accounts(conflict)[1].errors()
+    bad = dict(base_env, MT5_ADMIRALS_UNSUPPORTED_SYMBOLS=json.dumps(['NOPE']))
+    assert 'INVALID_UNSUPPORTED_SYMBOLS' in load_accounts(bad)[1].errors()
+
+
+
 
 def _stub_manager():
     return NS(get_position=lambda **kwargs: None,

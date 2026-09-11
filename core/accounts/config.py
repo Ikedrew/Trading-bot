@@ -70,6 +70,11 @@ class AccountConfig:
     # session; they never read a password or call login/change the account.
     password_env: str = field(default='', repr=False)
     symbol_map: tuple[tuple[str, str], ...] = ()
+    # Explicitly unsupported canonical symbols (broker-agnostic capability).
+    # Canonical names listed here are clean-skipped (no worker call, no error).
+    # Must never overlap symbol_map keys. Unknown/mistyped names are rejected
+    # at parse time; overlap is rejected as INVALID configuration.
+    unsupported_symbols: tuple[str, ...] = ()
     configuration_errors: tuple[str, ...] = ()
     terminal_data_path: str = ''
     portable: bool = False
@@ -78,10 +83,56 @@ class AccountConfig:
     def identity(self) -> tuple:
         return self.account_id, self.broker, self.server, self.login
 
+    def capability(self, canonical: str) -> str:
+        """Broker-agnostic capability state for one canonical symbol.
+
+        This is a *configuration* gate only — it never inspects live MT5
+        inventory or broker names. Live ambiguity/unavailability is still
+        decided worker-side by AccountSymbolResolver and surfaces as
+        SYMBOL_UNAVAILABLE_OR_AMBIGUOUS (fail closed).
+
+        SUPPORTED   — proceed to the worker. Either an explicit,
+                      well-formed symbol_map entry exists, or no explicit
+                      statement exists and dynamic worker-side resolution
+                      must decide (preserves METAQUOTES/VANTAGE behaviour
+                      with empty maps).
+        UNSUPPORTED — canonical symbol explicitly listed in
+                      unsupported_symbols; recovery cleanly skips (not ERROR).
+        INVALID     — malformed or inconsistent request/config *for this
+                      symbol*: unknown or blank canonical, blank/duplicate/
+                      conflicting mapping, or conflicting unsupported entry.
+                      Fail closed; never silently converted into UNSUPPORTED.
+                      Global config typos elsewhere are reported via errors()
+                      (and block the worker); they do not poison unrelated
+                      per-symbol queries.
+        """
+        name = str(canonical or '').strip()
+        if not name or name not in CANONICAL_SYMBOLS:
+            return 'INVALID'
+        unsupported = tuple(self.unsupported_symbols or ())
+        seen = [v for k, v in (self.symbol_map or ()) if k == name]
+        if len(seen) > 1:
+            # Duplicate configured entries: ambiguous, fail closed.
+            return 'INVALID'
+        if seen and not str(seen[0] or '').strip():
+            return 'INVALID'
+        if name in unsupported:
+            # Conflict (both mapped and unsupported) is fail-closed INVALID,
+            # never a silent skip.
+            if seen:
+                return 'INVALID'
+            return 'UNSUPPORTED'
+        return 'SUPPORTED'
+
     def errors(self) -> list[str]:
         errors = list(self.configuration_errors)
         if self.account_id not in ACCOUNT_IDS:
             errors.append('INVALID_ACCOUNT_ID')
+        if any(k in tuple(self.unsupported_symbols) for k, _ in self.symbol_map):
+            errors.append('INVALID_SYMBOL_CAPABILITY_CONFLICT')
+        if any(not isinstance(v, str) or v.strip() not in CANONICAL_SYMBOLS
+               for v in self.unsupported_symbols):
+            errors.append('INVALID_UNSUPPORTED_SYMBOLS')
         if self.login is None or self.login <= 0:
             errors.append('LOGIN_REQUIRED')
         if not self.server:
@@ -132,6 +183,19 @@ def load_accounts(env=None) -> tuple[AccountConfig, ...]:
         except (ValueError, TypeError):
             symbol_map = ()
             errors.append('INVALID_SYMBOL_MAP')
+        try:
+            raw_unsupported = json.loads(env.get(prefix + 'UNSUPPORTED_SYMBOLS', '[]') or '[]')
+            if not isinstance(raw_unsupported, list) or any(
+                not isinstance(v, str) or v.strip() not in CANONICAL_SYMBOLS
+                for v in raw_unsupported
+            ):
+                raise ValueError
+            unsupported = tuple(sorted({v.strip() for v in raw_unsupported}))
+        except (ValueError, TypeError):
+            unsupported = ()
+            errors.append('INVALID_UNSUPPORTED_SYMBOLS')
+        if any(k in unsupported for k, _ in symbol_map):
+            errors.append('INVALID_SYMBOL_CAPABILITY_CONFLICT')
         result.append(AccountConfig(
             account_id=account_id, broker=broker,
             server=env.get(prefix + 'SERVER', '').strip(), login=login,
@@ -140,6 +204,7 @@ def load_accounts(env=None) -> tuple[AccountConfig, ...]:
             enabled=raw_enabled in ('true', '1'),
             role=env.get(prefix + 'ROLE', 'baseline' if account_id == 'METAQUOTES' else 'observe_only'),
             password_env=prefix + 'PASSWORD', symbol_map=symbol_map,
+            unsupported_symbols=unsupported,
             configuration_errors=tuple(errors),
             terminal_data_path=env.get(prefix + 'TERMINAL_DATA_PATH', '').strip(),
             portable=raw_portable in ('true', '1'),
