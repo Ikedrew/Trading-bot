@@ -63,11 +63,19 @@ class LifecycleRouter:
         response = self.transport(account, {
             'operation': operation, 'ownership': owner._asdict() if owner else None,
             'arguments': arguments})
+        # Fail-closed identity check FIRST: the echoed tuple must equal the pinned
+        # account's identity regardless of any other field. Only afterwards may
+        # the worker's own error surface verbatim — otherwise every operational
+        # failure (e.g. ADMIRALS SYMBOL_UNAVAILABLE_OR_AMBIGUOUS) is masked as
+        # WORKER_RESPONSE_IDENTITY_MISMATCH. An error-free but unverified
+        # response is still rejected as a mismatch.
         if (response.get('account_id'), response.get('broker'), response.get('server'),
-                response.get('login')) != account.identity or not response.get('identity_verified'):
+                response.get('login')) != account.identity:
             raise AccountReadError('WORKER_RESPONSE_IDENTITY_MISMATCH')
         if response.get('error'):
             raise AccountReadError(response['error'])
+        if not response.get('identity_verified'):
+            raise AccountReadError('WORKER_RESPONSE_IDENTITY_MISMATCH')
         value = response.get('value')
         if isinstance(value, list):
             return [SimpleNamespace(**row) for row in value]
