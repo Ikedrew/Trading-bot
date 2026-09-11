@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+import logging
 from typing import Any, Callable
 
 from .account_eligibility import evaluate_account_target, find_symbol_row
@@ -31,6 +32,47 @@ def prepare_account_routes(
     routes: list[dict] = []
     for target in targets:
         account = by_id[target.account_id]
+        capability = account.capability(target.canonical_symbol)
+        if capability == 'UNSUPPORTED':
+            logging.getLogger(__name__).info(
+                "[ACCOUNT_FANOUT_SKIP] account=%s canonical=%s reason=SYMBOL_UNSUPPORTED",
+                target.account_id, target.canonical_symbol)
+            routes.append({
+                "target": target,
+                "account_config": account,
+                "snapshot": snapshots.get(target.account_id, {}),
+                "eligibility": {"eligible": False, "reasons": ["SYMBOL_UNAVAILABLE"],
+                                "canonical_symbol": target.canonical_symbol,
+                                "account_id": target.account_id,
+                                "broker": target.broker,
+                                "broker_server": target.broker_server},
+                "volume": None,
+                "broker_symbol": None,
+                "execution_enabled": False,
+                "symbol_row": None,
+                "capability": capability,
+            })
+            continue
+        if capability == 'INVALID':
+            logging.getLogger(__name__).error(
+                "[ACCOUNT_FANOUT_REJECTED] account=%s canonical=%s reason=CAPABILITY_INVALID",
+                target.account_id, target.canonical_symbol)
+            routes.append({
+                "target": target,
+                "account_config": account,
+                "snapshot": snapshots.get(target.account_id, {}),
+                "eligibility": {"eligible": False, "reasons": ["CAPABILITY_INVALID"],
+                                "canonical_symbol": target.canonical_symbol,
+                                "account_id": target.account_id,
+                                "broker": target.broker,
+                                "broker_server": target.broker_server},
+                "volume": None,
+                "broker_symbol": None,
+                "execution_enabled": False,
+                "symbol_row": None,
+                "capability": capability,
+            })
+            continue
         snapshot = snapshots.get(target.account_id, {})
         if broker_symbols is not None and target.account_id in broker_symbols:
             override = broker_symbols[target.account_id]
@@ -64,5 +106,6 @@ def prepare_account_routes(
             "broker_symbol": broker_symbol,
             "execution_enabled": enabled,
             "symbol_row": row,
+            "capability": capability,
         })
     return routes

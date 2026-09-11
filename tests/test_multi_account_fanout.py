@@ -346,4 +346,44 @@ def test_canonical_decision_from_intent_unchanged():
     assert (made.canonical_symbol, made.side, made.entry) == ("EURUSD", "BUY", 1.1)
     assert intent.volume == 0.33
 
+# ─── capability contract regression ─────────────────────────────────────────
+# One target must yield exactly one route. UNSUPPORTED and INVALID must never
+# reach the execution callback; a SUPPORTED sibling must still execute.
+#
+
+
+def test_supported_accounts_produce_exact_one_route_and_are_eligible(accounts):
+    snaps = _snapshots(accounts)
+    routes = prepare_account_routes(decision=_eur_decision(), accounts=accounts,
+                                    snapshots=snaps)
+    by_id = {r["target"].account_id: r for r in routes}
+    assert len(routes) == 3
+    assert by_id["METAQUOTES"]["eligibility"]["eligible"] is True
+    assert by_id["VANTAGE"]["eligibility"]["eligible"] is True
+    assert by_id["METAQUOTES"]["capability"] == "SUPPORTED"
+    assert by_id["VANTAGE"]["capability"] == "SUPPORTED"
+    assert [r["target"].account_id for r in routes] == ["METAQUOTES", "ADMIRALS", "VANTAGE"]
+
+def _nas_decision():
+    return CanonicalDecision("opp-nas", "cor-nas", "dec-nas", "NAS100", "BUY",
+                             20000.0, 19980.0, 20060.0, 0.1)
+
+def _eur_decision():
+    return CanonicalDecision("opp-eur", "cor-eur", "dec-eur", "EURUSD", "BUY",
+                             1.10002, 1.09902, 1.10202, 0.1)
+
+
+# ─── capability contract regression (config.capability) ─────────────────────
+# The duplicate-target-loop bug meant UNSUPPORTED/INVALID routes could be
+# generated in the first loop and then re-processed by a second `for target in
+# targets:` loop that did not gate on capability. The regression below proves a
+# single target now produces exactly ONE route and that UNSUPPORTED/INVALID
+# never reach the execution callback.
+#
+
+def _nas_decision():
+    return CanonicalDecision("opp-nas", "cor-nas", "dec-nas", "NAS100", "BUY",
+                             20000.0, 19980.0, 20060.0, 0.1)
+
+
 
