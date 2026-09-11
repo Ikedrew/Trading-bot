@@ -1,11 +1,18 @@
 """
-Tests for D3: Position State Reconciliation on Startup.
+Modernized D3 startup-recovery tests.
+
+The pre-IPC version of this file patched ``core.runtime.startup_recovery.mt5_call``
+and ``core.runtime.startup_recovery.mt5`` — symbols that no longer exist. Recovery
+now runs through `LifecycleRouter` IPC with identity-verified worker transports,
+so every scenario below uses a fake transport and a real `TradeStateManager`
+(tests only, no MT5/S3/live trade).
 
 Covers:
 - Positions discovered and registered
-- Empty broker state ? no-op
+- Empty broker state → no-op
+- Wrong-magic positions filtered
+- None trade_manager → no-op
 - Duplicate protection (no double-registration)
-- Correct field mapping from broker position
 - Management continuity (recovered positions respond to price updates)
 """
 
@@ -13,7 +20,6 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -21,188 +27,163 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from core.accounts import position_state
+from core.accounts.config import AccountConfig
+from core.accounts.lifecycle import LifecycleRouter
+from core.accounts.position_state import position_key
+from core.position_ownership import PositionOwnership
 from core.runtime.startup_recovery import recover_positions_on_startup
 from core.trade_management.manager import TradeStateManager
 from core.trade_management.config import TradeManagementConfig
-from core.trade_management.position import PositionStatus
+from core.trade_management.position import Position, PositionStatus
 from strategy.signals import Side
 
+MAGIC = 713001
 
-def _cfg():
+
+@pytest.fixture
+def account(tmp_path):
+    return AccountConfig(
+        account_id='METAQUOTES', broker='MetaQuotes', server='MetaQuotes-Demo',
+        login=111, terminal_path=str(tmp_path / 'METAQUOTES' / 'terminal64.exe'),
+        enabled=True, role='baseline',
+    )
+
+
+@pytest.fixture
+def cfg():
     return TradeManagementConfig()
 
 
-def _mock_broker_position(ticket=12345, symbol="EURUSD", magic=713001,
-                          type_=0, volume=0.10, price_open=1.10000,
-                          sl=1.09500, tp=1.11000, time_=1717400000,
-                          price_current=1.10050):
-    """Create a mock broker position object (mimics MT5 positions_get result)."""
-    bp = MagicMock()
-    bp.ticket = ticket
-    bp.symbol = symbol
-    bp.magic = magic
-    bp.type = type_  # 0=BUY, 1=SELL
-    bp.volume = volume
-    bp.price_open = price_open
-    bp.sl = sl
-    bp.tp = tp
-    bp.time = time_
-    bp.price_current = price_current
-    return bp
+@pytest.fixture
+def state_dir(tmp_path, monkeypatch):
+    monkeypatch.setattr(position_state, 'STATE_DIR', tmp_path / 'state')
 
 
+def _row(ticket=100, symbol='EURUSD', broker_symbol='EURUSD', magic=MAGIC,
+         type_=0, volume=0.10, price_open=1.10000, price_current=1.10050,
+         sl=1.09500, tp=1.11000, time=1717400000):
+    return dict(ticket=ticket, symbol=symbol, broker_symbol=broker_symbol,
+                magic=magic, type=type_, volume=volume,
+                price_open=price_open, price_current=price_current,
+                sl=sl, tp=tp, time=time)
+
+
+def _run_recovery(tm, rows, account, symbol='EURUSD'):
+    """Recover via a fake IPC transport; returns the adopted count."""
+    def transport(acct, request):
+        return dict(account_id=acct.account_id, broker=acct.broker,
+                    server=acct.server, login=acct.login,
+                    identity_verified=True,
+                    value={'results': {symbol: list(rows) or []}, 'errors': {}})
+
+    router = LifecycleRouter((account,), transport=transport)
+    return recover_positions_on_startup(trade_manager=tm, symbol=symbol,
+                                        magic=MAGIC, lifecycle_router=router)
 class TestPositionDiscovery:
-    def test_recovers_broker_positions(self):
+    def test_recovers_broker_positions(self, cfg, account, state_dir):
         """Open broker positions are registered into TradeStateManager."""
-        tm = TradeStateManager(_cfg())
-        bp = _mock_broker_position(ticket=100, magic=713001)
-
-        with patch("core.runtime.startup_recovery.mt5_call", return_value=[bp]), \
-             patch("core.runtime.startup_recovery.mt5") as mock_mt5:
-            mock_mt5.ORDER_TYPE_BUY = 0
-            count = recover_positions_on_startup(trade_manager=tm, symbol="EURUSD", magic=713001)
+        tm = TradeStateManager(cfg, lifecycle_router=LifecycleRouter((account,)))
+        count = _run_recovery(tm, [_row(ticket=100)], account)
 
         assert count == 1
         assert len(tm.positions_open()) == 1
         pos = tm.positions_open()[0]
         assert pos.mt5_ticket == 100
-        assert pos.symbol == "EURUSD"
+        assert pos.symbol == 'EURUSD'
         assert pos.side == Side.BUY
         assert pos.entry_price == 1.10000
         assert pos.volume == 0.10
 
-    def test_multiple_positions_recovered(self):
+    def test_multiple_positions_recovered(self, cfg, account, state_dir):
         """Multiple positions are all recovered."""
-        tm = TradeStateManager(_cfg())
-        positions = [
-            _mock_broker_position(ticket=101, symbol="EURUSD"),
-            _mock_broker_position(ticket=102, symbol="EURUSD"),
-            _mock_broker_position(ticket=103, symbol="EURUSD"),
-        ]
-
-        with patch("core.runtime.startup_recovery.mt5_call", return_value=positions), \
-             patch("core.runtime.startup_recovery.mt5") as mock_mt5:
-            mock_mt5.ORDER_TYPE_BUY = 0
-            count = recover_positions_on_startup(trade_manager=tm, symbol="EURUSD", magic=713001)
-
+        tm = TradeStateManager(cfg, lifecycle_router=LifecycleRouter((account,)))
+        count = _run_recovery(tm, [_row(ticket=101), _row(ticket=102),
+                                   _row(ticket=103)], account)
         assert count == 3
         assert len(tm.positions_open()) == 3
 
-    def test_sell_position_detected(self):
+    def test_sell_position_detected(self, cfg, account, state_dir):
         """SELL positions have correct side."""
-        tm = TradeStateManager(_cfg())
-        bp = _mock_broker_position(ticket=200, type_=1)  # ORDER_TYPE_SELL
-
-        with patch("core.runtime.startup_recovery.mt5_call", return_value=[bp]), \
-             patch("core.runtime.startup_recovery.mt5") as mock_mt5:
-            mock_mt5.ORDER_TYPE_BUY = 0
-            recover_positions_on_startup(trade_manager=tm, symbol="EURUSD", magic=713001)
-
+        tm = TradeStateManager(cfg, lifecycle_router=LifecycleRouter((account,)))
+        _run_recovery(tm, [_row(ticket=200, type_=1)], account)
         assert tm.positions_open()[0].side == Side.SELL
 
 
 class TestEmptyBrokerState:
-    def test_no_positions_returns_zero(self):
-        """No broker positions ? graceful no-op."""
-        tm = TradeStateManager(_cfg())
-
-        with patch("core.runtime.startup_recovery.mt5_call", return_value=[]):
-            count = recover_positions_on_startup(trade_manager=tm, symbol="EURUSD", magic=713001)
-
+    def test_no_positions_returns_zero(self, cfg, account, state_dir):
+        """No broker positions -> graceful no-op."""
+        tm = TradeStateManager(cfg, lifecycle_router=LifecycleRouter((account,)))
+        count = _run_recovery(tm, [], account)
         assert count == 0
         assert len(tm.positions_open()) == 0
 
-    def test_none_response_returns_zero(self):
-        """MT5 returns None ? graceful no-op."""
-        tm = TradeStateManager(_cfg())
+    def test_none_response_returns_zero(self, cfg, account, state_dir):
+        """Missing broker snapshot -> graceful no-op (fail closed, not crash)."""
+        tm = TradeStateManager(cfg, lifecycle_router=LifecycleRouter((account,)))
 
-        with patch("core.runtime.startup_recovery.mt5_call", return_value=None):
-            count = recover_positions_on_startup(trade_manager=tm, symbol="EURUSD", magic=713001)
+        def transport(acct, request):
+            return dict(account_id=acct.account_id, broker=acct.broker,
+                        server=acct.server, login=acct.login,
+                        identity_verified=True,
+                        value={'results': {},
+                               'errors': {'EURUSD': 'POSITIONS_UNAVAILABLE'}})
 
+        router = LifecycleRouter((account,), transport=transport)
+        count = recover_positions_on_startup(trade_manager=tm, symbol='EURUSD',
+                                             magic=MAGIC, lifecycle_router=router)
         assert count == 0
 
-    def test_wrong_magic_filtered(self):
-        """Positions with different magic are ignored."""
-        tm = TradeStateManager(_cfg())
-        bp = _mock_broker_position(ticket=300, magic=999999)
-
-        with patch("core.runtime.startup_recovery.mt5_call", return_value=[bp]), \
-             patch("core.runtime.startup_recovery.mt5") as mock_mt5:
-            mock_mt5.ORDER_TYPE_BUY = 0
-            count = recover_positions_on_startup(trade_manager=tm, symbol="EURUSD", magic=713001)
-
+    def test_wrong_magic_filtered(self, cfg, account, state_dir):
+        """Positions with a different magic are ignored."""
+        tm = TradeStateManager(cfg, lifecycle_router=LifecycleRouter((account,)))
+        count = _run_recovery(tm, [_row(ticket=300, magic=999999)], account)
         assert count == 0
 
-    def test_no_trade_manager_noop(self):
-        """None trade_manager ? no-op, no crash."""
-        count = recover_positions_on_startup(trade_manager=None, symbol="EURUSD", magic=713001)
+    def test_no_trade_manager_noop(self, account, state_dir):
+        """None trade_manager -> no-op, no crash."""
+        count = recover_positions_on_startup(trade_manager=None, symbol='EURUSD',
+                                             magic=MAGIC, lifecycle_router=None)
         assert count == 0
-
-
 class TestDuplicateProtection:
-    def test_no_double_registration(self):
-        """Same position recovered twice ? only registered once."""
-        tm = TradeStateManager(_cfg())
-        bp = _mock_broker_position(ticket=400, magic=713001)
-
-        with patch("core.runtime.startup_recovery.mt5_call", return_value=[bp]), \
-             patch("core.runtime.startup_recovery.mt5") as mock_mt5:
-            mock_mt5.ORDER_TYPE_BUY = 0
-            recover_positions_on_startup(trade_manager=tm, symbol="EURUSD", magic=713001)
-            # Call again (simulates double-startup)
-            recover_positions_on_startup(trade_manager=tm, symbol="EURUSD", magic=713001)
-
+    def test_no_double_registration(self, cfg, account, state_dir):
+        """Same position recovered twice -> only registered once."""
+        tm = TradeStateManager(cfg, lifecycle_router=LifecycleRouter((account,)))
+        row = _row(ticket=400)
+        _run_recovery(tm, [row], account)
+        # Second recovery (simulates double-startup) must not duplicate.
+        _run_recovery(tm, [row], account)
         assert len(tm.positions_open()) == 1
 
-    def test_already_tracked_skipped(self):
-        """Position already in TradeStateManager ? not duplicated."""
-        tm = TradeStateManager(_cfg())
-
-        # Pre-register position
-        from core.trade_management.position import Position
-        existing = Position(
-            position_id="pos_500", symbol="EURUSD", side=Side.BUY,
-            magic=713001, entry_price=1.1, initial_sl=1.09, initial_tp=1.11,
-            stop_loss=1.09, take_profit=1.11, volume=0.1, open_time=1000.0,
-            status=PositionStatus.OPEN, mt5_ticket=500,
-        )
-        tm._by_id["pos_500"] = existing
-
-        bp = _mock_broker_position(ticket=500, magic=713001)
-        with patch("core.runtime.startup_recovery.mt5_call", return_value=[bp]), \
-             patch("core.runtime.startup_recovery.mt5") as mock_mt5:
-            mock_mt5.ORDER_TYPE_BUY = 0
-            count = recover_positions_on_startup(trade_manager=tm, symbol="EURUSD", magic=713001)
-
-        assert count == 0  # Already tracked
+    def test_already_tracked_skipped(self, cfg, account, state_dir):
+        """Position already in TradeStateManager is not duplicated."""
+        tm = TradeStateManager(cfg, lifecycle_router=LifecycleRouter((account,)))
+        owner = PositionOwnership('METAQUOTES', 'MetaQuotes', 'MetaQuotes-Demo',
+                                  500, canonical_symbol='EURUSD',
+                                  broker_symbol='EURUSD')
+        existing = Position(position_id=position_key(owner), symbol='EURUSD',
+                            side=Side.BUY, magic=MAGIC, entry_price=1.1,
+                            initial_sl=1.09, initial_tp=1.11, stop_loss=1.09,
+                            take_profit=1.11, volume=0.1, open_time=1000.0,
+                            status=PositionStatus.OPEN, mt5_ticket=500,
+                            ownership=owner)
+        tm._by_id[position_key(owner)] = existing
+        count = _run_recovery(tm, [_row(ticket=500)], account)
+        assert count == 0
         assert len(tm.positions_open()) == 1
 
 
 class TestManagementContinuity:
-    def test_recovered_position_responds_to_price_update(self):
-        """Recovered position is managed by on_price_update (trailing/BE)."""
-        cfg = TradeManagementConfig(
-            break_even_trigger_rr=1.0,
-            break_even_buffer_rr=0.00005,
-        )
-        tm = TradeStateManager(cfg)
-        bp = _mock_broker_position(
-            ticket=600, magic=713001, price_open=1.10000,
-            sl=1.09500, tp=1.11000, price_current=1.10600,
-        )
-
-        with patch("core.runtime.startup_recovery.mt5_call", return_value=[bp]), \
-             patch("core.runtime.startup_recovery.mt5") as mock_mt5:
-            mock_mt5.ORDER_TYPE_BUY = 0
-            recover_positions_on_startup(trade_manager=tm, symbol="EURUSD", magic=713001)
-
+    def test_recovered_position_responds_to_price_update(self, cfg, account, state_dir):
+        """Recovered position is managed by on_price_update (BE/trailing)."""
+        cfg = TradeManagementConfig(break_even_trigger_rr=1.0,
+                                    break_even_buffer_rr=0.00005)
+        tm = TradeStateManager(cfg, lifecycle_router=LifecycleRouter((account,)))
+        row = _row(ticket=600, price_open=1.10000, sl=1.09500, tp=1.11000,
+                   price_current=1.10600)
+        _run_recovery(tm, [row], account)
         pos = tm.positions_open()[0]
-        original_sl = pos.stop_loss
-
-        # Simulate price update that should trigger BE
-        # Entry=1.10000, SL=1.09500, risk=0.005. BE trigger at 1R = entry + 0.005 = 1.10500
-        # Price at 1.10600 > 1.10500 ? BE should move SL to entry + buffer
-        tm.on_price_update("EURUSD", 1.10600, 1.10620, 1717401000.0)
-
-        # SL should have moved (BE logic engaged)
-        assert pos.stop_loss >= pos.entry_price  # Moved to at least breakeven
+        # Entry=1.10000, SL=1.09500, risk=0.005 -> BE trigger at 1R = 1.10500.
+        # Price 1.10600 exceeds it, so BE should move SL to at least entry.
+        tm.on_price_update('EURUSD', 1.10600, 1.10620, 1717401000.0)
+        assert pos.stop_loss >= pos.entry_price

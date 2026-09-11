@@ -160,20 +160,13 @@ def initialize_symbol_states(
                 market_context_builder=_mc_builder,
             ))
 
-            # D3: Recover open broker positions into TradeStateManager
+            # D3: Register this symbol's manager for lifecycle ownership.
+            # Recovery itself is batched once after ALL symbols are created
+            # (see below) so each enabled account uses exactly ONE lifecycle
+            # worker subprocess for the complete symbol set.
             if tm is not None:
                 from core.accounts.lifecycle_registration import attach_manager
                 attach_manager(canonical, tm)
-                try:
-                    from core.runtime.startup_recovery import recover_positions_on_startup
-                    recover_positions_on_startup(
-                        trade_manager=tm,
-                        symbol=canonical,
-                        broker_symbol=resolved,
-                        magic=config.BOT_MAGIC,
-                    )
-                except Exception as _rec_exc:
-                    logger.warning("[STARTUP_RECOVERY_ERROR] symbol=%s error=%s", resolved, _rec_exc)
 
             logger.info("[LIVE_SCANNER] initialized symbol=%s", resolved)
         except Exception as exc:
@@ -182,5 +175,20 @@ def initialize_symbol_states(
                 sym_hint, type(exc).__name__, exc, type(exc).__qualname__,
             )
             continue
+
+    # D3 (batched): recover open broker positions across the WHOLE symbol set
+    # with ONE lifecycle worker subprocess per enabled account — a single
+    # verified MT5 initialize/recover/shutdown per account instead of one worker
+    # per account × symbol. Capability decisions stay per (account, symbol);
+    # account/symbol failures are isolated and never block reaching LIVE.
+    try:
+        from core.runtime.startup_recovery import recover_positions_batch
+        _recovery_trade_managers = {
+            st.symbol: st.trade_manager for st in states if st.trade_manager is not None}
+        if _recovery_trade_managers:
+            recover_positions_batch(magic=config.BOT_MAGIC,
+                                    trade_managers=_recovery_trade_managers)
+    except Exception as _batch_exc:
+        logger.warning("[STARTUP_RECOVERY_ERROR] batch error=%s", _batch_exc)
 
     return states

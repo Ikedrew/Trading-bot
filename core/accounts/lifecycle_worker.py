@@ -21,6 +21,25 @@ def execute_lifecycle(account, request, mt5):
             raise AccountReadError('SYMBOL_INVENTORY_UNAVAILABLE')
         resolver = AccountSymbolResolver(account.identity, [s.name for s in inventory],
             explicit=dict(account.symbol_map), aliases=SYMBOL_ALIASES)
+        if args.get('symbols') is not None:
+            # Batched startup recovery: ONE verified MT5 session for the whole
+            # symbol set. Per-symbol failures are explicit ('errors') and never
+            # abort the remaining symbols in the same session; the parent keeps
+            # adoption and fail-closed semantics. No broker-name branches.
+            results, errors = {}, {}
+            for canonical in args['symbols']:
+                resolved = resolver.resolve(canonical)
+                if resolved['status'] != 'available':
+                    errors[canonical] = 'SYMBOL_UNAVAILABLE_OR_AMBIGUOUS'
+                    continue
+                rows = reader.read('positions_get', symbol=resolved['broker_symbol'])
+                if rows is None:
+                    errors[canonical] = 'POSITIONS_UNAVAILABLE'
+                    continue
+                results[canonical] = [
+                    dict(_row(p), broker_symbol=resolved['broker_symbol']) for p in rows
+                    if int(p.magic) == int(args['magic']) and p.symbol == resolved['broker_symbol']]
+            return {'results': results, 'errors': errors}
         resolved = resolver.resolve(args['symbol'])
         if resolved['status'] != 'available':
             raise AccountReadError('SYMBOL_UNAVAILABLE_OR_AMBIGUOUS')
