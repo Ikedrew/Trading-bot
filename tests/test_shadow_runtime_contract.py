@@ -32,6 +32,15 @@ OBSERVATION_ID = mint_observation_id(
     symbol=SYMBOL, bar_time=1_784_800_000, timeframe="M5"
 )
 
+# Shadow trade IDs are now deterministic from (canonical_opportunity_id, horizon)
+# via core.shadow.runtime._shadow_trade_id (sha256). Tests must derive them the
+# same way rather than hardcoding the legacy "nshadow_{cycle}_{symbol}_{hz}" form.
+from core.shadow.runtime import _shadow_trade_id as _mint
+
+
+def _tid(horizon="INTRADAY"):
+    return _mint(ROOT_ID, horizon)
+
 
 def _ctx(
     *,
@@ -224,7 +233,7 @@ def test_exact_fill_tp(env):
 
 def test_horizon_specific_timeout_scalp_9_bars(env):
     env.rt.handle_opportunity(_ctx(eligible=("SCALP",)))
-    tid = f"nshadow_42_{SYMBOL}_SCALP"
+    tid = _tid("SCALP")
     t0 = _ctx()["bar_time_raw"]
     for bt, hi, lo, cl in _bars_after(t0, 9, 1.10040, 1.09990, 1.10000):
         env.rt.evaluate_bar(symbol=SYMBOL, bar_time=bt,
@@ -268,7 +277,7 @@ def test_data_gap_recorded_never_fabricated(env):
 
 def test_watermark_prevents_duplicate_evaluation(env):
     env.rt.handle_opportunity(_ctx())
-    tid = f"nshadow_42_{SYMBOL}_INTRADAY"
+    tid = _tid("INTRADAY")
     t0 = _ctx()["bar_time_raw"]
     for _ in range(2):  # same closed bar delivered twice
         env.rt.evaluate_bar(symbol=SYMBOL, bar_time=t0 + 300,
@@ -283,7 +292,7 @@ def test_recovery_reopens_active_and_continues_without_duplicate(env):
     # Cross ONE checkpoint boundary so durable mid-life state exists
     # (checkpoint_interval = 12 bars → PROGRESS at bar 12).
     env.rt.handle_opportunity(_ctx())
-    tid = f"nshadow_42_{SYMBOL}_INTRADAY"
+    tid = _tid("INTRADAY")
     t0 = _ctx()["bar_time_raw"]
     for bt, hi, lo, cl in _bars_after(t0, 12, 1.10010, 1.09990, 1.10000):
         env.rt.evaluate_bar(symbol=SYMBOL, bar_time=bt,
@@ -314,7 +323,7 @@ def test_recovery_reopens_active_and_continues_without_duplicate(env):
 
 def test_recovered_open_progress_and_close_preserve_original_observation_id(env):
     env.rt.handle_opportunity(_ctx())
-    tid = f"nshadow_42_{SYMBOL}_INTRADAY"
+    tid = _tid("INTRADAY")
     t0 = _ctx()["bar_time_raw"]
 
     rt2 = ShadowRuntime(writer=env.writer)

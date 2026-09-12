@@ -20,6 +20,7 @@ their own exception isolation; internal failures degrade to dropped shadows.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from typing import Any
 
@@ -47,6 +48,22 @@ from core.shadow.persistence import (
 from core.trade_truth import compute_mae_r, compute_mfe_r, compute_r_multiple
 
 logger = logging.getLogger(__name__)
+
+
+def _shadow_trade_id(canonical_opportunity_id: str, horizon: str) -> str:
+    """Deterministic, globally-unique shadow lifecycle identity.
+
+    One identity per (canonical_opportunity_id, horizon). Stable across bot
+    restarts and event replays because it is derived solely from the canonical
+    opportunity and horizon — never from a process-local counter, ``cycle_id``,
+    or Python's non-stable ``hash()``. A stable cryptographic digest keeps the
+    value collision-free across opportunities that would otherwise share the
+    same ``cycle_id``/``symbol``/``horizon`` tuple.
+    """
+    digest = hashlib.sha256(
+        f"{canonical_opportunity_id}::{horizon}".encode("utf-8")
+    ).hexdigest()[:16]
+    return f"nshadow_{digest}"
 
 
 def _wall_stamp() -> dict[str, Any]:
@@ -86,6 +103,7 @@ class ShadowRuntime:
         canonical_opportunity_id: str = "",
         observation_id: str = "",
         shadow_trade_id: str = "",
+        horizon: str = "",
     ) -> dict[str, Any]:
         ev: dict[str, Any] = {
             "event_type": event_type,
@@ -96,6 +114,7 @@ class ShadowRuntime:
             "observation_id": observation_id,
             "shadow_trade_id": shadow_trade_id,
             "symbol": symbol,
+            "horizon": horizon,
             "broker_offset_seconds": int(broker_offset),
         }
         ev.update(market_block("event_market_time", market_time_raw, broker_offset))
@@ -275,7 +294,7 @@ class ShadowRuntime:
         for item in constructed:
             hz = item["horizon"]
             t = item["trade"]
-            trade_id = f"nshadow_{ctx.get('cycle_id', 0)}_{symbol}_{hz}"
+            trade_id = _shadow_trade_id(root, hz)
             risk_distance = abs(t.entry - t.stop_loss)
             basis = "ASK" if direction == "BUY" else "BID"
             assumptions = build_assumptions(
@@ -297,6 +316,7 @@ class ShadowRuntime:
                 canonical_opportunity_id=root,
                 observation_id=observation_id,
                 shadow_trade_id=trade_id,
+                horizon=hz,
             )
             ev.update(
                 {
@@ -383,6 +403,7 @@ class ShadowRuntime:
                 "stop_loss": t.stop_loss,
                 "take_profit": t.take_profit,
                 "pip": pip,
+                "horizon": hz,
             }
 
     # ─────────────────────────────────────────────────────────────────────

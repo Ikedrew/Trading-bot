@@ -91,6 +91,27 @@ def load_shadow_runtime_events(
     )
 
 
+def _lifecycle_key(ev: dict[str, Any]) -> tuple[str, str]:
+    """Composite lifecycle identity: (shadow_trade_id, canonical_opportunity_id).
+
+    A shadow lifecycle is uniquely identified by the canonical opportunity it
+    traces together with the runtime-minted shadow_trade_id. Keying on
+    shadow_trade_id ALONE was the root cause of a P0 defect: the legacy
+    collection reused IDs across distinct canonical opportunities, so an OPEN
+    from one opportunity was silently joined with a CLOSE from another.
+
+    Grouping on (shadow_trade_id, canonical_opportunity_id) makes such
+    mis-attribution IMPOSSIBLE at ingestion: events whose canonical
+    opportunity differs are never joined, regardless of whether the source
+    shadow_trade_id is legacy/malformed. Mismatches are reported/excluded,
+    never silently merged.
+    """
+    return (
+        str(ev.get("shadow_trade_id", "") or ""),
+        str(ev.get("canonical_opportunity_id", "") or ""),
+    )
+
+
 def reconstruct_completed_shadow_trades(
     events: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -101,16 +122,21 @@ def reconstruct_completed_shadow_trades(
         - an OPEN event (immutable construction + identity + live facts), and
         - a CLOSE event (final outcome with pnl_r_multiple).
 
-    PLAN and PROGRESS events participate in lifecycle accounting only; they
-    never by themselves produce an outcome record. Incomplete lifecycles are
-    counted and logged — they NEVER become completed shadow outcomes.
+    Keying is on (shadow_trade_id, canonical_opportunity_id) — see
+    ``_lifecycle_key``. PLAN and PROGRESS events participate in lifecycle
+    accounting only; they never by themselves produce an outcome record.
+    Incomplete lifecycles are counted and logged — they NEVER become completed
+    shadow outcomes. Malformed/conflicting lifecycles (e.g. legacy reused IDs
+    spanning multiple canonical opportunities) are excluded with explicit
+    accounting rather than silently merged across opportunities.
     """
-    opens: dict[str, dict[str, Any]] = {}
-    closes: dict[str, dict[str, Any]] = {}
+    opens: dict[tuple[str, str], dict[str, Any]] = {}
+    closes: dict[tuple[str, str], dict[str, Any]] = {}
     plans: dict[str, dict[str, Any]] = {}
     progresses = 0
     bad_schema = 0
     close_without_open: set[str] = set()
+    cross_opportunity_id_conflicts = 0
 
     for ev in events:
         if not isinstance(ev, dict):
@@ -130,21 +156,26 @@ def reconstruct_completed_shadow_trades(
         elif event_type == "OPEN":
             if not trade_id.startswith(_VALID_TRADE_ID_PREFIX):
                 bad_schema += 1  # non-canonical ID — never reclassified
-            elif trade_id not in opens:
-                opens[trade_id] = ev  # first OPEN wins (append-only stream)
+            else:
+                key = _lifecycle_key(ev)
+                if key not in opens:
+                    opens[key] = ev  # first OPEN wins (append-only stream)
         elif event_type == "CLOSE":
             if not trade_id.startswith(_VALID_TRADE_ID_PREFIX):
                 bad_schema += 1
             else:
-                closes[trade_id] = ev  # last CLOSE wins
-                if trade_id not in opens:
+                key = _lifecycle_key(ev)
+                if key in closes:
+                    cross_opportunity_id_conflicts += 1
+                closes[key] = ev  # last CLOSE wins per (id, opportunity)
+                if key not in opens:
                     close_without_open.add(trade_id)
 
     records: list[dict[str, Any]] = []
     incomplete_no_close = 0
     incomplete_no_outcome = 0
-    for trade_id, open_ev in opens.items():
-        close_ev = closes.get(trade_id)
+    for key, open_ev in opens.items():
+        close_ev = closes.get(key)
         if close_ev is None:
             incomplete_no_close += 1
             continue
@@ -158,11 +189,11 @@ def reconstruct_completed_shadow_trades(
 
     logger.info(
         "[SHADOW_INGESTION] shadow_runtime_v1 stream: plans=%d opens=%d "
-        "progress=%d closes=%d → completed=%d (incomplete: no_close=%d "
-        "no_outcome=%d close_without_open=%d bad_schema=%d)",
+        "progress=%d closes=%d -> completed=%d (incomplete: no_close=%d "
+        "no_outcome=%d close_without_open=%d bad_schema=%d conflicts=%d)",
         len(plans), len(opens), progresses, len(closes), len(records),
         incomplete_no_close, incomplete_no_outcome, len(close_without_open),
-        bad_schema,
+        bad_schema, cross_opportunity_id_conflicts,
     )
     return records
 
