@@ -13,6 +13,11 @@ def execute_lifecycle(account, request, mt5):
     reader = AccountReader(account, mt5)
     reader.verify()
     op, args = request['operation'], request.get('arguments', {})
+    if op == 'verify':
+        # Terminal-manager readiness probe: the fail-closed session checks
+        # above (exe path, data path via portable/origin rules, login, server,
+        # demo mode) are the entire operation. Nothing else runs here.
+        return {'verified': True}
     if op == 'recover':
         from core.symbol_resolver import AccountSymbolResolver
         from core.config import SYMBOL_ALIASES

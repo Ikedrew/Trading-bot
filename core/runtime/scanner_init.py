@@ -45,6 +45,34 @@ from core.runtime.runtime_utils import (
 logger = logging.getLogger(__name__)
 
 
+def _ensure_enabled_account_terminals():
+    """Ensure each enabled account's dedicated MT5 terminal (once per startup).
+
+    Opt-in via ``core.config.MT5_TERMINAL_MANAGER_ENABLED``. Runs BEFORE
+    batched position recovery, ensures/launches at most one terminal per
+    enabled account, verifies terminal/account readiness, and keeps account
+    failures strictly account-local so healthy accounts always continue.
+    """
+    from core import config as runtime_config
+    if not getattr(runtime_config, 'MT5_TERMINAL_MANAGER_ENABLED', False):
+        return {}
+    try:
+        from core.accounts.config import load_accounts
+        from core.accounts.terminal_manager import TerminalManager
+        statuses = TerminalManager().ensure_all(load_accounts())
+    except Exception as _tm_exc:  # terminal management never blocks startup
+        logger.warning('[TERMINAL_MANAGER] bootstrap failed: %s', _tm_exc)
+        return {}
+    for account_id, status in statuses.items():
+        if status.ok:
+            logger.info('[TERMINAL_MANAGER] account=%s pid=%s path=%s manager_launched=%s',
+                        account_id, status.pid, status.path, status.manager_launched)
+        else:
+            logger.warning('[TERMINAL_MANAGER] account=%s duplicate=%s reason=%s',
+                           account_id, status.duplicate, status.reason)
+    return statuses
+
+
 def initialize_symbol_states(
     *,
     symbols: list[str] | None,
@@ -175,6 +203,11 @@ def initialize_symbol_states(
                 sym_hint, type(exc).__name__, exc, type(exc).__qualname__,
             )
             continue
+
+    # D3 (terminal manager): ensure each enabled account's dedicated MT5
+    # terminal exactly ONCE per startup, before batched recovery. Account
+    # failures are isolated and never block reaching LIVE.
+    _ensure_enabled_account_terminals()
 
     # D3 (batched): recover open broker positions across the WHOLE symbol set
     # with ONE lifecycle worker subprocess per enabled account — a single

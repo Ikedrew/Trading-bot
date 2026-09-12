@@ -1,5 +1,6 @@
 """Read-only Windows terminal inventory and cross-process diagnostic leases."""
 
+from collections import namedtuple
 from contextlib import contextmanager
 import hashlib
 import json
@@ -15,21 +16,43 @@ def hidden_process_flags() -> int:
     return getattr(subprocess, 'CREATE_NO_WINDOW', 0) if os.name == 'nt' else 0
 
 
-def running_terminals() -> list[str]:
+# One entry PER running terminal process. Two instances of the same
+# executable are distinct entries and must never be collapsed for
+# terminal-manager duplicate decisions.
+TerminalProcess = namedtuple('TerminalProcess', ('pid', 'path'))
+
+
+def running_terminal_processes() -> list[TerminalProcess]:
+    """Enumerate every running terminal64 process as (pid, executable path)."""
     if os.name != 'nt':
         return []
     # Constant command, no interpolated account values, secrets or command lines.
     command = ('@(Get-Process terminal64 -ErrorAction SilentlyContinue | '
-               'Select-Object -ExpandProperty Path -ErrorAction SilentlyContinue | '
-               'Where-Object { $_ }) | ConvertTo-Json -Compress')
+               'ForEach-Object { $p = $_.Path; if ($p) { '
+               '[pscustomobject]@{ Id = $_.Id; Path = $p } } }) | ConvertTo-Json -Compress')
     result = subprocess.run(
         ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', command],
         capture_output=True, text=True, timeout=10, creationflags=hidden_process_flags(),
     )
     if result.returncode:
         raise RuntimeError('TERMINAL_INVENTORY_UNAVAILABLE')
-    paths = json.loads(result.stdout or '[]')
-    return [paths] if isinstance(paths, str) else (paths or [])
+    data = json.loads(result.stdout or '[]')
+    if isinstance(data, dict):
+        data = [data]
+    processes = []
+    for item in data or []:
+        if not isinstance(item, dict):
+            continue
+        pid = item.get('Id')
+        path = item.get('Path')
+        if pid and path:
+            processes.append(TerminalProcess(int(pid), str(path)))
+    return processes
+
+
+def running_terminals() -> list[str]:
+    """Executable paths of every running terminal64 process (may repeat)."""
+    return [p.path for p in running_terminal_processes()]
 
 
 @contextmanager

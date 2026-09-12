@@ -162,6 +162,7 @@ MT5_CENTRALISED_INIT = True     # When True, main.py owns mt5.initialize/shutdow
 from core.accounts.config import BASELINE_TERMINAL as _MT5_BASELINE_TERMINAL  # noqa: E402
 MT5_TERMINAL_PATH = _MT5_BASELINE_TERMINAL
 MT5_TERMINAL_PORTABLE = True    # Use portable mode so the terminal loads its local account config
+MT5_TERMINAL_MANAGER_ENABLED = False  # When True, startup ensures/launches each enabled account's dedicated MT5 terminal (core.accounts.terminal_manager)
 MT5_RECONNECT_COOLDOWN_SECONDS = 10.0  # Base seconds between reconnect attempts
 MT5_RECONNECT_MAX_COOLDOWN_SECONDS = 60.0  # Maximum backoff cap (seconds)
 OBSERVABILITY_VALIDATION_ENABLED = False  # When True, trade event buffer collects events for validation
