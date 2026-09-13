@@ -78,6 +78,7 @@ def _current_lifecycle_events() -> list[dict]:
             "schema_version": "shadow_runtime_v1",
             "event_type": "CLOSE",
             "shadow_trade_id": "nshadow_7_EURUSD_SCALP",
+            "canonical_opportunity_id": "EURUSD*1777700000*HAMMER",
             "symbol": "EURUSD",
             "exit_reason": "take_profit",
             "exit_market_time_utc_epoch_s": 1777702400,
@@ -194,10 +195,10 @@ class TestFingerprintEpochMetadata:
         assert "architecture_version" in fp
         assert fp["architecture_version"] == "new_pipeline_v1.2"
 
-    def test_fingerprint_default_epoch_is_current(self):
-        """Default epoch in fingerprint is CURRENT."""
+    def test_fingerprint_default_epoch_is_unverified(self):
+        """Omitting evidence validation cannot silently assert CURRENT."""
         fp = build_fingerprint(100, 5)
-        assert fp["epoch"] == "CURRENT"
+        assert fp["epoch"] == "UNVERIFIED"
 
 
 class TestReportEpochWarnings:

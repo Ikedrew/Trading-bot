@@ -15,7 +15,8 @@ LEGACY:
 CURRENT:
     Records generated after lineage propagation. Must have:
     - Valid entity_id (non-empty)
-    - Clean strategy field (REVERSAL/CONTINUATION/FALSE_BREAK or empty)
+    - Clean strategy field (canonical V10 StrategyFamily, or a supported clean
+      legacy value during compatibility ingestion)
     - Independent trade_horizon field (SCALP/INTRADAY/EXTENDED or empty)
 
 TRANSITIONAL:
@@ -56,7 +57,13 @@ class DataEpoch(str, Enum):
 # CLASSIFICATION RULES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-_VALID_STRATEGIES = frozenset({"REVERSAL", "CONTINUATION", "FALSE_BREAK", ""})
+from core.v10.strategy_family import StrategyFamily
+
+
+_LEGACY_CLEAN_STRATEGIES = frozenset({"REVERSAL", "CONTINUATION", "FALSE_BREAK", ""})
+_VALID_STRATEGIES = _LEGACY_CLEAN_STRATEGIES | frozenset(
+    family.value for family in StrategyFamily
+)
 _VALID_HORIZONS = frozenset({"SCALP", "INTRADAY", "EXTENDED", ""})
 _CONTAMINATED_SUFFIXES = ("_SCALP", "_INTRADAY", "_EXTENDED")
 
@@ -66,7 +73,8 @@ def classify_record(record: dict[str, Any]) -> DataEpoch:
     Classify a single record as CURRENT, TRANSITIONAL, or LEGACY.
 
     Classification is based on lineage field completeness:
-    - CURRENT: entity_id present + clean strategy + no contamination
+    - CURRENT: entity_id + canonical opportunity + authoritative regime +
+      clean strategy with no horizon contamination
     - TRANSITIONAL: some lineage fields present but incomplete
     - LEGACY: missing entity_id or contaminated strategy
 

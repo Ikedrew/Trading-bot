@@ -32,10 +32,15 @@ class Priority(IntEnum):
 
 class Status(str):
     """Implementation status."""
-    READY = "ready"           # Experiment implemented and runnable
-    BLOCKED = "blocked"       # Requires data that doesn't exist yet
+    READY = "ready"                    # Experiment implemented and runnable
+    COMPLETE = "complete"              # Executed with valid CURRENT-epoch results
+    PARTIAL = "partial"                # Executed but results are incomplete/inconclusive
+    BLOCKED = "blocked"                # Requires data that doesn't exist yet
+    BLOCKED_DATA = "blocked_data"      # Implementation exists, waiting for more data
+    WAITING = "waiting"                # Awaiting external input/validation
+    INVALIDATED = "invalidated"        # Previous result exists but is invalid (contaminated/all-epoch)
     NOT_IMPLEMENTED = "not_implemented"  # Code not written yet
-    DEPRECATED = "deprecated"  # Superseded or no longer relevant
+    DEPRECATED = "deprecated"          # Superseded or no longer relevant
 
 
 @dataclass
@@ -78,7 +83,9 @@ QUESTIONS: list[ResearchQuestion] = [
         priority=Priority.P0,
         question="Which terminal stages have the highest missed-opportunity cost?",
         data_sources=["decision_trace"],
-        status=Status.NOT_IMPLEMENTED,
+        status=Status.COMPLETE,
+        runner="experiments.research_runner",
+        notes="Report exists (q3_missed_opportunity.json). Analysis of rejection stages from decision_trace.",
     ),
     ResearchQuestion(
         id="Q4",

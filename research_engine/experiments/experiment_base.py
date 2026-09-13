@@ -142,16 +142,23 @@ def build_fingerprint(
     records_excluded: int,
     source: str = "shadow_trades",
     validation_score: str = "UNKNOWN",
-    epoch: str = "CURRENT",
+    epoch: str | None = None,
 ) -> dict[str, Any]:
-    """Build a standard dataset fingerprint with epoch metadata."""
+    """Build a standard dataset fingerprint with explicit epoch provenance.
+
+    CURRENT is an evidence-backed assertion and must therefore be supplied by
+    a caller that has validated its analytical population.  Omitting ``epoch``
+    produces an explicitly unverified fingerprint; it can never silently pass
+    the canonical CURRENT report-validity gate.
+    """
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    evidence_epoch = str(epoch or "UNVERIFIED").strip().upper()
     return {
         "dataset_id": f"{source}_{today}",
         "records_used": records_used,
         "records_excluded": records_excluded,
         "source": source,
-        "epoch": epoch,
+        "epoch": evidence_epoch,
         "architecture_version": "new_pipeline_v1.2",
         "validation_score": validation_score,
         "generated": today,

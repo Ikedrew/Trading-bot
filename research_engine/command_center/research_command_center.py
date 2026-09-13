@@ -1087,6 +1087,10 @@ def print_report(report: ResearchCommandReport) -> None:
     w(f"  Ready:            {rr.ready}")
     w(f"  Waiting data:     {rr.waiting_data}")
     w(f"  Blocked:          {rr.blocked}")
+    if rr.invalidated > 0:
+        w(f"  Invalidated:      {rr.invalidated}  (historical results invalidated by data contamination)")
+    if rr.partial > 0:
+        w(f"  Partial:          {rr.partial}")
 
 
     # ─── 4. ACTIVE QUESTIONS ──────────────────────────────────────────

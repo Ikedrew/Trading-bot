@@ -368,26 +368,33 @@ def run(shadow_trades: list[dict[str, Any]] | None = None) -> dict:
 
     If shadow_trades not provided, loads from S3 via the shared data-access layer.
     """
+    from research_engine.data_quality.classifier import DataEpoch, classify_record
+    from research_engine.experiments.experiment_base import load_shadow_trades
+
     if shadow_trades is None:
-        from research_engine.data_access.shadow_runtime_ingestion import (
-            ingest_completed_shadow_trades,
-        )
-        from research_engine.data_access.s3_source import get_default_source
+        # Shared canonical boundary: this loader returns CURRENT evidence only.
+        current_population = load_shadow_trades(epoch="CURRENT")
+        excluded_count = 0
+    else:
+        # Injected populations (tests/operator calls) receive the identical
+        # boundary and cannot bypass CURRENT classification.
+        supplied_population = list(shadow_trades)
+        current_population = [
+            record for record in supplied_population
+            if classify_record(record) == DataEpoch.CURRENT
+        ]
+        excluded_count = len(supplied_population) - len(current_population)
 
-        _source = get_default_source()
-        shadow_trades = []
-        # Canonical production shadow source first (S3 shadow_runtime_v1
-        # event stream, reconstructed into the internal research shape),
-        # then research_shadow_trades (order preserved).
-        shadow_trades.extend(ingest_completed_shadow_trades())
-        shadow_trades.extend(_source.read_dataset("research_shadow_trades"))
-
-    result = run_expected_value(shadow_trades)
+    result = run_expected_value(current_population)
 
     # Build canonical report
     from research_engine.experiments.experiment_base import build_report, build_fingerprint
 
-    recommendation = "POSITIVE_EDGE" if result.expected_value > 0 else "NEGATIVE_EDGE"
+    recommendation = (
+        "INSUFFICIENT_DATA"
+        if result.total_trades == 0
+        else "POSITIVE_EDGE" if result.expected_value > 0 else "NEGATIVE_EDGE"
+    )
 
     report = build_report(
         question_id="Q19",
@@ -404,7 +411,12 @@ def run(shadow_trades: list[dict[str, Any]] | None = None) -> dict:
         },
         confidence=result.confidence,
         dataset={"source": "shadow_runtime_v1(ingested) + research_shadow_trades", "sample_size": result.total_trades},
-        fingerprint=build_fingerprint(result.total_trades, 0, "shadow_trades"),
+        fingerprint=build_fingerprint(
+            result.total_trades,
+            excluded_count,
+            "shadow_trades",
+            epoch="CURRENT",
+        ),
         recommendation=recommendation,
         provenance={"experiment_module": "research_engine.experiments.expected_value", "registry_id": "Q19", "function": "run", "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"},
     )

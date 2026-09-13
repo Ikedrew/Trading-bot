@@ -63,6 +63,8 @@ class ResearchReadiness:
     ready: int = 0
     waiting_data: int = 0
     blocked: int = 0
+    invalidated: int = 0          # Historical results invalid due to contamination
+    partial: int = 0              # Partial results, not conclusive
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -76,7 +78,7 @@ class QuestionEntry:
     question_id: str
     title: str
     priority: str           # P0 / P1 / P2 / P3
-    status: str             # COMPLETE / READY / WAITING_DATA / BLOCKED
+    status: str             # COMPLETE / READY / WAITING_DATA / BLOCKED / INVALIDATED / PARTIAL
     recommendation: str = ""
     blocker: str = ""
     sample_size: int = 0

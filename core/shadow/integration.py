@@ -141,11 +141,28 @@ def handle_live_opportunity_shadow(
     pr = new_result.get("v10_pipeline_result")
     v10_selected = ""
     v10_rejection = ""
+    v10_h4_regime = ""
     if pr is not None:
         hz_obj = getattr(pr, "horizon", None)
         if hz_obj is not None:
             v10_selected = str(getattr(hz_obj, "horizon_type", "") or "")
         v10_rejection = str(getattr(pr, "rejection_stage", "") or "")
+        # V10 owns its regime in the immutable pipeline result.  Preserve that
+        # value verbatim for shadow evidence instead of relying on the legacy
+        # ``activation_regime`` field (which V10 does not populate).
+        market_state = getattr(pr, "market_state", None)
+        regime_state = getattr(market_state, "regime", None)
+        v10_h4_regime = str(getattr(regime_state, "regime", "") or "")
+
+    # A present V10 regime is authoritative.  The explicit arguments and
+    # activation_regime fallback remain only for non-V10/legacy callers.
+    resolved_regime = (
+        v10_h4_regime
+        or h4_regime
+        or regime
+        or new_result.get("activation_regime", "")
+        or ""
+    )
 
     ctx = {
         "canonical_opportunity_id": canonical_opportunity_id,
@@ -161,8 +178,8 @@ def handle_live_opportunity_shadow(
         # Phase 3 Step 10-B: regime/phase facts are supplied by the caller from
         # the already-produced assessment/engine context (passed explicitly).
         # Values are forwarded verbatim; never invented here ("" when absent).
-        "regime": regime or new_result.get("activation_regime", "") or "",
-        "h4_regime": h4_regime or new_result.get("activation_regime", "") or "",
+        "regime": resolved_regime,
+        "h4_regime": resolved_regime,
         "h1_bias": _h1_bias_str(htf_context),
         "market_phase": market_phase or new_result.get("market_phase", "") or "",
         "market_phase_confidence": float(
