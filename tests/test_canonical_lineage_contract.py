@@ -356,9 +356,11 @@ class TestResearchConsumers:
     def test_classifier_requires_canonical_for_current_epoch(self):
         from research_engine.data_quality.classifier import classify_record, DataEpoch
         full = {
-            "identity": {"entity_id": "E", "strategy_id": "CONTINUATION",
-                         "canonical_opportunity_id": CANONICAL},
-            "decision_snapshot": {"h4_regime": "TRENDING"},
+            "identity": {"entity_id": "E", "strategy_id": "TREND_CONTINUATION",
+                         "canonical_opportunity_id": CANONICAL,
+                         "shadow_trade_id": "nshadow_0123456789abcdef"},
+            "decision_snapshot": {"h4_regime": "TRENDING",
+                                  "trade_horizon": "SCALP"},
             "simulated_outcome": {"pnl_r_multiple": 1.0},
         }
         assert classify_record(full) == DataEpoch.CURRENT

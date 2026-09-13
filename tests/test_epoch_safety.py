@@ -38,7 +38,8 @@ def _current_lifecycle_events() -> list[dict]:
         {
             "schema_version": "shadow_runtime_v1",
             "event_type": "OPEN",
-            "shadow_trade_id": "nshadow_7_EURUSD_SCALP",
+            "shadow_trade_id": "nshadow_0123456789abcdef",
+            "horizon": "SCALP",
             "plan_id": "nplan_7_EURUSD_1777700000",
             "canonical_opportunity_id": "EURUSD*1777700000*HAMMER",
             "symbol": "EURUSD",
@@ -55,7 +56,7 @@ def _current_lifecycle_events() -> list[dict]:
                 "v10_selected_horizon": "INTRADAY",
                 "horizon_selection_status": "ALTERNATIVE",
                 "pattern": "HAMMER",
-                "strategy": "REVERSAL",
+                "strategy": "MEAN_REVERSION",
                 "score": 0.7,
                 "regime": "TRENDING",
                 "h4_regime": "TRENDING",
@@ -77,7 +78,8 @@ def _current_lifecycle_events() -> list[dict]:
         {
             "schema_version": "shadow_runtime_v1",
             "event_type": "CLOSE",
-            "shadow_trade_id": "nshadow_7_EURUSD_SCALP",
+            "shadow_trade_id": "nshadow_0123456789abcdef",
+            "horizon": "SCALP",
             "canonical_opportunity_id": "EURUSD*1777700000*HAMMER",
             "symbol": "EURUSD",
             "exit_reason": "take_profit",

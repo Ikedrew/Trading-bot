@@ -59,12 +59,19 @@ def _horizon_result():
     )
 
 
-def _v10_result(regime: str, strategy: str = "MEAN_REVERSION") -> dict:
+def _v10_result(
+    regime: str,
+    strategy: str = "MEAN_REVERSION",
+    *,
+    top_level_strategy: str | None = None,
+) -> dict:
     return {
         "action": "NO_TRADE",
         "side": "SELL",
         "pattern": "TEST_PATTERN",
-        "strategy": strategy,
+        # Scanner compatibility output is lossy on NO_TRADE. Shadow evidence
+        # must use the immutable pipeline strategy below, not this field.
+        "strategy": top_level_strategy,
         "score": 0.8,
         # Deliberately contradictory: the V10 pipeline value must win.
         "activation_regime": "LEGACY_FALLBACK",
@@ -74,6 +81,7 @@ def _v10_result(regime: str, strategy: str = "MEAN_REVERSION") -> dict:
             market_state=SimpleNamespace(
                 regime=SimpleNamespace(regime=regime),
             ),
+            strategy=SimpleNamespace(strategy_family=strategy),
         ),
     }
 
@@ -85,6 +93,7 @@ def _write_complete_v10_lifecycle(
     regime: str = "TRENDING",
     strategy: str = "MEAN_REVERSION",
     root: str = "EURUSD*1784800000*TEST_PATTERN",
+    include_progress: bool = False,
 ) -> tuple[list[dict], list[dict]]:
     writer = _CapturingWriter(tmp_path)
     runtime = ShadowRuntime(writer=writer)
@@ -120,10 +129,22 @@ def _write_complete_v10_lifecycle(
         entity_id="EURUSD_1784800000",
         observation_id="obs_contract_fixture",
     )
+    if include_progress:
+        # A deliberate data-gap checkpoint emits PROGRESS without touching the
+        # SELL stop/target.
+        runtime.evaluate_bar(
+            symbol="EURUSD",
+            bar_time=1_784_800_600,
+            bar_high=1.1005,
+            bar_low=1.0995,
+            bar_close=1.1000,
+            bar_index=1,
+        )
+
     # Close the SELL lifecycle at its stop on the next authoritative bar.
     runtime.evaluate_bar(
         symbol="EURUSD",
-        bar_time=1_784_800_300,
+        bar_time=1_784_800_900 if include_progress else 1_784_800_300,
         bar_high=1.1020,
         bar_low=1.0990,
         bar_close=1.1010,
@@ -144,6 +165,107 @@ def test_authoritative_v10_regime_reaches_persisted_open(
     assert opened["live_facts"]["h4_regime"] == regime
     assert opened["live_facts"]["regime"] == regime
     assert records[0]["decision_snapshot"]["h4_regime"] == regime
+
+
+def test_authoritative_v10_strategy_reaches_open_and_is_canonical(
+    monkeypatch, tmp_path
+):
+    events, records = _write_complete_v10_lifecycle(
+        monkeypatch,
+        tmp_path,
+        strategy=StrategyFamily.TREND_CONTINUATION.value,
+    )
+    opened = next(event for event in events if event["event_type"] == "OPEN")
+    assert opened["live_facts"]["strategy"] == "TREND_CONTINUATION"
+    assert opened["live_facts"]["strategy"] in {
+        family.value for family in StrategyFamily
+    }
+    assert records[0]["identity"]["strategy_id"] == "TREND_CONTINUATION"
+
+
+def test_missing_authoritative_strategy_is_not_replaced_by_top_level_fallback(
+    monkeypatch, tmp_path
+):
+    writer = _CapturingWriter(tmp_path)
+    runtime = ShadowRuntime(writer=writer)
+    monkeypatch.setattr("core.shadow.runtime.get_shadow_runtime", lambda: runtime)
+    trade = SimpleNamespace(
+        entry=1.1000,
+        stop_loss=1.1010,
+        take_profit=1.0980,
+        rr=2.0,
+        sl_source="fixture",
+        reasoning=("fixture stop", "fixture target"),
+    )
+    monkeypatch.setattr(
+        "core.horizon.horizon_trade_builder.build_horizon_trade",
+        lambda **kwargs: trade,
+    )
+    result = _v10_result(
+        "TRENDING",
+        "",
+        top_level_strategy=StrategyFamily.MEAN_REVERSION.value,
+    )
+    handle_live_opportunity_shadow(
+        symbol="EURUSD",
+        cycle_id=43,
+        closed_time=1_784_800_000,
+        candles=[SimpleNamespace(high=1.1005, low=1.0995)],
+        closed_i=0,
+        bid=1.1000,
+        ask=1.1002,
+        htf_context=None,
+        new_result=result,
+        horizon_result=_horizon_result(),
+        canonical_opportunity_id="EURUSD*1784800000*MISSING_STRATEGY",
+        entity_id="EURUSD_1784800000",
+    )
+    opened = next(event for event in writer.events if event["event_type"] == "OPEN")
+    assert opened["live_facts"]["strategy"] == ""
+
+
+def test_horizon_survives_open_progress_close_and_three_part_pairing(
+    monkeypatch, tmp_path
+):
+    events, records = _write_complete_v10_lifecycle(
+        monkeypatch, tmp_path, include_progress=True
+    )
+    lifecycle = [
+        event for event in events
+        if event["event_type"] in ("OPEN", "PROGRESS", "CLOSE")
+    ]
+    assert [event["event_type"] for event in lifecycle] == [
+        "OPEN", "PROGRESS", "CLOSE"
+    ]
+    assert {event["horizon"] for event in lifecycle} == {"SCALP"}
+    assert {
+        (
+            event["shadow_trade_id"],
+            event["canonical_opportunity_id"],
+            event["horizon"],
+        )
+        for event in lifecycle
+    } == {
+        (
+            lifecycle[0]["shadow_trade_id"],
+            lifecycle[0]["canonical_opportunity_id"],
+            "SCALP",
+        )
+    }
+    assert len(records) == 1
+
+
+def test_reconstruction_fails_closed_on_missing_or_conflicting_close_horizon(
+    monkeypatch, tmp_path
+):
+    events, _ = _write_complete_v10_lifecycle(monkeypatch, tmp_path)
+    missing = copy.deepcopy(events)
+    next(e for e in missing if e["event_type"] == "CLOSE")["horizon"] = ""
+    assert reconstruct_completed_shadow_trades(missing) == []
+
+    conflicting = copy.deepcopy(events)
+    next(e for e in conflicting if e["event_type"] == "CLOSE")["horizon"] = "INTRADAY"
+    assert reconstruct_completed_shadow_trades(conflicting) == []
 
 
 @pytest.mark.parametrize(
@@ -201,12 +323,29 @@ def test_current_negative_controls(monkeypatch, tmp_path):
     missing_root["identity"]["canonical_opportunity_id"] = ""
     assert classify_record(missing_root) != DataEpoch.CURRENT
 
+    blank_strategy = copy.deepcopy(good)
+    blank_strategy["identity"]["strategy_id"] = ""
+    assert classify_record(blank_strategy) != DataEpoch.CURRENT
+
+    missing_horizon = copy.deepcopy(good)
+    missing_horizon["identity"]["evaluated_horizon"] = ""
+    missing_horizon["identity"]["trade_horizon"] = ""
+    missing_horizon["decision_snapshot"]["trade_horizon"] = ""
+    assert classify_record(missing_horizon) != DataEpoch.CURRENT
+
+    historical = copy.deepcopy(good)
+    historical["identity"]["shadow_trade_id"] = "nshadow_42_EURUSD_SCALP"
+    historical["identity"]["trade_id"] = "nshadow_42_EURUSD_SCALP"
+    historical["identity"]["strategy_id"] = "CONTINUATION"
+    assert classify_record(historical) != DataEpoch.CURRENT
+
 
 def _current_record(
     *,
     strategy: str = "MEAN_REVERSION",
     regime: str = "TRENDING",
     canonical_opportunity_id: str = "EURUSD*1784800000*TEST_PATTERN",
+    horizon: str = "SCALP",
 ) -> dict:
     return {
         "schema_version": "shadow_trades_v1",
@@ -214,13 +353,23 @@ def _current_record(
             "entity_id": "EURUSD_1784800000",
             "canonical_opportunity_id": canonical_opportunity_id,
             "strategy_id": strategy,
+            "shadow_trade_id": "nshadow_0123456789abcdef",
+            "trade_id": "nshadow_0123456789abcdef",
+            "evaluated_horizon": horizon,
+            "trade_horizon": horizon,
         },
         "decision_snapshot": {
             "h4_regime": regime,
-            "trade_horizon": "SCALP",
+            "trade_horizon": horizon,
         },
         "simulated_outcome": {"pnl_r_multiple": 0.0},
     }
+
+
+def test_shadow_repair_remains_on_v1_schemas(monkeypatch, tmp_path):
+    events, records = _write_complete_v10_lifecycle(monkeypatch, tmp_path)
+    assert {event["schema_version"] for event in events} == {"shadow_runtime_v1"}
+    assert {record["schema_version"] for record in records} == {"shadow_trades_v1"}
 
 
 def test_expected_value_runner_filters_injected_population_before_analysis(

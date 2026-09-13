@@ -91,8 +91,8 @@ def load_shadow_runtime_events(
     )
 
 
-def _lifecycle_key(ev: dict[str, Any]) -> tuple[str, str]:
-    """Composite lifecycle identity: (shadow_trade_id, canonical_opportunity_id).
+def _lifecycle_key(ev: dict[str, Any]) -> tuple[str, str, str]:
+    """Canonical lifecycle identity: (trade id, opportunity id, horizon).
 
     A shadow lifecycle is uniquely identified by the canonical opportunity it
     traces together with the runtime-minted shadow_trade_id. Keying on
@@ -100,15 +100,15 @@ def _lifecycle_key(ev: dict[str, Any]) -> tuple[str, str]:
     collection reused IDs across distinct canonical opportunities, so an OPEN
     from one opportunity was silently joined with a CLOSE from another.
 
-    Grouping on (shadow_trade_id, canonical_opportunity_id) makes such
-    mis-attribution IMPOSSIBLE at ingestion: events whose canonical
-    opportunity differs are never joined, regardless of whether the source
-    shadow_trade_id is legacy/malformed. Mismatches are reported/excluded,
-    never silently merged.
+    Grouping on all three authoritative identity dimensions makes cross-
+    opportunity and cross-horizon attribution impossible.  Missing horizons
+    do not borrow a value from another event and therefore cannot join a
+    complete current lifecycle.
     """
     return (
         str(ev.get("shadow_trade_id", "") or ""),
         str(ev.get("canonical_opportunity_id", "") or ""),
+        str(ev.get("horizon", "") or ""),
     )
 
 
@@ -122,7 +122,7 @@ def reconstruct_completed_shadow_trades(
         - an OPEN event (immutable construction + identity + live facts), and
         - a CLOSE event (final outcome with pnl_r_multiple).
 
-    Keying is on (shadow_trade_id, canonical_opportunity_id) — see
+    Keying is on (shadow_trade_id, canonical_opportunity_id, horizon) — see
     ``_lifecycle_key``. PLAN and PROGRESS events participate in lifecycle
     accounting only; they never by themselves produce an outcome record.
     Incomplete lifecycles are counted and logged — they NEVER become completed
@@ -130,8 +130,8 @@ def reconstruct_completed_shadow_trades(
     spanning multiple canonical opportunities) are excluded with explicit
     accounting rather than silently merged across opportunities.
     """
-    opens: dict[tuple[str, str], dict[str, Any]] = {}
-    closes: dict[tuple[str, str], dict[str, Any]] = {}
+    opens: dict[tuple[str, str, str], dict[str, Any]] = {}
+    closes: dict[tuple[str, str, str], dict[str, Any]] = {}
     plans: dict[str, dict[str, Any]] = {}
     progresses = 0
     bad_schema = 0
@@ -267,7 +267,23 @@ def _map_to_research_record(
     )
 
     exit_reason_raw = str(close_ev.get("exit_reason", "") or "")
-    horizon = str(open_identity.get("evaluated_horizon", "") or "")
+    # Horizon is an authoritative lifecycle identity dimension.  Require the
+    # OPEN envelope, CLOSE envelope, and OPEN identity to agree; never repair
+    # an incomplete lifecycle by copying a value during reconstruction.
+    open_horizon = str(open_ev.get("horizon", "") or "")
+    close_horizon = str(close_ev.get("horizon", "") or "")
+    identity_horizons = {
+        str(open_identity.get("evaluated_horizon", "") or ""),
+        str(open_identity.get("trade_horizon", "") or ""),
+    }
+    if (
+        not open_horizon
+        or not close_horizon
+        or open_horizon != close_horizon
+        or identity_horizons != {open_horizon}
+    ):
+        return None
+    horizon = open_horizon
     path, path_status = _normalise_trade_state_progression(close_ev)
 
     return {

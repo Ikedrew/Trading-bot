@@ -506,6 +506,7 @@ class ShadowRuntime:
             canonical_opportunity_id=sim["canonical_opportunity_id"],
             observation_id=sim.get("observation_id", ""),
             shadow_trade_id=sim["trade_id"],
+            horizon=sim["horizon"],
         )
         ev.update({"lifecycle": sim["lifecycle"].to_dict()})
         self._write(ev)
@@ -554,6 +555,7 @@ class ShadowRuntime:
             canonical_opportunity_id=sim["canonical_opportunity_id"],
             observation_id=sim.get("observation_id", ""),
             shadow_trade_id=sim["trade_id"],
+            horizon=sim["horizon"],
         )
         ev.update(market_block("exit_market_time", exit_market_time, off))
         ev.update(
@@ -611,6 +613,7 @@ class ShadowRuntime:
                 init = LifecycleState.from_dict(ev.get("lifecycle_initial", {}))
                 assumptions = ev.get("simulation_assumptions", {})
                 cons = ev.get("construction", {})
+                identity = ev.get("identity", {})
                 self._active[tid] = {
                     "trade_id": tid,
                     "canonical_opportunity_id": ev.get("canonical_opportunity_id", ""),
@@ -628,6 +631,15 @@ class ShadowRuntime:
                     "stop_loss": float(cons.get("stop_loss", 0.0)),
                     "take_profit": float(cons.get("take_profit", 0.0)),
                     "pip": 0.01 if "JPY" in str(ev.get("symbol", "")).upper() else 0.0001,
+                    # OPEN owns the horizon.  The nested identity fallback is
+                    # explicit persisted evidence for pre-repair OPEN records,
+                    # not a timing/symbol heuristic.
+                    "horizon": str(
+                        ev.get("horizon")
+                        or identity.get("evaluated_horizon")
+                        or identity.get("trade_horizon")
+                        or ""
+                    ),
                 }
             elif et == "PROGRESS":
                 sim = self._active.get(tid)
@@ -658,6 +670,7 @@ class ShadowRuntime:
             "entry_price": sim["entry_price"],
             "stop_loss": sim["stop_loss"],
             "take_profit": sim["take_profit"],
+            "horizon": sim["horizon"],
         }
 
     def active_ids(self) -> list[str]:

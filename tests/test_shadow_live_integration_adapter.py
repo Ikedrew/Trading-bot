@@ -122,6 +122,8 @@ def _new_result(*, action: str = "NO_TRADE", side: str = "SELL") -> dict:
         "action": action,
         "side": side,
         "pattern": "TWEEZER_TOP",
+        # Compatibility field is intentionally obsolete/lossy; the immutable
+        # V10 pipeline strategy below is authoritative for shadow evidence.
         "strategy": "REVERSAL",
         "score": 0.61,
         "activation_regime": "RANGE",
@@ -131,6 +133,9 @@ def _new_result(*, action: str = "NO_TRADE", side: str = "SELL") -> dict:
         "v10_pipeline_result": SimpleNamespace(
             horizon=SimpleNamespace(horizon_type="INTRADAY"),
             rejection_stage="risk",
+            strategy=SimpleNamespace(
+                strategy_family="LIQUIDITY_SWEEP_REVERSAL"
+            ),
         ),
     }
 
@@ -228,7 +233,7 @@ def test_full_context_assembly_mapped_to_runtime(recorded):
     # Direction + engine observation facts
     assert ctx["direction"] == "SELL"
     assert ctx["pattern"] == "TWEEZER_TOP"
-    assert ctx["strategy"] == "REVERSAL"
+    assert ctx["strategy"] == "LIQUIDITY_SWEEP_REVERSAL"
     assert ctx["score"] == pytest.approx(0.61)
     assert ctx["regime"] == "RANGE"
     assert ctx["h4_regime"] == "RANGE"

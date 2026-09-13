@@ -32,7 +32,7 @@ from research_engine.data_access.s3_source import ResearchDataSourceError
 ROOT = "nopp_20260828_0001_EURUSD"
 PLAN_ID = "nplan_7_EURUSD_1777700000"
 OBSERVATION_ID = "nobs_20260828_0001_EURUSD"
-TRADE_ID = "nshadow_7_EURUSD_SCALP"
+TRADE_ID = "nshadow_0123456789abcdef"
 
 
 def _plan_event() -> dict:
@@ -58,6 +58,7 @@ def _open_event() -> dict:
         "observation_id": OBSERVATION_ID,
         "shadow_trade_id": TRADE_ID,
         "symbol": "EURUSD",
+        "horizon": "SCALP",
         "plan_id": PLAN_ID,
         "entry_price_basis": "ASK",
         "identity": {
@@ -111,6 +112,7 @@ def _progress_event() -> dict:
         "observation_id": OBSERVATION_ID,
         "shadow_trade_id": TRADE_ID,
         "symbol": "EURUSD",
+        "horizon": "SCALP",
         "lifecycle": {
             "bars_elapsed": 2,
             "max_favourable_price": 1.08110,
@@ -127,6 +129,7 @@ def _close_event() -> dict:
         "observation_id": OBSERVATION_ID,
         "shadow_trade_id": TRADE_ID,
         "symbol": "EURUSD",
+        "horizon": "SCALP",
         "exit_market_time": 1777701500,
         "exit_market_time_utc_epoch_s": 1777701500,
         "exit_market_time_utc_iso8601": "2026-04-01T00:25:00Z",
@@ -238,6 +241,19 @@ class TestReconstruction:
             [_open_event(), close]
         )
         assert records == []
+
+    def test_missing_or_conflicting_horizon_never_pairs(self):
+        missing = _close_event()
+        missing["horizon"] = ""
+        assert ingestion.reconstruct_completed_shadow_trades(
+            [_open_event(), missing]
+        ) == []
+
+        conflicting = _close_event()
+        conflicting["horizon"] = "INTRADAY"
+        assert ingestion.reconstruct_completed_shadow_trades(
+            [_open_event(), conflicting]
+        ) == []
 
     def test_duplicate_events_tolerated(self):
         records = ingestion.reconstruct_completed_shadow_trades(

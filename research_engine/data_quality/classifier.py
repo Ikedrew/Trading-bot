@@ -15,9 +15,10 @@ LEGACY:
 CURRENT:
     Records generated after lineage propagation. Must have:
     - Valid entity_id (non-empty)
-    - Clean strategy field (canonical V10 StrategyFamily, or a supported clean
-      legacy value during compatibility ingestion)
-    - Independent trade_horizon field (SCALP/INTRADAY/EXTENDED or empty)
+    - Canonical V10 StrategyFamily value
+    - Independent trade_horizon field (SCALP/INTRADAY/EXTENDED)
+    - Stable nshadow_<hash> lifecycle identity
+    - Authoritative H4 regime and canonical opportunity lineage
 
 TRANSITIONAL:
     Records with partial lineage (some fields present, some missing).
@@ -38,6 +39,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+import re
 from typing import Any
 
 
@@ -60,12 +62,13 @@ class DataEpoch(str, Enum):
 from core.v10.strategy_family import StrategyFamily
 
 
-_LEGACY_CLEAN_STRATEGIES = frozenset({"REVERSAL", "CONTINUATION", "FALSE_BREAK", ""})
-_VALID_STRATEGIES = _LEGACY_CLEAN_STRATEGIES | frozenset(
+_LEGACY_CLEAN_STRATEGIES = frozenset({"REVERSAL", "CONTINUATION", "FALSE_BREAK"})
+_VALID_STRATEGIES = frozenset(
     family.value for family in StrategyFamily
 )
-_VALID_HORIZONS = frozenset({"SCALP", "INTRADAY", "EXTENDED", ""})
+_VALID_HORIZONS = frozenset({"SCALP", "INTRADAY", "EXTENDED"})
 _CONTAMINATED_SUFFIXES = ("_SCALP", "_INTRADAY", "_EXTENDED")
+_CURRENT_SHADOW_ID = re.compile(r"nshadow_[0-9a-f]{16}")
 
 
 def classify_record(record: dict[str, Any]) -> DataEpoch:
@@ -98,6 +101,11 @@ def classify_record(record: dict[str, Any]) -> DataEpoch:
         or record.get("regime", "")
     )
     trade_horizon = decision_snapshot.get("trade_horizon", "") or record.get("trade_horizon", "")
+    shadow_trade_id = (
+        identity.get("shadow_trade_id", "")
+        or identity.get("trade_id", "")
+        or record.get("shadow_trade_id", "")
+    )
 
     # Rule 1: Strategy contamination → LEGACY
     if strategy and any(strategy.endswith(suffix) or suffix[1:] in strategy for suffix in _CONTAMINATED_SUFFIXES):
@@ -115,12 +123,22 @@ def classify_record(record: dict[str, Any]) -> DataEpoch:
     has_entity = bool(entity_id)
     has_clean_strategy = strategy in _VALID_STRATEGIES
     has_regime = h4_regime not in ("", "UNKNOWN", "TRANSITIONAL")
+    has_horizon = trade_horizon in _VALID_HORIZONS
+    has_shadow_id = bool(_CURRENT_SHADOW_ID.fullmatch(str(shadow_trade_id)))
 
-    if has_entity and has_clean_strategy:
+    # Preserve the established lineage rule: a record carrying otherwise
+    # current entity/strategy/regime facts but no canonical root is LEGACY,
+    # irrespective of the newer horizon/identity gates below.
+    if (
+        has_entity
+        and (has_clean_strategy or strategy in _LEGACY_CLEAN_STRATEGIES)
+        and has_regime
+        and not canonical
+    ):
+        return DataEpoch.LEGACY
+
+    if has_entity and has_clean_strategy and has_horizon and has_shadow_id:
         if has_regime:
-            # Would be CURRENT-epoch → requires the canonical lineage root.
-            if not canonical:
-                return DataEpoch.LEGACY  # fails the canonical lineage contract
             return DataEpoch.CURRENT
         return DataEpoch.TRANSITIONAL
 
@@ -131,7 +149,9 @@ def classify_record(record: dict[str, Any]) -> DataEpoch:
         or record.get("pnl_r_multiple") is not None
     )
 
-    if (has_correlation or has_outcome) and has_clean_strategy:
+    if (has_correlation or has_outcome) and (
+        has_clean_strategy or strategy in _LEGACY_CLEAN_STRATEGIES
+    ):
         return DataEpoch.TRANSITIONAL
 
     # Rule 5: Everything else → LEGACY

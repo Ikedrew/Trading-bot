@@ -142,6 +142,7 @@ def handle_live_opportunity_shadow(
     v10_selected = ""
     v10_rejection = ""
     v10_h4_regime = ""
+    v10_strategy = ""
     if pr is not None:
         hz_obj = getattr(pr, "horizon", None)
         if hz_obj is not None:
@@ -153,6 +154,16 @@ def handle_live_opportunity_shadow(
         market_state = getattr(pr, "market_state", None)
         regime_state = getattr(market_state, "regime", None)
         v10_h4_regime = str(getattr(regime_state, "regime", "") or "")
+        # The scanner compatibility result deliberately leaves ``strategy``
+        # empty for some NO_TRADE outcomes.  The immutable V10 pipeline result
+        # still owns the authoritative taxonomy value, including the explicit
+        # ``NONE`` member.  Preserve that value verbatim; a missing/malformed
+        # pipeline strategy remains empty/malformed and is rejected by the
+        # research-side CURRENT contract rather than replaced here.
+        strategy_state = getattr(pr, "strategy", None)
+        v10_strategy = str(
+            getattr(strategy_state, "strategy_family", "") or ""
+        )
 
     # A present V10 regime is authoritative.  The explicit arguments and
     # activation_regime fallback remain only for non-V10/legacy callers.
@@ -173,7 +184,13 @@ def handle_live_opportunity_shadow(
         "bar_time_raw": int(closed_time),
         "direction": direction,
         "pattern": new_result.get("pattern", "") or "",
-        "strategy": new_result.get("strategy", "") or "",
+        # A present V10 pipeline result is authoritative.  Only legacy callers
+        # without one retain the existing top-level compatibility field.
+        "strategy": (
+            v10_strategy
+            if pr is not None
+            else str(new_result.get("strategy", "") or "")
+        ),
         "score": float(new_result.get("score", 0.0) or 0.0),
         # Phase 3 Step 10-B: regime/phase facts are supplied by the caller from
         # the already-produced assessment/engine context (passed explicitly).
