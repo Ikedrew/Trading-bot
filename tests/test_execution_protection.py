@@ -186,10 +186,24 @@ def _patch_loaders(monkeypatch, results=None, contexts=None, attempts=None,
     """Replace the S3 loaders with fake data returns."""
 
     def _fake_results():
-        return results or [copy.deepcopy(_fake_result()) for _ in range(35)]
+        return results if results is not None else [
+            copy.deepcopy(_fake_result(correlation_id=f"COR-{i:04d}"))
+            for i in range(35)
+        ]
 
     def _fake_contexts():
-        return contexts or [copy.deepcopy(_fake_context()) for _ in range(35)]
+        if contexts is not None:
+            return contexts
+        result_rows = results if results is not None else [
+            _fake_result(correlation_id=f"COR-{i:04d}") for i in range(35)
+        ]
+        return [
+            copy.deepcopy(_fake_context(
+                correlation_id=str(row.get("correlation_id") or ""),
+                symbol=str(row.get("symbol") or "EURUSD"),
+            ))
+            for row in result_rows
+        ]
 
     def _fake_attempts():
         return attempts or []
@@ -285,11 +299,11 @@ class TestX1:
         assert r["dataset"]["source"] == "execution_results_v1"
 
     def test_slippage_only_measured_semantic(self, monkeypatch):
-        results = ([_fake_result() for _ in range(35)] +
-                   [_fake_result(correlation_id="COR-UNMEASURED",
+        results = ([_fake_result(correlation_id=f"COR-MEASURED-{i}") for i in range(35)] +
+                   [_fake_result(correlation_id=f"COR-UNMEASURED-{i}",
                                  slippage=10.0,
                                  slippage_semantic="unmeasured")
-                    for _ in range(5)])
+                    for i in range(5)])
         _patch_loaders(monkeypatch, results=results)
         from research_engine.experiments.execution_protection_research import run_x1
         r = run_x1()

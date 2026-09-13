@@ -449,7 +449,7 @@ def build_all_question_states(
     candidate_registry: Any | None = None,
     application_evidence: Mapping[str, str] | None = None,
 ) -> list[QuestionState]:
-    """Return all 70 canonical states in canonical registry order."""
+    """Return all canonical states in canonical registry order."""
     snapshot = evidence_source if isinstance(evidence_source, EvidenceSnapshot) else EvidenceSnapshot(evidence_source)
     candidates, candidate_error = _load_candidates(candidate_registry)
     unmapped = _unmapped_candidate_ids(candidates)

@@ -53,6 +53,11 @@ import statistics
 from collections import defaultdict
 from typing import Any
 
+from research_engine.control_plane.evidence_resolver import (
+    join_execution_context_results,
+    normalise_evidence_record,
+)
+
 logger = logging.getLogger(__name__)
 
 _MIN_SAMPLE = 30   # overall status gate (engine convention)
@@ -136,32 +141,37 @@ def _report(
 
 def _extract_result(rec: dict[str, Any]) -> dict[str, Any] | None:
     """Flatten one execution_results_v1 record. EXECUTION-TIME facts."""
-    slippage = rec.get("slippage")
-    if slippage is not None and rec.get("slippage_semantic") != _MEASURED:
+    normalised = normalise_evidence_record(rec, "execution_results_v1")
+    slippage = normalised.get("slippage")
+    if slippage is not None and normalised.get("slippage_semantic") != _MEASURED:
         slippage = None
     return {
-        "correlation_id": str(rec.get("correlation_id", "") or ""),
-        "decision_id": str(rec.get("decision_id", "") or ""),
+        "correlation_id": str(normalised.get("correlation_id", "") or ""),
+        "decision_id": str(normalised.get("decision_id", "") or ""),
         "canonical_opportunity_id": str(
-            rec.get("canonical_opportunity_id", "") or ""),
-        "entity_id": str(rec.get("entity_id", "") or ""),
-        "symbol": str(rec.get("symbol", "") or ""),
-        "result_ok": bool(rec.get("result_ok", False)),
-        "retcode": rec.get("retcode"),
-        "comment": str(rec.get("comment", "") or ""),
-        "fill_price": rec.get("fill_price"),
+            normalised.get("canonical_opportunity_id", "") or ""),
+        "entity_id": str(normalised.get("entity_id", "") or ""),
+        "account_id": str(normalised.get("account_id", "") or ""),
+        "symbol": str(normalised.get("symbol", "") or ""),
+        "result_ok": bool(normalised.get("result_ok", False)),
+        "retcode": normalised.get("retcode"),
+        "comment": str(normalised.get("comment", "") or ""),
+        "fill_price": normalised.get("fill_price"),
         "slippage": (
             float(slippage)
             if slippage is not None and math.isfinite(float(slippage))
             else None
         ),
-        "protection_status": str(rec.get("protection_status", "") or ""),
+        "slippage_semantic": str(normalised.get("slippage_semantic", "unknown") or "unknown"),
+        "slippage_provenance": normalised.get("slippage_provenance", "unknown"),
+        "derived_compatibility_slippage": normalised.get("derived_compatibility_slippage"),
+        "protection_status": str(normalised.get("protection_status", "") or ""),
         "protection_failure_reason": str(
-            rec.get("protection_failure_reason", "") or ""),
-        "requested_sl": rec.get("requested_sl"),
-        "requested_tp": rec.get("requested_tp"),
-        "broker_confirmed_sl": rec.get("broker_confirmed_sl"),
-        "broker_confirmed_tp": rec.get("broker_confirmed_tp"),
+            normalised.get("protection_failure_reason", "") or ""),
+        "requested_sl": normalised.get("requested_sl"),
+        "requested_tp": normalised.get("requested_tp"),
+        "broker_confirmed_sl": normalised.get("broker_confirmed_sl"),
+        "broker_confirmed_tp": normalised.get("broker_confirmed_tp"),
     }
 
 
@@ -274,30 +284,15 @@ def join_context_to_results(
     results: list[dict[str, Any]],
     contexts: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """Deterministic execution_context <-> execution_results join on correlation_id."""
-    ctx_idx = join_by_correlation_id(contexts)
-    res_idx = join_by_correlation_id(results)
+    """Join one pre-execution context to account-grained execution results."""
+    joined = join_execution_context_results(results, contexts)
     matched: list[dict[str, Any]] = []
-    results_without_context = 0
-    ambiguous = 0
-    for corr, rs in res_idx.items():
-        cs = ctx_idx.get(corr, [])
-        if not cs:
-            results_without_context += len(rs)
-            continue
-        if len(cs) > 1 or len(rs) > 1:
-            ambiguous += 1
-            continue
-        matched.append({"result": rs[0], "context": cs[0]})
-    contexts_without_results = sum(
-        len(cs) for corr, cs in ctx_idx.items() if corr not in res_idx
-    )
-    return {
-        "matched": matched,
-        "results_without_context": results_without_context,
-        "contexts_without_results": contexts_without_results,
-        "ambiguous": ambiguous,
-    }
+    for pair in joined["matched"]:
+        result = _extract_result(pair["result"])
+        context = _extract_context(pair["context"])
+        if result is not None and context is not None:
+            matched.append({"result": result, "context": context})
+    return {**joined, "matched": matched}
 
 # ============================================================
 # X1 — Slippage model
@@ -371,9 +366,12 @@ def run_x1() -> dict[str, Any]:
     # Join context to results for session-level analysis
     joined = join_context_to_results(res, ctx)
     matched = joined["matched"]
-    m_with_ctx = [m for m_r in matched
-                  if m_r["result"].get("slippage") is not None
-                  and math.isfinite(float(m_r["result"]["slippage"]))]
+    measured_with_context = [
+        pair for pair in matched
+        if pair["result"].get("slippage_semantic") == _MEASURED
+        and pair["result"].get("slippage") is not None
+        and math.isfinite(float(pair["result"]["slippage"]))
+    ]
     overall["match_stats"] = {
         "matched": len(matched),
         "results_without_context": joined["results_without_context"],
@@ -382,9 +380,21 @@ def run_x1() -> dict[str, Any]:
     }
 
     # Per-session slippage
-    if len(m_with_ctx) >= _MIN_SAMPLE:
+    if len(measured_with_context) < _MIN_SAMPLE:
+        return _report(
+            question_id="X1", status="INSUFFICIENT_DATA",
+            overall=overall, confidence="LOW" if measured_with_context else "INSUFFICIENT_DATA",
+            dataset={"sample_size": len(measured_with_context),
+                     "measured_slippage": m,
+                     "source": "execution_results_v1 + execution_context_v1"},
+            recommendation="INSUFFICIENT_DATA",
+            assumptions=["Measured execution slippage joined to context by correlation_id."],
+            warnings=["Requires >=30 measured-slippage records with matched execution_context."],
+        )
+
+    if len(measured_with_context) >= _MIN_SAMPLE:
         by_session: dict[str, list[float]] = defaultdict(list)
-        for pair in matched:
+        for pair in measured_with_context:
             slp = pair["result"].get("slippage")
             if slp is not None and math.isfinite(float(slp)):
                 sess = pair["context"].get("session_state", "UNKNOWN") or "UNKNOWN"
@@ -536,7 +546,12 @@ def run_x3() -> dict[str, Any]:
         )
 
     joined = join_context_to_results(res, ctx)
-    matched = joined["matched"]
+    matched = [
+        pair for pair in joined["matched"]
+        if pair["result"].get("slippage_semantic") == _MEASURED
+        and pair["result"].get("slippage") is not None
+        and math.isfinite(float(pair["result"]["slippage"]))
+    ]
     n = len(matched)
     if n < _MIN_SAMPLE:
         return _report(
@@ -611,7 +626,8 @@ def run_x5() -> dict[str, Any]:
     dt = _load_decision_trace()
     tt = _load_trade_truth()
     tt_by_coid: dict[str, list[dict]] = defaultdict(list)
-    for t in tt:
+    for raw in tt:
+        t = normalise_evidence_record(raw, "trade_truth")
         coid = t.get("canonical_opportunity_id", "") or ""
         if coid:
             tt_by_coid[coid].append(t)

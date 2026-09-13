@@ -65,6 +65,8 @@ def _extract_outcome(rec: dict[str, Any]) -> dict[str, Any] | None:
     return {
         "trade_id": identity.get("trade_id", ""),
         "correlation_id": identity.get("correlation_id", ""),
+        "canonical_opportunity_id": identity.get("canonical_opportunity_id", ""),
+        "account_id": identity.get("account_id", ""),
         "r_multiple": float(r),
         "win": r > 0,
         "exit_reason": (rec.get("exit") or {}).get("exit_reason", ""),
@@ -129,18 +131,48 @@ def build_trade_level_population(
 
     managed_trade_ids = set(managed_actions.keys())
 
-    # Build outcome lookup by both trade_id and correlation_id
-    outcome_by_id: dict[str, dict[str, Any]] = {}
+    # Build only unambiguous lookup entries. Repeated or conflicting identity
+    # values fail closed instead of allowing last-write-wins joins.
+    grouped_outcomes: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for rec in outcomes:
         extracted = _extract_outcome(rec)
         if extracted is None:
             continue
-        if extracted["trade_id"]:
-            outcome_by_id[extracted["trade_id"]] = extracted
-        if extracted["correlation_id"]:
-            outcome_by_id[extracted["correlation_id"]] = extracted
+        for field_name in ("trade_id", "canonical_opportunity_id", "correlation_id"):
+            if extracted[field_name]:
+                grouped_outcomes[extracted[field_name]].append(extracted)
+    outcome_by_id = {
+        identity: records[0]
+        for identity, records in grouped_outcomes.items()
+        if len(records) == 1
+    }
 
     return managed_actions, outcome_by_id, managed_trade_ids
+
+
+def _identities_consistent(action: dict[str, Any], outcome: dict[str, Any]) -> bool:
+    for field_name in ("trade_id", "canonical_opportunity_id", "correlation_id", "account_id"):
+        left = action.get(field_name)
+        right = outcome.get(field_name)
+        if left not in (None, "") and right not in (None, "") and str(left) != str(right):
+            return False
+    return True
+
+
+def _find_outcome(
+    action: dict[str, Any],
+    outcome_by_id: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Use strongest available lifecycle identity and reject conflicts."""
+    for field_name in ("trade_id", "canonical_opportunity_id", "correlation_id"):
+        identity = str(action.get(field_name) or "")
+        if not identity:
+            continue
+        outcome = outcome_by_id.get(identity)
+        if outcome is None or not _identities_consistent(action, outcome):
+            return None
+        return outcome
+    return None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -177,6 +209,7 @@ def run_mgmt1() -> dict[str, Any]:
 
     managed_actions, outcome_by_id, managed_trade_ids = build_trade_level_population(
         actions, outcomes)
+    action_population = build_action_population(actions)
 
     # Split trade_truth into managed and unmanaged
     managed_trades: list[dict[str, Any]] = []
@@ -185,9 +218,9 @@ def run_mgmt1() -> dict[str, Any]:
         extracted = _extract_outcome(rec)
         if extracted is None:
             continue
-        tid = extracted["trade_id"]
-        cid = extracted["correlation_id"]
-        if tid in managed_trade_ids or cid in managed_trade_ids:
+        if any(_identities_consistent(action, extracted)
+               and _find_outcome(action, outcome_by_id) == extracted
+               for action in action_population):
             managed_trades.append(extracted)
         else:
             unmanaged_trades.append(extracted)
@@ -336,7 +369,7 @@ def run_mgmt2() -> dict[str, Any]:
         areason = a["action_reason"]
 
         # find outcome for this trade
-        outcome = outcome_by_id.get(tid) or outcome_by_id.get(cid)
+        outcome = _find_outcome(a, outcome_by_id)
         if outcome is None:
             continue
 

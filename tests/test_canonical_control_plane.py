@@ -39,10 +39,10 @@ def _write_report(root: Path, filename: str, report: dict) -> None:
     (root / filename).write_text(json.dumps(report), encoding="utf-8")
 
 
-def test_all_70_states_use_canonical_identity(tmp_path):
+def test_all_states_use_canonical_identity(tmp_path):
     states = build_all_question_states(reports_dir=tmp_path, evidence_source={})
 
-    assert len(states) == len(REGISTRY) == 70
+    assert len(states) == len(REGISTRY)
     assert [state.question_id for state in states] == [question.id for question in REGISTRY]
     for state, question in zip(states, REGISTRY):
         assert state.title == question.title
@@ -196,7 +196,7 @@ def test_q1_q25_dashboard_is_not_required(tmp_path, monkeypatch):
 
     states = build_all_question_states(reports_dir=tmp_path, evidence_source={})
 
-    assert len(states) == 70
+    assert len(states) == len(REGISTRY)
     assert states[0].title == get_question(states[0].question_id).title
 
 

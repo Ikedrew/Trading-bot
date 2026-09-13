@@ -13,6 +13,7 @@ import math
 from typing import Any, Callable, Mapping
 
 from research_engine.data_quality.classifier import DataEpoch, classify_record
+from core.production_data_contract import current_schema
 
 
 _PHYSICAL_DATASETS = {
@@ -66,7 +67,7 @@ _COVERAGE_FIELDS = {
 }
 _COUNT_RULES = frozenset({
     "sample_size", "ranking_rows", "ranked_candidates", "ranking_cycles",
-    "assessed_opportunities",
+    "assessed_opportunities", "max_action_type_sample_size",
 })
 
 
@@ -217,11 +218,21 @@ def _recursive_value(record: Any, names: tuple[str, ...]) -> Any:
 
 
 def _value(record: dict[str, Any], field_name: str) -> Any:
+    if field_name == "slippage" and record.get("slippage_provenance") in {
+        "derived_compatibility", "unknown",
+    }:
+        return None
     return _recursive_value(record, _FIELD_ALIASES.get(field_name, (field_name,)))
 
 
 def _present(value: Any) -> bool:
-    return value is not None and value != "" and value != [] and value != {}
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return value != ""
+    if isinstance(value, (list, dict)):
+        return bool(value)
+    return True
 
 
 def _known(value: Any) -> bool:
@@ -235,11 +246,23 @@ def _record_epoch(record: dict[str, Any], source: str) -> DataEpoch:
     explicit = _recursive_value(record, ("data_epoch", "epoch"))
     if explicit:
         value = str(explicit).upper()
-        if value in ("CURRENT", "CURRENT_ONLY", "SHADOW_TRADES_CURRENT"):
-            return DataEpoch.CURRENT
         if value == "TRANSITIONAL":
             return DataEpoch.TRANSITIONAL
-        return DataEpoch.LEGACY
+        if value not in ("CURRENT", "CURRENT_ONLY", "SHADOW_TRADES_CURRENT"):
+            return DataEpoch.LEGACY
+    if source == "trade_truth":
+        identity = record.get("identity")
+        outcome = record.get("outcome")
+        is_canonical_v1 = (
+            record.get("schema_version") == current_schema("trade_truth")
+            and isinstance(identity, dict)
+            and isinstance(outcome, dict)
+            and _present(identity.get("trade_id"))
+            and _present(identity.get("correlation_id"))
+        )
+        return DataEpoch.CURRENT if is_canonical_v1 else classify_record(record)
+    if explicit:
+        return DataEpoch.CURRENT
     if source in _CANONICAL_V1_SOURCES:
         return DataEpoch.CURRENT
     return classify_record(record)
@@ -258,6 +281,8 @@ def _normalise(record: dict[str, Any], source: str) -> dict[str, Any]:
         "selected", "candidate_id", "spread", "protection_status",
         "broker_confirmed_sl", "broker_confirmed_tp", "requested_sl", "requested_tp",
         "risk_classification", "risk_deviation", "actual_risk_R", "planned_risk_R",
+        "account_id", "broker", "broker_server", "broker_symbol", "order_ticket",
+        "deal_ticket", "entry_reference", "fill_price", "slippage_semantic",
     })
     for name in fields:
         value = _value(record, name)
@@ -271,7 +296,106 @@ def _normalise(record: dict[str, Any], source: str) -> dict[str, Any]:
         if source == "trade_truth":
             result.setdefault("live_r_multiple", r_value)
             result.setdefault("r_multiple_realised", r_value)
+    if source == "execution_results_v1":
+        semantic = str(result.get("slippage_semantic") or "unknown")
+        slippage = result.get("slippage")
+        if semantic == "measured_execution_slippage" and _present(slippage):
+            result["slippage_provenance"] = "producer_measured"
+        else:
+            request = record.get("request") if isinstance(record.get("request"), dict) else {}
+            fill = record.get("fill") if isinstance(record.get("fill"), dict) else {}
+            entry_reference = record.get("entry_reference", request.get("entry_reference"))
+            fill_price = record.get("fill_price", fill.get("price"))
+            try:
+                derived = abs(float(fill_price) - float(entry_reference))
+            except (TypeError, ValueError):
+                result["slippage_provenance"] = "unknown"
+            else:
+                if math.isfinite(derived):
+                    result["derived_compatibility_slippage"] = derived
+                    result["slippage_provenance"] = "derived_compatibility"
+                else:
+                    result["slippage_provenance"] = "unknown"
     return result
+
+
+def normalise_evidence_record(record: dict[str, Any], source: str) -> dict[str, Any]:
+    """Expose canonical V1 facts without mutating or flattening persisted evidence."""
+    return _normalise(record, source)
+
+
+def _lineage_consistent(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    for field_name in ("canonical_opportunity_id", "entity_id", "symbol"):
+        left_value = _value(left, field_name)
+        right_value = _value(right, field_name)
+        if _present(left_value) and _present(right_value) and str(left_value) != str(right_value):
+            return False
+    return True
+
+
+def _execution_result_grain(record: dict[str, Any]) -> tuple[str, str] | None:
+    for field_name in ("account_id", "order_ticket", "deal_ticket", "position_ticket"):
+        value = _value(record, field_name)
+        if _present(value) and str(value) != "0":
+            return field_name, str(value)
+    return None
+
+
+def join_execution_context_results(
+    results: list[dict[str, Any]],
+    contexts: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Join one execution context to one or many account-grained results."""
+    result_rows = [_normalise(row, "execution_results_v1") for row in results]
+    context_rows = [_normalise(row, "execution_context") for row in contexts]
+    results_by_correlation: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    contexts_by_correlation: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    missing_result_lineage = 0
+    for row in result_rows:
+        correlation_id = str(_value(row, "correlation_id") or "")
+        if correlation_id:
+            results_by_correlation[correlation_id].append(row)
+        else:
+            missing_result_lineage += 1
+    for row in context_rows:
+        correlation_id = str(_value(row, "correlation_id") or "")
+        if correlation_id:
+            contexts_by_correlation[correlation_id].append(row)
+
+    matched: list[dict[str, Any]] = []
+    results_without_context = missing_result_lineage
+    ambiguous = 0
+    for correlation_id, grouped_results in results_by_correlation.items():
+        grouped_contexts = contexts_by_correlation.get(correlation_id, [])
+        if not grouped_contexts:
+            results_without_context += len(grouped_results)
+            continue
+        if len(grouped_contexts) != 1:
+            ambiguous += len(grouped_results)
+            continue
+        context = grouped_contexts[0]
+        if len(grouped_results) > 1:
+            grains = [_execution_result_grain(row) for row in grouped_results]
+            if any(grain is None for grain in grains) or len(set(grains)) != len(grains):
+                ambiguous += len(grouped_results)
+                continue
+        for result in grouped_results:
+            if not _lineage_consistent(result, context):
+                ambiguous += 1
+                continue
+            matched.append({"result": result, "context": context})
+
+    contexts_without_results = sum(
+        len(grouped_contexts)
+        for correlation_id, grouped_contexts in contexts_by_correlation.items()
+        if correlation_id not in results_by_correlation
+    )
+    return {
+        "matched": matched,
+        "results_without_context": results_without_context,
+        "contexts_without_results": contexts_without_results,
+        "ambiguous": ambiguous,
+    }
 
 
 def _join_key(record: dict[str, Any]) -> tuple[str, str] | None:
@@ -430,6 +554,110 @@ def _opportunity_population(by_source: Mapping[str, DatasetSlice]) -> tuple[list
     return rows, total - len(rows), metrics
 
 
+def _execution_population(
+    by_source: Mapping[str, DatasetSlice],
+) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
+    joined = join_execution_context_results(
+        by_source["execution_results_v1"].current_records,
+        by_source["execution_context"].current_records,
+    )
+    rows: list[dict[str, Any]] = []
+    for pair in joined["matched"]:
+        combined = dict(pair["result"])
+        for key, value in pair["context"].items():
+            if _present(value):
+                combined.setdefault(key, value)
+        rows.append(combined)
+    metrics = {
+        "execution_context_matches": len(rows),
+        "results_without_context": joined["results_without_context"],
+        "contexts_without_results": joined["contexts_without_results"],
+        "ambiguous_execution_lineage": joined["ambiguous"],
+    }
+    excluded = joined["results_without_context"] + joined["ambiguous"]
+    return rows, excluded, metrics
+
+
+def _management_outcome_for_action(
+    action: dict[str, Any],
+    indices: Mapping[str, Mapping[str, list[dict[str, Any]]]],
+) -> dict[str, Any] | None:
+    # trade_id is the lifecycle identity; canonical opportunity and correlation
+    # are deterministic fallbacks only when the stronger identity is absent.
+    for field_name in ("trade_id", "canonical_opportunity_id", "correlation_id"):
+        value = _value(action, field_name)
+        if not _present(value):
+            continue
+        matches = indices[field_name].get(str(value), [])
+        if len(matches) != 1:
+            return None
+        outcome = matches[0]
+        if not _lineage_consistent(action, outcome):
+            return None
+        for identity_name in ("trade_id", "canonical_opportunity_id", "correlation_id", "account_id"):
+            action_value = _value(action, identity_name)
+            outcome_value = _value(outcome, identity_name)
+            if (_present(action_value) and _present(outcome_value)
+                    and str(action_value) != str(outcome_value)):
+                return None
+        return outcome
+    return None
+
+
+def _management_population(
+    question_id: str,
+    by_source: Mapping[str, DatasetSlice],
+) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
+    actions = [
+        _normalise(row, "management_actions")
+        for row in by_source["management_actions"].current_records
+    ]
+    outcomes = [
+        _normalise(row, "trade_truth")
+        for row in by_source["trade_truth"].current_records
+    ]
+    if question_id == "MGMT-1":
+        return outcomes, 0, {"management_actions": len(actions), "outcomes": len(outcomes)}
+
+    indices: dict[str, dict[str, list[dict[str, Any]]]] = {
+        name: defaultdict(list)
+        for name in ("trade_id", "canonical_opportunity_id", "correlation_id")
+    }
+    for outcome in outcomes:
+        for field_name, index in indices.items():
+            value = _value(outcome, field_name)
+            if _present(value):
+                index[str(value)].append(outcome)
+
+    rows: list[dict[str, Any]] = []
+    excluded = 0
+    seen: set[tuple[str, str]] = set()
+    for action in actions:
+        outcome = _management_outcome_for_action(action, indices)
+        if outcome is None:
+            excluded += 1
+            continue
+        action_type = str(_value(action, "action_type") or "")
+        lifecycle_id = str(_value(outcome, "trade_id") or "")
+        dedup_key = (lifecycle_id, action_type)
+        if dedup_key in seen:
+            continue
+        seen.add(dedup_key)
+        combined = dict(action)
+        for key, value in outcome.items():
+            if _present(value):
+                combined.setdefault(key, value)
+        rows.append(combined)
+    counts = Counter(str(_value(row, "action_type") or "") for row in rows)
+    metrics = {
+        "management_actions": len(actions),
+        "outcomes": len(outcomes),
+        "matched_management_outcomes": len(rows),
+        "max_action_type_sample_size": max(counts.values(), default=0),
+    }
+    return rows, excluded, metrics
+
+
 def _population(question: Any, slices: list[DatasetSlice]) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
     by_source = {dataset.source: dataset for dataset in slices}
     metrics: dict[str, Any] = {}
@@ -462,6 +690,22 @@ def _population(question: Any, slices: list[DatasetSlice]) -> tuple[list[dict[st
             *[_normalise(row, "execution_attempts_v1") for row in by_source["execution_attempts_v1"].current_records],
         ]
         return rows, 0, metrics
+    if question.id in {"X1", "X3"}:
+        return _execution_population(by_source)
+    if question.id == "EXEC1":
+        rows = [
+            _normalise(row, "execution_results_v1")
+            for row in by_source["execution_results_v1"].current_records
+        ]
+        return rows, 0, metrics
+    if question.id == "PROT1":
+        rows = [
+            _normalise(row, "protection_audit_v1")
+            for row in by_source["protection_audit_v1"].current_records
+        ]
+        return rows, 0, metrics
+    if question.id in {"MGMT-1", "MGMT-2"}:
+        return _management_population(question.id, by_source)
     rows, ambiguous = _merge_population(slices)
     return rows, ambiguous, metrics
 

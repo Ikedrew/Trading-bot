@@ -25,6 +25,7 @@ from research_engine.data_access.shadow_runtime_ingestion import (
 )
 from research_engine.data_quality.classifier import DataEpoch, classify_record
 from research_engine.experiments.experiment_base import build_fingerprint
+from research_engine.registry.research_question_registry import REGISTRY
 
 
 class _CapturingWriter:
@@ -308,7 +309,9 @@ def test_epoch_unverified_historical_q19_is_invalidated():
     assert "bypassed canonical CURRENT filtering" in reason
 
 
-def test_canonical_state_still_contains_all_70_questions(tmp_path):
+def test_canonical_state_still_contains_all_baseline_questions(tmp_path):
+    from research_engine.registry.baseline_manifest import BASELINE_QUESTION_IDS
     states = build_all_question_states(reports_dir=tmp_path, evidence_source={})
-    assert len(states) == 70
-    assert len({state.question_id for state in states}) == 70
+    assert len(states) == len(REGISTRY)
+    assert len({state.question_id for state in states}) == len(REGISTRY)
+    assert set(BASELINE_QUESTION_IDS) <= {state.question_id for state in states}

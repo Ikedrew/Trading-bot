@@ -23,8 +23,8 @@ def test_generate_dashboard_projects_all_canonical_states():
 
     projection = generate_dashboard(states)
 
-    assert projection["total_questions"] == 70
-    assert projection["state_counts"]["WAITING_DATA"] == 70
+    assert projection["total_questions"] == len(REGISTRY)
+    assert projection["state_counts"]["WAITING_DATA"] == len(REGISTRY)
     assert [item["question_id"] for item in projection["questions"]] == [
         question.id for question in REGISTRY
     ]

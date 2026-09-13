@@ -1,7 +1,7 @@
 """Research Control Plane - Canonical read-only state for all research questions.
 
 This module provides a unified view of the research portfolio by joining:
-- The canonical 70-question registry (authority for question identity)
+- The canonical question registry (authority for question identity)
 - Existing report artifacts (via report_resolver)
 - V10 candidate lifecycle (read-only)
 - Production application evidence (read-only)

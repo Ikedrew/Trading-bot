@@ -258,8 +258,12 @@ class TestRegistryLookup:
         assert all(q.priority == QuestionPriority.P0 for q in p0)
 
     def test_registry_has_expected_questions(self):
+        from research_engine.registry.baseline_manifest import BASELINE_QUESTION_IDS
         assert len(REGISTRY) > 0
-        assert len(REGISTRY) == 70
+        # V1 baseline programme contains exactly 70; live registry may grow.
+        assert len(BASELINE_QUESTION_IDS) == 70
+        assert len(REGISTRY) >= len(BASELINE_QUESTION_IDS)
+        assert set(BASELINE_QUESTION_IDS) <= {q.id for q in REGISTRY}
         assert len(REGISTRY) == len(set(q.id for q in REGISTRY))  # All unique IDs
 
     def test_registry_by_id_matches(self):

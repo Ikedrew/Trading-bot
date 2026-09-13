@@ -103,8 +103,8 @@ def test_build_all_isolates_one_question_resolution_failure(monkeypatch, tmp_pat
     )
     by_id = {state.question_id: state for state in states}
 
-    assert len(states) == 70
-    assert len(by_id) == 70
+    assert len(states) == len(REGISTRY)
+    assert len(by_id) == len(REGISTRY)
     assert by_id["E2"].state_status == "ERROR"
     assert by_id["E2"].readiness_reason == (
         "Question state resolution failed: RuntimeError: isolated resolver failure"
@@ -126,8 +126,8 @@ def test_terminal_and_html_render_the_same_projection():
     terminal = render_terminal(projection)
     html = render_html(projection)
 
-    assert "Questions: 70" in terminal
-    assert "70 questions" in html
+    assert f"Questions: {len(REGISTRY)}" in terminal
+    assert f"{len(REGISTRY)} questions" in html
     for question in REGISTRY:
         assert question.id in terminal
         assert f"<td>{question.id}</td>" in html
@@ -166,5 +166,5 @@ def test_terminal_cli_renders_when_evidence_states_are_errors(monkeypatch, capsy
 
     assert dashboard.main([]) == 0
     output = capsys.readouterr().out
-    assert "Questions: 70" in output
-    assert "ERROR: 70" in output
+    assert f"Questions: {len(REGISTRY)}" in output
+    assert f"ERROR: {len(REGISTRY)}" in output
