@@ -319,11 +319,19 @@ def build_definitions_from_registry(registry):
     from research_engine.registry.wave_a4_definitions import (
         apply_wave_a4_definitions,
     )
+    from research_engine.registry.wave_a5_definitions import (
+        apply_wave_a5_definitions,
+    )
+    from research_engine.registry.wave_a_no_runner_definitions import (
+        apply_wave_a_no_runner_designs,
+    )
 
     definitions = apply_wave_a1_definitions(definitions)
     definitions = apply_wave_a2_definitions(definitions)
     definitions = apply_wave_a3_definitions(definitions)
-    return apply_wave_a4_definitions(definitions)
+    definitions = apply_wave_a4_definitions(definitions)
+    definitions = apply_wave_a5_definitions(definitions)
+    return apply_wave_a_no_runner_designs(definitions)
 
 
 def validate_runner_registry_threshold_alignment(question, question_id):

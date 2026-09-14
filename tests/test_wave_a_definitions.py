@@ -1667,3 +1667,342 @@ def test_wave_a44_preserves_all_non_targets_prior_waves_and_protected(monkeypatc
     for qid in protected:
         assert after[qid] is before[qid]
         assert after[qid].to_dict() == before[qid].to_dict()
+
+
+# ---------------------------------------------------------------------------
+# WAVE A5 - canonical ownership relationships
+# ---------------------------------------------------------------------------
+
+from research_engine.registry.wave_a5_definitions import (  # noqa: E402
+    WAVE_A5_OWNERSHIP,
+    WAVE_A5_TARGET_RELATIONSHIPS,
+    WAVE_A5_TARGETS,
+    apply_wave_a5_definitions,
+)
+
+
+def test_wave_a5_relationship_scope_and_metadata_are_exact():
+    assert WAVE_A5_TARGET_RELATIONSHIPS == (
+        ("E3", "S1"),
+        ("D6", "PORT-1"),
+        ("R1", "R2"),
+        ("D1", "L3"),
+        ("E2", "L1"),
+    )
+    assert WAVE_A5_TARGETS == {
+        "E3", "S1", "D6", "PORT-1", "R1", "R2", "D1", "L3", "E2", "L1",
+    }
+    assert tuple(WAVE_A5_OWNERSHIP) == WAVE_A5_TARGET_RELATIONSHIPS
+    assert all(item.to_dict() == item.to_dict() for item in WAVE_A5_OWNERSHIP.values())
+
+
+def test_e3_s1_equivalent_intent_does_not_bless_wrong_shared_runner():
+    from research_engine.registry import REGISTRY_BY_ID
+
+    item = WAVE_A5_OWNERSHIP[("E3", "S1")]
+    e3, s1 = REGISTRY_BY_ID["E3"], REGISTRY_BY_ID["S1"]
+    assert item.scientifically_equivalent is True
+    assert "TRUE_ALIAS" in item.relationship_types
+    assert "UNRESOLVED" in item.relationship_types
+    assert item.canonical_owners == ()
+    assert e3.required_fields == s1.required_fields == ("strategy", "r_multiple")
+    assert e3.data_sources == s1.data_sources
+    assert tuple((r.field, r.operator, r.threshold) for r in e3.validation_rules) == tuple(
+        (r.field, r.operator, r.threshold) for r in s1.validation_rules
+    )
+    assert e3.runner_function == s1.runner_function == "run_q24"
+    assert "answers neither canonical intent" in item.runner_ownership_status
+    assert "activation report" in item.false_completion_risk
+
+
+def test_d6_port1_share_calculation_but_keep_distinct_ownership():
+    from research_engine.registry import REGISTRY_BY_ID
+
+    item = WAVE_A5_OWNERSHIP[("D6", "PORT-1")]
+    d6, port1 = REGISTRY_BY_ID["D6"], REGISTRY_BY_ID["PORT-1"]
+    assert item.relationship_types == ("SHARED_CALCULATION_DISTINCT_OWNERSHIP",)
+    assert item.scientifically_equivalent is False
+    assert item.highest_safe_sharing_level == "calculation"
+    assert "candidate outcome joining" in item.shared_helper_status
+    assert d6.runner_function != port1.runner_function
+    assert d6.report_filename != port1.report_filename
+    assert d6.legacy_ids == port1.legacy_ids == ()
+    assert dict(item.canonical_owners) == {"D6": "D6", "PORT-1": "PORT-1"}
+    assert "Account executions are not independent" in item.unit_of_analysis_boundary
+
+
+def test_r1_r2_same_risk_data_does_not_share_scientific_ownership():
+    from research_engine.registry import REGISTRY_BY_ID
+
+    item = WAVE_A5_OWNERSHIP[("R1", "R2")]
+    r1, r2 = REGISTRY_BY_ID["R1"], REGISTRY_BY_ID["R2"]
+    assert item.scientifically_equivalent is False
+    assert "SHARED_HELPER_ONLY" in item.relationship_types
+    assert "DISTINCT_RUNNER_REQUIRED" in item.relationship_types
+    assert "DISTINCT_REPORT_REQUIRED" in item.relationship_types
+    assert "LEGACY_IDENTITY_COLLISION" in item.relationship_types
+    assert r1.runner_function == r2.runner_function == "run_q10"
+    assert r1.report_filename == r2.report_filename == "q10_guard_efficacy.json"
+    assert r1.legacy_ids == r2.legacy_ids == ("Q10",)
+    assert "neither overall risk benefit nor per-guard value" in item.runner_ownership_status
+    assert "falsely complete both distinct claims" in item.false_completion_risk
+
+
+def test_d1_l3_keep_d1_component_ownership_and_require_l3_separation():
+    from research_engine.registry import REGISTRY_BY_ID
+
+    item = WAVE_A5_OWNERSHIP[("D1", "L3")]
+    d1, l3 = REGISTRY_BY_ID["D1"], REGISTRY_BY_ID["L3"]
+    assert item.scientifically_equivalent is False
+    assert item.highest_safe_sharing_level == "calculation"
+    assert d1.runner_function == l3.runner_function == "run"
+    assert d1.report_filename == l3.report_filename == "q1_component_reward.json"
+    assert d1.legacy_ids == l3.legacy_ids == ("Q1",)
+    assert dict(item.canonical_owners) == {
+        "component_reward.run": "D1",
+        "q1_component_reward.json": "D1",
+    }
+    assert "L3 requires an independent" in item.runner_ownership_status
+    assert "L3 requires a distinct canonical report" in item.report_ownership_status
+
+
+def test_e2_l1_keep_e2_pooled_ownership_and_require_l1_temporal_separation():
+    from research_engine.registry import REGISTRY_BY_ID
+
+    item = WAVE_A5_OWNERSHIP[("E2", "L1")]
+    e2, l1 = REGISTRY_BY_ID["E2"], REGISTRY_BY_ID["L1"]
+    assert item.scientifically_equivalent is False
+    assert item.highest_safe_sharing_level == "helper"
+    assert e2.runner_function == l1.runner_function == "run_q05"
+    assert e2.report_filename == l1.report_filename == "q5_pattern_degradation.json"
+    assert "Q5" in e2.legacy_ids and "Q5" in l1.legacy_ids
+    assert dict(item.canonical_owners) == {
+        "legacy_canonical.run_q05": "E2",
+        "q5_pattern_degradation.json": "E2",
+    }
+    assert "does not use timestamps" in item.runner_ownership_status
+    assert "non-temporal finding" in item.false_completion_risk
+
+
+def test_shared_reports_and_legacy_ids_never_establish_equivalence():
+    for pair in (("R1", "R2"), ("D1", "L3"), ("E2", "L1")):
+        item = WAVE_A5_OWNERSHIP[pair]
+        assert item.scientifically_equivalent is False
+        assert "DISTINCT_REPORT_REQUIRED" in item.relationship_types
+        assert "LEGACY_IDENTITY_COLLISION" in item.relationship_types
+
+
+def test_wave_a5_is_metadata_only_and_preserves_every_definition():
+    before = build_definitions_from_registry(REGISTRY)
+    after = apply_wave_a5_definitions(before)
+
+    assert after is before
+    assert set(after) == set(before)
+    for qid in before:
+        assert after[qid] is before[qid], qid
+        assert after[qid].to_dict() == before[qid].to_dict(), qid
+
+
+def test_wave_a5_does_not_mutate_operational_ownership_mappings():
+    from research_engine.registry import REGISTRY_BY_ID
+
+    expected = {
+        "E3": ("run_q24", "q24_strategy_edge.json", ("Q24",)),
+        "S1": ("run_q24", "q24_strategy_edge.json", ("Q24",)),
+        "D6": ("run_portfolio_ranking", "d6_portfolio_ranking.json", ()),
+        "PORT-1": ("run_port_1", "port1_portfolio_selection.json", ()),
+        "R1": ("run_q10", "q10_guard_efficacy.json", ("Q10",)),
+        "R2": ("run_q10", "q10_guard_efficacy.json", ("Q10",)),
+        "D1": ("run", "q1_component_reward.json", ("Q1",)),
+        "L3": ("run", "q1_component_reward.json", ("Q1",)),
+        "E2": ("run_q05", "q5_pattern_degradation.json", ("Q5", "Q24")),
+        "L1": ("run_q05", "q5_pattern_degradation.json", ("Q5",)),
+    }
+    for qid, mapping in expected.items():
+        question = REGISTRY_BY_ID[qid]
+        assert (question.runner_function, question.report_filename, question.legacy_ids) == mapping
+
+
+# ---------------------------------------------------------------------------
+# FINAL WAVE A - NO_RUNNER operational-design contracts
+# ---------------------------------------------------------------------------
+
+from research_engine.registry.wave_a_no_runner_definitions import (  # noqa: E402
+    ALREADY_AVAILABLE,
+    DERIVABLE,
+    EVIDENCE_GAP_CLASSIFICATIONS,
+    EXISTING_V1_CONTRACT_VIOLATION,
+    NEW_RESEARCH_EVIDENCE,
+    WAVE_A_NO_RUNNER_DESIGNS,
+    WAVE_A_NO_RUNNER_TARGETS,
+    apply_wave_a_no_runner_designs,
+)
+
+
+def test_no_runner_design_scope_and_metadata_are_deterministic():
+    expected = {"S5", "S6", "S7", "X6", "L6", "G1", "G2", "G3"}
+    assert WAVE_A_NO_RUNNER_TARGETS == expected
+    assert set(WAVE_A_NO_RUNNER_DESIGNS) == expected
+    for qid, design in WAVE_A_NO_RUNNER_DESIGNS.items():
+        assert design.canonical_question_id == qid
+        assert design.definition_version == 1
+        assert design.lifecycle == "PROPOSED"
+        assert design.to_dict() == design.to_dict()
+        assert design.canonical_intent
+        assert design.hypothesis and design.null_hypothesis
+        assert design.research_classification
+
+
+def test_no_runner_targets_remain_truthfully_unmapped_and_under_specified():
+    definitions = build_definitions_from_registry(REGISTRY)
+    reports = validate_all_definitions(definitions)
+
+    for qid in WAVE_A_NO_RUNNER_TARGETS:
+        question = REGISTRY_BY_ID[qid]
+        definition = definitions[qid]
+        assert question.runner_module == question.runner_function == ""
+        assert question.report_filename == ""
+        assert definition.runner_module == definition.runner_function == ""
+        assert definition.report_filename == ""
+        assert definition.minimum_sample is None
+        assert definition.completion_rule is None
+        assert get_question_health(reports[qid]) == "UNDER_SPECIFIED"
+
+
+def test_every_no_runner_design_has_implementation_ready_contract_fields():
+    for design in WAVE_A_NO_RUNNER_DESIGNS.values():
+        assert design.population_definition
+        assert design.unit_of_analysis
+        assert design.metric_definition
+        assert design.evidence_authority
+        assert design.join_contract
+        assert design.epoch_requirement
+        assert design.minimum_sample
+        assert design.cell_sufficiency
+        assert design.completion_criterion
+        assert design.dependencies
+        assert design.runner_specification.proposed_module
+        assert design.runner_specification.proposed_function
+        assert design.runner_specification.inputs
+        assert design.runner_specification.filters
+        assert design.runner_specification.unit_of_analysis
+        assert design.runner_specification.joins
+        assert design.runner_specification.grouping
+        assert design.runner_specification.metrics
+        assert design.runner_specification.sufficiency
+        assert design.runner_specification.output
+        assert design.runner_specification.completion_rule
+        assert design.runner_specification.fail_closed_conditions
+        assert design.report_identity.endswith(".json")
+        assert design.multi_account_rule
+        assert design.repeated_measure_rule
+        assert design.leakage_rule
+        assert design.implementation_requirements
+        assert design.human_semantic_decisions
+
+
+def test_evidence_gaps_are_explicit_and_new_research_is_not_a_v1_defect():
+    assert EVIDENCE_GAP_CLASSIFICATIONS == {
+        ALREADY_AVAILABLE,
+        DERIVABLE,
+        NEW_RESEARCH_EVIDENCE,
+        EXISTING_V1_CONTRACT_VIOLATION,
+    }
+    for design in WAVE_A_NO_RUNNER_DESIGNS.values():
+        assert design.evidence_gap_classification in EVIDENCE_GAP_CLASSIFICATIONS
+        assert design.evidence_gap_classification != EXISTING_V1_CONTRACT_VIOLATION
+        for authority in design.evidence_authority:
+            assert authority.gap_classification in EVIDENCE_GAP_CLASSIFICATIONS
+            assert authority.gap_classification != EXISTING_V1_CONTRACT_VIOLATION
+
+    assert WAVE_A_NO_RUNNER_DESIGNS["G3"].evidence_gap_classification == NEW_RESEARCH_EVIDENCE
+    assert not WAVE_A_NO_RUNNER_DESIGNS["G3"].existing_evidence_sufficient_in_principle
+    for qid in WAVE_A_NO_RUNNER_TARGETS - {"G3"}:
+        assert WAVE_A_NO_RUNNER_DESIGNS[qid].evidence_gap_classification == DERIVABLE
+        assert WAVE_A_NO_RUNNER_DESIGNS[qid].existing_evidence_sufficient_in_principle
+
+
+def test_strategy_designs_exclude_account_fanout_and_cluster_horizons():
+    for qid in ("S5", "S6", "S7"):
+        design = WAVE_A_NO_RUNNER_DESIGNS[qid]
+        assert "canonical opportunity" in design.unit_of_analysis
+        assert "Account" in design.multi_account_rule or "account" in design.multi_account_rule
+        assert "excluded" in design.multi_account_rule
+        assert "repeated" in design.repeated_measure_rule
+        assert "independent" in design.repeated_measure_rule
+        assert "simulated R" in design.leakage_rule
+        assert "outcome" in design.leakage_rule
+
+
+def test_x6_uses_justified_account_grain_and_preexecution_conditions():
+    design = WAVE_A_NO_RUNNER_DESIGNS["X6"]
+    datasets = {authority.dataset for authority in design.evidence_authority}
+    assert datasets == {"execution_results_v1", "execution_context", "decision_trace_v1"}
+    assert "account execution result" in design.unit_of_analysis
+    assert "clustered by correlation_id" in design.unit_of_analysis
+    assert "legitimate observations" in design.multi_account_rule
+    assert "producer-measured" in design.metric_definition
+    assert "pre-execution volatility" in design.canonical_intent
+    assert "slippage_journal" in " ".join(design.implementation_requirements)
+    assert "not a V1 defect" in " ".join(design.implementation_requirements)
+    assert all(join.conflict_policy.startswith("reject") for join in design.join_contract)
+
+
+def test_predictive_leakage_and_meta_governance_are_fail_closed():
+    for design in WAVE_A_NO_RUNNER_DESIGNS.values():
+        leakage = design.leakage_rule.lower()
+        assert "outcome" in leakage or "predict" in leakage or "production" in leakage
+
+    assert "outcome label only" in WAVE_A_NO_RUNNER_DESIGNS["S5"].leakage_rule
+    assert "outcomes only" in WAVE_A_NO_RUNNER_DESIGNS["S7"].leakage_rule
+    assert "frozen before execution" in WAVE_A_NO_RUNNER_DESIGNS["X6"].leakage_rule
+    assert "cannot approve" in WAVE_A_NO_RUNNER_DESIGNS["G3"].leakage_rule
+    assert "exclude G3 self-result" in WAVE_A_NO_RUNNER_DESIGNS["G3"].runner_specification.filters
+
+
+def test_g2_lineage_denominator_cannot_be_inflated_or_joined_by_fallback_alias():
+    design = WAVE_A_NO_RUNNER_DESIGNS["G2"]
+    assert design.unit_of_analysis == (
+        "One canonical opportunity; account executions and repeated shadow horizons never enlarge the denominator."
+    )
+    assert design.join_contract[0].keys == ("entity_id", "canonical_opportunity_id")
+    assert "partial keys" in design.join_contract[0].conflict_policy
+    assert "Collapse all completed horizon lifecycles" in design.repeated_measure_rule
+    assert "Account fanout is excluded" in design.multi_account_rule
+    assert "never determines whether lineage is valid" in design.leakage_rule
+
+
+def test_no_runner_report_identities_are_unique_and_do_not_collide():
+    proposed = [design.report_identity for design in WAVE_A_NO_RUNNER_DESIGNS.values()]
+    existing = {
+        question.report_filename
+        for question in REGISTRY
+        if question.id not in WAVE_A_NO_RUNNER_TARGETS and question.report_filename
+    }
+    assert len(proposed) == len(set(proposed)) == 8
+    assert not set(proposed) & existing
+
+
+def test_no_runner_design_layer_preserves_a1_to_a5_and_every_definition():
+    before = build_definitions_from_registry(REGISTRY)
+    snapshots = {qid: definition.to_dict() for qid, definition in before.items()}
+    after = apply_wave_a_no_runner_designs(before)
+
+    assert after is before
+    assert set(after) == set(before) == {question.id for question in REGISTRY}
+    for qid in before:
+        assert after[qid] is before[qid]
+        assert after[qid].to_dict() == snapshots[qid]
+
+    assert tuple(WAVE_A5_OWNERSHIP) == WAVE_A5_TARGET_RELATIONSHIPS
+
+
+def test_no_runner_design_does_not_change_runtime_resolver_or_readiness_contracts():
+    for qid in WAVE_A_NO_RUNNER_TARGETS:
+        question = REGISTRY_BY_ID[qid]
+        assert question.runner_module == ""
+        assert question.runner_function == ""
+        assert question.report_filename == ""
+        # Original registry evidence/readiness declarations remain the runtime truth.
+        assert question.data_sources
+        assert isinstance(question.validation_rules, tuple)
