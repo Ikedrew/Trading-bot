@@ -1140,6 +1140,8 @@ from research_engine.registry.wave_a4_definitions import (  # noqa: E402
     WAVE_A4_1_TARGETS,
     WAVE_A4_2_TARGETS,
     WAVE_A4_3_TARGETS,
+    WAVE_A4_4_RESEARCH_CLASSIFICATIONS,
+    WAVE_A4_4_TARGETS,
     WAVE_A4_OVERRIDES,
     WAVE_A4_RESOLVED,
     WAVE_A4_TARGETS,
@@ -1166,8 +1168,10 @@ def test_wave_a41_scope_and_before_to_after_health_are_exact(monkeypatch):
     assert WAVE_A4_1_TARGETS == {"M1", "M11", "X3", "EXEC1"}
     assert WAVE_A4_2_TARGETS == {"D3", "D4", "D5"}
     assert WAVE_A4_3_TARGETS == {"L1", "L2", "L3", "L4"}
+    assert WAVE_A4_4_TARGETS == {"EX5", "EX6", "EX7", "EX8"}
     assert WAVE_A4_TARGETS == (
         WAVE_A4_1_TARGETS | WAVE_A4_2_TARGETS | WAVE_A4_3_TARGETS
+        | WAVE_A4_4_TARGETS
     )
     assert WAVE_A4_RESOLVED == set()
     assert WAVE_A4_UNRESOLVED == WAVE_A4_TARGETS
@@ -1541,6 +1545,124 @@ def test_wave_a43_preserves_prior_protected_e2_d1_later_and_all_non_targets(monk
         "M1", "M11", "X3", "EXEC1", "D3", "D4", "D5", "M8",
         "OPP-1", "M3", "M7", "P1", "R3", "R4", "R5", "EX9",
         "D2", "X5", "E2", "D1", "EX5", "EX6", "EX7", "EX8",
+    }
+    for qid in protected:
+        assert after[qid] is before[qid]
+        assert after[qid].to_dict() == before[qid].to_dict()
+
+
+# ---------------------------------------------------------------------------
+# WAVE A4.4 - EX5 / EX6 / EX7 / EX8 semantic-alignment tests
+# ---------------------------------------------------------------------------
+
+def test_wave_a44_before_to_after_health_remains_fail_closed(monkeypatch):
+    before = _build_pre_a4_definitions(monkeypatch)
+    after = build_definitions_from_registry(REGISTRY)
+    before_reports = validate_all_definitions(before)
+    after_reports = validate_all_definitions(after)
+
+    assert WAVE_A4_4_TARGETS == {"EX5", "EX6", "EX7", "EX8"}
+    assert WAVE_A4_4_RESEARCH_CLASSIFICATIONS == {
+        "EX5": "associative",
+        "EX6": "associative",
+        "EX7": "descriptive",
+        "EX8": "descriptive",
+    }
+    for qid in WAVE_A4_4_TARGETS:
+        assert get_question_health(before_reports[qid]) == "SEMANTIC_MISMATCH", qid
+        assert get_question_health(after_reports[qid]) == "SEMANTIC_MISMATCH", qid
+        assert qid in WAVE_A4_UNRESOLVED
+        assert qid not in WAVE_A4_RESOLVED
+        assert qid not in WAVE_A4_OVERRIDES
+        assert not after[qid].hypothesis.strip(), qid
+        assert not after[qid].null_hypothesis.strip(), qid
+        assert not after[qid].population_definition.strip(), qid
+        assert not after[qid].metric_definition.strip(), qid
+        assert after[qid].minimum_sample is None, qid
+        assert after[qid].completion_rule is None, qid
+
+
+def test_ex5_is_horizon_association_not_trailing_policy_evaluation():
+    reason = WAVE_A4_UNRESOLVED_REASONS["EX5"]
+
+    assert "does not test or simulate a trailing rule" in reason
+    assert "observed shadow realised R" in reason
+    assert "literal mapped shadow exit-reason counts" in reason
+    assert "at least two available horizon means span >0.15" in reason
+    assert "in-sample observational association, not policy evaluation" in reason
+    assert "trade_state_progression and entry/exit timestamps are not consumed" in reason
+    assert ">=30" in reason and ">=10 per reported cell" in reason
+    assert "declares COMPLETE when any one cell remains" in reason
+
+
+def test_ex6_historical_exit_categories_are_not_causal_policy_effects():
+    reason = WAVE_A4_UNRESOLVED_REASONS["EX6"]
+
+    assert "REVERSAL, CONTINUATION, and FALSE_BREAK" in reason
+    assert "REVERSAL, MOMENTUM, and CONTINUATION" in reason
+    assert "historical shadow categories, not selectable treatments" in reason
+    assert "no alternative policy behaviour is simulated" in reason
+    assert "no causal or policy effect" in reason
+    assert "post-outcome diagnostics" in reason
+    assert "cannot be pre-exit predictive inputs" in reason
+
+
+def test_ex7_requires_ordered_path_authority_for_alternative_exit_claims():
+    reason = WAVE_A4_UNRESOLVED_REASONS["EX7"]
+
+    assert "performs no between-regime comparison" in reason
+    assert "candidate-rule simulation, predictive validation, or policy evaluation" in reason
+    assert "forward-appended per-bar trade_state_progression" in reason
+    assert "consumes neither timestamps nor the path" in reason
+    assert "post-outcome facts" in reason
+    assert "neither when an alternative exit was feasible nor what it would have realised" in reason
+    assert "ordered, field-audited path authority" in reason
+
+
+def test_ex8_count_ranking_is_not_best_or_optimal_exit_policy():
+    reason = WAVE_A4_UNRESOLVED_REASONS["EX8"]
+
+    assert "ranked by sample count, not exit performance" in reason
+    assert "does not identify a best or optimal policy" in reason
+    assert "compare candidate rules" in reason
+    assert "define an evaluation design" in reason
+    assert "leakage-safe pre-exit information" in reason
+    assert "optimality criterion" in reason
+
+
+def test_a44_preserves_actual_shadow_hypothetical_and_sample_grains():
+    for qid in WAVE_A4_4_TARGETS:
+        reason = WAVE_A4_UNRESOLVED_REASONS[qid]
+        lower_reason = reason.lower()
+        assert "Account execution" in reason or "account fanout" in reason
+        assert "canonical opportunity" in reason
+        assert "repeated horizon" in reason or "multiple horizon" in reason
+        assert "actual broker" in lower_reason
+        assert "shadow" in lower_reason
+        assert "candidate-policy" in lower_reason or "hypothetical" in lower_reason
+
+
+def test_a44_runner_and_resolver_population_authorities_remain_distinct():
+    for qid in WAVE_A4_4_TARGETS:
+        reason = WAVE_A4_UNRESOLVED_REASONS[qid]
+        assert "shadow_runtime_v1" in reason
+        assert "research_shadow_trades" in reason
+
+
+def test_wave_a44_preserves_all_non_targets_prior_waves_and_protected(monkeypatch):
+    before = _build_pre_a4_definitions(monkeypatch)
+    after = apply_wave_a4_definitions(before)
+
+    assert set(after) == set(before) == {question.id for question in REGISTRY}
+    for qid in before:
+        assert after[qid] is before[qid], qid
+        assert after[qid].to_dict() == before[qid].to_dict(), qid
+
+    protected = {
+        "M1", "M11", "X3", "EXEC1", "D3", "D4", "D5",
+        "L1", "L2", "L3", "L4", "M8", "OPP-1", "M3", "M7",
+        "P1", "R3", "R4", "R5", "EX9", "D2", "X5", "EX1",
+        "EX2", "EX10", "L7",
     }
     for qid in protected:
         assert after[qid] is before[qid]

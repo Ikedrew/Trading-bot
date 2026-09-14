@@ -1,4 +1,4 @@
-"""Wave A4.1 semantic-alignment assessment.
+"""Wave A4 semantic-alignment assessment.
 
 The registry, runners, resolver, readiness rules, and report contracts do not
 currently establish mutually consistent scientific definitions for this
@@ -18,7 +18,20 @@ from research_engine.registry.research_question_models import (
 WAVE_A4_1_TARGETS = frozenset({"M1", "M11", "X3", "EXEC1"})
 WAVE_A4_2_TARGETS = frozenset({"D3", "D4", "D5"})
 WAVE_A4_3_TARGETS = frozenset({"L1", "L2", "L3", "L4"})
-WAVE_A4_TARGETS = WAVE_A4_1_TARGETS | WAVE_A4_2_TARGETS | WAVE_A4_3_TARGETS
+WAVE_A4_4_TARGETS = frozenset({"EX5", "EX6", "EX7", "EX8"})
+WAVE_A4_TARGETS = (
+    WAVE_A4_1_TARGETS
+    | WAVE_A4_2_TARGETS
+    | WAVE_A4_3_TARGETS
+    | WAVE_A4_4_TARGETS
+)
+
+WAVE_A4_4_RESEARCH_CLASSIFICATIONS = {
+    "EX5": "associative",
+    "EX6": "associative",
+    "EX7": "descriptive",
+    "EX8": "descriptive",
+}
 
 # No A4.1 target can be closed without an approved semantic narrowing or a
 # runner/evidence repair.  The empty override set is intentional.
@@ -298,6 +311,117 @@ WAVE_A4_UNRESOLVED_REASONS = {
         "treatment, defined temporal windows/trend and assumption-invalidation "
         "criteria with cell sufficiency, and an aligned L4 runner/report. Left "
         "fail-closed."
+    ),
+    "EX5": (
+        "Registry intent asks whether SCALP/INTRADAY/EXTENDED horizons require "
+        "different exit policies and explicitly says trailing parameters are "
+        "tested. exit_depth.run_ex5 does not test or simulate a trailing rule. "
+        "It loads only CURRENT completed shadow_runtime_v1 lifecycles, requires "
+        "MFE and MAE even though registry readiness does not require MAE, and "
+        "groups one shadow lifecycle by identity.evaluated_horizon. It reports "
+        "observed shadow realised R, win rate, MFE, MAE, literal mapped shadow "
+        "exit-reason counts, realised-R/MFE capture for MFE > 0.05, and MFE "
+        "minus realised-R giveback. The only comparison marks capture means as "
+        "different when at least two available horizon means span >0.15; it is "
+        "an in-sample observational association, not policy evaluation. The "
+        "preserved trade_state_progression and entry/exit timestamps are not "
+        "consumed, so feasible alternative exits, ordering, and lookahead-safe "
+        "decision information are not established. The runner requires >=30 "
+        "CURRENT MFE/MAE lifecycles overall and >=10 per reported cell, but "
+        "declares COMPLETE when any one cell remains; the registry has coverage "
+        "gates and no sample rule. The runner excludes the resolver's separate "
+        "research_shadow_trades population, creating an evidence-population "
+        "conflict. Account executions are absent, but multiple horizon shadow "
+        "lifecycles from one canonical opportunity count independently. These "
+        "are shadow simulated closes, not actual broker closes or reconstructed "
+        "candidate-policy closes. Repair requires an approved observational "
+        "narrowing or a path-aware, chronology-valid candidate-policy simulator "
+        "with declared decision inputs and outcomes, one authoritative shadow "
+        "population, canonical-opportunity/repeated-horizon handling, and aligned "
+        "overall/cell sufficiency and completion rules. Left fail-closed."
+    ),
+    "EX6": (
+        "Registry intent asks whether strategy families require different exit "
+        "policies. exit_depth.run_ex6 instead performs an in-sample observational "
+        "comparison of completed CURRENT shadow lifecycles grouped by strategy. "
+        "Strategy comes from identity.strategy_id or decision_snapshot.strategy, "
+        "but the runner accepts only REVERSAL, CONTINUATION, and FALSE_BREAK, "
+        "whereas registry wording names REVERSAL, MOMENTUM, and CONTINUATION. "
+        "For each surviving cell it reports shadow realised R, win rate, MFE, "
+        "MAE, mapped shadow exit-reason counts, realised-R/MFE capture, and "
+        "giveback; stop_loss, take_profit, and timeout mapped to max_bars_timeout "
+        "are historical shadow categories, not selectable treatments. A >0.15 "
+        "span between at least two observed strategy mean-R values is labelled "
+        "a difference, but no alternative policy behaviour is simulated and no "
+        "causal or policy effect follows from those category differences. The "
+        "runner does not consume trade_state_progression or timestamps; MFE, "
+        "MAE, realised R, and exit reason are post-outcome diagnostics and cannot "
+        "be pre-exit predictive inputs. It requires >=30 CURRENT MFE/MAE "
+        "lifecycles overall and >=10 per reported cell yet declares COMPLETE "
+        "with one cell; registry readiness has coverage gates but no sample "
+        "threshold and requires pattern although the runner does not. The runner "
+        "uses only ingested shadow_runtime_v1 while the resolver also admits "
+        "research_shadow_trades. One shadow lifecycle is one observation: account "
+        "fanout is absent, but repeated horizons for one canonical opportunity "
+        "are not aggregated. Shadow closes remain distinct from actual broker or "
+        "candidate-policy exits. Repair requires aligned strategy vocabulary and "
+        "population/field authority, canonical-opportunity/repeated-horizon rules, "
+        "aligned comparative cell sufficiency/completion, and either approved "
+        "observational wording or a chronology-valid policy comparison design. "
+        "Left fail-closed."
+    ),
+    "EX7": (
+        "Registry intent asks whether TRENDING/RANGING/TRANSITIONAL regimes "
+        "require different exit policies. exit_depth.run_ex7 only describes "
+        "CURRENT completed shadow lifecycle exit metrics grouped by the frozen "
+        "decision_snapshot.h4_regime. It reports observed shadow realised R, win "
+        "rate, MFE, MAE, mapped exit-reason counts, realised-R/MFE capture, and "
+        "giveback. It performs no between-regime comparison, candidate-rule "
+        "simulation, predictive validation, or policy evaluation. Although the "
+        "adapter preserves entry/exit facts and forward-appended per-bar "
+        "trade_state_progression, the runner consumes neither timestamps nor the "
+        "path. Final MFE, MAE, realised R, exit reason, and later path are "
+        "post-outcome facts; they establish neither when an alternative exit was "
+        "feasible nor what it would have realised, and cannot silently become "
+        "pre-exit predictors. The runner requires >=30 CURRENT MFE/MAE lifecycles "
+        "overall and >=10 per reported regime but declares COMPLETE with any one "
+        "cell; registry readiness has coverage gates, no sample threshold, and "
+        "does not require MAE. The runner reads only ingested shadow_runtime_v1 "
+        "while the resolver additionally admits research_shadow_trades. Account "
+        "executions are absent, but repeated horizon lifecycles from one canonical "
+        "opportunity count separately. Shadow timeout/target/stop closes are not "
+        "actual broker exits or hypothetical exits under another policy. Repair "
+        "requires an approved descriptive narrowing or an ordered, field-audited "
+        "path authority and explicit candidate-policy simulation/evaluation, plus "
+        "one population authority, opportunity/horizon repeated-measure treatment, "
+        "and aligned comparative cell sufficiency/completion. Left fail-closed."
+    ),
+    "EX8": (
+        "Registry intent asks whether candlestick patterns require different "
+        "exit policies based on MFE/MAE profiles. exit_depth.run_ex8 only "
+        "describes CURRENT completed shadow lifecycles grouped by the literal "
+        "decision_snapshot.pattern. It reports observed shadow realised R, win "
+        "rate, MFE, MAE, mapped exit-reason counts, realised-R/MFE capture, and "
+        "giveback. Its top-five output is ranked by sample count, not exit "
+        "performance; it does not identify a best or optimal policy, compare "
+        "candidate rules, simulate hypothetical exits, or define an evaluation "
+        "design. The preserved trade_state_progression and entry/exit facts are "
+        "not consumed, so later MFE/MAE/final outcome cannot establish an "
+        "alternative exit or serve as leakage-safe pre-exit information. The "
+        "runner requires >=30 CURRENT MFE/MAE lifecycles overall and >=10 per "
+        "reported pattern, yet declares COMPLETE with one cell; registry "
+        "readiness has pattern/outcome coverage gates but no sample threshold "
+        "or comparative-cell rule. The runner uses only ingested "
+        "shadow_runtime_v1 whereas the resolver also admits separate "
+        "research_shadow_trades. Account executions do not enter the sample, "
+        "but multiple horizon shadows for one canonical opportunity can inflate "
+        "strategy-exit evidence. Actual broker closes, current-policy shadow "
+        "closes, and reconstructed candidate-policy closes remain distinct. "
+        "Repair requires an approved descriptive narrowing or a declared "
+        "chronology-valid candidate-policy comparison with leakage-safe inputs "
+        "and optimality criterion, one authoritative population, explicit "
+        "canonical-opportunity/horizon aggregation, and aligned multi-cell "
+        "sufficiency/completion. Left fail-closed."
     ),
 }
 
