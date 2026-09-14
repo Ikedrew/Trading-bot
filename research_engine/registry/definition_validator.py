@@ -303,7 +303,15 @@ def build_definitions_from_registry(registry):
             depends_on=q.depends_on,
             legacy_ids=q.legacy_ids,
         )
-    return definitions
+    # Wave A1 Safe Definition Closure: enrich the closed target subset with
+    # authoritative scientific definitions derived only from existing registry,
+    # runner, evidence-resolver and readiness semantics. Unresolved targets and
+    # all non-target questions are returned unchanged (fail-closed).
+    from research_engine.registry.wave_a1_definitions import (
+        apply_wave_a1_definitions,
+    )
+
+    return apply_wave_a1_definitions(definitions)
 
 
 def validate_runner_registry_threshold_alignment(question, question_id):

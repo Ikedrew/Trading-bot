@@ -165,16 +165,30 @@ def test_health_categories_populated():
     definitions = build_definitions_from_registry(REGISTRY)
     reports = validate_all_definitions(definitions)
 
-    # Migrated V1 definitions are honest: none validate as fully VALID yet
-    # (hypothesis/population/metric empty on migration; D2/X5 unresolved).
-    assert all(get_question_health(r) != "VALID" for r in reports.values())
-
     # D2 and X5 have UNRESOLVED_AUTHORITY errors
     d2_report = reports["D2"]
     assert any(r.category == "UNRESOLVED_AUTHORITY" for r in d2_report.results)
 
     x5_report = reports["X5"]
     assert any(r.category == "UNRESOLVED_AUTHORITY" for r in x5_report.results)
+
+    # Wave A1 closed targets are now semantically complete and VALID (one is
+    # VALID_WITH_WARNINGS because of a pre-existing report-filename ambiguity
+    # with a non-target question — see AMBIGUOUS_REPORT_MAPPING below).
+    from research_engine.registry.wave_a1_definitions import WAVE_A1_RESOLVED
+    resolved_health = {qid: get_question_health(reports[qid]) for qid in sorted(WAVE_A1_RESOLVED)}
+    assert set(resolved_health.values()) == {"VALID", "VALID_WITH_WARNINGS"}
+    assert resolved_health["D1"] == "VALID_WITH_WARNINGS"
+    assert any(
+        r.category == "AMBIGUOUS_REPORT_MAPPING"
+        for r in reports["D1"].results
+    )
+
+    # Unresolved Wave A1 targets must stay fail-closed (never forced VALID).
+    from research_engine.registry.wave_a1_definitions import WAVE_A1_UNRESOLVED
+    for qid in WAVE_A1_UNRESOLVED:
+        assert get_question_health(reports[qid]) != "VALID"
+
 
 
 def test_no_questions_deleted():
@@ -238,3 +252,145 @@ def test_no_runner_health_distinct():
         get_question_health(r) in ("NO_RUNNER", "UNDER_SPECIFIED", "SEMANTIC_MISMATCH", "INVALID")
         for r in reports.values()
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WAVE A1 SAFE DEFINITION CLOSURE — focused contract tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+from dataclasses import replace  # noqa: E402
+
+from research_engine.registry.wave_a1_definitions import (  # noqa: E402
+    WAVE_A1_RESOLVED,
+    WAVE_A1_TARGETS,
+    WAVE_A1_UNRESOLVED,
+    WAVE_A1_UNRESOLVED_REASONS,
+    apply_wave_a1_definitions,
+)
+
+# Datasets the canonical evidence resolver knows how to load/normalise for the
+# closed subset. A closed definition must never reference an unavailable source.
+_KNOWN_EVIDENCE_DATASETS = {
+    "shadow_trades", "decision_trace", "trade_truth",
+    "management_actions", "execution_results_v1", "execution_context",
+    "strategy_candidates", "protection_audit_v1", "execution_attempts_v1",
+    "risk_deviation_v1", "horizon_candidates", "portfolio_rankings",
+    "opportunities", "assessments",
+}
+
+# Registry sample_size readiness thresholds the closed definitions must agree
+# with. Questions without a sample_size rule must not declare a minimum_sample.
+_EXPECTED_MINIMUM_SAMPLE = {
+    "EX3": 200, "EX4": 200, "X1": 30, "MGMT-1": 30, "MGMT-2": 15,
+    "STRAT-1": 30, "PROT1": 30, "M9": 100, "M10": 100,
+}
+_NO_SAMPLE_RULE = {
+    "E1", "E4", "M2", "M4", "M6", "D1", "X4",
+}
+
+
+def _closed_definitions():
+    return build_definitions_from_registry(REGISTRY)
+
+
+def test_wave_a1_scope_is_exactly_the_20_targets():
+    assert len(WAVE_A1_TARGETS) == 20
+    assert WAVE_A1_RESOLVED | WAVE_A1_UNRESOLVED == WAVE_A1_TARGETS
+    assert not (WAVE_A1_RESOLVED & WAVE_A1_UNRESOLVED)
+    assert len(WAVE_A1_RESOLVED) == 16
+    assert len(WAVE_A1_UNRESOLVED) == 4
+    # Every unresolved target has an explicit, exact conflict reason.
+    assert set(WAVE_A1_UNRESOLVED_REASONS) == WAVE_A1_UNRESOLVED
+
+
+def test_every_closed_target_has_complete_scientific_definition():
+    definitions = _closed_definitions()
+    for qid in sorted(WAVE_A1_RESOLVED):
+        d = definitions[qid]
+        assert d.hypothesis.strip(), qid
+        assert d.null_hypothesis.strip(), qid
+        assert d.population_definition.strip(), qid
+        assert d.metric_definition.strip(), qid
+        assert d.evidence_authorities, qid
+        assert d.epoch_requirement == "CURRENT", qid
+        assert d.runner_module, qid
+        assert d.runner_function, qid
+        assert d.report_filename, qid
+
+
+def test_closed_target_evidence_authorities_are_explicit_and_available():
+    definitions = _closed_definitions()
+    for qid in sorted(WAVE_A1_RESOLVED):
+        d = definitions[qid]
+        assert d.evidence_authorities, qid
+        for auth in d.evidence_authorities:
+            assert auth.dataset in _KNOWN_EVIDENCE_DATASETS, (
+                f"{qid} references unavailable dataset {auth.dataset!r}"
+            )
+            assert auth.semantic_meaning.strip(), f"{qid} authority lacks semantic_meaning"
+            assert auth.field_path, f"{qid} authority lacks field_path"
+            assert auth.current_eligibility is True, f"{qid} authority not CURRENT-eligible"
+
+
+def test_multi_source_closed_targets_declare_join_contract():
+    definitions = _closed_definitions()
+    multi = {qid for qid in WAVE_A1_RESOLVED
+             if len(definitions[qid].evidence_authorities) > 1}
+    assert multi == {"D1", "X1", "X4", "MGMT-1", "MGMT-2", "STRAT-1"}
+    for qid in multi:
+        assert definitions[qid].join_contract is not None, qid
+        assert definitions[qid].join_contract.join_keys, qid
+
+
+def test_closed_target_sample_semantics_agree_with_readiness_runner():
+    definitions = _closed_definitions()
+    for qid, expected in _EXPECTED_MINIMUM_SAMPLE.items():
+        d = definitions[qid]
+        assert d.minimum_sample == expected, (
+            f"{qid}: minimum_sample={d.minimum_sample} != {expected}"
+        )
+        assert d.completion_rule is not None, qid
+        assert d.completion_rule.rule_type == "sample_reached", qid
+        assert d.completion_rule.threshold == expected, qid
+    for qid in _NO_SAMPLE_RULE:
+        d = definitions[qid]
+        assert d.minimum_sample is None, f"{qid} declares sample without registry rule"
+        assert d.completion_rule is not None, qid
+        assert d.completion_rule.rule_type == "report_exists", qid
+
+
+def test_unresolved_targets_remain_fail_closed():
+    definitions = _closed_definitions()
+    reports = validate_all_definitions(definitions)
+    for qid in sorted(WAVE_A1_UNRESOLVED):
+        d = definitions[qid]
+        # Not populated (no invention) — hypothesis/population/metric stay blank.
+        assert not d.hypothesis.strip(), qid
+        assert not d.population_definition.strip(), qid
+        assert not d.metric_definition.strip(), qid
+        # And the validator refuses to call them VALID.
+        assert get_question_health(reports[qid]) != "VALID", qid
+
+
+def test_validator_accepts_only_semantically_complete_definitions():
+    definitions = _closed_definitions()
+    for qid in ("E1", "STRAT-1", "PROT1"):
+        base = definitions[qid]
+        # Remove the metric -> the definition must no longer be VALID.
+        stripped = replace(base, metric_definition="")
+        report = validate_definition(stripped)
+        assert get_question_health(report) != "VALID", qid
+        assert any(r.category == "MISSING_METRIC" for r in report.results)
+
+
+def test_non_target_definitions_not_silently_altered():
+    # apply_wave_a1_definitions must leave every non-target question untouched
+    # (same object identity) and only replace the resolved target entries.
+    definitions = _closed_definitions()
+    applied = apply_wave_a1_definitions(definitions)
+    assert set(applied) == set(definitions) == {q.id for q in REGISTRY}
+    for qid, d in applied.items():
+        if qid in WAVE_A1_RESOLVED:
+            assert d is not definitions[qid], f"resolved target {qid} not enriched"
+        else:
+            assert d is definitions[qid], f"non-target {qid} definition object changed"
