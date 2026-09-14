@@ -1139,6 +1139,7 @@ def test_wave_a33_preserves_every_definition_and_prior_unresolved_targets(monkey
 from research_engine.registry.wave_a4_definitions import (  # noqa: E402
     WAVE_A4_1_TARGETS,
     WAVE_A4_2_TARGETS,
+    WAVE_A4_3_TARGETS,
     WAVE_A4_OVERRIDES,
     WAVE_A4_RESOLVED,
     WAVE_A4_TARGETS,
@@ -1164,7 +1165,10 @@ def _build_pre_a4_definitions(monkeypatch):
 def test_wave_a41_scope_and_before_to_after_health_are_exact(monkeypatch):
     assert WAVE_A4_1_TARGETS == {"M1", "M11", "X3", "EXEC1"}
     assert WAVE_A4_2_TARGETS == {"D3", "D4", "D5"}
-    assert WAVE_A4_TARGETS == WAVE_A4_1_TARGETS | WAVE_A4_2_TARGETS
+    assert WAVE_A4_3_TARGETS == {"L1", "L2", "L3", "L4"}
+    assert WAVE_A4_TARGETS == (
+        WAVE_A4_1_TARGETS | WAVE_A4_2_TARGETS | WAVE_A4_3_TARGETS
+    )
     assert WAVE_A4_RESOLVED == set()
     assert WAVE_A4_UNRESOLVED == WAVE_A4_TARGETS
     assert WAVE_A4_OVERRIDES == {}
@@ -1425,5 +1429,119 @@ def test_wave_a42_preserves_a41_prior_waves_protected_and_later_targets(monkeypa
     }
     later_a4 = {"L1", "L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8"}
     for qid in protected | later_a4:
+        assert after[qid] is before[qid]
+        assert after[qid].to_dict() == before[qid].to_dict()
+
+
+# ---------------------------------------------------------------------------
+# WAVE A4.3 - L1 / L2 / L3 / L4 semantic-alignment tests
+# ---------------------------------------------------------------------------
+
+def test_wave_a43_before_to_after_health_remains_fail_closed(monkeypatch):
+    before = _build_pre_a4_definitions(monkeypatch)
+    after = build_definitions_from_registry(REGISTRY)
+    before_reports = validate_all_definitions(before)
+    after_reports = validate_all_definitions(after)
+
+    for qid in WAVE_A4_3_TARGETS:
+        assert get_question_health(before_reports[qid]) == "SEMANTIC_MISMATCH", qid
+        assert get_question_health(after_reports[qid]) == "SEMANTIC_MISMATCH", qid
+        assert qid in WAVE_A4_UNRESOLVED
+        assert qid not in WAVE_A4_RESOLVED
+        assert qid not in WAVE_A4_OVERRIDES
+        assert not after[qid].hypothesis.strip(), qid
+        assert not after[qid].population_definition.strip(), qid
+        assert not after[qid].metric_definition.strip(), qid
+
+
+def test_l1_is_pooled_pattern_performance_not_temporal_learning():
+    from research_engine.registry import REGISTRY_BY_ID
+
+    l1 = REGISTRY_BY_ID["L1"]
+    e2 = REGISTRY_BY_ID["E2"]
+    reason = WAVE_A4_UNRESOLVED_REASONS["L1"]
+
+    assert "never reads entry_time" in reason
+    assert "early/late or rolling windows" in reason
+    assert ">=5 observations" in reason
+    assert "COMPLETE whenever any shadow outcome exists" in reason
+    assert "no timestamp" in reason
+    assert "repeated horizon simulations" in reason
+    assert "pooled descriptive pattern performance" in reason
+    assert "not temporal drift, learning, adaptation, or causal improvement" in reason
+    assert l1.runner_module == e2.runner_module
+    assert l1.runner_function == e2.runner_function == "run_q05"
+    assert l1.report_filename == e2.report_filename == "q5_pattern_degradation.json"
+    assert l1.description != e2.description
+    assert "Q5" in l1.legacy_ids and "Q5" in e2.legacy_ids
+    assert "same artifact as authority for either claim" in reason
+
+
+def test_l2_report_count_has_no_valid_chronology_or_adaptation_semantics():
+    reason = WAVE_A4_UNRESOLVED_REASONS["L2"]
+
+    assert "reads none of those fields or shadow evidence" in reason
+    assert "counts JSON files" in reason
+    assert "always declares COMPLETE" in reason
+    assert "zero reports" in reason
+    assert "neither an architecture-change boundary nor pre/post outcome windows" in reason
+    assert "File count and filesystem enumeration are not authoritative chronology" in reason
+    assert "do not demonstrate temporal improvement, system adaptation, or causal benefit" in reason
+    assert "no validation or minimum-sample rule" in reason
+    assert "Account fanout is not consumed" in reason
+
+
+def test_l3_cannot_inherit_d1_component_report_as_architecture_authority():
+    from research_engine.registry import REGISTRY_BY_ID
+
+    l3 = REGISTRY_BY_ID["L3"]
+    d1 = REGISTRY_BY_ID["D1"]
+    reason = WAVE_A4_UNRESOLVED_REASONS["L3"]
+
+    assert l3.runner_module == d1.runner_module
+    assert l3.runner_function == d1.runner_function == "run"
+    assert l3.report_filename == d1.report_filename == "q1_component_reward.json"
+    assert l3.description != d1.description
+    assert "Q1" in l3.legacy_ids and "Q1" in d1.legacy_ids
+    assert "never tests regime classification or strategy-mapping correctness" in reason
+    assert "One matched decision trace/shadow outcome" in reason
+    assert "account executions are absent" in reason
+    assert ">=5 matched outcomes" in reason
+    assert ">=3 for interactions" in reason
+    assert "declares COMPLETE when merely one matched outcome exists" in reason
+    assert "descriptive/associative component attribution" in reason
+    assert "one artifact can falsely establish report ownership/completion for L3" in reason
+
+
+def test_l4_trade_truth_count_is_not_market_drift_or_learning():
+    reason = WAVE_A4_UNRESOLVED_REASONS["L4"]
+
+    assert "loads trade_truth only" in reason
+    assert "does not read market_context or shadow evidence" in reason
+    assert "computes no regime, pattern, outcome, temporal, drift" in reason
+    assert "only the number of trade-truth rows" in reason
+    assert "q17_drawdown_precursors.json" in reason
+    assert "chronology is undefined" in reason
+    assert "account-level live outcome evidence" in reason
+    assert "multi-account fanout could inflate" in reason
+    assert "requires only one row" in reason
+    assert "not temporal drift, adaptation, or causal improvement research" in reason
+
+
+def test_wave_a43_preserves_prior_protected_e2_d1_later_and_all_non_targets(monkeypatch):
+    before = _build_pre_a4_definitions(monkeypatch)
+    after = apply_wave_a4_definitions(before)
+
+    assert set(after) == set(before) == {question.id for question in REGISTRY}
+    for qid in before:
+        assert after[qid] is before[qid], qid
+        assert after[qid].to_dict() == before[qid].to_dict(), qid
+
+    protected = {
+        "M1", "M11", "X3", "EXEC1", "D3", "D4", "D5", "M8",
+        "OPP-1", "M3", "M7", "P1", "R3", "R4", "R5", "EX9",
+        "D2", "X5", "E2", "D1", "EX5", "EX6", "EX7", "EX8",
+    }
+    for qid in protected:
         assert after[qid] is before[qid]
         assert after[qid].to_dict() == before[qid].to_dict()
