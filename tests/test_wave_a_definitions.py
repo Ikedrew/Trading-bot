@@ -780,3 +780,113 @@ def test_wave_a22b_preserves_all_prior_a2_and_non_target_definitions(monkeypatch
         if before_all_a2[qid].to_dict() != after[qid].to_dict()
     }
     assert changed == WAVE_A2_RESOLVED
+
+
+# ---------------------------------------------------------------------------
+# WAVE A3.1 - M3 / M7 / P1 focused fail-closed assessment tests
+# ---------------------------------------------------------------------------
+
+from research_engine.registry.wave_a3_definitions import (  # noqa: E402
+    WAVE_A3_1_TARGETS,
+    WAVE_A3_OVERRIDES,
+    WAVE_A3_RESOLVED,
+    WAVE_A3_TARGETS,
+    WAVE_A3_UNRESOLVED,
+    WAVE_A3_UNRESOLVED_REASONS,
+    apply_wave_a3_definitions,
+)
+
+
+def _build_pre_a3_definitions(monkeypatch):
+    """Build the committed A1/A2 state with A3 application disabled."""
+    import research_engine.registry.wave_a3_definitions as wave_a3
+
+    original = wave_a3.apply_wave_a3_definitions
+    monkeypatch.setattr(
+        wave_a3, "apply_wave_a3_definitions", lambda definitions: definitions
+    )
+    before = build_definitions_from_registry(REGISTRY)
+    monkeypatch.setattr(wave_a3, "apply_wave_a3_definitions", original)
+    return before
+
+
+def test_wave_a31_scope_before_and_after_health_are_exact(monkeypatch):
+    assert WAVE_A3_1_TARGETS == {"M3", "M7", "P1"}
+    assert WAVE_A3_TARGETS == WAVE_A3_1_TARGETS
+    assert WAVE_A3_RESOLVED == set()
+    assert WAVE_A3_UNRESOLVED == WAVE_A3_TARGETS
+    assert WAVE_A3_OVERRIDES == {}
+    assert set(WAVE_A3_UNRESOLVED_REASONS) == WAVE_A3_UNRESOLVED
+
+    before = _build_pre_a3_definitions(monkeypatch)
+    after = build_definitions_from_registry(REGISTRY)
+    before_reports = validate_all_definitions(before)
+    after_reports = validate_all_definitions(after)
+
+    for qid in WAVE_A3_TARGETS:
+        assert get_question_health(before_reports[qid]) == "UNDER_SPECIFIED", qid
+        assert get_question_health(after_reports[qid]) == "UNDER_SPECIFIED", qid
+        assert not after[qid].hypothesis.strip(), qid
+        assert not after[qid].population_definition.strip(), qid
+        assert not after[qid].metric_definition.strip(), qid
+
+
+def test_m3_and_m7_predictive_claims_remain_fail_closed():
+    m3_reason = WAVE_A3_UNRESOLVED_REASONS["M3"]
+    m7_reason = WAVE_A3_UNRESOLVED_REASONS["M7"]
+
+    assert "unweighted standard deviation" in m3_reason
+    assert ">115%" in m3_reason
+    assert "any positive number" in m3_reason
+    assert "no scientifically sufficient minimum sample" in m3_reason
+    assert "unweighted standard deviation" in m7_reason
+    assert "observational, pooled comparison" in m7_reason
+    assert "no predictive validation" in m7_reason
+    assert "no scientifically sufficient minimum sample" in m7_reason
+    assert "descriptive association" in m7_reason
+
+
+def test_wave_a31_units_exclude_account_fanout_without_inventing_deduplication():
+    m3_reason = WAVE_A3_UNRESOLVED_REASONS["M3"]
+    m7_reason = WAVE_A3_UNRESOLVED_REASONS["M7"]
+    p1_reason = WAVE_A3_UNRESOLVED_REASONS["P1"]
+
+    assert "each record as an observation" in m3_reason
+    assert "Account executions are not in" in m3_reason
+    assert "no canonical-opportunity deduplication rule" in m3_reason
+    assert "Each CURRENT completed shadow record is counted" in m7_reason
+    assert "no account execution input" in m7_reason
+    assert "unit is a completed shadow record" in p1_reason
+    assert "account executions are absent" in p1_reason
+    assert "multiple shadow simulations" in p1_reason
+
+
+def test_p1_runner_registry_and_sufficiency_conflicts_are_explicit():
+    reason = WAVE_A3_UNRESOLVED_REASONS["P1"]
+
+    assert "shadow_trades plus decision_trace" in reason
+    assert "reads only CURRENT shadow records" in reason
+    assert "no decision_trace join" in reason
+    assert "100 shadow records" in reason
+    assert "95% outcome" in reason
+    assert "80% entity lineage" in reason
+    assert "50% canonical strategy" in reason
+    assert "100 R outcomes" in reason
+    assert ">=10 remaining trades" in reason
+    assert "does not estimate promotion effects on drawdown or risk" in reason
+    assert "in-sample scenarios" in reason
+    assert "causal/predictive impact" in reason
+
+
+def test_wave_a31_preserves_a1_a2_protected_and_all_non_targets(monkeypatch):
+    before = _build_pre_a3_definitions(monkeypatch)
+    after = apply_wave_a3_definitions(before)
+
+    assert set(after) == set(before) == {question.id for question in REGISTRY}
+    for qid in before:
+        assert after[qid] is before[qid], qid
+        assert after[qid].to_dict() == before[qid].to_dict(), qid
+
+    for qid in ("M8", "OPP-1", "D2", "X5"):
+        assert after[qid] is before[qid]
+        assert after[qid].to_dict() == before[qid].to_dict()
