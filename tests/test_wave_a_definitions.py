@@ -401,6 +401,8 @@ def test_non_target_definitions_not_silently_altered():
 # ---------------------------------------------------------------------------
 
 from research_engine.registry.wave_a2_definitions import (  # noqa: E402
+    WAVE_A2_1_TARGETS,
+    WAVE_A2_2A_TARGETS,
     WAVE_A2_OVERRIDES,
     WAVE_A2_RESOLVED,
     WAVE_A2_TARGETS,
@@ -422,8 +424,12 @@ def _build_pre_a2_definitions(monkeypatch):
 
 
 def test_wave_a2_scope_and_pre_state_are_exact(monkeypatch):
-    assert WAVE_A2_TARGETS == {"E2", "E5", "M5", "M8", "S2", "X2"}
-    assert WAVE_A2_RESOLVED == {"E2", "E5", "M5", "S2", "X2"}
+    assert WAVE_A2_1_TARGETS == {"E2", "E5", "M5", "M8", "S2", "X2"}
+    assert WAVE_A2_2A_TARGETS == {"S3", "S4", "RISK-1"}
+    assert WAVE_A2_TARGETS == WAVE_A2_1_TARGETS | WAVE_A2_2A_TARGETS
+    assert WAVE_A2_RESOLVED == {
+        "E2", "E5", "M5", "S2", "X2", "S3", "S4", "RISK-1"
+    }
     assert WAVE_A2_UNRESOLVED == {"M8"}
     assert WAVE_A2_RESOLVED | WAVE_A2_UNRESOLVED == WAVE_A2_TARGETS
     assert not (WAVE_A2_RESOLVED & WAVE_A2_UNRESOLVED)
@@ -462,7 +468,10 @@ def test_wave_a2_resolved_health_and_unresolved_fail_closed():
 
 def test_wave_a2_hidden_runner_thresholds_are_declarative():
     definitions = build_definitions_from_registry(REGISTRY)
-    expected = {"E5": 80, "M5": 30, "S2": 30, "X2": 30}
+    expected = {
+        "E5": 80, "M5": 30, "S2": 30, "X2": 30,
+        "S3": 30, "S4": 30, "RISK-1": 30,
+    }
     for qid, threshold in expected.items():
         definition = definitions[qid]
         assert definition.minimum_sample == threshold, qid
@@ -519,3 +528,95 @@ def test_wave_a2_does_not_change_d2_or_x5(monkeypatch):
             result.category == "UNRESOLVED_AUTHORITY"
             for result in report.results
         )
+
+
+# ---------------------------------------------------------------------------
+# WAVE A2.2a - S3 / S4 / RISK-1 focused closure tests
+# ---------------------------------------------------------------------------
+
+def test_wave_a22a_targets_move_from_under_specified_to_valid(monkeypatch):
+    before = _build_pre_a2_definitions(monkeypatch)
+    after = build_definitions_from_registry(REGISTRY)
+    before_reports = validate_all_definitions(before)
+    after_reports = validate_all_definitions(after)
+
+    for qid in WAVE_A2_2A_TARGETS:
+        assert get_question_health(before_reports[qid]) == "UNDER_SPECIFIED", qid
+        assert get_question_health(after_reports[qid]) == "VALID", qid
+
+
+def test_wave_a22a_targets_have_complete_scientific_contracts():
+    definitions = build_definitions_from_registry(REGISTRY)
+    for qid in WAVE_A2_2A_TARGETS:
+        definition = definitions[qid]
+        assert definition.definition_version == 1
+        assert definition.lifecycle_status == QuestionLifecycle.ACTIVE
+        assert definition.hypothesis.strip()
+        assert definition.null_hypothesis.strip()
+        assert definition.population_definition.strip()
+        assert definition.metric_definition.strip()
+        assert definition.evidence_authorities
+        assert definition.join_contract is None
+        assert definition.epoch_requirement == "CURRENT"
+        assert definition.minimum_sample == 30
+        assert definition.completion_rule.rule_type == "sample_reached"
+        assert definition.completion_rule.threshold == 30
+
+
+def test_wave_a22a_units_of_analysis_preserve_multi_account_boundary():
+    definitions = build_definitions_from_registry(REGISTRY)
+    s3 = definitions["S3"]
+    s4 = definitions["S4"]
+    risk1 = definitions["RISK-1"]
+
+    assert "(canonical_opportunity_id, evaluated_horizon)" in s3.population_definition
+    assert "Account-grained execution fanout is not part" in s3.population_definition
+    assert "PRIMARY_HORIZON_SIMULATION" in s4.population_definition
+    assert "one primary-horizon shadow lifecycle per canonical" in s4.population_definition
+    assert "account-grained execution fanout are excluded" in s4.population_definition
+    assert "one recorded closed trade, not one canonical decision" in risk1.population_definition
+    assert "distinct closed-trade trade_ids" in risk1.population_definition
+    assert "No strategy-observation count" in risk1.population_definition
+
+
+def test_wave_a22a_existing_sufficiency_and_metric_semantics_are_exact():
+    definitions = build_definitions_from_registry(REGISTRY)
+    s3 = definitions["S3"]
+    s4 = definitions["S4"]
+    risk1 = definitions["RISK-1"]
+
+    assert ">=10 outcomes" in s3.completion_rule.description
+    assert "mean R > 0" in s3.metric_definition
+    assert ">=2 phase cells with >=10 outcomes" in s4.completion_rule.description
+    assert "Spread >=0.5R" in s4.metric_definition
+    assert "classified loss records" in risk1.metric_definition
+    assert "_MIN_SAMPLE=30" in risk1.completion_rule.description
+    assert "_MIN_CELL=10" in risk1.completion_rule.description
+
+
+def test_wave_a22a_preserves_a21_definitions(monkeypatch):
+    before_all_a2 = _build_pre_a2_definitions(monkeypatch)
+    after_a22a = build_definitions_from_registry(REGISTRY)
+
+    # Reconstruct the A2.1 result from its unchanged override entries, then
+    # compare every field with the cumulative A2 result.
+    for qid in WAVE_A2_1_TARGETS:
+        expected = before_all_a2[qid]
+        if qid in WAVE_A2_OVERRIDES:
+            expected = replace(expected, **WAVE_A2_OVERRIDES[qid])
+        assert after_a22a[qid].to_dict() == expected.to_dict(), qid
+
+
+def test_wave_a22a_keeps_m8_d2_x5_and_other_non_targets_unchanged(monkeypatch):
+    before = _build_pre_a2_definitions(monkeypatch)
+    after = apply_wave_a2_definitions(before)
+    protected = {"M8", "D2", "X5"}
+    for qid in protected:
+        assert after[qid] is before[qid]
+        assert after[qid].to_dict() == before[qid].to_dict()
+
+    changed = {
+        qid for qid in before
+        if before[qid].to_dict() != after[qid].to_dict()
+    }
+    assert changed == WAVE_A2_RESOLVED

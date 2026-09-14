@@ -1,4 +1,4 @@
-"""Wave A2.1 Safe Definition Closure — authoritative scientific definitions.
+"""Wave A2 Safe Definition Closure — authoritative scientific definitions.
 
 This module closes the canonical Wave A2 scientific-definition contract ONLY for
 the subset of research questions whose semantics are already established by the
@@ -25,7 +25,7 @@ SCOPE GUARANTEES:
       (fail-closed): their base definitions stay blank and are never forced
       VALID.
 
-RESOLVED (5):  E2 E5 M5 S2 X2
+RESOLVED (8):  E2 E5 M5 S2 X2 S3 S4 RISK-1
 UNRESOLVED (1): M8   (see WAVE_A2_UNRESOLVED_REASONS)
 """
 from __future__ import annotations
@@ -40,14 +40,18 @@ from research_engine.registry.research_question_models import (
     ResearchQuestionDefinition,
 )
 
-# The full Wave A2.1 target scope (6 questions).
-WAVE_A2_TARGETS = frozenset({
+# Frozen Wave A2 tranche scopes and their cumulative scope.
+WAVE_A2_1_TARGETS = frozenset({
     "E2", "E5", "M5", "M8", "S2", "X2",
 })
+WAVE_A2_2A_TARGETS = frozenset({
+    "S3", "S4", "RISK-1",
+})
+WAVE_A2_TARGETS = WAVE_A2_1_TARGETS | WAVE_A2_2A_TARGETS
 
 # Targets closed in this module.
 WAVE_A2_RESOLVED = frozenset({
-    "E2", "E5", "M5", "S2", "X2",
+    "E2", "E5", "M5", "S2", "X2", "S3", "S4", "RISK-1",
 })
 
 # Targets intentionally left unresolved because authoritative sources conflict.
@@ -421,6 +425,186 @@ WAVE_A2_OVERRIDES: dict[str, dict] = {
                 "has >=30 records OR execution_attempts_v1 has >=30 records "
                 "(_MIN_SAMPLE=30); per-symbol views require >=10 result records "
                 "(_MIN_CELL=10)."
+            ),
+        ),
+    ),
+
+    # -- S3 - Strategy x horizon combinations (selection_research.run_s3)
+    # Full simulation population; _MIN_SAMPLE=30 and _MIN_CELL=10.
+    "S3": _override(
+        hypothesis=(
+            "At least one sufficiently populated canonical strategy and "
+            "persisted evaluated-horizon combination has positive mean "
+            "simulated R-multiple in CURRENT shadow evidence."
+        ),
+        null_hypothesis=(
+            "No sufficiently populated canonical strategy and evaluated-"
+            "horizon combination has positive mean simulated R-multiple in "
+            "CURRENT shadow evidence."
+        ),
+        population_definition=(
+            "CURRENT-epoch completed shadow simulation lifecycles with finite "
+            "simulated_outcome.pnl_r_multiple, canonical decision-time "
+            "strategy, and explicitly persisted evaluated_horizon. Primary "
+            "and horizon-alternative simulations are included. The independent "
+            "strategy observation is the canonical opportunity; analytical "
+            "cells contain one persisted simulation per "
+            "(canonical_opportunity_id, evaluated_horizon). Account-grained "
+            "execution fanout is not part of this population."
+        ),
+        metric_definition=(
+            "Per (strategy, evaluated_horizon) cell sample size, mean and "
+            "median simulated R-multiple, win rate, total R and R standard "
+            "deviation. Cells with >=10 outcomes are eligible for conclusions; "
+            "positive cells have mean R > 0. The number of combinations tested "
+            "and undersized cells is reported for multiple-comparison context."
+        ),
+        evidence_authorities=(
+            _auth(
+                "shadow_trades",
+                producer=EvidenceProducer.SHADOW_TRADES,
+                field_path=(
+                    "identity.canonical_opportunity_id | "
+                    "identity.evaluated_horizon | decision_snapshot.strategy | "
+                    "simulated_outcome.pnl_r_multiple"
+                ),
+                semantic_meaning=(
+                    "Canonical opportunity lineage, persisted simulated "
+                    "horizon, decision-time strategy, and completed simulated "
+                    "R-multiple"
+                ),
+            ),
+        ),
+        epoch_requirement="CURRENT",
+        minimum_sample=30,
+        completion_rule=CompletionRule(
+            rule_type="sample_reached",
+            threshold=30,
+            description=(
+                "Runner (run_s3) declares COMPLETE when >=30 finite shadow "
+                "outcome records form at least one strategy+horizon cell "
+                "(_MIN_SAMPLE=30). Cells require >=10 outcomes (_MIN_CELL=10) "
+                "to support a positive-combination conclusion. Dependencies "
+                "S1 and S2 remain governed by the registry."
+            ),
+        ),
+    ),
+
+    # -- S4 - Strategy specialisation by phase (selection_research.run_s4)
+    # Primary-horizon only to avoid duplicate opportunity observations.
+    "S4": _override(
+        hypothesis=(
+            "At least one canonical strategy is phase-specialised: across at "
+            "least two sufficiently populated market-phase cells, its best-to-"
+            "worst mean simulated R-multiple spread is >=0.5R."
+        ),
+        null_hypothesis=(
+            "No canonical strategy has a best-to-worst mean simulated "
+            "R-multiple spread of >=0.5R across at least two sufficiently "
+            "populated market-phase cells."
+        ),
+        population_definition=(
+            "CURRENT-epoch PRIMARY_HORIZON_SIMULATION completed shadow "
+            "lifecycles with finite simulated_outcome.pnl_r_multiple, canonical "
+            "decision-time strategy, and decision-time market_phase. The unit "
+            "of analysis is one primary-horizon shadow lifecycle per canonical "
+            "opportunity; horizon alternatives and account-grained execution "
+            "fanout are excluded."
+        ),
+        metric_definition=(
+            "Per (strategy, market_phase) cell R-multiple summary, followed by "
+            "a within-strategy best-phase minus worst-phase mean-R spread across "
+            "phase cells with >=10 outcomes. Spread >=0.5R is "
+            "PHASE_SPECIALISED, >=0.25R is MILD_PHASE_VARIATION, otherwise "
+            "NO_MATERIAL_PHASE_SPECIALISATION; fewer than two sufficient phase "
+            "cells yields INSUFFICIENT_PHASE_COVERAGE for that strategy."
+        ),
+        evidence_authorities=(
+            _auth(
+                "shadow_trades",
+                producer=EvidenceProducer.SHADOW_TRADES,
+                field_path=(
+                    "identity.canonical_opportunity_id | identity.shadow_type "
+                    "| decision_snapshot.strategy | "
+                    "decision_snapshot.market_phase | "
+                    "simulated_outcome.pnl_r_multiple"
+                ),
+                semantic_meaning=(
+                    "Primary-horizon canonical opportunity, decision-time "
+                    "strategy and phase, and completed simulated R-multiple"
+                ),
+            ),
+        ),
+        epoch_requirement="CURRENT",
+        minimum_sample=30,
+        completion_rule=CompletionRule(
+            rule_type="sample_reached",
+            threshold=30,
+            description=(
+                "Runner (run_s4) declares COMPLETE when >=30 finite primary-"
+                "horizon outcomes form at least one strategy+phase cell "
+                "(_MIN_SAMPLE=30). A specialisation conclusion for a strategy "
+                "requires >=2 phase cells with >=10 outcomes each "
+                "(_MIN_CELL=10). Dependencies E3 and M3 remain governed by "
+                "the registry."
+            ),
+        ),
+    ),
+
+    # -- RISK-1 - Realised risk-control fidelity (risk_research.run_risk1)
+    # Post-outcome diagnostic population; _MIN_SAMPLE=30, _MIN_CELL=10.
+    "RISK-1": _override(
+        hypothesis=(
+            "Recorded realised losses respect the 1-R planned-risk definition: "
+            "fewer than 5% of classified loss records are ELEVATED or CRITICAL "
+            "and no CRITICAL loss is present."
+        ),
+        null_hypothesis=(
+            "At least 5% of classified loss records are ELEVATED or CRITICAL, "
+            "or at least one CRITICAL realised loss is present."
+        ),
+        population_definition=(
+            "CURRENT risk_deviation_v1 post-outcome diagnostic records with a "
+            "closed-trade trade_id and a valid canonical "
+            "risk_classification (NORMAL, ELEVATED, CRITICAL, WIN, or "
+            "NO_RISK_DATA). The unit of analysis is one recorded closed trade, "
+            "not one canonical decision. Separate account executions may be "
+            "valid separate observations only when they are persisted as "
+            "distinct closed-trade trade_ids. No strategy-observation count is "
+            "derived from account fanout."
+        ),
+        metric_definition=(
+            "Classification distribution; ELEVATED-or-CRITICAL rate and "
+            "CRITICAL rate using classified loss records "
+            "(NORMAL/ELEVATED/CRITICAL) as denominator; realised loss-deviation "
+            "and actual-R summaries; win and NO_RISK_DATA counts; and per-symbol "
+            "classification summaries for cells with >=10 records. "
+            "planned_risk_R is the definitional -1R reference, not a captured "
+            "pre-trade intended-risk chain."
+        ),
+        evidence_authorities=(
+            _auth(
+                "risk_deviation_v1",
+                producer=EvidenceProducer.RISK_DEVIATION,
+                field_path=(
+                    "trade_id | risk_classification | risk_deviation | "
+                    "actual_risk_R | planned_risk_R | symbol | semantic_stage"
+                ),
+                semantic_meaning=(
+                    "Post-outcome closed-trade diagnostic comparing realised "
+                    "loss magnitude with the definitional 1-R reference"
+                ),
+            ),
+        ),
+        epoch_requirement="CURRENT",
+        minimum_sample=30,
+        completion_rule=CompletionRule(
+            rule_type="sample_reached",
+            threshold=30,
+            description=(
+                "Runner (run_risk1) declares COMPLETE with >=30 usable "
+                "risk_deviation_v1 classification records (_MIN_SAMPLE=30); "
+                "per-symbol summaries require >=10 records (_MIN_CELL=10)."
             ),
         ),
     ),
