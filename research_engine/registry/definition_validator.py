@@ -310,8 +310,12 @@ def build_definitions_from_registry(registry):
     from research_engine.registry.wave_a1_definitions import (
         apply_wave_a1_definitions,
     )
+    from research_engine.registry.wave_a2_definitions import (
+        apply_wave_a2_definitions,
+    )
 
-    return apply_wave_a1_definitions(definitions)
+    definitions = apply_wave_a1_definitions(definitions)
+    return apply_wave_a2_definitions(definitions)
 
 
 def validate_runner_registry_threshold_alignment(question, question_id):

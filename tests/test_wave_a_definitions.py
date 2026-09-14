@@ -394,3 +394,128 @@ def test_non_target_definitions_not_silently_altered():
             assert d is not definitions[qid], f"resolved target {qid} not enriched"
         else:
             assert d is definitions[qid], f"non-target {qid} definition object changed"
+
+
+# ---------------------------------------------------------------------------
+# WAVE A2.1 SAFE DEFINITION CLOSURE - focused contract tests
+# ---------------------------------------------------------------------------
+
+from research_engine.registry.wave_a2_definitions import (  # noqa: E402
+    WAVE_A2_OVERRIDES,
+    WAVE_A2_RESOLVED,
+    WAVE_A2_TARGETS,
+    WAVE_A2_UNRESOLVED,
+    WAVE_A2_UNRESOLVED_REASONS,
+    apply_wave_a2_definitions,
+)
+
+
+def _build_pre_a2_definitions(monkeypatch):
+    """Build the committed Wave A1 state with the A2 application disabled."""
+    import research_engine.registry.wave_a2_definitions as wave_a2
+
+    original = wave_a2.apply_wave_a2_definitions
+    monkeypatch.setattr(wave_a2, "apply_wave_a2_definitions", lambda definitions: definitions)
+    before = build_definitions_from_registry(REGISTRY)
+    monkeypatch.setattr(wave_a2, "apply_wave_a2_definitions", original)
+    return before
+
+
+def test_wave_a2_scope_and_pre_state_are_exact(monkeypatch):
+    assert WAVE_A2_TARGETS == {"E2", "E5", "M5", "M8", "S2", "X2"}
+    assert WAVE_A2_RESOLVED == {"E2", "E5", "M5", "S2", "X2"}
+    assert WAVE_A2_UNRESOLVED == {"M8"}
+    assert WAVE_A2_RESOLVED | WAVE_A2_UNRESOLVED == WAVE_A2_TARGETS
+    assert not (WAVE_A2_RESOLVED & WAVE_A2_UNRESOLVED)
+    assert set(WAVE_A2_OVERRIDES) == WAVE_A2_RESOLVED
+    assert set(WAVE_A2_UNRESOLVED_REASONS) == WAVE_A2_UNRESOLVED
+
+    before = _build_pre_a2_definitions(monkeypatch)
+    reports = validate_all_definitions(before)
+    assert {
+        qid: get_question_health(reports[qid]) for qid in WAVE_A2_TARGETS
+    } == {qid: "UNDER_SPECIFIED" for qid in WAVE_A2_TARGETS}
+
+
+def test_wave_a2_resolved_health_and_unresolved_fail_closed():
+    definitions = build_definitions_from_registry(REGISTRY)
+    reports = validate_all_definitions(definitions)
+
+    for qid in WAVE_A2_RESOLVED:
+        assert get_question_health(reports[qid]) in {
+            "VALID", "VALID_WITH_WARNINGS"
+        }, qid
+        definition = definitions[qid]
+        assert definition.hypothesis.strip(), qid
+        assert definition.null_hypothesis.strip(), qid
+        assert definition.population_definition.strip(), qid
+        assert definition.metric_definition.strip(), qid
+        assert definition.evidence_authorities, qid
+
+    unresolved = definitions["M8"]
+    assert not unresolved.hypothesis.strip()
+    assert not unresolved.population_definition.strip()
+    assert not unresolved.metric_definition.strip()
+    assert get_question_health(reports["M8"]) == "UNDER_SPECIFIED"
+    assert "market_context" in WAVE_A2_UNRESOLVED_REASONS["M8"]
+
+
+def test_wave_a2_hidden_runner_thresholds_are_declarative():
+    definitions = build_definitions_from_registry(REGISTRY)
+    expected = {"E5": 80, "M5": 30, "S2": 30, "X2": 30}
+    for qid, threshold in expected.items():
+        definition = definitions[qid]
+        assert definition.minimum_sample == threshold, qid
+        assert definition.completion_rule is not None, qid
+        assert definition.completion_rule.rule_type == "sample_reached", qid
+        assert definition.completion_rule.threshold == threshold, qid
+
+    assert definitions["E2"].minimum_sample is None
+    assert definitions["E2"].completion_rule.rule_type == "report_exists"
+    assert ">=5" in definitions["E2"].completion_rule.description
+    assert ">=3 phase-transition" in definitions["M5"].completion_rule.description
+    assert ">=2 explicitly observed horizons" in definitions["S2"].completion_rule.description
+    assert "SCALP-only evidence remains" in definitions["S2"].completion_rule.description
+    assert " OR " in definitions["X2"].completion_rule.description
+
+
+def test_wave_a2_application_changes_only_resolved_targets(monkeypatch):
+    before = _build_pre_a2_definitions(monkeypatch)
+    after = apply_wave_a2_definitions(before)
+    assert set(after) == set(before) == {question.id for question in REGISTRY}
+    for qid in before:
+        if qid in WAVE_A2_RESOLVED:
+            assert after[qid] is not before[qid], qid
+        else:
+            assert after[qid] is before[qid], qid
+
+
+def test_e2_and_l1_shared_artifact_does_not_collapse_semantics():
+    definitions = build_definitions_from_registry(REGISTRY)
+    reports = validate_all_definitions(definitions)
+    e2 = definitions["E2"]
+    l1 = definitions["L1"]
+
+    assert e2.runner_module == l1.runner_module
+    assert e2.runner_function == l1.runner_function
+    assert e2.report_filename == l1.report_filename
+    assert e2.question_wording != l1.question_wording
+    assert e2.hypothesis.strip()
+    assert not l1.hypothesis.strip()
+    assert any(
+        result.category == "AMBIGUOUS_REPORT_MAPPING"
+        for result in reports["E2"].results
+    )
+
+
+def test_wave_a2_does_not_change_d2_or_x5(monkeypatch):
+    before = _build_pre_a2_definitions(monkeypatch)
+    after = apply_wave_a2_definitions(before)
+    for qid in ("D2", "X5"):
+        assert after[qid] is before[qid]
+        assert after[qid].to_dict() == before[qid].to_dict()
+        report = validate_definition(after[qid])
+        assert any(
+            result.category == "UNRESOLVED_AUTHORITY"
+            for result in report.results
+        )
