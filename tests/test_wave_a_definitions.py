@@ -1138,6 +1138,7 @@ def test_wave_a33_preserves_every_definition_and_prior_unresolved_targets(monkey
 
 from research_engine.registry.wave_a4_definitions import (  # noqa: E402
     WAVE_A4_1_TARGETS,
+    WAVE_A4_2_TARGETS,
     WAVE_A4_OVERRIDES,
     WAVE_A4_RESOLVED,
     WAVE_A4_TARGETS,
@@ -1162,7 +1163,8 @@ def _build_pre_a4_definitions(monkeypatch):
 
 def test_wave_a41_scope_and_before_to_after_health_are_exact(monkeypatch):
     assert WAVE_A4_1_TARGETS == {"M1", "M11", "X3", "EXEC1"}
-    assert WAVE_A4_TARGETS == WAVE_A4_1_TARGETS
+    assert WAVE_A4_2_TARGETS == {"D3", "D4", "D5"}
+    assert WAVE_A4_TARGETS == WAVE_A4_1_TARGETS | WAVE_A4_2_TARGETS
     assert WAVE_A4_RESOLVED == set()
     assert WAVE_A4_UNRESOLVED == WAVE_A4_TARGETS
     assert WAVE_A4_OVERRIDES == {}
@@ -1300,6 +1302,128 @@ def test_wave_a41_preserves_prior_protected_later_and_all_non_targets(monkeypatc
         "D3", "D4", "D5", "L1", "L2", "L3", "L4",
         "EX5", "EX6", "EX7", "EX8",
     }
+    for qid in protected | later_a4:
+        assert after[qid] is before[qid]
+        assert after[qid].to_dict() == before[qid].to_dict()
+
+
+# ---------------------------------------------------------------------------
+# WAVE A4.2 - D3 / D4 / D5 semantic-alignment tests
+# ---------------------------------------------------------------------------
+
+def test_wave_a42_before_to_after_health_remains_fail_closed(monkeypatch):
+    before = _build_pre_a4_definitions(monkeypatch)
+    after = build_definitions_from_registry(REGISTRY)
+    before_reports = validate_all_definitions(before)
+    after_reports = validate_all_definitions(after)
+
+    for qid in WAVE_A4_2_TARGETS:
+        assert get_question_health(before_reports[qid]) == "SEMANTIC_MISMATCH", qid
+        assert get_question_health(after_reports[qid]) == "SEMANTIC_MISMATCH", qid
+        assert qid in WAVE_A4_UNRESOLVED
+        assert qid not in WAVE_A4_RESOLVED
+        assert qid not in WAVE_A4_OVERRIDES
+        assert not after[qid].hypothesis.strip(), qid
+        assert not after[qid].population_definition.strip(), qid
+        assert not after[qid].metric_definition.strip(), qid
+
+
+def test_d3_price_distance_ev_and_policy_authority_remain_fail_closed():
+    from research_engine.control_plane.evidence_resolver import (
+        normalise_evidence_record,
+    )
+
+    reason = WAVE_A4_UNRESOLVED_REASONS["D3"]
+    assert "never consumes ev, policy_trade_allowed, decision_trace" in reason
+    assert "decision_snapshot.score is >=0.45" in reason
+    assert "comparative price-distance heuristic" in reason
+    assert "not expected R or monetary P&L" in reason
+    assert "semantic version" in reason
+    assert "multi-gate ExecutionPolicy" in reason
+    assert "not an EV-gate-only treatment indicator" in reason
+    assert "DecisionTrace does not persist that field" in reason
+    assert ">=20 shadow records" in reason
+    assert "descriptive score-threshold coverage" in reason
+    assert "not EV calibration or policy evaluation" in reason
+
+    compatibility = normalise_evidence_record(
+        {"expected_value": 0.25, "trade_allowed": True}, "decision_trace"
+    )
+    assert "ev" not in compatibility
+    assert "policy_trade_allowed" not in compatibility
+
+
+def test_d4_ambiguous_scores_cannot_establish_predictive_threshold_authority():
+    from research_engine.control_plane.evidence_resolver import (
+        normalise_evidence_record,
+    )
+
+    reason = WAVE_A4_UNRESOLVED_REASONS["D4"]
+    assert "literal decision_snapshot.score" in reason
+    assert "neither selects an optimum" in reason
+    assert "nor groups outcomes by regime or market_state" in reason
+    assert "score_neutral and regime only" in reason
+    assert "no trace-to-shadow join" in reason
+    assert "competing unpaired score authorities" in reason
+    assert "score, score_strategy, overall_score, or signal_score" in reason
+    assert "confidence and p_success are distinct fields" in reason
+    assert "Score and regime inputs are pre-decision" in reason
+    assert "shadow R is post-outcome" in reason
+    assert "missing shadow pnl_r_multiple defaults to zero" in reason
+    assert ">=20 shadow records" in reason
+    assert "descriptive pooled threshold filtering" in reason
+
+    for alias in ("score_strategy", "overall_score", "signal_score"):
+        normalised = normalise_evidence_record({alias: 0.7}, "decision_trace")
+        assert normalised["score"] == 0.7
+    assert "score" not in normalise_evidence_record(
+        {"confidence": 0.7, "p_success": 0.7}, "decision_trace"
+    )
+
+
+def test_d3_d4_decision_samples_exclude_accounts_but_not_repeated_horizons():
+    for qid in ("D3", "D4"):
+        reason = WAVE_A4_UNRESOLVED_REASONS[qid]
+        assert "completed shadow simulation" in reason, qid
+        assert "canonical opportunit" in reason.replace("-", " "), qid
+        assert "account" in reason.lower(), qid
+        assert "repeated horizon" in reason, qid
+
+
+def test_d5_rejection_and_counterfactual_authorities_remain_distinct():
+    reason = WAVE_A4_UNRESOLVED_REASONS["D5"]
+
+    assert "action == NO_TRADE" in reason
+    assert "decision_trace only" in reason
+    assert "does not load shadow evidence" in reason
+    assert "join canonical_opportunity_id/entity_id" in reason
+    assert "distinguish actual realised trades from hypothetical evidence" in reason
+    assert "PATTERN_REJECT, NO_TRADE, and RISK_BLOCK" in reason
+    assert "not given an authoritative equivalence" in reason
+    assert "Rejection status and reason are pre-outcome" in reason
+    assert "no subsequent label" in reason
+    assert "COMPLETE requires just one matching trace" in reason
+    assert "zero broker executions" in reason
+    assert "repeated measures within one canonical opportunity" in reason
+    assert "not independent rejected opportunities" in reason
+    assert "descriptive rejection-funnel reporting" in reason
+    assert "not counterfactual missed-opportunity research" in reason
+
+
+def test_wave_a42_preserves_a41_prior_waves_protected_and_later_targets(monkeypatch):
+    before = _build_pre_a4_definitions(monkeypatch)
+    after = apply_wave_a4_definitions(before)
+
+    assert set(after) == set(before) == {question.id for question in REGISTRY}
+    for qid in before:
+        assert after[qid] is before[qid], qid
+        assert after[qid].to_dict() == before[qid].to_dict(), qid
+
+    protected = {
+        "M1", "M11", "X3", "EXEC1", "M8", "OPP-1", "M3", "M7",
+        "P1", "R3", "R4", "R5", "EX9", "D2", "X5",
+    }
+    later_a4 = {"L1", "L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8"}
     for qid in protected | later_a4:
         assert after[qid] is before[qid]
         assert after[qid].to_dict() == before[qid].to_dict()

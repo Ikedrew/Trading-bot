@@ -16,7 +16,8 @@ from research_engine.registry.research_question_models import (
 
 
 WAVE_A4_1_TARGETS = frozenset({"M1", "M11", "X3", "EXEC1"})
-WAVE_A4_TARGETS = WAVE_A4_1_TARGETS
+WAVE_A4_2_TARGETS = frozenset({"D3", "D4", "D5"})
+WAVE_A4_TARGETS = WAVE_A4_1_TARGETS | WAVE_A4_2_TARGETS
 
 # No A4.1 target can be closed without an approved semantic narrowing or a
 # runner/evidence repair.  The empty override set is intentional.
@@ -117,13 +118,95 @@ WAVE_A4_UNRESOLVED_REASONS = {
         "otherwise-valid opportunity population and outcome metric, and an "
         "approved descriptive narrowing or association design. Left fail-closed."
     ),
+    "D3": (
+        "Registry intent asks whether enabling the negative-EV execution-policy "
+        "gate improves realised expectancy, requiring ev, r_multiple, and "
+        "policy_trade_allowed joined across shadow_trades and decision_trace. "
+        "The registered legacy_canonical.run_q21 runner reads only shadow "
+        "outcomes and never consumes ev, policy_trade_allowed, decision_trace, "
+        "or a gate-on/gate-off population. It merely counts completed shadow "
+        "records whose decision_snapshot.score is >=0.45 and reports the overall "
+        "shadow win rate. The production Stage-4 ev is pre-decision, but is a "
+        "comparative price-distance heuristic (p_success * TP distance - "
+        "p_failure * SL distance), not expected R or monetary P&L; its semantic "
+        "version and probability/reward/risk provenance are not persisted in "
+        "decision_trace. policy_trade_allowed is the pre-execution result of the "
+        "multi-gate ExecutionPolicy (score, strategy confidence, EV, and RR), not "
+        "an EV-gate-only treatment indicator, and DecisionTrace does not persist "
+        "that field even though the resolver looks for its literal name. No EV "
+        "or policy convenience aliases are defined by the resolver. The runner "
+        "requires >=20 shadow records while the registry declares no sample "
+        "threshold, counts one completed shadow simulation as an observation, "
+        "does not deduplicate canonical opportunities, and can count repeated "
+        "horizons separately; account fanout is absent. This is descriptive "
+        "score-threshold coverage, not EV calibration or policy evaluation. "
+        "Repair requires a versioned pre-decision EV contract with explicit "
+        "units/provenance, a persisted EV-gate treatment/counterfactual policy "
+        "state distinct from other policy gates, a commensurate subsequent "
+        "outcome, deterministic CURRENT opportunity-level pairing, and an "
+        "approved gate-effect design and sufficiency rule. Left fail-closed."
+    ),
+    "D4": (
+        "Registry intent asks whether score thresholds are optimal within H4 "
+        "regime and market-state segments. legacy_canonical.run_q02 does not "
+        "perform that analysis. It applies a fixed [0.30, 0.35, 0.40, 0.45, "
+        "0.50] grid to the literal decision_snapshot.score on the pooled shadow "
+        "population and reports in-sample win rate and mean R for every nonempty "
+        "threshold subset; it neither selects an optimum nor groups outcomes by "
+        "regime or market_state. Separately, it filters raw decision traces on "
+        "score_neutral and regime only to report a regime-frequency count, with "
+        "no trace-to-shadow join. Thus the runner has competing unpaired score "
+        "authorities, while the resolver's generic score requirement can accept "
+        "score, score_strategy, overall_score, or signal_score; confidence and "
+        "p_success are distinct fields and cannot establish score authority. "
+        "Score and regime inputs are pre-decision, and shadow R is post-outcome, "
+        "but missing shadow pnl_r_multiple defaults to zero in the legacy loader. "
+        "The hidden runner minimum is >=20 shadow records, whereas the registry "
+        "has coverage gates but no sample threshold or per-context cell minimum. "
+        "Its unit is one completed shadow simulation, with no canonical-"
+        "opportunity deduplication; account executions are absent but repeated "
+        "horizons can inflate the decision-level sample. This is descriptive "
+        "pooled threshold filtering, not predictive validation or optimal policy "
+        "evaluation. Repair requires one canonical pre-decision score, CURRENT "
+        "opportunity/outcome pairing, authoritative regime and market-state "
+        "grouping, horizon/deduplication rules, cell sufficiency, and an approved "
+        "out-of-sample threshold comparison/optimality criterion. Left fail-closed."
+    ),
+    "D5": (
+        "Registry intent asks which rejected decisions would have succeeded and "
+        "requires a decision_trace-to-shadow outcome join. The mapped "
+        "legacy_canonical.run_q03 runner reads decision_trace only, defines its "
+        "entire population as action == NO_TRADE with a nonempty terminal_stage, "
+        "and reports counts of terminal stages and reasons. It does not load "
+        "shadow evidence, join canonical_opportunity_id/entity_id, inspect an "
+        "outcome, horizon, or R-multiple, or distinguish actual realised trades "
+        "from hypothetical evidence. PATTERN_REJECT, NO_TRADE, and RISK_BLOCK "
+        "are not given an authoritative equivalence: the runner explicitly "
+        "selects only NO_TRADE actions and may merely stratify whatever causes "
+        "appear in terminal_stage/reason. Rejection status and reason are "
+        "pre-outcome decision facts, but the runner supplies no subsequent label "
+        "and therefore cannot leak or estimate success. COMPLETE requires just "
+        "one matching trace; the registry declares lineage >=0.80 and outcome "
+        "coverage >=0.50 but no sample or per-category threshold. Its unit is one "
+        "decision-trace rejection row, not an account execution; rejected "
+        "opportunities have zero broker executions. The absent counterfactual "
+        "contract would need to treat any horizon shadows as repeated measures "
+        "within one canonical opportunity, not independent rejected "
+        "opportunities. This is descriptive rejection-funnel reporting, not "
+        "counterfactual missed-opportunity research. Repair requires an approved "
+        "canonical rejection taxonomy, one rejected canonical-opportunity grain, "
+        "a leakage-safe CURRENT hypothetical-outcome authority with explicit "
+        "horizon and provenance, deterministic pairing and repeated-measure "
+        "handling, explicit separation from realised execution truth, and "
+        "category/cell sufficiency rules. Left fail-closed."
+    ),
 }
 
 
 def apply_wave_a4_definitions(
     definitions: dict[str, ResearchQuestionDefinition],
 ) -> dict[str, ResearchQuestionDefinition]:
-    """Apply only evidence-backed A4 overrides; A4.1 intentionally has none."""
+    """Apply only evidence-backed A4 overrides; current A4 tranches have none."""
     result = dict(definitions)
     for qid, overrides in WAVE_A4_OVERRIDES.items():
         result[qid] = replace(result[qid], **overrides)
