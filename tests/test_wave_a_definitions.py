@@ -788,6 +788,7 @@ def test_wave_a22b_preserves_all_prior_a2_and_non_target_definitions(monkeypatch
 
 from research_engine.registry.wave_a3_definitions import (  # noqa: E402
     WAVE_A3_1_TARGETS,
+    WAVE_A3_2_TARGETS,
     WAVE_A3_OVERRIDES,
     WAVE_A3_RESOLVED,
     WAVE_A3_TARGETS,
@@ -812,7 +813,8 @@ def _build_pre_a3_definitions(monkeypatch):
 
 def test_wave_a31_scope_before_and_after_health_are_exact(monkeypatch):
     assert WAVE_A3_1_TARGETS == {"M3", "M7", "P1"}
-    assert WAVE_A3_TARGETS == WAVE_A3_1_TARGETS
+    assert WAVE_A3_2_TARGETS == {"R3", "R4", "R5"}
+    assert WAVE_A3_TARGETS == WAVE_A3_1_TARGETS | WAVE_A3_2_TARGETS
     assert WAVE_A3_RESOLVED == set()
     assert WAVE_A3_UNRESOLVED == WAVE_A3_TARGETS
     assert WAVE_A3_OVERRIDES == {}
@@ -888,5 +890,133 @@ def test_wave_a31_preserves_a1_a2_protected_and_all_non_targets(monkeypatch):
         assert after[qid].to_dict() == before[qid].to_dict(), qid
 
     for qid in ("M8", "OPP-1", "D2", "X5"):
+        assert after[qid] is before[qid]
+        assert after[qid].to_dict() == before[qid].to_dict()
+
+
+# ---------------------------------------------------------------------------
+# WAVE A3.2 - R3 / R4 / R5 focused fail-closed assessment tests
+# ---------------------------------------------------------------------------
+
+def test_wave_a32_before_to_after_health_remains_fail_closed(monkeypatch):
+    before = _build_pre_a3_definitions(monkeypatch)
+    after = build_definitions_from_registry(REGISTRY)
+    before_reports = validate_all_definitions(before)
+    after_reports = validate_all_definitions(after)
+
+    for qid in WAVE_A3_2_TARGETS:
+        assert get_question_health(before_reports[qid]) == "UNDER_SPECIFIED", qid
+        assert get_question_health(after_reports[qid]) == "UNDER_SPECIFIED", qid
+        assert qid in WAVE_A3_UNRESOLVED
+        assert qid not in WAVE_A3_RESOLVED
+        assert qid not in WAVE_A3_OVERRIDES
+        assert not after[qid].hypothesis.strip(), qid
+        assert not after[qid].population_definition.strip(), qid
+        assert not after[qid].metric_definition.strip(), qid
+
+
+def test_r3_assumptions_and_probability_semantics_are_explicitly_unresolved():
+    reason = WAVE_A3_UNRESOLVED_REASONS["R3"]
+
+    assert ">=50 records" in reason
+    assert ">=95% outcome" in reason
+    assert ">=80% entity-lineage" in reason
+    assert "samples R outcomes independently with replacement" in reason
+    assert "stationary identically distributed" in reason
+    assert "fixed 1% additive risk" in reason
+    assert "ignores the registry's measured position_size" in reason
+    assert "50% peak drawdown" in reason
+    assert "1/ruin_threshold (=2 capital units)" in reason
+    assert "conditional scenario modelling" in reason
+    assert "not a literal eventual-ruin probability forecast" in reason
+
+
+def test_r4_ordering_drawdown_and_policy_semantics_are_explicitly_unresolved():
+    reason = WAVE_A3_UNRESOLVED_REASONS["R4"]
+
+    assert ">=50 records" in reason
+    assert ">=95% outcome" in reason
+    assert "additive 1%-risk synthetic equity curve" in reason
+    assert "not account equity" in reason
+    assert "sorts reconstructed lifecycles by shadow_trade_id" in reason
+    assert "does not sort by entry_time" in reason
+    assert "fixed threshold grid" in reason
+    assert "defaults to 50%" in reason
+    assert "not an optimal-policy test" in reason
+
+
+def test_r5_model_set_and_optimisation_semantics_are_explicitly_unresolved():
+    reason = WAVE_A3_UNRESOLVED_REASONS["R5"]
+
+    assert ">=50 records" in reason
+    assert ">=95% outcome" in reason
+    assert "fixed 0.5%/1%/2%" in reason
+    assert "Fixed-lot and dynamic models" in reason
+    assert "stationary, independent, identically distributed" in reason
+    assert "hard-coded 30% maximum drawdown" in reason
+    assert "annualises by 252 observations" in reason
+    assert "heuristic historical scenario comparison" in reason
+    assert "not proven long-term optimisation" in reason
+
+
+def test_a32_units_do_not_silently_use_multi_account_fanout():
+    for qid in WAVE_A3_2_TARGETS:
+        reason = WAVE_A3_UNRESOLVED_REASONS[qid]
+        assert "completed shadow simulation record" in reason, qid
+        assert "account executions are absent" in reason, qid
+        assert "canonical-opportunity deduplication" in reason, qid
+        assert "horizon" in reason, qid
+
+
+def test_historical_risk_reports_and_unverified_reruns_are_non_authoritative():
+    from research_engine.control_plane.models import ReportValidity
+    from research_engine.control_plane.report_resolver import resolve_report_validity
+
+    invalidated = {
+        "R3": ("r3_probability_of_ruin.json", 100),
+        "R4": ("r4_drawdown_threshold.json", 901),
+        "R5": ("r5_position_sizing.json", 901),
+    }
+    for qid, (filename, records_used) in invalidated.items():
+        old_report = {
+            "question_id": qid,
+            "status": "COMPLETE",
+            "fingerprint": {
+                "dataset_id": "shadow_trades_2026-07-27",
+                "records_used": records_used,
+                "epoch": "CURRENT",
+            },
+        }
+        validity, _ = resolve_report_validity(
+            filename, old_report, expected_question_id=qid
+        )
+        assert validity == ReportValidity.INVALIDATED, qid
+
+        unverified_report = {
+            "question_id": qid,
+            "status": "COMPLETE",
+            "fingerprint": {
+                "dataset_id": "shadow_trades_future_current_rerun",
+                "records_used": 100,
+                "epoch": "UNVERIFIED",
+            },
+        }
+        validity, _ = resolve_report_validity(
+            filename, unverified_report, expected_question_id=qid
+        )
+        assert validity == ReportValidity.STALE, qid
+        assert "default to UNVERIFIED" in WAVE_A3_UNRESOLVED_REASONS[qid]
+
+
+def test_wave_a32_preserves_a31_earlier_waves_and_every_non_target(monkeypatch):
+    before = _build_pre_a3_definitions(monkeypatch)
+    after = apply_wave_a3_definitions(before)
+
+    for qid in before:
+        assert after[qid] is before[qid], qid
+        assert after[qid].to_dict() == before[qid].to_dict(), qid
+
+    protected = {"M3", "M7", "P1", "M8", "OPP-1", "D2", "X5"}
+    for qid in protected:
         assert after[qid] is before[qid]
         assert after[qid].to_dict() == before[qid].to_dict()
