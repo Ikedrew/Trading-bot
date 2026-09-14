@@ -25,8 +25,8 @@ SCOPE GUARANTEES:
       (fail-closed): their base definitions stay blank and are never forced
       VALID.
 
-RESOLVED (8):  E2 E5 M5 S2 X2 S3 S4 RISK-1
-UNRESOLVED (1): M8   (see WAVE_A2_UNRESOLVED_REASONS)
+RESOLVED (10): E2 E5 M5 S2 X2 S3 S4 RISK-1 L5 HORIZON-1
+UNRESOLVED (2): M8 OPP-1   (see WAVE_A2_UNRESOLVED_REASONS)
 """
 from __future__ import annotations
 
@@ -47,17 +47,23 @@ WAVE_A2_1_TARGETS = frozenset({
 WAVE_A2_2A_TARGETS = frozenset({
     "S3", "S4", "RISK-1",
 })
-WAVE_A2_TARGETS = WAVE_A2_1_TARGETS | WAVE_A2_2A_TARGETS
+WAVE_A2_2B_TARGETS = frozenset({
+    "L5", "HORIZON-1", "OPP-1",
+})
+WAVE_A2_TARGETS = (
+    WAVE_A2_1_TARGETS | WAVE_A2_2A_TARGETS | WAVE_A2_2B_TARGETS
+)
 
 # Targets closed in this module.
 WAVE_A2_RESOLVED = frozenset({
-    "E2", "E5", "M5", "S2", "X2", "S3", "S4", "RISK-1",
+    "E2", "E5", "M5", "S2", "X2", "S3", "S4", "RISK-1", "L5",
+    "HORIZON-1",
 })
 
 # Targets intentionally left unresolved because authoritative sources conflict.
 # Their base definitions remain blank so the validator stays fail-closed.
 WAVE_A2_UNRESOLVED = frozenset({
-    "M8",
+    "M8", "OPP-1",
 })
 
 # Exact conflicts that prevent authoritative closure. Kept machine-readable so
@@ -74,6 +80,21 @@ WAVE_A2_UNRESOLVED_REASONS = {
         "would invent a join the runner never performs; declaring only "
         "shadow_trades contradicts the registry's declared data_sources. "
         "Left fail-closed."
+    ),
+    "OPP-1": (
+        "The dedicated runner (opportunity_selection.run_opp_1) preserves "
+        "missing versus genuine-zero outcomes while building promoted and "
+        "rejected outcome lists, but converts a missing outcome to 0.0 in "
+        "assessment score buckets (`r if r is not None else 0.0`). That "
+        "invented zero enters group_stats expectancy/performance summaries "
+        "as an observed result even though canonical CURRENT shadow evidence "
+        "can distinguish an absent outcome from a genuine 0R outcome. The "
+        "runner also joins horizon-candidate promotion and shadow outcomes by "
+        "canonical_opportunity_id, while joining assessments by legacy "
+        "opportunity_id and permitting opportunity_id as a canonical-ID "
+        "fallback. The declarative definition layer cannot remove the "
+        "contaminated score-bucket population or establish a single canonical "
+        "root join without changing runner/join semantics. Left fail-closed."
     ),
 }
 
@@ -608,17 +629,172 @@ WAVE_A2_OVERRIDES: dict[str, dict] = {
             ),
         ),
     ),
+
+    # -- L5 - Observational strategy drift (edge_depth.run_l5)
+    # Hidden thresholds: >=20 analysable records for COMPLETE and >=20
+    # records within a strategy for its early/late comparison.
+    "L5": _override(
+        hypothesis=(
+            "At least one canonical strategy exhibits an observationally "
+            "material absolute change greater than 0.2R in mean simulated "
+            "R-multiple between its chronological early and late halves."
+        ),
+        null_hypothesis=(
+            "No sufficiently populated canonical strategy exhibits an "
+            "absolute early-versus-late change greater than 0.2R in mean "
+            "simulated R-multiple."
+        ),
+        population_definition=(
+            "CURRENT-epoch completed shadow lifecycle simulations with a "
+            "canonical V10 strategy, parseable decision-time entry timestamp, "
+            "and simulated R-multiple. Each completed "
+            "(canonical_opportunity_id, evaluated_horizon) shadow lifecycle is "
+            "one observational simulation record; multiple simulated horizons "
+            "for one opportunity are not represented as independent market "
+            "opportunities, and account-grained execution fanout is absent "
+            "from this population. Records are grouped by strategy, ordered by "
+            "entry time, and split into equal early and late halves."
+        ),
+        metric_definition=(
+            "For each strategy with >=20 records, early-half and late-half "
+            "sample size, mean simulated R-multiple and win rate, plus "
+            "late-minus-early mean-R change. An absolute change >0.2R is "
+            "reported as material observational drift. This is a descriptive "
+            "historical association and does not establish that adaptation "
+            "caused an improvement or that the change will persist."
+        ),
+        evidence_authorities=(
+            _auth(
+                "shadow_trades",
+                producer=EvidenceProducer.SHADOW_TRADES,
+                field_path=(
+                    "identity.canonical_opportunity_id | "
+                    "identity.evaluated_horizon | decision_snapshot.strategy "
+                    "| decision_snapshot.entry_time | "
+                    "simulated_outcome.pnl_r_multiple"
+                ),
+                semantic_meaning=(
+                    "Canonical lifecycle lineage, decision-time strategy and "
+                    "timestamp, and completed simulated R-multiple used for "
+                    "chronological descriptive comparison"
+                ),
+            ),
+        ),
+        epoch_requirement="CURRENT",
+        minimum_sample=20,
+        completion_rule=CompletionRule(
+            rule_type="sample_reached",
+            threshold=20,
+            description=(
+                "Runner (run_l5) declares COMPLETE with >=20 analysable "
+                "CURRENT shadow records. Each strategy also requires >=20 "
+                "records before its chronological early/late comparison is "
+                "reported; smaller strategy groups remain insufficient. "
+                "Registry dependencies L1, L4 and E5 remain unchanged."
+            ),
+        ),
+    ),
+
+    # -- HORIZON-1 - Within-opportunity horizon selection quality
+    # (selection_research.run_horizon1). _MIN_SAMPLE=30 comparable canonical
+    # opportunities; alternative horizons are repeated counterfactuals within
+    # an opportunity, not independent market opportunities.
+    "HORIZON-1": _override(
+        hypothesis=(
+            "Across comparable canonical opportunities, the persisted "
+            "primary-horizon simulation exceeds the best same-opportunity "
+            "alternative by more than 0.05R for more than half of comparable "
+            "opportunities."
+        ),
+        null_hypothesis=(
+            "Across comparable canonical opportunities, the persisted "
+            "primary-horizon simulation exceeds the best same-opportunity "
+            "alternative by more than 0.05R for at most half of comparable "
+            "opportunities."
+        ),
+        population_definition=(
+            "CURRENT-epoch completed shadow simulations grouped by "
+            "canonical_opportunity_id. A comparable observation requires "
+            "exactly one PRIMARY_HORIZON_SIMULATION with finite simulated R "
+            "and at least one other persisted horizon simulation with finite "
+            "simulated R for that same canonical opportunity. The independent "
+            "analytical unit is one comparable canonical opportunity; its "
+            "selected and alternative horizon simulations are repeated "
+            "counterfactual measures within that unit, not separate market "
+            "opportunities. Actual executions and account fanout are excluded."
+        ),
+        metric_definition=(
+            "Within each comparable opportunity, selected simulated R is "
+            "compared with the maximum alternative-horizon simulated R. "
+            "Selected is BEST when above best alternative by >0.05R, TIED_BEST "
+            "when within 0.05R, otherwise UNDERPERFORMED_ALTERNATIVE. Aggregate "
+            "rates, mean selected R, mean best-alternative R and mean paired "
+            "delta R are reported; horizon_candidates SELECTED facts provide "
+            "an optional same-opportunity agreement cross-check only."
+        ),
+        evidence_authorities=(
+            _auth(
+                "shadow_trades",
+                producer=EvidenceProducer.SHADOW_TRADES,
+                field_path=(
+                    "identity.canonical_opportunity_id | "
+                    "identity.evaluated_horizon | identity.shadow_type | "
+                    "simulated_outcome.pnl_r_multiple"
+                ),
+                semantic_meaning=(
+                    "Completed primary and alternative simulated horizon "
+                    "outcomes grouped within one canonical opportunity"
+                ),
+            ),
+            _auth(
+                "horizon_candidates",
+                producer=None,
+                field_path=(
+                    "canonical_opportunity_id | horizon | selection_status"
+                ),
+                semantic_meaning=(
+                    "Pre-outcome SELECTED horizon fact used only to cross-check "
+                    "the shadow primary-horizon label"
+                ),
+            ),
+        ),
+        join_contract=JoinContract(
+            join_keys=("canonical_opportunity_id",),
+            cardinality="one_to_many",
+            conflict_policy="reject",
+            description=(
+                "Group shadow simulations only by canonical_opportunity_id: "
+                "exactly one primary and >=1 finite alternative are required. "
+                "The same key optionally cross-checks the primary horizon "
+                "against a horizon_candidates SELECTED fact. Multiple primary "
+                "shadow records are ambiguous and excluded; no symbol/time, "
+                "legacy opportunity_id, execution, or account join is used."
+            ),
+        ),
+        epoch_requirement="CURRENT",
+        minimum_sample=30,
+        completion_rule=CompletionRule(
+            rule_type="sample_reached",
+            threshold=30,
+            description=(
+                "Runner (run_horizon1) declares COMPLETE only with >=30 "
+                "comparable canonical opportunities (_MIN_SAMPLE=30), each "
+                "having one finite primary-horizon outcome and >=1 finite "
+                "same-opportunity alternative-horizon outcome."
+            ),
+        ),
+    ),
 }
 
 
 def apply_wave_a2_definitions(
     definitions: dict[str, ResearchQuestionDefinition],
 ) -> dict[str, ResearchQuestionDefinition]:
-    """Return definitions with only resolved Wave A2.1 overrides applied.
+    """Return definitions with only resolved cumulative Wave A2 overrides applied.
 
-    M8 and every non-target definition retain their existing objects and
-    fields. This keeps unresolved authority conflicts fail-closed and makes
-    the application order safe after Wave A1.
+    M8, OPP-1, and every non-target definition retain their existing objects
+    and fields. This keeps unresolved authority conflicts fail-closed and
+    makes the application order safe after Wave A1.
     """
     result = dict(definitions)
     for qid, overrides in WAVE_A2_OVERRIDES.items():

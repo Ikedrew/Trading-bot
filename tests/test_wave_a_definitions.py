@@ -403,6 +403,7 @@ def test_non_target_definitions_not_silently_altered():
 from research_engine.registry.wave_a2_definitions import (  # noqa: E402
     WAVE_A2_1_TARGETS,
     WAVE_A2_2A_TARGETS,
+    WAVE_A2_2B_TARGETS,
     WAVE_A2_OVERRIDES,
     WAVE_A2_RESOLVED,
     WAVE_A2_TARGETS,
@@ -426,11 +427,15 @@ def _build_pre_a2_definitions(monkeypatch):
 def test_wave_a2_scope_and_pre_state_are_exact(monkeypatch):
     assert WAVE_A2_1_TARGETS == {"E2", "E5", "M5", "M8", "S2", "X2"}
     assert WAVE_A2_2A_TARGETS == {"S3", "S4", "RISK-1"}
-    assert WAVE_A2_TARGETS == WAVE_A2_1_TARGETS | WAVE_A2_2A_TARGETS
+    assert WAVE_A2_2B_TARGETS == {"L5", "HORIZON-1", "OPP-1"}
+    assert WAVE_A2_TARGETS == (
+        WAVE_A2_1_TARGETS | WAVE_A2_2A_TARGETS | WAVE_A2_2B_TARGETS
+    )
     assert WAVE_A2_RESOLVED == {
-        "E2", "E5", "M5", "S2", "X2", "S3", "S4", "RISK-1"
+        "E2", "E5", "M5", "S2", "X2", "S3", "S4", "RISK-1", "L5",
+        "HORIZON-1",
     }
-    assert WAVE_A2_UNRESOLVED == {"M8"}
+    assert WAVE_A2_UNRESOLVED == {"M8", "OPP-1"}
     assert WAVE_A2_RESOLVED | WAVE_A2_UNRESOLVED == WAVE_A2_TARGETS
     assert not (WAVE_A2_RESOLVED & WAVE_A2_UNRESOLVED)
     assert set(WAVE_A2_OVERRIDES) == WAVE_A2_RESOLVED
@@ -458,12 +463,17 @@ def test_wave_a2_resolved_health_and_unresolved_fail_closed():
         assert definition.metric_definition.strip(), qid
         assert definition.evidence_authorities, qid
 
-    unresolved = definitions["M8"]
-    assert not unresolved.hypothesis.strip()
-    assert not unresolved.population_definition.strip()
-    assert not unresolved.metric_definition.strip()
+    for qid in WAVE_A2_UNRESOLVED:
+        unresolved = definitions[qid]
+        assert not unresolved.hypothesis.strip(), qid
+        assert not unresolved.population_definition.strip(), qid
+        assert not unresolved.metric_definition.strip(), qid
+        assert get_question_health(reports[qid]) == "UNDER_SPECIFIED", qid
     assert get_question_health(reports["M8"]) == "UNDER_SPECIFIED"
     assert "market_context" in WAVE_A2_UNRESOLVED_REASONS["M8"]
+    assert "missing outcome to 0.0" in WAVE_A2_UNRESOLVED_REASONS["OPP-1"].replace(
+        "a missing outcome", "missing outcome"
+    )
 
 
 def test_wave_a2_hidden_runner_thresholds_are_declarative():
@@ -471,6 +481,7 @@ def test_wave_a2_hidden_runner_thresholds_are_declarative():
     expected = {
         "E5": 80, "M5": 30, "S2": 30, "X2": 30,
         "S3": 30, "S4": 30, "RISK-1": 30,
+        "L5": 20, "HORIZON-1": 30,
     }
     for qid, threshold in expected.items():
         definition = definitions[qid]
@@ -618,5 +629,154 @@ def test_wave_a22a_keeps_m8_d2_x5_and_other_non_targets_unchanged(monkeypatch):
     changed = {
         qid for qid in before
         if before[qid].to_dict() != after[qid].to_dict()
+    }
+    assert changed == WAVE_A2_RESOLVED
+
+
+# ---------------------------------------------------------------------------
+# WAVE A2.2b - L5 / HORIZON-1 / OPP-1 focused closure tests
+# ---------------------------------------------------------------------------
+
+def test_wave_a22b_before_to_after_health_is_fail_closed_where_required(monkeypatch):
+    before = _build_pre_a2_definitions(monkeypatch)
+    after = build_definitions_from_registry(REGISTRY)
+    before_reports = validate_all_definitions(before)
+    after_reports = validate_all_definitions(after)
+
+    assert {
+        qid: get_question_health(before_reports[qid])
+        for qid in WAVE_A2_2B_TARGETS
+    } == {qid: "UNDER_SPECIFIED" for qid in WAVE_A2_2B_TARGETS}
+    assert get_question_health(after_reports["L5"]) == "VALID"
+    assert get_question_health(after_reports["HORIZON-1"]) == "VALID"
+    assert get_question_health(after_reports["OPP-1"]) == "UNDER_SPECIFIED"
+    assert "OPP-1" not in WAVE_A2_OVERRIDES
+
+
+def test_wave_a22b_resolved_contracts_are_complete_and_declarative():
+    definitions = build_definitions_from_registry(REGISTRY)
+    expected_samples = {"L5": 20, "HORIZON-1": 30}
+
+    for qid, sample in expected_samples.items():
+        definition = definitions[qid]
+        assert definition.definition_version == 1
+        assert definition.lifecycle_status == QuestionLifecycle.ACTIVE
+        assert definition.hypothesis.strip()
+        assert definition.null_hypothesis.strip()
+        assert definition.population_definition.strip()
+        assert definition.metric_definition.strip()
+        assert definition.evidence_authorities
+        assert definition.epoch_requirement == "CURRENT"
+        assert definition.minimum_sample == sample
+        assert definition.completion_rule.rule_type == "sample_reached"
+        assert definition.completion_rule.threshold == sample
+
+    assert ">=20 records" in definitions["L5"].completion_rule.description
+    assert ">=30 comparable canonical opportunities" in (
+        definitions["HORIZON-1"].completion_rule.description
+    )
+
+
+def test_l5_is_observational_and_does_not_claim_causal_improvement():
+    definition = build_definitions_from_registry(REGISTRY)["L5"]
+
+    assert "observational" in definition.hypothesis.lower()
+    assert "descriptive historical association" in definition.metric_definition
+    assert "does not establish that adaptation caused" in definition.metric_definition
+    assert "(canonical_opportunity_id, evaluated_horizon)" in (
+        definition.population_definition
+    )
+    assert "account-grained execution fanout is absent" in (
+        definition.population_definition
+    )
+
+
+def test_horizon1_unit_is_one_opportunity_with_repeated_simulations():
+    definition = build_definitions_from_registry(REGISTRY)["HORIZON-1"]
+
+    assert "one comparable canonical opportunity" in definition.population_definition
+    assert "repeated counterfactual measures within that unit" in (
+        definition.population_definition
+    )
+    assert "Actual executions and account fanout are excluded" in (
+        definition.population_definition
+    )
+    assert definition.join_contract.join_keys == ("canonical_opportunity_id",)
+    assert definition.join_contract.cardinality == "one_to_many"
+    assert "legacy opportunity_id" in definition.join_contract.description
+    assert "0.05R" in definition.metric_definition
+
+
+def test_opp1_missing_outcome_zero_contamination_remains_fail_closed():
+    from research_engine.experiments.opportunity_selection import run_opp_1
+
+    opportunities = [
+        {"opportunity_id": f"local-{i}", "canonical_opportunity_id": f"canon-{i}"}
+        for i in range(10)
+    ]
+    assessments = [
+        {"opportunity_id": f"local-{i}", "score_strategy": 0.9}
+        for i in range(10)
+    ]
+    horizon_candidates = [
+        {
+            "canonical_opportunity_id": f"canon-{i}",
+            "selection_status": "SELECTED" if i % 2 == 0 else "REJECTED",
+        }
+        for i in range(10)
+    ]
+    shadows = [
+        {
+            "canonical_opportunity_id": f"canon-{i}",
+            "simulated_outcome": {"pnl_r_multiple": 1.0},
+        }
+        for i in range(5)
+    ]
+
+    report = run_opp_1(
+        opportunities=opportunities,
+        assessments=assessments,
+        horizon_candidates=horizon_candidates,
+        shadow_trades=shadows,
+    )
+    high_bucket = report["overall"]["score_bucket_outcomes"]["HIGH_0.80+"]
+
+    assert report["overall"]["opportunities_with_outcome"] == 5
+    assert high_bucket["n"] == 10
+    assert high_bucket["mean_r"] == 0.5
+    assert "converts a missing outcome to 0.0" in (
+        WAVE_A2_UNRESOLVED_REASONS["OPP-1"]
+    )
+    assert not build_definitions_from_registry(REGISTRY)["OPP-1"].hypothesis
+
+
+def test_opp1_canonical_and_legacy_join_conflict_is_explicit():
+    reason = WAVE_A2_UNRESOLVED_REASONS["OPP-1"]
+
+    assert "horizon-candidate promotion and shadow outcomes by " \
+           "canonical_opportunity_id" in reason
+    assert "assessments by legacy opportunity_id" in reason
+    assert "opportunity_id as a canonical-ID fallback" in reason
+    assert "single canonical root join" in reason
+
+
+def test_wave_a22b_preserves_all_prior_a2_and_non_target_definitions(monkeypatch):
+    before_all_a2 = _build_pre_a2_definitions(monkeypatch)
+    after = apply_wave_a2_definitions(before_all_a2)
+    prior_targets = WAVE_A2_1_TARGETS | WAVE_A2_2A_TARGETS
+
+    for qid in prior_targets:
+        expected = before_all_a2[qid]
+        if qid in WAVE_A2_OVERRIDES:
+            expected = replace(expected, **WAVE_A2_OVERRIDES[qid])
+        assert after[qid].to_dict() == expected.to_dict(), qid
+
+    for qid in ("M8", "D2", "X5"):
+        assert after[qid] is before_all_a2[qid]
+        assert after[qid].to_dict() == before_all_a2[qid].to_dict()
+
+    changed = {
+        qid for qid in before_all_a2
+        if before_all_a2[qid].to_dict() != after[qid].to_dict()
     }
     assert changed == WAVE_A2_RESOLVED
