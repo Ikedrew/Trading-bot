@@ -17,7 +17,8 @@ from research_engine.registry.research_question_models import (
 
 WAVE_A3_1_TARGETS = frozenset({"M3", "M7", "P1"})
 WAVE_A3_2_TARGETS = frozenset({"R3", "R4", "R5"})
-WAVE_A3_TARGETS = WAVE_A3_1_TARGETS | WAVE_A3_2_TARGETS
+WAVE_A3_3_TARGETS = frozenset({"EX9", "D2", "X5"})
+WAVE_A3_TARGETS = WAVE_A3_1_TARGETS | WAVE_A3_2_TARGETS | WAVE_A3_3_TARGETS
 
 # No current A3 target can be closed without choosing new scientific semantics or
 # changing an existing runner.  An empty override set is intentional.
@@ -154,6 +155,72 @@ WAVE_A3_UNRESOLVED_REASONS = {
         "model set or narrowed approved intent, explicit Kelly/stationarity and "
         "annualisation assumptions, out-of-sample or resampled policy evaluation, "
         "and validated CURRENT fingerprint provenance. Left fail-closed."
+    ),
+    "EX9": (
+        "Registry intent asks whether a proposed exit policy reduces timeout "
+        "frequency and converts timeout losses into captured profits. The "
+        "dedicated runner (exit_depth.run_ex9) explicitly performs only an "
+        "observational description of CURRENT completed shadow lifecycles: it "
+        "compares max_bars_timeout with non-timeout exits, reports timeout rate, "
+        "win rates, MFE, bars held, and the rate of MFE >0.05R followed by a "
+        "non-positive outcome. It does not simulate any proposed policy over "
+        "ordered trade_state_progression and therefore cannot estimate a "
+        "counterfactual reduction or converted profit. The registry declares "
+        ">=200 records, while the runner starts at >=30 total records and calls "
+        "the report COMPLETE with >=10 timeout records; its loader additionally "
+        "requires MAE even though that field is not part of the registry "
+        "question. Its independent observation is one completed shadow "
+        "lifecycle (shadow_trade_id plus canonical_opportunity_id and evaluated "
+        "horizon), not an account execution. Account fanout cannot inflate it, "
+        "but multiple horizon simulations for one canonical opportunity remain "
+        "separate analytical records. Repair requires an approved observational "
+        "narrowing or a defined proposed-policy counterfactual simulator, plus "
+        "one aligned total/cell sufficiency contract. Left fail-closed."
+    ),
+    "D2": (
+        "The production probability authority is ProbabilityEstimator score_v1: "
+        "a pre-decision heuristic estimate of trade success derived from a score "
+        "calibrator, confirmation modifier, and market-state dampening, clamped "
+        "to [0.10, 0.85]. ProbabilityEstimate carries producer, model, calibration "
+        "version, and inputs, but decision_trace persists only the numeric "
+        "p_success and does not persist that provenance or a versioned outcome-"
+        "target definition. The registered runner (legacy_canonical.run_q04) "
+        "reads the literal p_success field (not confidence/score aliases), mixes "
+        "unfiltered decision_trace rows with canonical and separate research "
+        "shadow populations, and never joins a prediction to its outcome. It "
+        "compares the mean of every available prediction with the win rate of a "
+        "different shadow population, defining success as pnl_r_multiple > 0; "
+        "missing pnl_r_multiple can default to 0 and count as a loss. It requires "
+        ">=20 shadow outcomes but only one prediction, performs no probability-"
+        "bin or proper calibration analysis, and defines no canonical-opportunity "
+        "deduplication. Account executions are absent, yet multiple shadow "
+        "horizons can inflate the outcome population. Repair requires a versioned "
+        "persisted p_success authority and success target at the canonical "
+        "decision/opportunity grain, deterministic leakage-safe prediction-to-"
+        "outcome pairing, CURRENT-only evidence, and an aligned calibration "
+        "method and sufficiency rule. Left fail-closed."
+    ),
+    "X5": (
+        "The production ev field is computed pre-decision as p_success * TP price "
+        "distance - p_failure * SL price distance and is documented as a "
+        "comparative ranking heuristic in instrument-price units, not expected R "
+        "or money P&L. decision_trace persists the literal ev field at Stage 4, "
+        "but not an EV semantic/model version or its probability/reward/risk "
+        "provenance; the producer also retains an inline probability fallback. "
+        "Neither the runner nor canonical resolver accepts expected_value, "
+        "expectancy, predicted_r, or realised-r aliases for ev, so aliases do not "
+        "supply the missing authority. The registered runner "
+        "(execution_protection_research.run_x5) joins decision_trace to "
+        "trade_truth by canonical_opportunity_id and requires >=30 pairs, but "
+        "subtracts mean realised R from mean price-distance EV as though their "
+        "units were commensurate. It excludes a canonical opportunity whenever "
+        "multi-account fanout produces multiple trade_truth outcomes, while it "
+        "does not deduplicate repeated decision_trace rows; therefore it has no "
+        "settled canonical prediction observation for execution leakage. Repair "
+        "requires one versioned persisted pre-decision EV with explicit unit and "
+        "inputs, a like-for-like realised outcome metric, and an approved "
+        "canonical-decision/account aggregation contract before the existing "
+        "join can support this claim. Left fail-closed."
     ),
 }
 

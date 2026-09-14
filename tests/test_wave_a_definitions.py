@@ -789,6 +789,7 @@ def test_wave_a22b_preserves_all_prior_a2_and_non_target_definitions(monkeypatch
 from research_engine.registry.wave_a3_definitions import (  # noqa: E402
     WAVE_A3_1_TARGETS,
     WAVE_A3_2_TARGETS,
+    WAVE_A3_3_TARGETS,
     WAVE_A3_OVERRIDES,
     WAVE_A3_RESOLVED,
     WAVE_A3_TARGETS,
@@ -814,7 +815,10 @@ def _build_pre_a3_definitions(monkeypatch):
 def test_wave_a31_scope_before_and_after_health_are_exact(monkeypatch):
     assert WAVE_A3_1_TARGETS == {"M3", "M7", "P1"}
     assert WAVE_A3_2_TARGETS == {"R3", "R4", "R5"}
-    assert WAVE_A3_TARGETS == WAVE_A3_1_TARGETS | WAVE_A3_2_TARGETS
+    assert WAVE_A3_3_TARGETS == {"EX9", "D2", "X5"}
+    assert WAVE_A3_TARGETS == (
+        WAVE_A3_1_TARGETS | WAVE_A3_2_TARGETS | WAVE_A3_3_TARGETS
+    )
     assert WAVE_A3_RESOLVED == set()
     assert WAVE_A3_UNRESOLVED == WAVE_A3_TARGETS
     assert WAVE_A3_OVERRIDES == {}
@@ -1018,5 +1022,284 @@ def test_wave_a32_preserves_a31_earlier_waves_and_every_non_target(monkeypatch):
 
     protected = {"M3", "M7", "P1", "M8", "OPP-1", "D2", "X5"}
     for qid in protected:
+        assert after[qid] is before[qid]
+        assert after[qid].to_dict() == before[qid].to_dict()
+
+
+# ---------------------------------------------------------------------------
+# WAVE A3.3 - EX9 / D2 / X5 focused fail-closed assessment tests
+# ---------------------------------------------------------------------------
+
+def test_wave_a33_before_to_after_health_remains_fail_closed(monkeypatch):
+    before = _build_pre_a3_definitions(monkeypatch)
+    after = build_definitions_from_registry(REGISTRY)
+    before_reports = validate_all_definitions(before)
+    after_reports = validate_all_definitions(after)
+
+    for qid in WAVE_A3_3_TARGETS:
+        assert get_question_health(before_reports[qid]) == "UNDER_SPECIFIED", qid
+        assert get_question_health(after_reports[qid]) == "UNDER_SPECIFIED", qid
+        assert qid in WAVE_A3_UNRESOLVED
+        assert qid not in WAVE_A3_RESOLVED
+        assert qid not in WAVE_A3_OVERRIDES
+        assert not after[qid].hypothesis.strip(), qid
+        assert not after[qid].population_definition.strip(), qid
+        assert not after[qid].metric_definition.strip(), qid
+
+
+def test_ex9_counterfactual_and_sufficiency_conflicts_are_explicit():
+    reason = WAVE_A3_UNRESOLVED_REASONS["EX9"]
+
+    assert "observational description" in reason
+    assert "does not simulate any proposed policy" in reason
+    assert "ordered trade_state_progression" in reason
+    assert ">=200 records" in reason
+    assert ">=30 total records" in reason
+    assert ">=10 timeout records" in reason
+    assert "requires MAE" in reason
+    assert "one aligned total/cell sufficiency contract" in reason
+
+
+def test_ex9_shadow_lifecycle_unit_excludes_account_fanout():
+    reason = WAVE_A3_UNRESOLVED_REASONS["EX9"]
+
+    assert "one completed shadow lifecycle" in reason
+    assert "shadow_trade_id plus canonical_opportunity_id and evaluated horizon" in reason
+    assert "not an account execution" in reason
+    assert "Account fanout cannot inflate it" in reason
+    assert "multiple horizon simulations" in reason
+
+
+def test_d2_probability_authority_does_not_bless_unpaired_calibration():
+    reason = WAVE_A3_UNRESOLVED_REASONS["D2"]
+
+    assert "ProbabilityEstimator score_v1" in reason
+    assert "pre-decision heuristic estimate" in reason
+    assert "decision_trace persists only the numeric p_success" in reason
+    assert "does not persist that provenance" in reason
+    assert "reads the literal p_success field" in reason
+    assert "not confidence/score aliases" in reason
+    assert "never joins a prediction to its outcome" in reason
+    assert "defining success as pnl_r_multiple > 0" in reason
+    assert "missing pnl_r_multiple can default to 0" in reason
+    assert ">=20 shadow outcomes but only one prediction" in reason
+    assert "no probability-bin or proper calibration analysis" in reason
+
+
+def test_x5_ev_authority_does_not_bless_unit_or_alias_mismatch():
+    reason = WAVE_A3_UNRESOLVED_REASONS["X5"]
+
+    assert "computed pre-decision" in reason
+    assert "instrument-price units" in reason
+    assert "not expected R or money P&L" in reason
+    assert "not an EV semantic/model version" in reason
+    assert "inline probability fallback" in reason
+    assert "expected_value, expectancy, predicted_r" in reason
+    assert "aliases do not supply the missing authority" in reason
+    assert "canonical_opportunity_id" in reason
+    assert ">=30 pairs" in reason
+    assert "subtracts mean realised R from mean price-distance EV" in reason
+    assert "units were commensurate" in reason
+
+
+def test_d2_x5_prediction_populations_do_not_silently_absorb_account_fanout():
+    d2_reason = WAVE_A3_UNRESOLVED_REASONS["D2"]
+    x5_reason = WAVE_A3_UNRESOLVED_REASONS["X5"]
+
+    assert "canonical-opportunity deduplication" in d2_reason
+    assert "Account executions are absent" in d2_reason
+    assert "multiple shadow horizons" in d2_reason
+    assert "multi-account fanout produces multiple trade_truth outcomes" in x5_reason
+    assert "excludes a canonical opportunity" in x5_reason
+    assert "does not deduplicate repeated decision_trace rows" in x5_reason
+    assert "canonical-decision/account aggregation contract" in x5_reason
+
+
+def test_wave_a33_preserves_every_definition_and_prior_unresolved_targets(monkeypatch):
+    before = _build_pre_a3_definitions(monkeypatch)
+    after = apply_wave_a3_definitions(before)
+
+    assert set(after) == set(before) == {question.id for question in REGISTRY}
+    for qid in before:
+        assert after[qid] is before[qid], qid
+        assert after[qid].to_dict() == before[qid].to_dict(), qid
+
+    protected = {
+        "M3", "M7", "P1", "R3", "R4", "R5", "M8", "OPP-1"
+    }
+    for qid in protected:
+        assert after[qid] is before[qid]
+        assert after[qid].to_dict() == before[qid].to_dict()
+
+
+# ---------------------------------------------------------------------------
+# WAVE A4.1 - M1 / M11 / X3 / EXEC1 semantic-alignment tests
+# ---------------------------------------------------------------------------
+
+from research_engine.registry.wave_a4_definitions import (  # noqa: E402
+    WAVE_A4_1_TARGETS,
+    WAVE_A4_OVERRIDES,
+    WAVE_A4_RESOLVED,
+    WAVE_A4_TARGETS,
+    WAVE_A4_UNRESOLVED,
+    WAVE_A4_UNRESOLVED_REASONS,
+    apply_wave_a4_definitions,
+)
+
+
+def _build_pre_a4_definitions(monkeypatch):
+    """Build the current A1/A2/A3 state with A4 application disabled."""
+    import research_engine.registry.wave_a4_definitions as wave_a4
+
+    original = wave_a4.apply_wave_a4_definitions
+    monkeypatch.setattr(
+        wave_a4, "apply_wave_a4_definitions", lambda definitions: definitions
+    )
+    before = build_definitions_from_registry(REGISTRY)
+    monkeypatch.setattr(wave_a4, "apply_wave_a4_definitions", original)
+    return before
+
+
+def test_wave_a41_scope_and_before_to_after_health_are_exact(monkeypatch):
+    assert WAVE_A4_1_TARGETS == {"M1", "M11", "X3", "EXEC1"}
+    assert WAVE_A4_TARGETS == WAVE_A4_1_TARGETS
+    assert WAVE_A4_RESOLVED == set()
+    assert WAVE_A4_UNRESOLVED == WAVE_A4_TARGETS
+    assert WAVE_A4_OVERRIDES == {}
+    assert set(WAVE_A4_UNRESOLVED_REASONS) == WAVE_A4_UNRESOLVED
+
+    before = _build_pre_a4_definitions(monkeypatch)
+    after = build_definitions_from_registry(REGISTRY)
+    before_reports = validate_all_definitions(before)
+    after_reports = validate_all_definitions(after)
+
+    for qid in WAVE_A4_1_TARGETS:
+        assert get_question_health(before_reports[qid]) == "SEMANTIC_MISMATCH", qid
+        assert get_question_health(after_reports[qid]) == "SEMANTIC_MISMATCH", qid
+        assert not after[qid].hypothesis.strip(), qid
+        assert not after[qid].population_definition.strip(), qid
+        assert not after[qid].metric_definition.strip(), qid
+
+
+def test_m1_remains_descriptive_not_predictive_and_has_no_account_fanout():
+    reason = WAVE_A4_UNRESOLVED_REASONS["M1"]
+
+    assert "does not relate regime to outcomes at all" in reason
+    assert "reports only regime frequency" in reason
+    assert "no deterministic trace-to-outcome join" in reason
+    assert "COMPLETE requires merely one shadow outcome" in reason
+    assert "no sample threshold" in reason
+    assert "Account execution fanout is not an input" in reason
+    assert "repeated horizon simulations" in reason
+    assert "descriptive regime-frequency reporting" in reason
+    assert "not associative or predictive" in reason
+
+
+def test_m11_dispersion_proxy_remains_associative_not_predictive():
+    reason = WAVE_A4_UNRESOLVED_REASONS["M11"]
+
+    assert "loads only shadow trades" in reason
+    assert "no decision_trace join" in reason
+    assert "compatibility fields" in reason
+    assert "bias is not a registry required field" in reason
+    assert "one shadow lifecycle is one observation" in reason
+    assert "multiple horizon simulations" in reason
+    assert "unweighted standard deviation" in reason
+    assert "exceeds pattern dispersion by 15%" in reason
+    assert "no per-cell minimum" in reason
+    assert "or predictive score" in reason
+    assert "pooled descriptive association" in reason
+
+
+def test_x3_preserves_account_grain_nested_session_and_measured_slippage():
+    from research_engine.experiments.execution_protection_research import (
+        _extract_context,
+        _extract_result,
+        join_context_to_results,
+    )
+
+    context = {
+        "correlation_id": "corr-1",
+        "canonical_opportunity_id": "opp-1",
+        "symbol": "EURUSD",
+        "market_access": {"session_state": "LONDON", "spread": 0.0001},
+    }
+    results = [
+        {
+            "correlation_id": "corr-1",
+            "canonical_opportunity_id": "opp-1",
+            "symbol": "EURUSD",
+            "account_id": account,
+            "slippage": slippage,
+            "slippage_semantic": "measured_execution_slippage",
+        }
+        for account, slippage in (("METAQUOTES", 0.00001), ("VANTAGE", 0.00002))
+    ]
+    joined = join_context_to_results(results, [context])
+
+    assert len(joined["matched"]) == 2
+    assert {p["result"]["account_id"] for p in joined["matched"]} == {
+        "METAQUOTES", "VANTAGE"
+    }
+    assert {p["context"]["session_state"] for p in joined["matched"]} == {"LONDON"}
+    assert _extract_context(context)["session_state"] == "LONDON"
+
+    derived = _extract_result({
+        "correlation_id": "corr-2",
+        "account_id": "METAQUOTES",
+        "entry_reference": 1.1000,
+        "fill_price": 1.1002,
+    })
+    assert derived["slippage"] is None
+    assert derived["slippage_provenance"] == "derived_compatibility"
+    assert derived["derived_compatibility_slippage"] > 0
+
+    reason = WAVE_A4_UNRESOLVED_REASONS["X3"]
+    assert "does not compute rejection or failure rates" in reason
+    assert ">=30 matched observations" in reason
+    assert ">=10 observations" in reason
+    assert "descriptive account-execution slippage" in reason
+
+
+def test_exec1_keeps_execution_results_primary_and_protection_separate():
+    from research_engine.registry import DataSource, REGISTRY_BY_ID
+
+    question = REGISTRY_BY_ID["EXEC1"]
+    assert question.data_sources == (DataSource.EXECUTION_RESULTS,)
+    assert DataSource.PROTECTION_AUDIT not in question.data_sources
+    assert DataSource.EXECUTION_ATTEMPTS not in question.data_sources
+
+    reason = WAVE_A4_UNRESOLVED_REASONS["EXEC1"]
+    assert "CURRENT execution_results_v1 as the primary population" in reason
+    assert "does not use protection_audit" in reason
+    assert "execution_attempts" in reason
+    assert "Each account-grained execution result" in reason
+    assert "different account outcomes for one canonical decision" in reason
+    assert "missing result_ok defaults to failure" in reason
+    assert "populated with result slippage rather than context spread" in reason
+    assert "No valid-opportunity or outcome evidence is joined" in reason
+    assert ">=30 result rows" in reason
+    assert "per-symbol cells require >=10" in reason
+    assert "descriptive execution-result reliability" in reason
+
+
+def test_wave_a41_preserves_prior_protected_later_and_all_non_targets(monkeypatch):
+    before = _build_pre_a4_definitions(monkeypatch)
+    after = apply_wave_a4_definitions(before)
+
+    assert set(after) == set(before) == {question.id for question in REGISTRY}
+    for qid in before:
+        assert after[qid] is before[qid], qid
+        assert after[qid].to_dict() == before[qid].to_dict(), qid
+
+    protected = {
+        "M8", "OPP-1", "M3", "M7", "P1", "R3", "R4", "R5",
+        "EX9", "D2", "X5",
+    }
+    later_a4 = {
+        "D3", "D4", "D5", "L1", "L2", "L3", "L4",
+        "EX5", "EX6", "EX7", "EX8",
+    }
+    for qid in protected | later_a4:
         assert after[qid] is before[qid]
         assert after[qid].to_dict() == before[qid].to_dict()
