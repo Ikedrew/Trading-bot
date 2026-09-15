@@ -147,8 +147,8 @@ def test_question_wording_from_description():
 def test_semantic_mismatch_detected():
     from research_engine.registry import REGISTRY_BY_ID
     from research_engine.registry.definition_validator import validate_runner_registry_threshold_alignment
-    # D2 and D3 were repaired in RW3 and are no longer semantic mismatches.
-    mismatch_ids = {"D4", "D5", "X3", "L1", "L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8", "EXEC1"}
+    # D2, D3, D4 and D5 were repaired in RW3 and are no longer semantic mismatches.
+    mismatch_ids = {"X3", "L1", "L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8", "EXEC1"}
     for mid in mismatch_ids:
         q = REGISTRY_BY_ID[mid]
         report = validate_runner_registry_threshold_alignment(q, mid)
@@ -1367,9 +1367,10 @@ def test_wave_a42_before_to_after_health_remains_fail_closed(monkeypatch):
     before_reports = validate_all_definitions(before)
     after_reports = validate_all_definitions(after)
 
-    # D3 was repaired in RW3.2 (paired chronological predicted-EV gate) and is
-    # now VALID; D4/D5 remain fail-closed semantic mismatches.
-    for qid in WAVE_A4_2_TARGETS - {"D3"}:
+    # D3 (RW3.2), D4 (RW3.3) and D5 (RW3.4) were repaired and are now VALID.
+    # All of WAVE_A4_2_TARGETS are repaired, so this fail-closed loop is empty;
+    # the assertions below still guard any future unrepaired A4.2 target.
+    for qid in WAVE_A4_2_TARGETS - {"D3", "D4", "D5"}:
         assert get_question_health(before_reports[qid]) == "SEMANTIC_MISMATCH", qid
         assert get_question_health(after_reports[qid]) == "SEMANTIC_MISMATCH", qid
         assert qid in WAVE_A4_UNRESOLVED
