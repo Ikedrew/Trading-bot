@@ -68,6 +68,9 @@ def persist_execution_result(
     decision_ts_utc_ms: int = 0,
     slippage: float = 0.0,
     slippage_measured: bool = False,
+    # Selected broker filling mode (diagnostic; MT5 ORDER_FILLING_* value).
+    # None when no order reached the broker (e.g. local pre-flight block).
+    filling_mode: int | None = None,
     # Phase 3 Step 4: execution-moment market facts (additive; 0.0 = unknown).
     # Derived from the live feed tick at the execution boundary — never invented.
     bid_at_execution: float = 0.0,
@@ -119,7 +122,9 @@ def persist_execution_result(
             "entity_id": entity_id,
             "observation_id": observation_id,
             "canonical_opportunity_id": canonical_opportunity_id,
-            "decision_ts_utc_ms": decision_ts_utc_ms,
+            "decision_ts_utc_ms": decision_ts_utc_ms or None,
+            # Broker filling-mode negotiation evidence (additive diagnostic).
+            "filling_mode": filling_mode,
             # Phase 3 Step 4/7: execution-moment facts + derived planned-risk
             # geometry. This row is the ENTRY-FACTS snapshot for the trade:
             # outcome fields (pnl/MFE/MAE/exit) are structurally absent here.

@@ -81,3 +81,62 @@ def validate_stops(
     if tp > 0 and abs(market_price - tp) + tolerance < minimum:
         return "TP_TOO_CLOSE"
     return None
+
+
+# ─── CANONICAL BROKER FILLING-MODE NEGOTIATION (shared) ──────────────────────
+# MQL5 SYMBOL_FILLING_* bitmask (not always exposed on the Python mt5 module).
+# This is the ONE interpretation of broker filling support shared between the
+# legacy execution boundary (execution.mt5_execution) and the fan-out execution
+# worker (core.accounts.execution_worker). Never hardcode a mode.
+FILLING_FOK = 1
+FILLING_IOC = 2
+FILLING_RETURN = 4
+
+
+def select_filling_mode(filling_mode) -> str | None:
+    """Broker-aware filling negotiation from ``symbol_info.filling_mode``.
+
+    Preference matches the existing canonical execution implementation
+    (IOC → FOK → RETURN). Returns the semantic mode name, or ``None`` when the
+    broker reports no supported market filling mode — the caller must then fail
+    closed with an explicit reason instead of defaulting to IOC.
+    """
+    try:
+        mask = int(filling_mode)
+    except (TypeError, ValueError):
+        return None
+    if mask & FILLING_IOC:
+        return "IOC"
+    if mask & FILLING_FOK:
+        return "FOK"
+    if mask & FILLING_RETURN:
+        return "RETURN"
+    return None
+
+
+def filling_mode_constant(mode: str, mt5_module: Any) -> int:
+    """Map a semantic mode from :func:`select_filling_mode` onto the runtime
+    MT5 module's ORDER_FILLING_* constant. Raises for an unknown mode (fail
+    closed — callers must negotiate before reaching this)."""
+    names = {"IOC": "ORDER_FILLING_IOC", "FOK": "ORDER_FILLING_FOK",
+             "RETURN": "ORDER_FILLING_RETURN"}
+    return int(getattr(mt5_module, names[mode]))
+
+
+def validate_trade_mode(spec: "MT5SymbolSpec", side: str) -> str | None:
+    """Destination-broker trade-mode gate for NEW market entries.
+
+    MT5 SYMBOL_TRADE_MODE: 0=disabled, 1=longonly, 2=shortonly,
+    3=closeonly, 4=full. Same semantics as the read-side broker preflight
+    (core.accounts.eligibility.evaluate): only full mode, or the side's
+    one-way mode, may open a position. Mode 0 (e.g. MetaQuotes USTEC/US500)
+    is reported explicitly so disabled instruments clean-skip before
+    order_send.
+    """
+    if side not in ("BUY", "SELL"):
+        return "INVALID_SIDE"
+    if spec.trade_mode == 0:
+        return "SYMBOL_TRADE_MODE_DISABLED"
+    if spec.trade_mode not in (4, 1 if side == "BUY" else 2):
+        return "SYMBOL_TRADE_MODE_BLOCKED"
+    return None

@@ -37,11 +37,12 @@ def main(argv=None):
         print(json.dumps(reports, indent=2, allow_nan=False))
     else:
         for r in reports:
-            print(f"{r['account_id']} connected={r['connected']} login={r['login']} server={r['server']} "
+            print(f"{r['account_id']} connected={r['connected']} "
+                  f"identity_verified={r['identity_verified']} login={r['login']} server={r['server']} "
                   f"balance={r['balance']} equity={r['equity']} margin_free={r['margin_free']} "
                   f"currency={r['currency']} leverage={r['leverage']} "
                   f"trade_allowed={r['trade_allowed']} trade_expert={r['trade_expert']} "
-                  f"execution_enabled=False reasons={','.join(r['reasons']) or '-'}")
+                  f"execution_enabled={r['execution_enabled']} reasons={','.join(r['reasons']) or '-'}")
             for s in r['symbols']:
                 print(f"  {s['canonical_symbol']:7} {s['broker_symbol'] or '-':16} {s['status']:12} "
                       f"digits={s['digits']} point={s['point']} contract={s['contract_size']} "

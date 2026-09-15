@@ -48,7 +48,9 @@ def run_isolated(account, request=None, *, timeout=25, include_symbol_inventory=
         return unavailable(account, ['WORKER_FAILED'])
 
 
-def diagnose(accounts, request=None, *, timeout=25, config_only=False, include_symbol_inventory=False):
+def diagnose(accounts, request=None, *, timeout=25, config_only=False,
+             include_symbol_inventory=False,
+             global_execution_enabled: bool | None = None):
     accounts = tuple(accounts)
     if len({a.account_id for a in accounts}) != len(accounts):
         raise ValueError('DUPLICATE_ACCOUNT_ID')
@@ -87,4 +89,17 @@ def diagnose(accounts, request=None, *, timeout=25, config_only=False, include_s
             for other in connected
         ):
             results[account.account_id] = unavailable(account, ['SHARED_TERMINAL_DATA_PATH'])
+    # REPAIR: report the SAME effective execution gate production routing uses
+    # (core.accounts.account_router.execution_enabled_for) instead of an
+    # unwired default constant. No second definition of execution eligibility.
+    from .account_router import execution_enabled_for
+    if global_execution_enabled is None:
+        try:
+            from core import config as _cfg
+            global_execution_enabled = bool(getattr(_cfg, 'EXECUTION_ENABLED', True))
+        except Exception:
+            global_execution_enabled = True
+    for account in accounts:
+        results[account.account_id]['execution_enabled'] = bool(
+            execution_enabled_for(account, global_execution_enabled=global_execution_enabled))
     return [results[a.account_id] for a in accounts]

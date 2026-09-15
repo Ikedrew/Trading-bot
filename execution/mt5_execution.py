@@ -14,7 +14,10 @@ from core.mt5_timeout import mt5_call, is_circuit_open
 from risk.models import OrderIntent
 from risk.spread_guard import check_spread
 from strategy.signals import Side
-from core.mt5_symbol_spec import MT5SymbolSpec, validate_stops, validate_volume
+from core.mt5_symbol_spec import (
+    MT5SymbolSpec, validate_stops, validate_volume,
+    filling_mode_constant, select_filling_mode,
+)
 from core.symbol_resolver import broker_symbol_for
 
 logger = logging.getLogger(__name__)
@@ -321,10 +324,9 @@ def _persist_attempt(
 
 # ─── END EXECUTION ATTEMPTS PERSISTENCE ───────────────────────────────────────
 
-# MQL5 SYMBOL_FILLING_* bitmask (not always exposed on Python mt5 module)
-_FILL_FOK = 1
-_FILL_IOC = 2
-_FILL_RETURN = 4
+# MQL5 SYMBOL_FILLING_* bitmask interpretation now lives in the shared
+# canonical helper (core.mt5_symbol_spec.select_filling_mode) so legacy and
+# fan-out execution share ONE broker-constraint interpretation.
 
 
 # ─── EVENT STREAM EMISSION ────────────────────────────────────────────────────
@@ -433,14 +435,14 @@ def _filling_mode(symbol: str) -> int:
     info = mt5_call(mt5.symbol_info, symbol)
     if info is None:
         return mt5.ORDER_FILLING_IOC
-    fm = int(info.filling_mode)
-    if fm & _FILL_IOC:
+    # Delegate negotiation to the ONE canonical broker filling-mode
+    # interpretation shared with the fan-out execution worker. The legacy
+    # boundary keeps its historical permissive fallback (IOC) when the
+    # broker reports no supported mask; the fan-out worker fails closed.
+    mode = select_filling_mode(getattr(info, "filling_mode", 0))
+    if mode is None:
         return mt5.ORDER_FILLING_IOC
-    if fm & _FILL_FOK:
-        return mt5.ORDER_FILLING_FOK
-    if fm & _FILL_RETURN:
-        return mt5.ORDER_FILLING_RETURN
-    return mt5.ORDER_FILLING_IOC
+    return filling_mode_constant(mode, mt5)
 
 
 def describe_retcode(code: int) -> str:

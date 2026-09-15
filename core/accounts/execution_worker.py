@@ -20,7 +20,10 @@ def _lineage(target: dict) -> dict:
 
 
 def execute_pinned(request: dict, mt5) -> dict:
-    from core.mt5_symbol_spec import MT5SymbolSpec, validate_stops, validate_volume
+    from core.mt5_symbol_spec import (
+        MT5SymbolSpec, validate_stops, validate_volume,
+        filling_mode_constant, select_filling_mode, validate_trade_mode,
+    )
     account = AccountConfig(**request["account"])
     target = request["target"]
     order = request["order"]
@@ -40,24 +43,53 @@ def execute_pinned(request: dict, mt5) -> dict:
                 "status": "BLOCKED", "comment": "SYMBOL_UNAVAILABLE",
                 **_lineage(target)}
     spec = MT5SymbolSpec.from_info(broker_symbol, info)
+    side = str(order.get("side") or "")
+
+    # ─── BROKER TRADE-MODE GATE (fail closed BEFORE order_send) ─────
+    # Disabled instruments (e.g. MetaQuotes USTEC/US500 trade_mode=0) and
+    # side-restricted symbols must clean-skip here, never reach the broker.
+    trade_mode_error = validate_trade_mode(spec, side)
+    if trade_mode_error:
+        return {"account_id": account.account_id, "executed": False,
+                "status": "BLOCKED", "comment": trade_mode_error,
+                "broker_trade_mode": spec.trade_mode, **_lineage(target)}
+
+    # ─── BROKER FILLING-MODE NEGOTIATION (never hardcode IOC) ───────
+    # MetaQuotes FX symbols commonly report FOK-only support; sending IOC
+    # there yields 10030 Unsupported filling mode. Negotiate from the actual
+    # broker spec and fail closed when no supported mode exists.
+    filling = select_filling_mode(spec.filling_mode)
+    if filling is None:
+        return {"account_id": account.account_id, "executed": False,
+                "status": "BLOCKED", "comment": "NO_SUPPORTED_FILLING_MODE",
+                "broker_filling_mode": spec.filling_mode, **_lineage(target)}
+
     volume = float(order.get("requested_volume") or 0.0)
     volume_error = validate_volume(spec, volume)
     if volume_error:
         return {"account_id": account.account_id, "executed": False,
                 "status": "BLOCKED", "comment": volume_error, **_lineage(target)}
-    side = str(order.get("side") or "")
     tick = reader.read("symbol_info_tick", broker_symbol)
     if tick is None:
         return {"account_id": account.account_id, "executed": False,
                 "status": "FAILED", "comment": "NO_TICK", **_lineage(target)}
     market = float(tick.ask if side == "BUY" else tick.bid)
+    # ─── BROKER STOP-DISTANCE VALIDATION (Vantage 10016 fix) ────────
+    # Normalise the canonical SL/TP onto the destination broker's price
+    # grid FIRST, then validate distances against THAT spec. Validating
+    # raw canonical prices against a different broker's point/digits
+    # rejects orders the broker would accept after normalisation.
+    canonical_sl = float(order.get("sl") or 0.0)
+    canonical_tp = float(order.get("tp") or 0.0)
+    sl = spec.normalize_price(canonical_sl)
+    tp = spec.normalize_price(canonical_tp)
     stops_error = validate_stops(spec, market_price=market,
-                                 sl=float(order.get("sl") or 0.0),
-                                 tp=float(order.get("tp") or 0.0),
-                                 include_freeze=True)
+                                 sl=sl, tp=tp, include_freeze=True)
     if stops_error:
         return {"account_id": account.account_id, "executed": False,
-                "status": "BLOCKED", "comment": stops_error, **_lineage(target)}
+                "status": "BLOCKED", "comment": stops_error,
+                "canonical_sl": canonical_sl, "canonical_tp": canonical_tp,
+                "broker_sl": sl, "broker_tp": tp, **_lineage(target)}
     price = spec.normalize_price(float(tick.ask if side == "BUY" else tick.bid))
     broker_request = {
         "action": mt5.TRADE_ACTION_DEAL,
@@ -65,13 +97,13 @@ def execute_pinned(request: dict, mt5) -> dict:
         "volume": volume,
         "type": mt5.ORDER_TYPE_BUY if side == "BUY" else mt5.ORDER_TYPE_SELL,
         "price": price,
-        "sl": spec.normalize_price(float(order.get("sl") or 0.0)),
-        "tp": spec.normalize_price(float(order.get("tp") or 0.0)),
+        "sl": sl,
+        "tp": tp,
         "deviation": int(order.get("deviation", 20)),
         "magic": int(order.get("magic", 713001)),
         "comment": str(order.get("comment", "multi-account"))[:31],
         "type_time": mt5.ORDER_TIME_GTC,
-        "type_filling": mt5.ORDER_FILLING_IOC,
+        "type_filling": filling_mode_constant(filling, mt5),
     }
     reader.verify()
     result = mt5.order_send(broker_request)
@@ -79,6 +111,9 @@ def execute_pinned(request: dict, mt5) -> dict:
     if result is None:
         return {"account_id": account.account_id, "executed": False,
                 "status": "FAILED", "comment": "order_send_none",
+                "filling_mode": filling,
+                "broker_sl": sl, "broker_tp": tp,
+                "canonical_sl": canonical_sl, "canonical_tp": canonical_tp,
                 **_lineage(target)}
     ok = int(getattr(result, "retcode", -1)) == int(mt5.TRADE_RETCODE_DONE)
     ownership = None
@@ -108,6 +143,9 @@ def execute_pinned(request: dict, mt5) -> dict:
             "order": int(getattr(result, "order", 0) or 0),
             "comment": str(getattr(result, "comment", "")),
             "fill_price": float(getattr(result, "price", 0.0) or 0.0),
+            "filling_mode": filling,
+            "canonical_sl": canonical_sl, "canonical_tp": canonical_tp,
+            "broker_sl": sl, "broker_tp": tp,
             **_lineage(target)}
 
 

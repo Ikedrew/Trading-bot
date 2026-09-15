@@ -260,7 +260,10 @@ def test_execution_worker_pinned_routing_and_identity(accounts):
         ORDER_TYPE_BUY = 0
         ORDER_TYPE_SELL = 1
         ORDER_TIME_GTC = 0
+        # MQL5 ORDER_FILLING_* values as the real MT5 module exposes them.
+        ORDER_FILLING_FOK = 0
         ORDER_FILLING_IOC = 1
+        ORDER_FILLING_RETURN = 2
         TRADE_RETCODE_DONE = 10009
 
         def __init__(self, account):
@@ -322,6 +325,11 @@ def test_execution_worker_pinned_routing_and_identity(accounts):
         out = execute_pinned(payload, mt5)
         assert out["executed"] is True and out["status"] == "FILLED"
         assert mt5.sent and mt5.sent[0]["symbol"] == broker_symbol
+        # Broker filling negotiation: every spec here reports filling_mode=1
+        # (FOK-only). The request must carry FOK — never the hardcoded IOC
+        # that caused 10030 on FOK-only brokers (MetaQuotes FX).
+        assert mt5.sent[0]["type_filling"] == mt5.ORDER_FILLING_FOK
+        assert out["filling_mode"] == "FOK"
         assert out["account_execution_id"] == "e-" + account_id
     # Identity mismatch must never route to the wrong account.
     cfg = by_id["METAQUOTES"]

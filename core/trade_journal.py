@@ -626,6 +626,13 @@ def persist_trade(record: TradeRecord) -> bool:
                 swap=record.swap,
                 net_profit=record.net_pnl,
                 exit_reason=_exit_reason,
+                # PHASE H: explicit per-account attribution (fan-out trades
+                # must be self-attributing — never inferred from trade IDs).
+                account_id=getattr(record, "account_id", ""),
+                broker=getattr(record, "broker", ""),
+                broker_server=getattr(record, "broker_server", ""),
+                broker_symbol=getattr(record, "broker_symbol", ""),
+                position_ticket=int(getattr(record, "position_ticket", 0) or 0),
                 # Excursion metrics — trade_truth is the authoritative research
                 # owner. Computed once in build_trade_record; projected here.
                 max_favourable_price=record.max_favourable_price,

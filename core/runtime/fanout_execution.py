@@ -183,6 +183,12 @@ def execute_multi_account_fanout(
 
     horizon_type = str((intent.metadata or {}).get("horizon", "SCALP") or "SCALP")
 
+    # Real dispatch timestamp (REPAIR: fan-out results previously persisted
+    # decision_ts_utc_ms=0). Mirrors the legacy orchestrator, which stamps
+    # utc_ms() at the execution boundary.
+    from core.clock import utc_ms as _utc_ms
+    _dispatch_ts = _utc_ms()
+
     outcomes = execute_fanned_out(
         decision=canonical,
         accounts=accounts,
@@ -196,7 +202,7 @@ def execute_multi_account_fanout(
     )
     _log_fanout_outcomes(symbol, canonical, outcomes)
     _persist_account_results(outcomes, cycle_id=cycle_id, entity_id=entity_id,
-                             bid=bid, ask=ask)
+                             bid=bid, ask=ask, decision_ts_utc_ms=_dispatch_ts)
     return build_primary_execution_outcome(outcomes)
 
 
@@ -213,16 +219,19 @@ def _log_fanout_outcomes(symbol: str, canonical: Any, outcomes: list[dict]) -> N
         account_id = getattr(target, "account_id", None) or out.get("account_id", "")
         log.info(
             "[MULTI_ACCOUNT_FANOUT] symbol=%s decision_id=%s account=%s "
-            "status=%s executed=%s account_execution_id=%s trade_id=%s comment=%s",
+            "status=%s executed=%s account_execution_id=%s trade_id=%s "
+            "filling_mode=%s broker_sl=%s broker_tp=%s comment=%s",
             symbol, canonical.decision_id, account_id, out.get("status", "?"),
             bool(out.get("executed")),
             getattr(target, "account_execution_id", "") if target else out.get("account_execution_id", ""),
             getattr(target, "trade_id", "") if target else out.get("trade_id", ""),
+            out.get("filling_mode", "-"),
+            out.get("broker_sl", "-"), out.get("broker_tp", "-"),
             str(out.get("comment", ""))[:80],
         )
 def _persist_account_results(
     outcomes: list[dict], *, cycle_id: int, entity_id: str,
-    bid: float, ask: float,
+    bid: float, ask: float, decision_ts_utc_ms: int = 0,
 ) -> None:
     """Observational Phase-H persistence for every fan-out child attempt."""
     try:
@@ -248,8 +257,13 @@ def _persist_account_results(
                 side=str(out.get("lifecycle_side", "")),
                 volume=_outcome_volume(out),
                 entry_reference=entry,
-                sl=float(target.sl),
-                tp=float(target.tp),
+                # `sl`/`tp` = FINAL broker-normalised/submitted values when the
+                # worker reports them; `requested_sl`/`requested_tp` preserve
+                # the ORIGINAL canonical SL/TP untouched for diagnostics.
+                sl=float(out.get("broker_sl") or target.sl),
+                tp=float(out.get("broker_tp") or target.tp),
+                requested_sl=float(target.sl),
+                requested_tp=float(target.tp),
                 pattern=getattr(target, "pattern", ""),
                 decision_id=getattr(target, "decision_id", ""),
                 correlation_id=getattr(target, "correlation_id", ""),
@@ -261,7 +275,8 @@ def _persist_account_results(
                 broker_server=getattr(target, "broker_server", ""),
                 position_ticket=int(out.get("order", 0) or 0),
                 broker_symbol=route_broker_symbol(out),
-                decision_ts_utc_ms=0,
+                filling_mode=_outcome_filling_mode(out),
+                decision_ts_utc_ms=decision_ts_utc_ms,
                 slippage=abs(fill - entry) if fill and entry else 0.0,
                 slippage_measured=bool(fill and entry),
                 bid_at_execution=bid,
@@ -270,6 +285,77 @@ def _persist_account_results(
             )
         except Exception:
             pass  # Observational persistence must never affect trading
+    # REPAIR (evidence continuity): fan-out replaced the legacy execution
+    # boundary but stopped writing execution_attempts. Restore ONE
+    # correctly-attributed attempt record per account execution attempt that
+    # actually reached the broker (order_send). Local pre-flight blocks
+    # (BLOCKED/OBSERVED/worker failures) are not broker interactions.
+    _persist_account_attempts(outcomes, cycle_id=cycle_id)
+
+
+def _persist_account_attempts(outcomes: list[dict], *, cycle_id: int) -> None:
+    """One execution_attempt record per fan-out child that reached order_send.
+
+    Purely observational, fire-and-forget, never raises. Attempt records are
+    written ONLY for outcomes where the worker actually submitted an order
+    (executed=True → FILLED or broker REJECTED). Local pre-flight blocks are
+    not broker interactions and keep the attempts contract honest.
+    """
+    try:
+        from core.persistence.execution_attempts_writer import persist_execution_attempt
+        import uuid as _uuid
+    except Exception:
+        return
+    for out in outcomes:
+        target = out.get("target")
+        if target is None or not bool(out.get("executed")):
+            continue
+        try:
+            persist_execution_attempt(
+                attempt_id=str(_uuid.uuid4()),
+                decision_id=getattr(target, "decision_id", ""),
+                canonical_opportunity_id=getattr(target, "canonical_opportunity_id", ""),
+                observation_id=getattr(target, "observation_id", ""),
+                correlation_id=getattr(target, "correlation_id", ""),
+                trade_id=getattr(target, "trade_id", ""),
+                symbol=getattr(target, "canonical_symbol", ""),
+                cycle_id=cycle_id,
+                action_type="ENTRY",
+                attempt_number=1,
+                retry_reason=None,
+                side=str(out.get("lifecycle_side", "")),
+                volume=_outcome_volume(out),
+                entry_reference=float(target.entry),
+                requested_sl=float(target.sl),
+                requested_tp=float(target.tp),
+                bid_at_attempt=float(out.get("lifecycle_bid", 0.0) or 0.0),
+                ask_at_attempt=float(out.get("lifecycle_ask", 0.0) or 0.0),
+                broker_ok=bool(out.get("ok")),
+                retcode=int(out.get("retcode", -1)),
+                deal=int(out.get("deal", 0) or 0),
+                order_ticket=int(out.get("order", 0) or 0),
+                comment=str(out.get("comment", "") or ""),
+                fill_price=(float(out.get("fill_price") or 0.0) or None),
+                # PHASE H: explicit per-account attribution
+                account_id=getattr(target, "account_id", ""),
+                broker=getattr(target, "broker", ""),
+                broker_server=getattr(target, "broker_server", ""),
+                position_ticket=int(out.get("order", 0) or 0),
+                broker_symbol=route_broker_symbol(out),
+            )
+        except Exception:
+            pass
+
+
+def _outcome_filling_mode(out: dict) -> int | None:
+    """Numeric MT5 filling mode selected by the worker for this outcome."""
+    mode = out.get("filling_mode")
+    if not mode:
+        return None
+    from core.mt5_symbol_spec import FILLING_FOK, FILLING_IOC, FILLING_RETURN
+    mapping = {"IOC": FILLING_IOC, "FOK": FILLING_FOK, "RETURN": FILLING_RETURN}
+    value = mapping.get(str(mode).upper())
+    return int(value) if value is not None else None
 
 
 def route_broker_symbol(out: dict) -> str:
