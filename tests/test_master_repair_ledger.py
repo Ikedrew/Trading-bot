@@ -57,8 +57,8 @@ def test_structural_operational_status_is_derived_consistently():
         if all(value in STRUCTURAL_PASS_STATUSES for value in entry.gates.values())
     }
     assert derived == set(STRUCTURALLY_OPERATIONAL_IDS) == set(OPERATIONAL_IDS)
-    assert operational_baseline() == (32, 38)
-    assert len(STRUCTURALLY_NON_OPERATIONAL_IDS) == 38
+    assert operational_baseline() == (33, 37)
+    assert len(STRUCTURALLY_NON_OPERATIONAL_IDS) == 37
     for entry in MASTER_REPAIR_LEDGER.values():
         assert entry.to_dict()["structurally_operational"] == entry.structurally_operational
 
@@ -98,12 +98,12 @@ def test_primary_blocker_counts_cover_every_non_operational_question_once():
         "evidence authority": 1,
         "join/population": 1,
         "no runner": 8,
-        "prediction/calibration": 4,
+        "prediction/calibration": 3,
         "report ownership": 4,
         "risk modelling": 3,
         "runner mismatch": 2,
     }
-    assert sum(counts.values()) == 38
+    assert sum(counts.values()) == 37
 
 
 def test_repair_wave_dependencies_exist_and_are_acyclic():
@@ -154,7 +154,7 @@ def test_direct_gains_are_disjoint_and_cover_all_non_operational_ids():
 def test_cumulative_repair_plan_reconciles_exactly_to_70():
     projection = projected_operational_counts()
     assert projection == (
-        ("RW1", 32), ("RW2", 32), ("RW3", 36), ("RW4", 40),
+        ("RW1", 33), ("RW2", 33), ("RW3", 36), ("RW4", 40),
         ("RW5", 44), ("RW6", 45), ("RW7", 48), ("RW8", 56),
         ("RW9", 61), ("RW10", 66), ("RW11", 69), ("RW12", 70),
     )
@@ -257,8 +257,8 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
 
 def test_evidence_gap_accounting_preserves_v1_freeze_and_g3_requirement():
     assert evidence_gap_counts() == {
-        "ALREADY_AVAILABLE": 34,
-        "DERIVABLE": 35,
+        "ALREADY_AVAILABLE": 35,
+        "DERIVABLE": 34,
         "NEW_RESEARCH_EVIDENCE": 1,
         "EXISTING_V1_CONTRACT_VIOLATION": 0,
     }

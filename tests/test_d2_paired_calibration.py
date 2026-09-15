@@ -170,8 +170,11 @@ def test_d2_is_operational_while_rw3_remains_in_progress():
         operational_baseline,
     )
 
-    assert operational_baseline() == (32, 38)
+    # After RW3.2 repaired D3, the derived baseline is 33/37. D2 itself is
+    # unchanged; only the global count reflects D3 becoming operational.
+    assert operational_baseline() == (33, 37)
     assert MASTER_REPAIR_LEDGER["D2"].structurally_operational
     assert REPAIR_WAVES["RW3"].implemented is False
-    assert set(REPAIR_WAVES["RW3"].direct_gain) == {"D3", "D4", "D5", "X5"}
-    assert {"D3", "D4", "D5", "X5"} <= STRUCTURALLY_NON_OPERATIONAL_IDS
+    # RW3.2 repaired D3, so RW3's outstanding direct gain is now D4/D5/X5.
+    assert set(REPAIR_WAVES["RW3"].direct_gain) == {"D4", "D5", "X5"}
+    assert {"D4", "D5", "X5"} <= STRUCTURALLY_NON_OPERATIONAL_IDS
