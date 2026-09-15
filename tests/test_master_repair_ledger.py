@@ -57,8 +57,8 @@ def test_structural_operational_status_is_derived_consistently():
         if all(value in STRUCTURAL_PASS_STATUSES for value in entry.gates.values())
     }
     assert derived == set(STRUCTURALLY_OPERATIONAL_IDS) == set(OPERATIONAL_IDS)
-    assert operational_baseline() == (39, 31)
-    assert len(STRUCTURALLY_NON_OPERATIONAL_IDS) == 31
+    assert operational_baseline() == (40, 30)
+    assert len(STRUCTURALLY_NON_OPERATIONAL_IDS) == 30
     for entry in MASTER_REPAIR_LEDGER.values():
         assert entry.to_dict()["structurally_operational"] == entry.structurally_operational
 
@@ -93,14 +93,14 @@ def test_primary_blocker_counts_cover_every_non_operational_question_once():
     counts = blocker_counts()
     assert counts == {
         "chronology": 3,
-        "counterfactual design": 10,
+        "counterfactual design": 9,
         "evidence authority": 1,
         "no runner": 8,
         "report ownership": 4,
         "risk modelling": 3,
         "runner mismatch": 2,
     }
-    assert sum(counts.values()) == 31
+    assert sum(counts.values()) == 30
 
 
 def test_repair_wave_dependencies_exist_and_are_acyclic():
@@ -143,6 +143,7 @@ def test_direct_gains_are_disjoint_and_cover_all_non_operational_ids():
             gained.update(wave.direct_gain)
     assert implemented_direct_gain == {
         "D1", "E2", "M1", "M3", "M7", "M8", "M11", "D2", "D3", "D4", "D5", "X5",
+        "D6", "PORT-1", "OPP-1", "P1",
     }
     assert gained == set(STRUCTURALLY_NON_OPERATIONAL_IDS)
     assert REPAIR_WAVES["RW2"].implemented is True
@@ -153,7 +154,7 @@ def test_direct_gains_are_disjoint_and_cover_all_non_operational_ids():
 def test_cumulative_repair_plan_reconciles_exactly_to_70():
     projection = projected_operational_counts()
     assert projection == (
-        ("RW1", 39), ("RW2", 39), ("RW3", 39), ("RW4", 40),
+        ("RW1", 40), ("RW2", 40), ("RW3", 40), ("RW4", 40),
         ("RW5", 44), ("RW6", 45), ("RW7", 48), ("RW8", 56),
         ("RW9", 61), ("RW10", 66), ("RW11", 69), ("RW12", 70),
     )
@@ -230,7 +231,7 @@ def test_rw1_ownership_repair_is_satisfied_and_only_d1_e2_become_operational():
 
 def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
     implemented = [wave_id for wave_id, wave in REPAIR_WAVES.items() if wave.implemented]
-    assert implemented == ["RW1", "RW2", "RW3"]
+    assert implemented == ["RW1", "RW2", "RW3", "RW4"]
 
     wave = REPAIR_WAVES["RW1"]
     assert wave.direct_gain == ("D1", "E2")
@@ -253,9 +254,16 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
     assert rw3.implementation_evidence
     assert all(item.strip() for item in rw3.implementation_evidence)
 
+    rw4 = REPAIR_WAVES["RW4"]
+    assert rw4.implemented is True
+    assert rw4.direct_gain == ("D6", "PORT-1", "OPP-1", "P1")
+    assert set(rw4.direct_gain) <= set(STRUCTURALLY_OPERATIONAL_IDS)
+    assert rw4.implementation_evidence
+    assert all(item.strip() for item in rw4.implementation_evidence)
+
     # Every later wave is still outstanding and records no implementation claims.
     for wave_id, other in REPAIR_WAVES.items():
-        if wave_id in {"RW1", "RW2", "RW3"}:
+        if wave_id in {"RW1", "RW2", "RW3", "RW4"}:
             continue
         assert not other.implemented
         assert other.implementation_evidence == ()
@@ -263,8 +271,8 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
 
 def test_evidence_gap_accounting_preserves_v1_freeze_and_g3_requirement():
     assert evidence_gap_counts() == {
-        "ALREADY_AVAILABLE": 39,
-        "DERIVABLE": 30,
+        "ALREADY_AVAILABLE": 40,
+        "DERIVABLE": 29,
         "NEW_RESEARCH_EVIDENCE": 1,
         "EXISTING_V1_CONTRACT_VIOLATION": 0,
     }

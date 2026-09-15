@@ -169,12 +169,13 @@ RW2_OPERATIONAL_IDS = frozenset({"M1", "M3", "M7", "M8", "M11"})
 # predicted-EV-vs-realised-R validation) all have real runners, unique reports,
 # and passing focused gates.
 D2_RW3_PROGRESS_IDS = frozenset({"D2", "D3", "D4", "D5", "X5"})
-# RW4 is in progress: D6 (candidate rank-ordering vs realised-R validation),
-# PORT-1 (selected-vs-best-available selection competitiveness), and OPP-1
+# RW4 is COMPLETE: D6 (candidate rank-ordering vs realised-R validation),
+# PORT-1 (selected-vs-best-available selection competitiveness), OPP-1
 # (promoted-vs-rejected opportunity expectancy, missing outcomes excluded, one
-# conflict-rejecting canonical root) have canonical runners, unique report
-# ownership, and passing focused gates.  P1 remains non-operational.
-D6_RW4_PROGRESS_IDS = frozenset({"D6", "PORT-1", "OPP-1"})
+# conflict-rejecting canonical root), and P1 (leakage-safe counterfactual
+# promotion-policy evaluation) all have canonical runners, unique reports, and
+# passing focused gates.
+D6_RW4_PROGRESS_IDS = frozenset({"D6", "PORT-1", "OPP-1", "P1"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
@@ -353,8 +354,15 @@ REPAIR_WAVES = {
         "RW4", "Selection, ranking, and promotion", ("D6", "PORT-1", "OPP-1", "P1"),
         "Selection questions need complete definitions, uncontaminated outcomes, strict roots, and a declared promotion estimand.", ("RW3",), ("HD05",),
         ("portfolio/opportunity definitions", "opportunity-selection join", "promotion-impact runner/report"), False,
-        ("P1",), (),
-        "D6 (candidate rank-ordering vs realised-R validation), PORT-1 (selected-vs-best-available selection competitiveness), and OPP-1 (promoted-vs-rejected opportunity expectancy with missing outcomes excluded, never imputed to 0R, and one conflict-rejecting canonical_opportunity_id root) are structurally operational through their distinct runners and unique reports. RW4 remains in progress until P1 (declared promotion impact metrics under its evaluation design) is complete.",
+        ("D6", "PORT-1", "OPP-1", "P1"), (),
+        "Each RW4 runner evaluates its distinct selection/promotion question at one-observation-per-canonical-opportunity (or per valid cycle), with pre-outcome membership, missing outcomes excluded (never 0R), fail-closed conflicts, deterministic chronological discovery/validation, and unique report ownership.",
+        implemented=True,
+        implementation_evidence=(
+            "D6 (portfolio_ranking.run_portfolio_ranking) validates whether candidate rank ordering predicts realised R; PORT-1 (run_port_1) validates selected-vs-best-available competitiveness per valid cycle with a versioned regret tolerance.",
+            "OPP-1 (opportunity_selection.run_opp_1) compares promoted-vs-rejected opportunity expectancy with the missing->0.0 contamination eliminated and one conflict-rejecting canonical_opportunity_id root (no legacy fallback).",
+            "P1 (promotion_impact.run_promotion_impact) evaluates a leakage-safe counterfactual promotion policy: pre-outcome pattern-group treatment learned on discovery, frozen, and scored on later unseen validation opportunities with EV/win-rate/frequency/drawdown deltas; no in-sample selection leakage and no causal claim.",
+            "Each target owns a unique report; focused RW4 tests prove pre-outcome membership, canonical-opportunity dedup, missing-outcome exclusion, fail-closed conflicts, deterministic chronology, distinct D6/PORT-1/OPP-1/P1 ownership, and derived 40/70 ledger accounting.",
+        ),
     ),
     "RW5": RepairWave(
         "RW5", "Strategy expectancy foundation", ("E3", "S1", "S5", "S6"),
@@ -443,8 +451,7 @@ _assign(("D2", "D3", "D4", "D5", "X5"), "RW3", "prediction/calibration", "PREDIC
         "Canonical versioned pre-decision probability/EV/score and leakage-safe outcome pairing are unresolved.", human=True)
 # PORT-1 was repaired in RW4.2 and is structurally operational (no assignment).
 # OPP-1 was repaired in RW4.3 and is structurally operational (no assignment).
-_assign(("P1",), "RW4", "counterfactual design", "SELECTION_PROMOTION_FOUNDATION",
-        "The runner omits declared evidence and impact metrics and evaluates only fixed in-sample scenarios.", human=True)
+# P1 was repaired in RW4.4 and is structurally operational (no assignment).
 _assign(("E3", "S1"), "RW5", "report ownership", "STRATEGY_EXPECTANCY_FOUNDATION",
         "Equivalent intent lacks a chosen canonical owner and the shared runner reports activation counts, not expectancy.", human=True)
 _assign(("S5", "S6"), "RW5", "no runner", "NO_RUNNER_STRATEGY_FOUNDATION",

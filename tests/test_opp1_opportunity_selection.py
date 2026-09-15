@@ -295,15 +295,15 @@ def test_ledger_derives_39_and_rw4_in_progress():
         operational_baseline,
     )
 
-    assert operational_baseline() == (39, 31)
+    # After RW4.4 (P1), RW4 is COMPLETE and the baseline is 40/30.
+    assert operational_baseline() == (40, 30)
     assert MASTER_REPAIR_LEDGER["OPP-1"].structurally_operational
     assert MASTER_REPAIR_LEDGER["D6"].structurally_operational
     assert MASTER_REPAIR_LEDGER["PORT-1"].structurally_operational
-    assert REPAIR_WAVES["RW4"].implemented is False
-    assert set(REPAIR_WAVES["RW4"].direct_gain) == {"P1"}
-    assert "P1" in STRUCTURALLY_NON_OPERATIONAL_IDS
+    assert REPAIR_WAVES["RW4"].implemented is True
+    assert set(REPAIR_WAVES["RW4"].direct_gain) == {"D6", "PORT-1", "OPP-1", "P1"}
     assert "OPP-1" not in STRUCTURALLY_NON_OPERATIONAL_IDS
-    for wave_id in ("RW1", "RW2", "RW3"):
+    for wave_id in ("RW1", "RW2", "RW3", "RW4"):
         assert REPAIR_WAVES[wave_id].implemented is True
 
 

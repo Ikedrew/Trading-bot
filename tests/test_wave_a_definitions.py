@@ -434,6 +434,7 @@ def _rw3_repair_modules():
     import research_engine.registry.rw4_d6_definitions as d6_repair
     import research_engine.registry.rw4_port1_definitions as port1_repair
     import research_engine.registry.rw4_opp1_definitions as opp1_repair
+    import research_engine.registry.rw4_p1_definitions as p1_repair
 
     return (
         (d2_repair, "apply_d2_definition"),
@@ -444,6 +445,7 @@ def _rw3_repair_modules():
         (d6_repair, "apply_d6_definition"),
         (port1_repair, "apply_port1_definition"),
         (opp1_repair, "apply_opp1_definition"),
+        (p1_repair, "apply_p1_definition"),
     )
 
 
@@ -871,8 +873,8 @@ def test_wave_a31_scope_before_and_after_health_are_exact(monkeypatch):
 
     for qid in WAVE_A3_TARGETS:
         assert get_question_health(before_reports[qid]) == "UNDER_SPECIFIED", qid
-        # M3/M7 (RW2), D2 (RW3.1) and X5 (RW3.5) are repaired and now VALID.
-        if qid in {"M3", "M7", "D2", "X5"}:
+        # M3/M7 (RW2), D2 (RW3.1), X5 (RW3.5) and P1 (RW4.4) are repaired -> VALID.
+        if qid in {"M3", "M7", "D2", "X5", "P1"}:
             assert get_question_health(after_reports[qid]) == "VALID", qid
             assert after[qid].hypothesis.strip(), qid
             assert after[qid].population_definition.strip(), qid
