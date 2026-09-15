@@ -444,17 +444,19 @@ X4 = ResearchQuestion(
 X5 = ResearchQuestion(
     id="X5",
     category=QuestionCategory.EXECUTION,
-    title="Execution leakage",
-    description="How much of the theoretical EV from decision_trace survives into realised R?",
-    required_fields=("canonical_opportunity_id", "ev", "r_multiple_realised"),
-    data_sources=(DataSource.DECISION_TRACE, DataSource.TRADE_TRUTH),
+    title="Predicted-EV vs realised-R validation",
+    description="Does pre-decision predicted EV (predicted_ev_r_v1, R units) correspond to subsequent realised R at canonical-opportunity level, and does it persist on later unseen evidence?",
+    required_fields=("canonical_opportunity_id", "p_success", "r_multiple"),
+    data_sources=(DataSource.DECISION_TRACE, DataSource.SHADOW_TRADES),
     priority=QuestionPriority.P1,
     validation_rules=(
-        ValidationRule("sample_size", ">=", 30, "Minimum matched decision/outcome observations"),
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need trace→outcome join"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 100, "Distinct paired canonical opportunities required for chronological predicted-EV-vs-realised-R validation"),
     ),
-    runner_module="research_engine.experiments.execution_protection_research",
+    runner_module="research_engine.experiments.x5_predicted_ev_realised_r_validation",
     runner_function="run_x5",
-    report_filename="w4_x5_execution_leakage.json",
+    report_filename="x5_predicted_ev_realised_r_validation_v1.json",
     legacy_ids=(),
 )
 

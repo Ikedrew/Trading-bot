@@ -170,11 +170,12 @@ def test_d2_is_operational_while_rw3_remains_in_progress():
         operational_baseline,
     )
 
-    # After RW3.4 repaired D5, the derived baseline is 35/35. D2 itself is
-    # unchanged; only the global count reflects D5 becoming operational.
-    assert operational_baseline() == (35, 35)
+    # After RW3.5 repaired X5, RW3 is COMPLETE and the derived baseline is 36/34.
+    # D2 itself is unchanged; only the global count reflects X5 becoming
+    # operational and RW3 being implemented.
+    assert operational_baseline() == (36, 34)
     assert MASTER_REPAIR_LEDGER["D2"].structurally_operational
-    assert REPAIR_WAVES["RW3"].implemented is False
-    # RW3.4 repaired D5, so RW3's outstanding direct gain is now X5 only.
-    assert set(REPAIR_WAVES["RW3"].direct_gain) == {"X5"}
-    assert {"X5"} <= STRUCTURALLY_NON_OPERATIONAL_IDS
+    assert REPAIR_WAVES["RW3"].implemented is True
+    # RW3 is fully implemented; its direct gain is the whole RW3 target set.
+    assert set(REPAIR_WAVES["RW3"].direct_gain) == {"D2", "D3", "D4", "D5", "X5"}
+    assert not {"D2", "D3", "D4", "D5", "X5"} & STRUCTURALLY_NON_OPERATIONAL_IDS

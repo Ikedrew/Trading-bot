@@ -271,12 +271,12 @@ def test_ledger_derives_33_and_neighbours_unchanged():
         operational_baseline,
     )
 
-    assert operational_baseline() == (35, 35)
+    assert operational_baseline() == (36, 34)
     assert MASTER_REPAIR_LEDGER["D3"].structurally_operational
     assert MASTER_REPAIR_LEDGER["D2"].structurally_operational
-    # RW3 not complete; X5 remains non-operational (D4/D5 repaired in RW3.3/RW3.4).
-    assert REPAIR_WAVES["RW3"].implemented is False
-    assert {"X5"} <= STRUCTURALLY_NON_OPERATIONAL_IDS
+    # RW3 is COMPLETE after X5 (RW3.5); no RW3 target remains non-operational.
+    assert REPAIR_WAVES["RW3"].implemented is True
+    assert not {"D2", "D3", "D4", "D5", "X5"} & STRUCTURALLY_NON_OPERATIONAL_IDS
     # RW1/RW2 direct gains remain operational.
     for qid in ("D1", "E2", "M1", "M3", "M7", "M8", "M11"):
         assert MASTER_REPAIR_LEDGER[qid].structurally_operational

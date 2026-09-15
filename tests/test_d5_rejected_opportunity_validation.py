@@ -390,11 +390,12 @@ def test_ledger_derives_35_and_x5_non_operational():
         operational_baseline,
     )
 
-    assert operational_baseline() == (35, 35)
+    assert operational_baseline() == (36, 34)
     assert MASTER_REPAIR_LEDGER["D5"].structurally_operational
-    assert REPAIR_WAVES["RW3"].implemented is False
-    assert set(REPAIR_WAVES["RW3"].direct_gain) == {"X5"}
-    assert "X5" in STRUCTURALLY_NON_OPERATIONAL_IDS
+    # RW3 is COMPLETE after X5 (RW3.5).
+    assert REPAIR_WAVES["RW3"].implemented is True
+    assert set(REPAIR_WAVES["RW3"].direct_gain) == {"D2", "D3", "D4", "D5", "X5"}
+    assert "X5" not in STRUCTURALLY_NON_OPERATIONAL_IDS
     assert "D5" not in STRUCTURALLY_NON_OPERATIONAL_IDS
 
 

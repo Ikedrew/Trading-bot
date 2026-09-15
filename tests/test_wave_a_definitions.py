@@ -79,10 +79,13 @@ def test_d2_repaired_authority_is_valid():
 
 
 def test_x5_unresolved_authority_visible():
+    # X5 was repaired in RW3.5: predicted_ev_r_v1 (reused from D3) is a versioned
+    # pre-decision EV authority, so no UNRESOLVED_AUTHORITY remains and X5 is VALID.
     definitions = build_definitions_from_registry(REGISTRY)
     report = validate_definition(definitions["X5"])
     unresolved = [r for r in report.results if r.category == "UNRESOLVED_AUTHORITY"]
-    assert len(unresolved) >= 5
+    assert unresolved == []
+    assert get_question_health(report) == "VALID"
 
 
 def test_missing_authority_detected():
@@ -167,12 +170,13 @@ def test_health_categories_populated():
     definitions = build_definitions_from_registry(REGISTRY)
     reports = validate_all_definitions(definitions)
 
-    # D2 is repaired; X5 remains fail-closed with unresolved authority.
+    # D2 and X5 are both repaired in RW3; neither has unresolved authority.
     d2_report = reports["D2"]
     assert get_question_health(d2_report) == "VALID"
 
     x5_report = reports["X5"]
-    assert any(r.category == "UNRESOLVED_AUTHORITY" for r in x5_report.results)
+    assert not any(r.category == "UNRESOLVED_AUTHORITY" for r in x5_report.results)
+    assert get_question_health(x5_report) == "VALID"
 
     # Wave A1 closed targets are now semantically complete and VALID (one is
     # VALID_WITH_WARNINGS because of a pre-existing report-filename ambiguity
@@ -415,22 +419,35 @@ from research_engine.registry.wave_a2_definitions import (  # noqa: E402
 )
 
 
+def _rw3_repair_modules():
+    """(module, attr) pairs for every RW3 definition repair (D2/D3/D4/D5/X5)."""
+    import research_engine.registry.rw3_d2_definitions as d2_repair
+    import research_engine.registry.rw3_d3_definitions as d3_repair
+    import research_engine.registry.rw3_d4_definitions as d4_repair
+    import research_engine.registry.rw3_d5_definitions as d5_repair
+    import research_engine.registry.rw3_x5_definitions as x5_repair
+
+    return (
+        (d2_repair, "apply_d2_definition"),
+        (d3_repair, "apply_d3_definition"),
+        (d4_repair, "apply_d4_definition"),
+        (d5_repair, "apply_d5_definition"),
+        (x5_repair, "apply_x5_definition"),
+    )
+
+
 def _build_pre_a2_definitions(monkeypatch):
-    """Build the committed Wave A1 state with the A2 application disabled."""
+    """Build the committed Wave A1 state, before A2/RW2/RW3 applications."""
     import research_engine.registry.wave_a2_definitions as wave_a2
     import research_engine.registry.rw2_definitions as rw2
-    import research_engine.registry.rw3_d2_definitions as d2_repair
 
-    original = wave_a2.apply_wave_a2_definitions
-    original_rw2 = rw2.apply_rw2_definitions
-    original_d2 = d2_repair.apply_d2_definition
-    monkeypatch.setattr(wave_a2, "apply_wave_a2_definitions", lambda definitions: definitions)
-    monkeypatch.setattr(rw2, "apply_rw2_definitions", lambda definitions: definitions)
-    monkeypatch.setattr(d2_repair, "apply_d2_definition", lambda definitions: definitions)
+    disabled = ((wave_a2, "apply_wave_a2_definitions"), (rw2, "apply_rw2_definitions")) + _rw3_repair_modules()
+    originals = [(module, attr, getattr(module, attr)) for module, attr in disabled]
+    for module, attr in disabled:
+        monkeypatch.setattr(module, attr, lambda definitions: definitions)
     before = build_definitions_from_registry(REGISTRY)
-    monkeypatch.setattr(wave_a2, "apply_wave_a2_definitions", original)
-    monkeypatch.setattr(rw2, "apply_rw2_definitions", original_rw2)
-    monkeypatch.setattr(d2_repair, "apply_d2_definition", original_d2)
+    for module, attr, original in originals:
+        monkeypatch.setattr(module, attr, original)
     return before
 
 
@@ -546,10 +563,11 @@ def test_wave_a2_does_not_change_d2_or_x5(monkeypatch):
         assert after[qid] is before[qid]
         assert after[qid].to_dict() == before[qid].to_dict()
         report = validate_definition(after[qid])
-        if qid == "X5":
-            assert any(result.category == "UNRESOLVED_AUTHORITY" for result in report.results)
-        else:
-            assert get_question_health(report) == "UNDER_SPECIFIED"
+        # The A2 module leaves both untouched; their pre-RW3 registry-derived
+        # definitions are UNDER_SPECIFIED (empty hypothesis/population/metric).
+        # X5 no longer carries an UNRESOLVED_AUTHORITY error (repaired in RW3.5).
+        assert not any(result.category == "UNRESOLVED_AUTHORITY" for result in report.results)
+        assert get_question_health(report) == "UNDER_SPECIFIED"
 
 
 # ---------------------------------------------------------------------------
@@ -811,23 +829,17 @@ from research_engine.registry.wave_a3_definitions import (  # noqa: E402
 
 
 def _build_pre_a3_definitions(monkeypatch):
-    """Build the committed A1/A2 state with A3 application disabled."""
+    """Build the committed A1/A2 state, before A3/RW2/RW3 applications."""
     import research_engine.registry.wave_a3_definitions as wave_a3
     import research_engine.registry.rw2_definitions as rw2
-    import research_engine.registry.rw3_d2_definitions as d2_repair
 
-    original = wave_a3.apply_wave_a3_definitions
-    original_rw2 = rw2.apply_rw2_definitions
-    original_d2 = d2_repair.apply_d2_definition
-    monkeypatch.setattr(
-        wave_a3, "apply_wave_a3_definitions", lambda definitions: definitions
-    )
-    monkeypatch.setattr(rw2, "apply_rw2_definitions", lambda definitions: definitions)
-    monkeypatch.setattr(d2_repair, "apply_d2_definition", lambda definitions: definitions)
+    disabled = ((wave_a3, "apply_wave_a3_definitions"), (rw2, "apply_rw2_definitions")) + _rw3_repair_modules()
+    originals = [(module, attr, getattr(module, attr)) for module, attr in disabled]
+    for module, attr in disabled:
+        monkeypatch.setattr(module, attr, lambda definitions: definitions)
     before = build_definitions_from_registry(REGISTRY)
-    monkeypatch.setattr(wave_a3, "apply_wave_a3_definitions", original)
-    monkeypatch.setattr(rw2, "apply_rw2_definitions", original_rw2)
-    monkeypatch.setattr(d2_repair, "apply_d2_definition", original_d2)
+    for module, attr, original in originals:
+        monkeypatch.setattr(module, attr, original)
     return before
 
 
@@ -850,7 +862,8 @@ def test_wave_a31_scope_before_and_after_health_are_exact(monkeypatch):
 
     for qid in WAVE_A3_TARGETS:
         assert get_question_health(before_reports[qid]) == "UNDER_SPECIFIED", qid
-        if qid in {"M3", "M7", "D2"}:
+        # M3/M7 (RW2), D2 (RW3.1) and X5 (RW3.5) are repaired and now VALID.
+        if qid in {"M3", "M7", "D2", "X5"}:
             assert get_question_health(after_reports[qid]) == "VALID", qid
             assert after[qid].hypothesis.strip(), qid
             assert after[qid].population_definition.strip(), qid
@@ -1066,12 +1079,14 @@ def test_wave_a33_before_to_after_health_remains_fail_closed(monkeypatch):
         assert qid in WAVE_A3_UNRESOLVED
         assert qid not in WAVE_A3_RESOLVED
         assert qid not in WAVE_A3_OVERRIDES
-        if qid == "D2":
+        if qid in ("D2", "X5"):
+            # D2 (RW3.1) and X5 (RW3.5) are repaired and now VALID.
             assert get_question_health(after_reports[qid]) == "VALID", qid
             assert after[qid].hypothesis.strip(), qid
             assert after[qid].population_definition.strip(), qid
             assert after[qid].metric_definition.strip(), qid
         else:
+            # EX9 remains fail-closed / under-specified.
             assert get_question_health(after_reports[qid]) == "UNDER_SPECIFIED", qid
             assert not after[qid].hypothesis.strip(), qid
             assert not after[qid].population_definition.strip(), qid

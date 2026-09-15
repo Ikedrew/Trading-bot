@@ -16,16 +16,11 @@ from research_engine.registry.research_question_models import (
 )
 
 
-KNOWN_UNRESOLVED_AUTH = {
-    "X5": [
-        "authoritative pre-decision EV",
-        "producer",
-        "probability model",
-        "reward/risk inputs",
-        "semantic stage",
-        "version",
-    ],
-}
+# X5 was repaired in RW3.5: predicted_ev_r_v1 (reused from D3) is a versioned
+# pre-decision EV authority with explicit producer, probability model, reward/
+# risk inputs, semantic stage and units. No unresolved-authority questions
+# remain in this baseline.
+KNOWN_UNRESOLVED_AUTH: dict[str, list[str]] = {}
 
 SEMANTIC_MISMATCH_QIDS = {
     "X3",
@@ -322,6 +317,7 @@ def build_definitions_from_registry(registry):
     from research_engine.registry.rw3_d3_definitions import apply_d3_definition
     from research_engine.registry.rw3_d4_definitions import apply_d4_definition
     from research_engine.registry.rw3_d5_definitions import apply_d5_definition
+    from research_engine.registry.rw3_x5_definitions import apply_x5_definition
 
     definitions = apply_wave_a1_definitions(definitions)
     definitions = apply_wave_a2_definitions(definitions)
@@ -333,7 +329,8 @@ def build_definitions_from_registry(registry):
     definitions = apply_d2_definition(definitions)
     definitions = apply_d3_definition(definitions)
     definitions = apply_d4_definition(definitions)
-    return apply_d5_definition(definitions)
+    definitions = apply_d5_definition(definitions)
+    return apply_x5_definition(definitions)
 
 
 def validate_runner_registry_threshold_alignment(question, question_id):
