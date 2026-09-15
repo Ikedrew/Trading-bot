@@ -420,12 +420,20 @@ from research_engine.registry.wave_a2_definitions import (  # noqa: E402
 
 
 def _rw3_repair_modules():
-    """(module, attr) pairs for every RW3 definition repair (D2/D3/D4/D5/X5)."""
+    """(module, attr) pairs for every RW3/RW4 definition repair.
+
+    RW3: D2/D3/D4/D5/X5. RW4: D6/PORT-1/OPP-1. Disabling these lets the pre-A2/
+    pre-A3 snapshots represent the genuine committed early-wave state before any
+    later-wave repair leaks its VALID definition into the "before" snapshot.
+    """
     import research_engine.registry.rw3_d2_definitions as d2_repair
     import research_engine.registry.rw3_d3_definitions as d3_repair
     import research_engine.registry.rw3_d4_definitions as d4_repair
     import research_engine.registry.rw3_d5_definitions as d5_repair
     import research_engine.registry.rw3_x5_definitions as x5_repair
+    import research_engine.registry.rw4_d6_definitions as d6_repair
+    import research_engine.registry.rw4_port1_definitions as port1_repair
+    import research_engine.registry.rw4_opp1_definitions as opp1_repair
 
     return (
         (d2_repair, "apply_d2_definition"),
@@ -433,11 +441,14 @@ def _rw3_repair_modules():
         (d4_repair, "apply_d4_definition"),
         (d5_repair, "apply_d5_definition"),
         (x5_repair, "apply_x5_definition"),
+        (d6_repair, "apply_d6_definition"),
+        (port1_repair, "apply_port1_definition"),
+        (opp1_repair, "apply_opp1_definition"),
     )
 
 
 def _build_pre_a2_definitions(monkeypatch):
-    """Build the committed Wave A1 state, before A2/RW2/RW3 applications."""
+    """Build the committed Wave A1 state, before A2/RW2/RW3/RW4 applications."""
     import research_engine.registry.wave_a2_definitions as wave_a2
     import research_engine.registry.rw2_definitions as rw2
 
@@ -490,13 +501,16 @@ def test_wave_a2_resolved_health_and_unresolved_fail_closed():
         assert definition.metric_definition.strip(), qid
         assert definition.evidence_authorities, qid
 
-    for qid in WAVE_A2_UNRESOLVED - {"M8"}:
+    # M8 (RW2) and OPP-1 (RW4.3) were repaired by later waves and are now VALID;
+    # no A2-unresolved target remains fail-closed in the live built definitions.
+    for qid in WAVE_A2_UNRESOLVED - {"M8", "OPP-1"}:
         unresolved = definitions[qid]
         assert not unresolved.hypothesis.strip(), qid
         assert not unresolved.population_definition.strip(), qid
         assert not unresolved.metric_definition.strip(), qid
         assert get_question_health(reports[qid]) == "UNDER_SPECIFIED", qid
     assert get_question_health(reports["M8"]) == "VALID"
+    assert get_question_health(reports["OPP-1"]) == "VALID"
     assert definitions["M8"].hypothesis.strip()
     assert "market_context" in WAVE_A2_UNRESOLVED_REASONS["M8"]
     assert "missing outcome to 0.0" in WAVE_A2_UNRESOLVED_REASONS["OPP-1"].replace(
@@ -678,7 +692,9 @@ def test_wave_a22b_before_to_after_health_is_fail_closed_where_required(monkeypa
     } == {qid: "UNDER_SPECIFIED" for qid in WAVE_A2_2B_TARGETS}
     assert get_question_health(after_reports["L5"]) == "VALID"
     assert get_question_health(after_reports["HORIZON-1"]) == "VALID"
-    assert get_question_health(after_reports["OPP-1"]) == "UNDER_SPECIFIED"
+    # OPP-1 was repaired in RW4.3 (missing outcomes excluded, canonical root),
+    # so its live definition is now VALID; the A2 module still owns no override.
+    assert get_question_health(after_reports["OPP-1"]) == "VALID"
     assert "OPP-1" not in WAVE_A2_OVERRIDES
 
 
@@ -736,17 +752,14 @@ def test_horizon1_unit_is_one_opportunity_with_repeated_simulations():
     assert "0.05R" in definition.metric_definition
 
 
-def test_opp1_missing_outcome_zero_contamination_remains_fail_closed():
-    from research_engine.experiments.opportunity_selection import run_opp_1
+def test_opp1_missing_outcome_zero_contamination_is_repaired():
+    # RW4.3 repair: the missing->0.0 contamination is eliminated. 5 canonical
+    # opportunities have a real 1.0R outcome; 5 have NO outcome. The 5 missing
+    # must be EXCLUDED (never imputed to 0.0), not folded into any mean.
+    from research_engine.experiments.opportunity_selection import (
+        build_opp1_observations,
+    )
 
-    opportunities = [
-        {"opportunity_id": f"local-{i}", "canonical_opportunity_id": f"canon-{i}"}
-        for i in range(10)
-    ]
-    assessments = [
-        {"opportunity_id": f"local-{i}", "score_strategy": 0.9}
-        for i in range(10)
-    ]
     horizon_candidates = [
         {
             "canonical_opportunity_id": f"canon-{i}",
@@ -757,26 +770,22 @@ def test_opp1_missing_outcome_zero_contamination_remains_fail_closed():
     shadows = [
         {
             "canonical_opportunity_id": f"canon-{i}",
+            "identity": {"canonical_opportunity_id": f"canon-{i}", "shadow_type": ""},
+            "decision_snapshot": {"timestamp_decision_utc": f"2026-01-01T00:{i:02d}:00+00:00"},
             "simulated_outcome": {"pnl_r_multiple": 1.0},
         }
-        for i in range(5)
+        for i in range(5)  # only canon-0..canon-4 have outcomes
     ]
+    rows, diagnostics = build_opp1_observations(horizon_candidates, shadows)
+    # Exactly the 5 with a real outcome are paired; the 5 missing are excluded.
+    assert len(rows) == 5
+    assert all(r["outcome_r"] == 1.0 for r in rows)  # no imputed 0.0 present
+    assert diagnostics["missing_outcomes_excluded"] == 5
 
-    report = run_opp_1(
-        opportunities=opportunities,
-        assessments=assessments,
-        horizon_candidates=horizon_candidates,
-        shadow_trades=shadows,
-    )
-    high_bucket = report["overall"]["score_bucket_outcomes"]["HIGH_0.80+"]
-
-    assert report["overall"]["opportunities_with_outcome"] == 5
-    assert high_bucket["n"] == 10
-    assert high_bucket["mean_r"] == 0.5
-    assert "converts a missing outcome to 0.0" in (
-        WAVE_A2_UNRESOLVED_REASONS["OPP-1"]
-    )
-    assert not build_definitions_from_registry(REGISTRY)["OPP-1"].hypothesis
+    # The frozen diagnosis text still records the historical defect...
+    assert "converts a missing outcome to 0.0" in WAVE_A2_UNRESOLVED_REASONS["OPP-1"]
+    # ...but the live OPP-1 definition is now repaired (VALID, populated).
+    assert build_definitions_from_registry(REGISTRY)["OPP-1"].hypothesis
 
 
 def test_opp1_canonical_and_legacy_join_conflict_is_explicit():
