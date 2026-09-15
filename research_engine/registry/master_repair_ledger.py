@@ -169,10 +169,11 @@ RW2_OPERATIONAL_IDS = frozenset({"M1", "M3", "M7", "M8", "M11"})
 # predicted-EV-vs-realised-R validation) all have real runners, unique reports,
 # and passing focused gates.
 D2_RW3_PROGRESS_IDS = frozenset({"D2", "D3", "D4", "D5", "X5"})
-# RW4 is in progress: D6 (candidate rank-ordering vs realised-R validation) has
-# a canonical runner, unique report ownership, and passing focused gates.
-# PORT-1/OPP-1/P1 remain non-operational.
-D6_RW4_PROGRESS_IDS = frozenset({"D6"})
+# RW4 is in progress: D6 (candidate rank-ordering vs realised-R validation) and
+# PORT-1 (selected-vs-best-available selection competitiveness) have canonical
+# runners, unique report ownership, and passing focused gates.  OPP-1/P1 remain
+# non-operational.
+D6_RW4_PROGRESS_IDS = frozenset({"D6", "PORT-1"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
@@ -351,8 +352,8 @@ REPAIR_WAVES = {
         "RW4", "Selection, ranking, and promotion", ("D6", "PORT-1", "OPP-1", "P1"),
         "Selection questions need complete definitions, uncontaminated outcomes, strict roots, and a declared promotion estimand.", ("RW3",), ("HD05",),
         ("portfolio/opportunity definitions", "opportunity-selection join", "promotion-impact runner/report"), False,
-        ("PORT-1", "OPP-1", "P1"), (),
-        "D6 (candidate rank-ordering vs realised-R validation) is structurally operational through run_portfolio_ranking and its unique d6_portfolio_ranking.json report. RW4 remains in progress until PORT-1 (selected-vs-best, distinct ownership), OPP-1 (missing outcomes excluded, one conflict-rejecting canonical root) and P1 (declared promotion impact metrics under its evaluation design) are complete.",
+        ("OPP-1", "P1"), (),
+        "D6 (candidate rank-ordering vs realised-R validation) and PORT-1 (selected-vs-best-available selection competitiveness, one valid cycle per observation, versioned regret tolerance) are structurally operational through their distinct runners and unique reports. RW4 remains in progress until OPP-1 (missing outcomes excluded, one conflict-rejecting canonical root) and P1 (declared promotion impact metrics under its evaluation design) are complete.",
     ),
     "RW5": RepairWave(
         "RW5", "Strategy expectancy foundation", ("E3", "S1", "S5", "S6"),
@@ -439,9 +440,7 @@ _assign(("M8",), "RW2", "evidence authority", "MARKET_CONTEXT_PREDICTION",
         "Registry multi-source market_context authority conflicts with the runner's embedded shadow snapshot.", human=True)
 _assign(("D2", "D3", "D4", "D5", "X5"), "RW3", "prediction/calibration", "PREDICTION_DECISION_FOUNDATION",
         "Canonical versioned pre-decision probability/EV/score and leakage-safe outcome pairing are unresolved.", human=True)
-_assign(("PORT-1",), "RW4", "definition", "SELECTION_PROMOTION_FOUNDATION",
-        "A5 proves distinct coherent ownership, but PORT-1's scientific/sufficiency/completion definition remains unclosed.",
-        evidence_gap=ALREADY_AVAILABLE)
+# PORT-1 was repaired in RW4.2 and is structurally operational (no assignment).
 _assign(("OPP-1",), "RW4", "join/population", "SELECTION_PROMOTION_FOUNDATION",
         "Missing outcomes become 0R in score buckets and canonical/legacy opportunity roots are mixed.")
 _assign(("P1",), "RW4", "counterfactual design", "SELECTION_PROMOTION_FOUNDATION",

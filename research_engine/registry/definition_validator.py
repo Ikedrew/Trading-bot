@@ -319,6 +319,7 @@ def build_definitions_from_registry(registry):
     from research_engine.registry.rw3_d5_definitions import apply_d5_definition
     from research_engine.registry.rw3_x5_definitions import apply_x5_definition
     from research_engine.registry.rw4_d6_definitions import apply_d6_definition
+    from research_engine.registry.rw4_port1_definitions import apply_port1_definition
 
     definitions = apply_wave_a1_definitions(definitions)
     definitions = apply_wave_a2_definitions(definitions)
@@ -332,7 +333,8 @@ def build_definitions_from_registry(registry):
     definitions = apply_d4_definition(definitions)
     definitions = apply_d5_definition(definitions)
     definitions = apply_x5_definition(definitions)
-    return apply_d6_definition(definitions)
+    definitions = apply_d6_definition(definitions)
+    return apply_port1_definition(definitions)
 
 
 def validate_runner_registry_threshold_alignment(question, question_id):

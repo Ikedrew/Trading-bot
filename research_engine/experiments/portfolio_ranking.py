@@ -276,6 +276,170 @@ def _d6_classify(status: str, discovery_signal: float | None, validation_signal:
     return "INVERSE_RANK_SIGNAL"
 
 
+# PORT-1 canonical selection-competitiveness contract (distinct from D6).
+PORT1_REPORT_FILENAME = "port1_portfolio_selection.json"
+PORT1_COMPETITIVENESS_VERSION = "port1_competitiveness_v1"
+# Fixed, versioned regret tolerance (R). A cycle is "competitive" when the
+# selected candidate's realised R is within this tolerance of the best
+# pre-outcome (rank_position==1) comparator. NOT tuned on validation evidence.
+_PORT1_REGRET_TOLERANCE_R = 0.10
+_PORT1_MIN_TOTAL = 100      # valid paired selection cycles
+_PORT1_MIN_DISCOVERY = 60
+_PORT1_MIN_VALIDATION = 40
+# A cohort is "competitive" overall when the majority of cycles are within
+# tolerance; the directional claim must persist on later unseen validation.
+_PORT1_COMPETITIVE_RATE_MIN = 0.50
+
+
+def build_selection_cycles(
+    portfolio_rankings: list[dict[str, Any]],
+    decisions: list[dict[str, Any]],
+    trade_truth: list[dict[str, Any]],
+    shadow_trades: list[dict[str, Any]],
+    boundary: "QuarantineBoundary",
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """PORT-1 pure calculation: one selected-vs-best-available observation per
+    valid selection cycle.
+
+    Selected identity = candidate with selection_status == "SELECTED" (pre-
+    outcome producer authority). Best-available comparator = candidate with
+    rank_position == 1 (pre-outcome highest final_rank_score). Neither identity
+    is derived from realised outcome. Reuses D6's per-candidate outcome join
+    (canonical opportunity -> CURRENT shadow R); account fanout and repeated
+    horizons collapse via that join's primary-shadow selection.
+
+    A cycle contributes to the paired regret evaluation only when BOTH the
+    selected candidate and the rank-1 comparator have a valid CURRENT outcome.
+    Missing outcomes are excluded (never imputed). Conflicting selected or
+    comparator identity within a cycle fails closed.
+    """
+    decision_idx = build_decision_index(decisions)
+    truth_idx = index_by(trade_truth, lambda r: str(
+        deep_get(r, "identity", "correlation_id") or r.get("correlation_id", "")
+    ) or "")
+
+    cycles: list[dict[str, Any]] = []
+    conflicts: list[str] = []
+    total_cycles = 0
+    cycles_with_selection = 0
+    cycles_with_comparator = 0
+    incomplete_missing_outcome = 0
+    for ranking in portfolio_rankings:
+        candidates = ranking.get("candidates", [])
+        if not candidates:
+            continue
+        total_cycles += 1
+        cycle_id = ranking.get("cycle_id")
+
+        selected = [c for c in candidates if str(c.get("selection_status", "")).upper() == "SELECTED"]
+        rank1 = [c for c in candidates if c.get("rank_position") == 1]
+        # Conflicting pre-outcome selection or comparator identity -> fail closed.
+        if len(selected) > 1 or len(rank1) > 1:
+            conflicts.append(str(cycle_id))
+            continue
+        if not selected:
+            continue
+        cycles_with_selection += 1
+        if not rank1:
+            continue
+        cycles_with_comparator += 1
+
+        sel_cand, cmp_cand = selected[0], rank1[0]
+        for cand in (sel_cand, cmp_cand):
+            cand["_outcome"] = join_candidate_outcome(cand, ranking, decision_idx, truth_idx, shadow_trades, boundary)
+        sel_opp = str(sel_cand["_outcome"].get("canonical_opportunity_id") or "")
+        cmp_opp = str(cmp_cand["_outcome"].get("canonical_opportunity_id") or "")
+        sel_r = outcome_value(sel_cand, precedence="shadow")
+        cmp_r = outcome_value(cmp_cand, precedence="shadow")
+        if sel_r is None or cmp_r is None or not sel_opp or not cmp_opp:
+            incomplete_missing_outcome += 1
+            continue
+
+        selected_is_best_ranked = (sel_cand.get("rank_position") == 1)
+        regret = cmp_r - sel_r  # >0 => selected underperformed the top-ranked
+        order_key = str(ranking.get("timestamp") or cycle_id)
+        cycles.append({
+            "cycle_id": cycle_id,
+            "selected_opportunity_id": sel_opp,
+            "comparator_opportunity_id": cmp_opp,
+            "selected_r": sel_r,
+            "comparator_r": cmp_r,
+            "selection_regret_r": regret,
+            "selected_is_best_ranked": selected_is_best_ranked,
+            "competitive": regret <= _PORT1_REGRET_TOLERANCE_R,
+            "_order": order_key,
+        })
+    cycles.sort(key=lambda row: (row["_order"], str(row["cycle_id"])))
+    diagnostics = {
+        "total_cycles": total_cycles,
+        "cycles_with_selection": cycles_with_selection,
+        "cycles_with_comparator": cycles_with_comparator,
+        "paired_cycles": len(cycles),
+        "incomplete_missing_outcome_cycles": incomplete_missing_outcome,
+        "conflicting_cycles": tuple(sorted(set(conflicts))),
+        "distinct_selected_opportunities": len({c["selected_opportunity_id"] for c in cycles}),
+    }
+    return cycles, diagnostics
+
+
+def _port1_split(cycles: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    unique = sorted({row["_order"] for row in cycles})
+    if len(unique) < 2:
+        return cycles, []
+    index = max(1, min(len(unique) - 1, int(len(unique) * 0.60)))
+    boundary_key = unique[index]
+    return ([r for r in cycles if r["_order"] < boundary_key],
+            [r for r in cycles if r["_order"] >= boundary_key])
+
+
+def _port1_stats(cycles: list[dict[str, Any]]) -> dict[str, Any]:
+    if not cycles:
+        return {
+            "n": 0, "mean_regret_r": None, "median_regret_r": None,
+            "regret_stdev_r": None, "competitive_rate": None,
+            "selected_best_ranked_rate": None,
+            "selected_mean_r": None, "selected_median_r": None,
+            "comparator_mean_r": None, "comparator_median_r": None,
+            "selected_minus_comparator_mean_r": None,
+        }
+    regrets = [c["selection_regret_r"] for c in cycles]
+    sel = [c["selected_r"] for c in cycles]
+    cmp = [c["comparator_r"] for c in cycles]
+    return {
+        "n": len(cycles),
+        "mean_regret_r": round(sum(regrets) / len(regrets), 4),
+        "median_regret_r": round(statistics.median(regrets), 4),
+        "regret_stdev_r": round(statistics.pstdev(regrets), 4) if len(regrets) > 1 else 0.0,
+        "competitive_rate": round(sum(1 for c in cycles if c["competitive"]) / len(cycles), 4),
+        "selected_best_ranked_rate": round(sum(1 for c in cycles if c["selected_is_best_ranked"]) / len(cycles), 4),
+        "selected_mean_r": round(sum(sel) / len(sel), 4),
+        "selected_median_r": round(statistics.median(sel), 4),
+        "comparator_mean_r": round(sum(cmp) / len(cmp), 4),
+        "comparator_median_r": round(statistics.median(cmp), 4),
+        "selected_minus_comparator_mean_r": round((sum(sel) / len(sel)) - (sum(cmp) / len(cmp)), 4),
+    }
+
+
+def _port1_classify(status: str, discovery: dict[str, Any], validation: dict[str, Any]) -> str:
+    if status != "COMPLETE":
+        return "INSUFFICIENT_EVIDENCE"
+    d_rate = discovery.get("competitive_rate")
+    v_rate = validation.get("competitive_rate")
+    v_mean_regret = validation.get("mean_regret_r")
+    if d_rate is None or v_rate is None or v_mean_regret is None:
+        return "NO_RELIABLE_SELECTION_ADVANTAGE"
+    d_competitive = d_rate >= _PORT1_COMPETITIVE_RATE_MIN
+    v_competitive = v_rate >= _PORT1_COMPETITIVE_RATE_MIN
+    if d_competitive and v_competitive:
+        return "SELECTION_COMPETITIVE"
+    if d_competitive and not v_competitive:
+        return "DISCOVERY_ONLY"
+    # Consistent, materially positive regret => selected underperforms best.
+    if v_mean_regret > _PORT1_REGRET_TOLERANCE_R and not v_competitive:
+        return "SELECTION_REGRET_SIGNAL"
+    return "NO_RELIABLE_SELECTION_ADVANTAGE"
+
+
 # ==============================================================================
 # D6 - Candidate rank-ordering predicts outcome (canonical; owns d6 report)
 # ==============================================================================
@@ -450,13 +614,17 @@ def run_port_1(
     shadow_trades: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """
-    PORT-1: Portfolio selection quality.
+    PORT-1: Portfolio SELECTION quality / selection regret.
 
-    Evaluates whether the SELECTED candidate (from each ranking cycle)
-    was genuinely the best available choice. This is a portfolio-LEVEL
-    question about the ranker's selection vs. the full candidate pool.
+    Was the candidate actually selected by the portfolio process (pre-outcome
+    selection_status == "SELECTED") competitive with the best AVAILABLE pre-
+    outcome comparator (rank_position == 1), and does that competitiveness
+    persist on later unseen cycles?
 
-    PRIMARY evidence: portfolio_rankings. Materially depends on it.
+    Distinct from D6 (rank-ordering across positions). One valid selection cycle
+    is one independent observation; account fanout and repeated horizons never
+    inflate n. Missing outcomes exclude the cycle (never imputed). Research only
+    — never modifies production selection.
     """
     if portfolio_rankings is None:
         portfolio_rankings = load_portfolio_rankings()
@@ -468,163 +636,127 @@ def run_port_1(
         shadow_trades = ingest_completed_shadow_trades()
 
     boundary = load_quarantine_boundary()
+    ranking_rows = len(portfolio_rankings)
 
-    if not portfolio_rankings:
-        return build_selection_report(
-            question_id="PORT-1", status=ReadinessStatus.INSUFFICIENT_DATA,
-            overall={"reason": "No portfolio_rankings evidence"},
-            confidence="INSUFFICIENT_DATA",
-            dataset={"portfolio_rankings_read": 0, "outcome_candidates": 0},
-            recommendation="WAIT", source="portfolio_rankings",
-            records_used=0, records_excluded=0,
-            warnings=["No portfolio_rankings - PORT-1 cannot answer"],
-            module="research_engine.experiments.portfolio_ranking",
+    cycles, diagnostics = build_selection_cycles(
+        portfolio_rankings, decisions, trade_truth, shadow_trades, boundary,
+    )
+    discovery, validation = _port1_split(cycles)
+
+    paired = len(cycles)
+    overall_stats = _port1_stats(cycles)
+    discovery_stats = _port1_stats(discovery)
+    validation_stats = _port1_stats(validation)
+
+    if diagnostics["conflicting_cycles"]:
+        status = ReadinessStatus.BLOCKED
+        reason = "Conflicting selected or comparator identity within a cycle"
+    elif paired < _PORT1_MIN_TOTAL or len(discovery) < _PORT1_MIN_DISCOVERY or len(validation) < _PORT1_MIN_VALIDATION:
+        status = ReadinessStatus.INSUFFICIENT_DATA
+        reason = (
+            f"paired/discovery/validation={paired}/{len(discovery)}/{len(validation)}; "
+            f"need {_PORT1_MIN_TOTAL}/{_PORT1_MIN_DISCOVERY}/{_PORT1_MIN_VALIDATION}"
         )
+    else:
+        status = ReadinessStatus.COMPLETE
+        reason = "Chronological selected-vs-best-available competitiveness evaluation completed on later unseen cycles"
 
-    decision_idx = build_decision_index(decisions)
-    truth_idx = index_by(trade_truth, lambda r: str(
-        deep_get(r, "identity", "correlation_id") or r.get("correlation_id", "")
-    ) or "")
-
-    cycles_with_selection = 0
-    cycles_with_outcome = 0
-    selected_best = 0
-    selected_worse_than_rejected = 0
-    regrets: list[float] = []
-    selected_rs: list[float] = []
-    best_available_rs: list[float] = []
-    unselected_rs: list[float] = []
-
-    for ranking in portfolio_rankings:
-        cycle_id = ranking.get("cycle_id")
-        candidates = ranking.get("candidates", [])
-        if not candidates:
-            continue
-
-        selected_cand = None
-        all_with_r: list[tuple[dict[str, Any], float]] = []
-
-        for cand in candidates:
-            outcome = join_candidate_outcome(
-                cand, ranking, decision_idx, truth_idx, shadow_trades, boundary,
-            )
-            cand["_outcome"] = outcome
-            r = outcome_value(cand, precedence="shadow")
-            if r is not None:
-                all_with_r.append((cand, r))
-            if cand.get("selection_status") == "SELECTED":
-                selected_cand = cand
-
-        if not all_with_r:
-            continue
-
-        cycles_with_outcome += 1
-        if selected_cand:
-            cycles_with_selection += 1
-            best_r = max(all_with_r, key=lambda x: x[1])[1]
-            sel_r = outcome_value(selected_cand, precedence="shadow")
-            if sel_r is not None:
-                best_available_rs.append(best_r)
-                selected_rs.append(sel_r)
-                regrets.append(best_r - sel_r)
-                if sel_r >= best_r - 0.001:
-                    selected_best += 1
-                if sel_r < best_r - 0.1:
-                    selected_worse_than_rejected += 1
-
-    n_with_data = len(selected_rs)
-    n_regrets = len(regrets)
-
-    if n_with_data < _MIN_SELECTION_CYCLES:
-        return build_selection_report(
-            question_id="PORT-1", status=ReadinessStatus.INSUFFICIENT_DATA,
-            overall={
-                "reason": f"Only {n_with_data} selection cycles with outcome evidence (need {_MIN_SELECTION_CYCLES})",
-                "total_ranking_rows": len(portfolio_rankings),
-                "outcome_bearing_cycles": cycles_with_outcome,
-            },
-            confidence="INSUFFICIENT_DATA",
-            dataset={
-                "portfolio_rankings_read": len(portfolio_rankings),
-                "outcome_candidates": n_with_data,
-            },
-            recommendation="WAIT", source="portfolio_rankings",
-            records_used=n_with_data,
-            records_excluded=_total_candidates(portfolio_rankings) - n_with_data,
-            warnings=[f"Insufficient outcome-bearing selection cycles: {n_with_data}"],
-            module="research_engine.experiments.portfolio_ranking",
-        )
-
-    avg_regret = statistics.mean(regrets) if regrets else None
-    selection_top1 = 0
-    total_sel = 0
-    for r in portfolio_rankings:
-        for c in r.get("candidates", []):
-            if c.get("selection_status") == "SELECTED":
-                total_sel += 1
-                if c.get("rank_position") == 1:
-                    selection_top1 += 1
-    top1_selection_rate = selection_top1 / max(total_sel, 1)
+    finding = _port1_classify(status if isinstance(status, str) else str(status), discovery_stats, validation_stats)
 
     overall = {
-        "portfolio_rankings_read": len(portfolio_rankings),
-        "total_candidates": _total_candidates(portfolio_rankings),
-        "cycles_with_rankings": len(portfolio_rankings),
-        "outcome_bearing_cycles": cycles_with_outcome,
-        "selection_cycles_with_outcome": n_with_data,
-        "top1_selection_rate": round(top1_selection_rate, 4),
-        "selected_best_in_cycle_rate": round(selected_best / max(n_with_data, 1), 4),
-        "selected_worse_than_rejected_rate": round(
-            selected_worse_than_rejected / max(n_with_data, 1), 4,
-        ),
-        "avg_selection_regret": round(avg_regret, 4) if avg_regret is not None else None,
-        "selected_outcome": group_stats(selected_rs),
-        "best_available_outcome": group_stats(best_available_rs),
-        "selected_vs_best_delta": {
-            "mean_delta": round(avg_regret, 4) if avg_regret is not None else None,
-            "n_comparable": n_regrets,
+        "canonical_question": "PORT-1",
+        "hypothesis": "The actually selected candidate (selection_status==SELECTED) is competitive with the best pre-outcome available candidate (rank_position==1) in the same cycle, and that competitiveness persists from earlier discovery cycles into later unseen validation cycles.",
+        "research_classification": "observational_selection_competitiveness",
+        "causal_claim": "NONE — observational selection-regret evaluation; shadow outcomes are counterfactual/simulated, not proof of production selection causation",
+        "distinct_from_d6": "D6 asks whether rank ORDERING predicts outcomes across positions; PORT-1 asks whether the SELECTED candidate was competitive with the best-available comparator. Separate runners and reports; neither completes the other.",
+        "unit_of_analysis": "one valid portfolio selection cycle; account fanout and repeated horizons collapse",
+        "selection_authority": "portfolio_rankings candidate selection_status == 'SELECTED' (pre-outcome producer field)",
+        "best_available_comparator_authority": "portfolio_rankings candidate rank_position == 1 (pre-outcome highest final_rank_score; producer-sorted descending)",
+        "outcome_authority": "CURRENT shadow simulated_outcome.pnl_r_multiple joined per candidate canonical opportunity via decision_ledger",
+        "competitiveness_metric": {
+            "version": PORT1_COMPETITIVENESS_VERSION,
+            "selection_regret_r": "realised_R(rank1 comparator) - realised_R(selected)",
+            "sign": "positive => selected underperformed the best pre-outcome comparator; 0 => matched; negative => selected outperformed despite lower rank",
+            "tolerance_r": _PORT1_REGRET_TOLERANCE_R,
+            "competitive_rule": f"cycle competitive when selection_regret_r <= {_PORT1_REGRET_TOLERANCE_R}R; cohort competitive when competitive_rate >= {_PORT1_COMPETITIVE_RATE_MIN} and it persists on validation",
+            "tolerance_provenance": "fixed versioned contract (not tuned on validation evidence)",
+        },
+        "evidence_epoch": "CURRENT",
+        "portfolio_rankings_read": ranking_rows,
+        "total_cycles": diagnostics["total_cycles"],
+        "cycles_with_selection": diagnostics["cycles_with_selection"],
+        "cycles_with_comparator": diagnostics["cycles_with_comparator"],
+        "paired_cycles": paired,
+        "incomplete_missing_outcome_cycles": diagnostics["incomplete_missing_outcome_cycles"],
+        "distinct_selected_opportunities": diagnostics["distinct_selected_opportunities"],
+        "regret": {
+            "overall": overall_stats,
+            "discovery": discovery_stats,
+            "later_unseen_validation": validation_stats,
+        },
+        "discovery": {"n": len(discovery)},
+        "later_unseen_validation": {"n": len(validation)},
+        "finding_classification": finding,
+        "completion_reason": reason,
+        "limitations": [
+            "Selected and comparator identities are pre-outcome producer fields; neither is derived from realised outcome.",
+            "Shadow outcomes are counterfactual/simulated, not broker truth.",
+            "COMPLETE means the chronological competitiveness evaluation ran validly, not that selection was good.",
+            "One selection cycle is one observation; account fanout and repeated horizons never inflate n.",
+            "A cycle without a valid outcome for BOTH selected and comparator is excluded, never imputed.",
+            "The competitiveness tolerance is a fixed versioned contract, never tuned on validation evidence.",
+            "Research only; production portfolio selection is never modified. Distinct from D6.",
+        ],
+        "diagnostics": diagnostics,
+        "sufficiency": {
+            "minimum_total": _PORT1_MIN_TOTAL,
+            "minimum_discovery": _PORT1_MIN_DISCOVERY,
+            "minimum_validation": _PORT1_MIN_VALIDATION,
         },
         "quarantine_boundary": boundary.describe(),
     }
 
-    confidence = compute_confidence(n_with_data, selected_best / max(n_with_data, 1) > 0.60)
-
-    if confidence == "INSUFFICIENT_DATA":
-        recommendation = "WAIT"
-    elif selected_best / max(n_with_data, 1) >= 0.75 and avg_regret is not None and avg_regret <= 0.1:
-        recommendation = "PROMOTE"
-    elif selected_best / max(n_with_data, 1) >= 0.50:
-        recommendation = "MONITOR"
+    confidence = "MEDIUM" if status == ReadinessStatus.COMPLETE else "INSUFFICIENT_DATA"
+    if status == ReadinessStatus.COMPLETE:
+        recommendation = (
+            f"OBSERVATIONAL FINDING [{finding}]: validation competitive_rate "
+            f"{validation_stats['competitive_rate']:.2f}, mean regret {validation_stats['mean_regret_r']:+.4f}R"
+        )
     else:
-        recommendation = "REJECT"
+        recommendation = f"{getattr(status, 'value', status)}: {reason}"
 
     report = build_selection_report(
-        question_id="PORT-1", status=ReadinessStatus.COMPLETE,
+        question_id="PORT-1", status=status,
         overall=overall, confidence=confidence,
         dataset={
-            "portfolio_rankings_read": len(portfolio_rankings),
-            "total_candidates": _total_candidates(portfolio_rankings),
-            "outcome_bearing_candidates": n_with_data,
+            "source": "portfolio_rankings+shadow_trades",
+            "sample_size": paired,
+            "independent_observations": paired,
             "quarantine_boundary": boundary.describe(),
         },
         recommendation=recommendation, source="portfolio_rankings",
-        records_used=n_with_data,
-        records_excluded=_total_candidates(portfolio_rankings) - n_with_data,
+        records_used=paired,
+        records_excluded=diagnostics["incomplete_missing_outcome_cycles"],
         assumptions=[
-            "Primary evidence = portfolio_rankings V1",
-            "Outcome via decision_ledger bridge (cycle_id, symbol)",
-            "Shadow outcome preferred - ensures rejected candidates are comparable",
-            "Selection regret = best candidate shadow R - selected candidate shadow R",
-            "Portfolio-level question about ranker selection quality",
+            "Selected identity = pre-outcome selection_status == SELECTED; rank_position==1 cannot silently substitute.",
+            "Best-available comparator = pre-outcome rank_position == 1 (producer highest final_rank_score).",
+            "selection_regret_r = realised_R(rank1) - realised_R(selected); comparator chosen pre-outcome, outcomes only evaluate it.",
+            "One valid selection cycle is one independent observation; account fanout and repeated horizons collapse.",
+            "Missing selected or comparator outcome excludes the cycle; never imputed to 0/loss/success.",
+            "Competitiveness tolerance is a fixed versioned contract; deterministic chronological discovery/validation; no validation tuning.",
+            "PORT-1 (selection competitiveness) is distinct from D6 (rank-ordering); neither report completes the other.",
         ],
         module="research_engine.experiments.portfolio_ranking",
     )
 
-    persist_report(report, "port1_portfolio_selection.json")
-    update_knowledge_map("PORT-1",
-        f"Selected best in {selected_best}/{n_with_data} cycles. "
-        f"Avg regret " + (f"{avg_regret:+.3f}R." if avg_regret is not None else "N/A.") + f" Top-1 rate {top1_selection_rate:.0%}.",
-        recommendation)
+    persist_report(report, PORT1_REPORT_FILENAME)
+    update_knowledge_map(
+        "PORT-1",
+        f"[{finding}] paired cycles {paired}; validation competitive_rate "
+        + (f"{validation_stats['competitive_rate']:.2f}" if validation_stats['competitive_rate'] is not None else "N/A")
+        + f"; mean regret " + (f"{validation_stats['mean_regret_r']:+.3f}R." if validation_stats['mean_regret_r'] is not None else "N/A."),
+        recommendation,
+    )
     return report
 
 
