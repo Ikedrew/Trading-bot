@@ -7,6 +7,10 @@ from typing import Any, Iterable
 
 from research_engine.control_plane.models import ReportValidity
 from research_engine.control_plane.invalidation import is_report_invalidated
+from research_engine.control_plane.report_ownership import (
+    OWNERSHIP_METADATA_CONFLICT,
+    resolve_report_ownership,
+)
 from research_engine.validity_gates import validate_experiment_report
 
 _KNOWN_INVALIDATED_DATASETS = {
@@ -146,6 +150,18 @@ def resolve_report_validity(
     expected_question_id: str = "",
     accepted_question_ids: Iterable[str] = (),
 ) -> tuple[ReportValidity, str]:
+    # Report ownership is resolved before any artifact content is trusted.
+    # An adjudicated artifact may only ever satisfy its canonical owner, and
+    # artifact metadata may never silently contradict that owner.
+    ownership = resolve_report_ownership(
+        report_filename,
+        expected_question_id,
+        report_metadata=report_data,
+    )
+    if not ownership.allowed:
+        if ownership.kind == OWNERSHIP_METADATA_CONFLICT:
+            return ReportValidity.INVALIDATED, ownership.reason
+        return ReportValidity.MISSING, ownership.reason
     if report_data is None:
         return ReportValidity.MISSING, "Report file not found or unreadable"
     filename = Path(report_filename).name.lower()
@@ -192,7 +208,10 @@ def load_report_for_question(
     *,
     reports_dir: str | Path | None = None,
 ) -> tuple[dict[str, Any] | None, str]:
-    del question_id
+    # Ownership gate: an adjudicated artifact may only be loaded by its owner.
+    ownership = resolve_report_ownership(report_filename, question_id)
+    if not ownership.allowed:
+        return None, ""
     root = Path(reports_dir) if reports_dir is not None else _REPORTS_DIR
     if not report_filename or not report_filename.strip():
         return None, ""

@@ -1,8 +1,14 @@
 """Canonical Master 70-Question Repair Ledger.
 
-Planning/consolidation artifact only.  The ledger derives the strict structural
+Planning/consolidation artifact.  The ledger derives the strict structural
 baseline from frozen Wave-A findings.  It does not change the registry, runners,
 reports, resolvers, readiness, collection, or production behaviour.
+
+For every question the ledger still derives ``structurally_operational`` from
+that entry's own 18 gates; the headline counts are never hard-coded.  A repair
+wave whose exit gate has been implemented and proven is recorded with
+``implemented=True`` plus its implementation evidence, and its direct gain then
+belongs to the derived operational baseline instead of the outstanding plan.
 """
 from __future__ import annotations
 
@@ -143,11 +149,19 @@ class RepairWave:
     direct_gain: tuple[str, ...]
     unlocked_not_yet_operational: tuple[str, ...]
     exit_gate: str
+    # An implemented wave's direct gain is already part of the derived
+    # operational baseline; its exit gate has been proven by focused tests.
+    implemented: bool = False
+    implementation_evidence: tuple[str, ...] = ()
 
 
-OPERATIONAL_IDS = frozenset(
-    (WAVE_A1_RESOLVED | WAVE_A2_RESOLVED) - {"D1", "E2"}
-)
+# Repair Wave RW1 (canonical ownership / legacy routing) is implemented and
+# verified, so the Wave-A complete D1/E2 definitions are no longer withheld from
+# the structural baseline.  Ownership itself is enforced at the canonical report
+# boundary by research_engine.control_plane.report_ownership and proven by
+# tests/test_rw1_report_ownership.py; every entry below still derives its own
+# structurally_operational value from its own gates.
+OPERATIONAL_IDS = frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
 
 
 HUMAN_SEMANTIC_DECISIONS = {
@@ -266,6 +280,26 @@ REPAIR_WAVES = {
         ("canonical registry ownership metadata", "report resolver routing", "report validity/readiness ownership tests"),
         False, ("D1", "E2"), ("E3", "S1", "R1", "R2", "L1", "L3"),
         "Q1 and Q5 artifacts resolve only to D1 and E2; distinct questions cannot inherit their finding or completion state.",
+        implemented=True,
+        implementation_evidence=(
+            "research_engine/control_plane/report_ownership.py records the adjudicated canonical "
+            "ownership contract derived from Wave A5: q1_component_reward.json belongs to D1 and "
+            "q5_pattern_degradation.json belongs to E2.",
+            "The canonical report resolver (resolve_report_validity / load_report_for_question) and "
+            "the canonical report history resolver fail closed whenever a question is not the "
+            "artifact's canonical owner: L3 can no longer resolve D1's component-reward artifact and "
+            "L1 can no longer resolve E2's pooled-pattern artifact.",
+            "Legacy identities stay compatible only where they cannot transfer ownership: D1 still "
+            "accepts its historical Q1 identity on its own artifact and E2 still accepts Q5/Q24 on its "
+            "own artifact, while a shared legacy ID can no longer complete a scientifically distinct "
+            "canonical question.",
+            "Artifact metadata can no longer contradict canonical ownership silently; a conflicting "
+            "question_id fails closed as AMBIGUOUS_REPORT_MAPPING/INVALIDATED.",
+            "L1 and L3 remain structurally non-operational and must not resolve D1/E2 artifacts until "
+            "their dedicated RW10 repairs create genuinely distinct runners and reports.",
+            "tests/test_rw1_report_ownership.py proves all 25 ownership, fail-closed, ledger-delta, and "
+            "scope-containment requirements.",
+        ),
     ),
     "RW2": RepairWave(
         "RW2", "Market-context evidence and predictive semantics", ("M1", "M3", "M7", "M8", "M11"),
@@ -361,8 +395,10 @@ def _assign(
         _ASSIGNMENTS[qid] = (wave, category, cluster, blocker, dependencies, human, evidence_gap)
 
 
-_assign(("D1", "E2"), "RW1", "report ownership", "OWNERSHIP_LEGACY_ROUTING",
-        "A shared legacy report can satisfy a scientifically distinct canonical question.", evidence_gap=ALREADY_AVAILABLE)
+# RW1 previously assigned D1/E2 to the blocked "report ownership" category.  The
+# canonical ownership repair is implemented and verified, so no blocked
+# assignment remains for them: D1/E2 are derived as structurally operational
+# directly from their gates.  See REPAIR_WAVES["RW1"].implementation_evidence.
 _assign(("M1", "M11"), "RW2", "runner mismatch", "MARKET_CONTEXT_PREDICTION",
         "The mapped runner emits descriptive frequencies/dispersion rather than the registry outcome claim.", human=True)
 _assign(("M3", "M7"), "RW2", "prediction/calibration", "MARKET_CONTEXT_PREDICTION",
@@ -409,8 +445,6 @@ _assign(("G3",), "RW12", "no runner", "NO_RUNNER_GLOBAL_VALIDITY",
 
 
 _QUESTION_ACTIONS = {
-    "D1": "Make q1_component_reward.json resolvable only as D1 and remove L3 completion inheritance without changing D1 calculations.",
-    "E2": "Make q5_pattern_degradation.json resolvable only as E2 and remove L1/Q24 cross-attribution without changing pooled pattern calculations.",
     "M1": "Join authoritative H4 regime to one opportunity-safe outcome and implement the approved predictive evaluation with real sufficiency.",
     "M3": "Replace dispersion-of-cell-means proxy with an out-of-sample H4-regime versus H4-regime-plus-phase comparison.",
     "M7": "Implement time-ordered regime-only, phase-only, and combined predictive model comparison with clustered outcomes.",
@@ -633,13 +667,42 @@ def evidence_gap_counts() -> dict[str, int]:
 
 
 def projected_operational_counts() -> tuple[tuple[str, int], ...]:
-    """Apply each direct gain exactly once in declared dependency order."""
+    """Apply each outstanding direct gain exactly once in declared dependency order.
+
+    An implemented wave's direct gain is already part of the derived operational
+    baseline, so it is verified rather than re-applied.  This keeps the overall
+    count strictly derived from the 70 ledger entries instead of being hard-coded.
+    """
     covered = set(STRUCTURALLY_OPERATIONAL_IDS)
     result: list[tuple[str, int]] = []
     for wave in REPAIR_WAVES.values():
-        overlap = covered.intersection(wave.direct_gain)
-        if overlap:
-            raise RuntimeError(f"direct gain double-counted in {wave.repair_wave_id}: {sorted(overlap)}")
-        covered.update(wave.direct_gain)
+        wave_gain = set(wave.direct_gain)
+        if wave.implemented:
+            outstanding = wave_gain - covered
+            if outstanding:
+                raise RuntimeError(
+                    f"implemented wave {wave.repair_wave_id} direct gain is not operational: "
+                    f"{sorted(outstanding)}"
+                )
+        else:
+            overlap = covered.intersection(wave_gain)
+            if overlap:
+                raise RuntimeError(f"direct gain double-counted in {wave.repair_wave_id}: {sorted(overlap)}")
+            covered.update(wave_gain)
         result.append((wave.repair_wave_id, len(covered)))
     return tuple(result)
+
+
+def implemented_waves() -> tuple[str, ...]:
+    """Repair waves whose exit gate has been proven by focused implementation."""
+    return tuple(
+        wave.repair_wave_id for wave in REPAIR_WAVES.values() if wave.implemented
+    )
+
+
+def outstanding_operational_gain(wave_id: str) -> tuple[str, ...]:
+    """Direct gain of a wave that is still structurally non-operational."""
+    wave = REPAIR_WAVES[wave_id]
+    return tuple(
+        qid for qid in wave.direct_gain if qid in STRUCTURALLY_NON_OPERATIONAL_IDS
+    )

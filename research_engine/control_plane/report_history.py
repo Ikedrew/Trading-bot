@@ -10,6 +10,7 @@ from research_engine.control_plane.models import (
     QuestionState,
     ReportValidity,
 )
+from research_engine.control_plane.report_ownership import resolve_report_ownership
 from research_engine.control_plane.report_resolver import (
     _extract_confidence,
     _extract_epoch,
@@ -104,11 +105,19 @@ def _report_belongs_to_question(
     """Check if a report artifact belongs to this canonical question.
 
     A report belongs if:
+    - The artifact's adjudicated canonical owner is this question (fail closed
+      for every other question), AND
     - Its question_id matches the canonical ID, OR
     - Its question_id matches a declared legacy alias, OR
     - Its filename matches the expected report filename for this question
       (for reports without question_id field)
     """
+    if not resolve_report_ownership(
+        report_path.name, canonical_question_id, report_metadata=report_data
+    ).allowed:
+        # Adjudicated artifact owned by another canonical question: legacy
+        # identity compatibility may never transfer ownership or completion.
+        return False
     if report_data is None:
         return False
 

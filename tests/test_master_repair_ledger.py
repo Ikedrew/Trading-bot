@@ -57,8 +57,8 @@ def test_structural_operational_status_is_derived_consistently():
         if all(value in STRUCTURAL_PASS_STATUSES for value in entry.gates.values())
     }
     assert derived == set(STRUCTURALLY_OPERATIONAL_IDS) == set(OPERATIONAL_IDS)
-    assert operational_baseline() == (24, 46)
-    assert len(STRUCTURALLY_NON_OPERATIONAL_IDS) == 46
+    assert operational_baseline() == (26, 44)
+    assert len(STRUCTURALLY_NON_OPERATIONAL_IDS) == 44
     for entry in MASTER_REPAIR_LEDGER.values():
         assert entry.to_dict()["structurally_operational"] == entry.structurally_operational
 
@@ -99,11 +99,11 @@ def test_primary_blocker_counts_cover_every_non_operational_question_once():
         "join/population": 1,
         "no runner": 8,
         "prediction/calibration": 7,
-        "report ownership": 6,
+        "report ownership": 4,
         "risk modelling": 3,
         "runner mismatch": 4,
     }
-    assert sum(counts.values()) == 46
+    assert sum(counts.values()) == 44
 
 
 def test_repair_wave_dependencies_exist_and_are_acyclic():
@@ -132,11 +132,18 @@ def test_repair_wave_dependencies_exist_and_are_acyclic():
 
 def test_direct_gains_are_disjoint_and_cover_all_non_operational_ids():
     gained: set[str] = set()
+    implemented_direct_gain: set[str] = set()
     for wave in REPAIR_WAVES.values():
         assert set(wave.target_question_ids) == set(wave.direct_gain)
         assert not gained.intersection(wave.direct_gain)
-        assert not STRUCTURALLY_OPERATIONAL_IDS.intersection(wave.direct_gain)
-        gained.update(wave.direct_gain)
+        if wave.implemented:
+            # A satisfied wave's direct gain is already part of the derived baseline.
+            assert set(wave.direct_gain) <= set(STRUCTURALLY_OPERATIONAL_IDS)
+            implemented_direct_gain.update(wave.direct_gain)
+        else:
+            assert not STRUCTURALLY_OPERATIONAL_IDS.intersection(wave.direct_gain)
+            gained.update(wave.direct_gain)
+    assert implemented_direct_gain == {"D1", "E2"}
     assert gained == set(STRUCTURALLY_NON_OPERATIONAL_IDS)
 
 
@@ -189,14 +196,54 @@ def test_a5_ownership_conclusions_are_preserved():
     assert WAVE_A5_OWNERSHIP[("R1", "R2")].highest_safe_sharing_level == "helper"
 
 
-def test_d1_e2_are_strictly_blocked_only_because_cross_ownership_is_unsafe():
+def test_rw1_ownership_repair_is_satisfied_and_only_d1_e2_become_operational():
+    """RW1's exit gate is proven, so D1/E2 are operational and L1/L3 are not."""
     for qid in ("D1", "E2"):
         entry = MASTER_REPAIR_LEDGER[qid]
+        assert entry.structurally_operational
         assert entry.current_definition_health in {"VALID", "VALID_WITH_WARNINGS"}
         assert entry.gates.scientific_definition == "PASS"
         assert entry.gates.runner == "PASS"
+        assert entry.gates.report_ownership == "PASS"
+        assert entry.to_dict()["gates"]["report_ownership"] == "PASS"
+        assert entry.primary_blocker_category == ""
+        assert entry.proposed_repair_wave == ""
+        assert entry.repair_actions == ()
+        assert entry.to_dict()["structurally_operational"] is True
+
+    expected_blockers = {"L1": "chronology", "L3": "runner mismatch"}
+    for qid, category in expected_blockers.items():
+        entry = MASTER_REPAIR_LEDGER[qid]
+        assert not entry.structurally_operational
         assert entry.gates.report_ownership == "FAIL"
-        assert entry.primary_blocker_category == "report ownership"
+        assert entry.primary_blocker_category == category
+        assert entry.proposed_repair_wave == "RW10"
+
+    for qid in ("E3", "S1", "R1", "R2"):
+        entry = MASTER_REPAIR_LEDGER[qid]
+        assert not entry.structurally_operational
+        assert entry.gates.report_ownership == "FAIL"
+
+
+def test_rw1_is_recorded_as_the_only_implemented_wave_with_evidence():
+    implemented = [wave_id for wave_id, wave in REPAIR_WAVES.items() if wave.implemented]
+    assert implemented == ["RW1"]
+
+    wave = REPAIR_WAVES["RW1"]
+    assert wave.direct_gain == ("D1", "E2")
+    assert wave.target_question_ids == ("D1", "E2")
+    assert wave.implementation_evidence
+    assert all(item.strip() for item in wave.implementation_evidence)
+    assert set(wave.unlocked_not_yet_operational) == {"E3", "S1", "R1", "R2", "L1", "L3"}
+    for qid in wave.unlocked_not_yet_operational:
+        assert not MASTER_REPAIR_LEDGER[qid].structurally_operational
+
+    # Every other wave is still outstanding and records no implementation claims.
+    for wave_id, other in REPAIR_WAVES.items():
+        if wave_id == "RW1":
+            continue
+        assert not other.implemented
+        assert other.implementation_evidence == ()
 
 
 def test_evidence_gap_accounting_preserves_v1_freeze_and_g3_requirement():
