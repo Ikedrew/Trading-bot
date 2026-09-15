@@ -17,14 +17,6 @@ from research_engine.registry.research_question_models import (
 
 
 KNOWN_UNRESOLVED_AUTH = {
-    "D2": [
-        "authoritative pre-decision p_success",
-        "probability semantics",
-        "producer/model",
-        "version",
-        "calibration population",
-        "prediction->outcome pairing",
-    ],
     "X5": [
         "authoritative pre-decision EV",
         "producer",
@@ -326,6 +318,7 @@ def build_definitions_from_registry(registry):
         apply_wave_a_no_runner_designs,
     )
     from research_engine.registry.rw2_definitions import apply_rw2_definitions
+    from research_engine.registry.rw3_d2_definitions import apply_d2_definition
 
     definitions = apply_wave_a1_definitions(definitions)
     definitions = apply_wave_a2_definitions(definitions)
@@ -333,7 +326,8 @@ def build_definitions_from_registry(registry):
     definitions = apply_wave_a4_definitions(definitions)
     definitions = apply_wave_a5_definitions(definitions)
     definitions = apply_wave_a_no_runner_designs(definitions)
-    return apply_rw2_definitions(definitions)
+    definitions = apply_rw2_definitions(definitions)
+    return apply_d2_definition(definitions)
 
 
 def validate_runner_registry_threshold_alignment(question, question_id):

@@ -224,16 +224,17 @@ D2 = ResearchQuestion(
     category=QuestionCategory.DECISION_QUALITY,
     title="Confidence calibration",
     description="Is the system's predicted probability (p_success) calibrated to actual win rate?",
-    required_fields=("score", "p_success", "r_multiple"),
+    required_fields=("canonical_opportunity_id", "p_success", "r_multiple"),
     data_sources=(DataSource.DECISION_TRACE, DataSource.SHADOW_TRADES),
     priority=QuestionPriority.P0,
     validation_rules=(
         ValidationRule("lineage_coverage", ">=", 0.80, "Need trace→outcome join"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 100, "Distinct paired canonical opportunities required for chronological calibration"),
     ),
-    runner_module="research_engine.experiments.legacy_canonical",
-    runner_function="run_q04",
-    report_filename="q4_confidence_calibration.json",
+    runner_module="research_engine.experiments.d2_paired_calibration",
+    runner_function="run_d2",
+    report_filename="d2_paired_probability_calibration_v1.json",
     legacy_ids=("Q4", "Q20"),
 )
 

@@ -248,7 +248,7 @@ def test_rw2_ledger_gain_is_derived_and_rw1_ownership_remains_intact():
         operational_baseline,
     )
 
-    assert operational_baseline() == (31, 39)
+    assert operational_baseline() == (32, 38)
     assert REPAIR_WAVES["RW2"].implemented is True
     assert set(REPAIR_WAVES["RW2"].direct_gain) == {"M1", "M3", "M7", "M8", "M11"}
     assert set(REPAIR_WAVES["RW2"].direct_gain) <= STRUCTURALLY_OPERATIONAL_IDS
@@ -263,5 +263,5 @@ def test_unrelated_ledger_operational_ids_are_exactly_frozen_baseline_plus_rw2()
     from research_engine.registry.wave_a2_definitions import WAVE_A2_RESOLVED
 
     assert STRUCTURALLY_OPERATIONAL_IDS == frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED) | {
-        "M1", "M3", "M7", "M8", "M11"
+        "M1", "M3", "M7", "M8", "M11", "D2"
     }

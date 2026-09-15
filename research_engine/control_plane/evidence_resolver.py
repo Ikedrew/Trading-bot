@@ -661,6 +661,30 @@ def _management_population(
 def _population(question: Any, slices: list[DatasetSlice]) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
     by_source = {dataset.source: dataset for dataset in slices}
     metrics: dict[str, Any] = {}
+    if question.id == "D2":
+        from research_engine.experiments.d2_paired_calibration import build_paired_observations
+
+        paired, diagnostics = build_paired_observations(
+            by_source["decision_trace"].current_records,
+            by_source["shadow_trades"].current_records,
+        )
+        if diagnostics.get("conflicting_opportunities"):
+            diagnostics["d2_blocker"] = (
+                "Conflicting D2 prediction, outcome, version, or chronology for "
+                f"{len(diagnostics['conflicting_opportunities'])} canonical opportunities"
+            )
+        rows = [
+            {
+                "canonical_opportunity_id": row["canonical_opportunity_id"],
+                "entry_time": row["timestamp"].isoformat(),
+                "p_success": row["p_success"],
+                "r_multiple": row["outcome_r"],
+                "model_version": row["model_version"],
+            }
+            for row in paired
+        ]
+        metrics.update(diagnostics)
+        return rows, max(0, diagnostics["prediction_opportunities"] - len(rows)), metrics
     if question.id in {"M1", "M3", "M7", "M8", "M11"}:
         from research_engine.experiments.market_prediction_rw2 import (
             build_opportunity_observations,
@@ -797,7 +821,7 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
     # RW2's two non-shadow authorities have canonical V1 schemas but are not
     # shadow-shaped, so classify them strictly and locally.  This must not
     # broaden epoch treatment for any unrelated question.
-    if question.id in {"M8", "M11"}:
+    if question.id in {"M8", "M11", "D2"}:
         authority_source = "market_context" if question.id == "M8" else "decision_trace"
         adjusted: list[DatasetSlice] = []
         for dataset in slices:
@@ -883,14 +907,14 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
 
     rows, population_excluded, metrics = _population(question, slices)
     base_count = len(rows)
-    if metrics.get("rw2_blocker"):
+    if metrics.get("rw2_blocker") or metrics.get("d2_blocker"):
         requirements.append(RequirementResult(
             type="join_integrity",
             name="canonical_opportunity_join",
             required="unambiguous",
             current="conflicting",
             satisfied=False,
-            reason=str(metrics["rw2_blocker"]),
+            reason=str(metrics.get("rw2_blocker") or metrics.get("d2_blocker")),
             blocking=True,
         ))
     metrics["total_current_population"] = base_count

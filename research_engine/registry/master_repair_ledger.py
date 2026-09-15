@@ -162,7 +162,12 @@ class RepairWave:
 # tests/test_rw1_report_ownership.py; every entry below still derives its own
 # structurally_operational value from its own gates.
 RW2_OPERATIONAL_IDS = frozenset({"M1", "M3", "M7", "M8", "M11"})
-OPERATIONAL_IDS = frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED) | RW2_OPERATIONAL_IDS
+D2_RW3_PROGRESS_IDS = frozenset({"D2"})
+OPERATIONAL_IDS = (
+    frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
+    | RW2_OPERATIONAL_IDS
+    | D2_RW3_PROGRESS_IDS
+)
 
 
 
@@ -321,8 +326,8 @@ REPAIR_WAVES = {
         "RW3", "Prediction, calibration, and decision foundation", ("D2", "D3", "D4", "D5", "X5"),
         "Pre-decision p_success/EV/score authorities, pairing, rejection taxonomy, and leakage-safe evaluation are unresolved.", ("RW1",), ("HD04",),
         ("versioned prediction authority", "decision-to-outcome joins", "calibration/rejection runners and reports"), False,
-        ("D2", "D3", "D4", "D5", "X5"), ("P1",),
-        "Versioned pre-decision fields are paired one-to-one with outcomes, excluded from labels, evaluated out of sample, and each report has matching sufficiency/completion.",
+        ("D3", "D4", "D5", "X5"), ("P1",),
+        "D2 is structurally operational through its paired chronological calibration runner. RW3 remains in progress until D3/D4/D5/X5 have versioned pre-decision fields paired one-to-one with outcomes, leakage-safe evaluation, and matching sufficiency/completion.",
     ),
     "RW4": RepairWave(
         "RW4", "Selection, ranking, and promotion", ("D6", "PORT-1", "OPP-1", "P1"),

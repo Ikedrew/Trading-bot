@@ -70,11 +70,12 @@ def test_lifecycle_status_distinct_from_readiness():
         assert d.lifecycle_status == QuestionLifecycle.ACTIVE
 
 
-def test_d2_unresolved_authority_visible():
+def test_d2_repaired_authority_is_valid():
     definitions = build_definitions_from_registry(REGISTRY)
     report = validate_definition(definitions["D2"])
     unresolved = [r for r in report.results if r.category == "UNRESOLVED_AUTHORITY"]
-    assert len(unresolved) >= 6
+    assert unresolved == []
+    assert get_question_health(report) == "VALID"
 
 
 def test_x5_unresolved_authority_visible():
@@ -165,9 +166,9 @@ def test_health_categories_populated():
     definitions = build_definitions_from_registry(REGISTRY)
     reports = validate_all_definitions(definitions)
 
-    # D2 and X5 have UNRESOLVED_AUTHORITY errors
+    # D2 is repaired; X5 remains fail-closed with unresolved authority.
     d2_report = reports["D2"]
-    assert any(r.category == "UNRESOLVED_AUTHORITY" for r in d2_report.results)
+    assert get_question_health(d2_report) == "VALID"
 
     x5_report = reports["X5"]
     assert any(r.category == "UNRESOLVED_AUTHORITY" for r in x5_report.results)
@@ -417,14 +418,18 @@ def _build_pre_a2_definitions(monkeypatch):
     """Build the committed Wave A1 state with the A2 application disabled."""
     import research_engine.registry.wave_a2_definitions as wave_a2
     import research_engine.registry.rw2_definitions as rw2
+    import research_engine.registry.rw3_d2_definitions as d2_repair
 
     original = wave_a2.apply_wave_a2_definitions
     original_rw2 = rw2.apply_rw2_definitions
+    original_d2 = d2_repair.apply_d2_definition
     monkeypatch.setattr(wave_a2, "apply_wave_a2_definitions", lambda definitions: definitions)
     monkeypatch.setattr(rw2, "apply_rw2_definitions", lambda definitions: definitions)
+    monkeypatch.setattr(d2_repair, "apply_d2_definition", lambda definitions: definitions)
     before = build_definitions_from_registry(REGISTRY)
     monkeypatch.setattr(wave_a2, "apply_wave_a2_definitions", original)
     monkeypatch.setattr(rw2, "apply_rw2_definitions", original_rw2)
+    monkeypatch.setattr(d2_repair, "apply_d2_definition", original_d2)
     return before
 
 
@@ -540,10 +545,10 @@ def test_wave_a2_does_not_change_d2_or_x5(monkeypatch):
         assert after[qid] is before[qid]
         assert after[qid].to_dict() == before[qid].to_dict()
         report = validate_definition(after[qid])
-        assert any(
-            result.category == "UNRESOLVED_AUTHORITY"
-            for result in report.results
-        )
+        if qid == "X5":
+            assert any(result.category == "UNRESOLVED_AUTHORITY" for result in report.results)
+        else:
+            assert get_question_health(report) == "UNDER_SPECIFIED"
 
 
 # ---------------------------------------------------------------------------
@@ -808,16 +813,20 @@ def _build_pre_a3_definitions(monkeypatch):
     """Build the committed A1/A2 state with A3 application disabled."""
     import research_engine.registry.wave_a3_definitions as wave_a3
     import research_engine.registry.rw2_definitions as rw2
+    import research_engine.registry.rw3_d2_definitions as d2_repair
 
     original = wave_a3.apply_wave_a3_definitions
     original_rw2 = rw2.apply_rw2_definitions
+    original_d2 = d2_repair.apply_d2_definition
     monkeypatch.setattr(
         wave_a3, "apply_wave_a3_definitions", lambda definitions: definitions
     )
     monkeypatch.setattr(rw2, "apply_rw2_definitions", lambda definitions: definitions)
+    monkeypatch.setattr(d2_repair, "apply_d2_definition", lambda definitions: definitions)
     before = build_definitions_from_registry(REGISTRY)
     monkeypatch.setattr(wave_a3, "apply_wave_a3_definitions", original)
     monkeypatch.setattr(rw2, "apply_rw2_definitions", original_rw2)
+    monkeypatch.setattr(d2_repair, "apply_d2_definition", original_d2)
     return before
 
 
@@ -840,7 +849,7 @@ def test_wave_a31_scope_before_and_after_health_are_exact(monkeypatch):
 
     for qid in WAVE_A3_TARGETS:
         assert get_question_health(before_reports[qid]) == "UNDER_SPECIFIED", qid
-        if qid in {"M3", "M7"}:
+        if qid in {"M3", "M7", "D2"}:
             assert get_question_health(after_reports[qid]) == "VALID", qid
             assert after[qid].hypothesis.strip(), qid
             assert after[qid].population_definition.strip(), qid
@@ -1053,13 +1062,19 @@ def test_wave_a33_before_to_after_health_remains_fail_closed(monkeypatch):
 
     for qid in WAVE_A3_3_TARGETS:
         assert get_question_health(before_reports[qid]) == "UNDER_SPECIFIED", qid
-        assert get_question_health(after_reports[qid]) == "UNDER_SPECIFIED", qid
         assert qid in WAVE_A3_UNRESOLVED
         assert qid not in WAVE_A3_RESOLVED
         assert qid not in WAVE_A3_OVERRIDES
-        assert not after[qid].hypothesis.strip(), qid
-        assert not after[qid].population_definition.strip(), qid
-        assert not after[qid].metric_definition.strip(), qid
+        if qid == "D2":
+            assert get_question_health(after_reports[qid]) == "VALID", qid
+            assert after[qid].hypothesis.strip(), qid
+            assert after[qid].population_definition.strip(), qid
+            assert after[qid].metric_definition.strip(), qid
+        else:
+            assert get_question_health(after_reports[qid]) == "UNDER_SPECIFIED", qid
+            assert not after[qid].hypothesis.strip(), qid
+            assert not after[qid].population_definition.strip(), qid
+            assert not after[qid].metric_definition.strip(), qid
 
 
 def test_ex9_counterfactual_and_sufficiency_conflicts_are_explicit():
