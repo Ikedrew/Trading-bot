@@ -58,8 +58,226 @@ _MIN_RANKING_ROWS = 10
 _MIN_RANKED_CANDIDATES = 30
 _MIN_SELECTION_CYCLES = 5
 
+# D6 canonical rank-ordering contract (distinct from PORT-1 selected-vs-best).
+D6_REPORT_FILENAME = "d6_portfolio_ranking.json"
+_D6_MIN_TOTAL = 100        # distinct paired canonical opportunities
+_D6_MIN_DISCOVERY = 60
+_D6_MIN_VALIDATION = 40
+_D6_MIN_BUCKET = 15        # per rank bucket used for a directional claim
+_D6_RANK_SIGNAL_MIN = 0.10  # |Spearman| below this = no reliable rank signal
+
+
+def _d6_time(value: Any):
+    """Parse a timestamp (iso or epoch) to a comparable UTC datetime or None."""
+    from datetime import datetime, timezone
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        try:
+            return datetime.fromtimestamp(float(value), tz=timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.isdigit():
+        try:
+            return datetime.fromtimestamp(float(text), tz=timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _average_ranks(values: list[float]) -> list[float]:
+    order = sorted(range(len(values)), key=lambda i: values[i])
+    ranks = [0.0] * len(values)
+    i = 0
+    while i < len(order):
+        j = i
+        while j + 1 < len(order) and values[order[j + 1]] == values[order[i]]:
+            j += 1
+        average = (i + j) / 2.0 + 1.0
+        for k in range(i, j + 1):
+            ranks[order[k]] = average
+        i = j + 1
+    return ranks
+
+
+def spearman(xs: list[float], ys: list[float]) -> float | None:
+    """Deterministic Spearman rank correlation; None if <3 or zero variance."""
+    if len(xs) < 3 or len(xs) != len(ys):
+        return None
+    if len(set(xs)) < 2 or len(set(ys)) < 2:
+        return None
+    rx = _average_ranks(xs)
+    ry = _average_ranks(ys)
+    n = len(xs)
+    mean_rank = (n + 1) / 2.0
+    cov = sum((rx[i] - mean_rank) * (ry[i] - mean_rank) for i in range(n))
+    var_x = sum((r - mean_rank) ** 2 for r in rx)
+    var_y = sum((r - mean_rank) ** 2 for r in ry)
+    if var_x <= 0.0 or var_y <= 0.0:
+        return None
+    return cov / math.sqrt(var_x * var_y)
+
+
+def build_rank_observations(
+    portfolio_rankings: list[dict[str, Any]],
+    decisions: list[dict[str, Any]],
+    trade_truth: list[dict[str, Any]],
+    shadow_trades: list[dict[str, Any]],
+    boundary: "QuarantineBoundary",
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """SHARED PURE CALCULATION: one rank-ordering observation per canonical
+    opportunity, paired to its CURRENT shadow (counterfactual) realised R.
+
+    This helper is deliberately interpretation-free so D6 (rank-ordering) and a
+    future PORT-1 refactor could both reuse the pairing WITHOUT sharing question
+    ownership or completion. It returns rows and diagnostics only.
+
+    - Independent unit = one canonical_opportunity_id. Account fanout and
+      repeated horizons collapse; conflicting rank_position or outcome for one
+      canonical opportunity fails closed.
+    - Missing outcome is excluded (never imputed to 0R/loss/success).
+    - Ambiguous/missing canonical lineage is excluded, never guessed.
+    """
+    from collections import defaultdict
+
+    decision_idx = build_decision_index(decisions)
+    truth_idx = index_by(trade_truth, lambda r: str(
+        deep_get(r, "identity", "correlation_id") or r.get("correlation_id", "")
+    ) or "")
+
+    # candidate rows grouped by canonical opportunity (pre-outcome rank/time)
+    grouped: dict[str, dict[str, set]] = defaultdict(lambda: {"rank": set(), "time": set(), "outcome": set(), "cycles": set()})
+    total_candidate_rows = 0
+    excluded_no_lineage = 0
+    for ranking in portfolio_rankings:
+        for cand in ranking.get("candidates", []):
+            total_candidate_rows += 1
+            outcome = join_candidate_outcome(cand, ranking, decision_idx, truth_idx, shadow_trades, boundary)
+            cand["_outcome"] = outcome
+            opp = str(outcome.get("canonical_opportunity_id") or "")
+            if not opp:
+                excluded_no_lineage += 1
+                continue
+            pos = cand.get("rank_position")
+            if pos is None:
+                excluded_no_lineage += 1
+                continue
+            grouped[opp]["rank"].add(int(pos))
+            grouped[opp]["cycles"].add(ranking.get("cycle_id"))
+            ledger_time = outcome.get("decision_time") or ranking.get("timestamp") or ranking.get("cycle_id")
+            grouped[opp]["time"].add(str(ledger_time))
+            r = outcome_value(cand, precedence="shadow")
+            if r is not None:
+                grouped[opp]["outcome"].add(round(float(r), 6))
+
+    rows: list[dict[str, Any]] = []
+    conflicts: list[str] = []
+    missing_outcome = 0
+    for opp in sorted(grouped):
+        info = grouped[opp]
+        # Conflicting pre-outcome rank membership for one opportunity -> fail closed.
+        if len(info["rank"]) != 1:
+            conflicts.append(opp)
+            continue
+        # Conflicting realised outcomes (beyond one collapsed value) -> fail closed.
+        if len(info["outcome"]) > 1:
+            conflicts.append(opp)
+            continue
+        if len(info["outcome"]) == 0:
+            missing_outcome += 1
+            continue
+        rank_position = next(iter(info["rank"]))
+        outcome_r = next(iter(info["outcome"]))
+        order_key = sorted(info["time"])[0]
+        rows.append({
+            "canonical_opportunity_id": opp,
+            "rank_position": rank_position,
+            "outcome_r": outcome_r,
+            "won": 1.0 if outcome_r > 0 else 0.0,
+            "_order": order_key,
+        })
+    rows.sort(key=lambda row: (row["_order"], row["canonical_opportunity_id"]))
+    diagnostics = {
+        "total_candidate_rows": total_candidate_rows,
+        "distinct_opportunities": len(grouped),
+        "paired_opportunities": len(rows),
+        "missing_outcomes_excluded": missing_outcome,
+        "excluded_missing_lineage": excluded_no_lineage,
+        "conflicting_opportunities": tuple(sorted(set(conflicts))),
+    }
+    return rows, diagnostics
+
+
+def _d6_chronological_split(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    unique = sorted({row["_order"] for row in rows})
+    if len(unique) < 2:
+        return rows, []
+    index = max(1, min(len(unique) - 1, int(len(unique) * 0.60)))
+    boundary_key = unique[index]
+    return ([r for r in rows if r["_order"] < boundary_key],
+            [r for r in rows if r["_order"] >= boundary_key])
+
+
+def _d6_bucket_stats(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    from collections import defaultdict
+    cells: dict[int, list[float]] = defaultdict(list)
+    for row in rows:
+        cells[row["rank_position"]].append(row["outcome_r"])
+    result: dict[str, Any] = {}
+    for pos in sorted(cells):
+        values = cells[pos]
+        result[str(pos)] = {
+            "n": len(values),
+            "mean_r": round(sum(values) / len(values), 4),
+            "median_r": round(statistics.median(values), 4),
+            "win_rate": round(sum(1 for v in values if v > 0) / len(values), 4),
+            "sufficient": len(values) >= _D6_MIN_BUCKET,
+        }
+    return result
+
+
+def _d6_rank_signal(rows: list[dict[str, Any]]) -> float | None:
+    """Spearman between BETTER rank (−rank_position) and realised R.
+
+    Positive => better-ranked (lower rank_position) candidates realise higher R.
+    """
+    if len(rows) < 3:
+        return None
+    better_rank = [-float(row["rank_position"]) for row in rows]
+    realised = [row["outcome_r"] for row in rows]
+    return spearman(better_rank, realised)
+
+
+def _d6_classify(status: str, discovery_signal: float | None, validation_signal: float | None) -> str:
+    if status != "COMPLETE":
+        return "INSUFFICIENT_EVIDENCE"
+    if discovery_signal is None or validation_signal is None:
+        return "NO_RELIABLE_RANK_SIGNAL"
+    discovery_useful = abs(discovery_signal) >= _D6_RANK_SIGNAL_MIN
+    if not discovery_useful:
+        return "NO_RELIABLE_RANK_SIGNAL"
+    # A materially negative validation signal is an inverse (harmful) ordering.
+    if validation_signal <= -_D6_RANK_SIGNAL_MIN and discovery_signal > 0:
+        return "INVERSE_RANK_SIGNAL"
+    same_direction = (discovery_signal > 0) == (validation_signal > 0)
+    if not same_direction or abs(validation_signal) < _D6_RANK_SIGNAL_MIN:
+        return "DISCOVERY_ONLY"
+    if discovery_signal > 0:
+        return "RANK_ORDERING_PREDICTS_OUTCOME"
+    return "INVERSE_RANK_SIGNAL"
+
+
 # ==============================================================================
-# D6 - Portfolio Ranking Quality
+# D6 - Candidate rank-ordering predicts outcome (canonical; owns d6 report)
 # ==============================================================================
 
 
@@ -70,14 +288,16 @@ def run_portfolio_ranking(
     shadow_trades: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """
-    D6: Portfolio Ranking Quality.
+    D6: Does candidate RANK ORDERING (by rank_position) predict subsequent
+    realised/shadow R across rank positions — do higher-ranked candidates
+    genuinely outperform lower-ranked ones, and does that persist on later
+    unseen cycles?
 
-    PRIMARY evidence = ``portfolio_rankings``. The computation materially
-    DEPENDS on portfolio_rankings rows - it reads cycle_id, rank_position,
-    selection_status, rank_score, and each candidate's symbol/pattern/ev
-    FROM portfolio_rankings. Shadow outcomes are joined where available.
-
-    NO other dataset can substitute for portfolio_rankings here.
+    Distinct from PORT-1 (selected-vs-best). PRIMARY evidence =
+    ``portfolio_rankings``; outcomes are joined per canonical opportunity.
+    One canonical_opportunity_id is one independent observation; account fanout
+    and repeated horizons collapse; missing outcomes are excluded. Research
+    only — never modifies production ranking/selection.
     """
     if portfolio_rankings is None:
         portfolio_rankings = load_portfolio_rankings()
@@ -88,198 +308,132 @@ def run_portfolio_ranking(
     if shadow_trades is None:
         shadow_trades = ingest_completed_shadow_trades()
 
+    if portfolio_rankings is None:
+        portfolio_rankings = load_portfolio_rankings()
+    if decisions is None:
+        decisions = load_decision_ledger()
+    if trade_truth is None:
+        trade_truth = load_trade_truth()
+    if shadow_trades is None:
+        shadow_trades = ingest_completed_shadow_trades()
+
     boundary = load_quarantine_boundary()
-
-    # Prove portfolio_rankings was materially read
-    if not portfolio_rankings:
-        return build_report(
-            question_id="D6", status=ReadinessStatus.INSUFFICIENT_DATA,
-            overall={"reason": "No portfolio_rankings records available. "
-                     "D6 depends on portfolio_rankings V1 as primary evidence.",
-                     "portfolio_rankings_read": 0},
-            confidence="INSUFFICIENT_DATA",
-            dataset={"records_available": 0, "portfolio_rankings_read": 0},
-            fingerprint=build_fingerprint(0, 0, source="portfolio_rankings"),
-            recommendation="WAIT",
-            warnings=["No portfolio_rankings evidence - D6 cannot answer without it"],
-        )
-
     ranking_rows = len(portfolio_rankings)
-    total_candidate_rows = sum(len(r.get("candidates", [])) for r in portfolio_rankings)
 
-    if total_candidate_rows < _MIN_RANKED_CANDIDATES:
-        return build_report(
-            question_id="D6", status=ReadinessStatus.INSUFFICIENT_DATA,
-            overall={
-                "reason": f"Only {total_candidate_rows} ranked candidates (need {_MIN_RANKED_CANDIDATES})",
-                "portfolio_rankings_read": ranking_rows, "candidate_rows": total_candidate_rows,
-            },
-            confidence="INSUFFICIENT_DATA",
-            dataset={
-                "portfolio_rankings_read": ranking_rows,
-                "candidate_rows": total_candidate_rows,
-            },
-            fingerprint=build_fingerprint(total_candidate_rows, 0, source="portfolio_rankings"),
-            recommendation="WAIT",
+    rows, diagnostics = build_rank_observations(
+        portfolio_rankings, decisions, trade_truth, shadow_trades, boundary,
+    )
+    discovery, validation = _d6_chronological_split(rows)
+
+    paired = len(rows)
+    discovery_signal = _d6_rank_signal(discovery)
+    validation_signal = _d6_rank_signal(validation)
+    overall_signal = _d6_rank_signal(rows)
+    all_r = [row["outcome_r"] for row in rows]
+
+    if diagnostics["conflicting_opportunities"]:
+        status = ReadinessStatus.BLOCKED
+        reason = "Conflicting rank membership or outcome for a canonical opportunity"
+    elif paired < _D6_MIN_TOTAL or len(discovery) < _D6_MIN_DISCOVERY or len(validation) < _D6_MIN_VALIDATION:
+        status = ReadinessStatus.INSUFFICIENT_DATA
+        reason = (
+            f"paired/discovery/validation={paired}/{len(discovery)}/{len(validation)}; "
+            f"need {_D6_MIN_TOTAL}/{_D6_MIN_DISCOVERY}/{_D6_MIN_VALIDATION}"
         )
+    else:
+        status = ReadinessStatus.COMPLETE
+        reason = "Chronological candidate rank-ordering vs realised-R evaluation completed on later unseen cycles"
 
-    decision_idx = build_decision_index(decisions)
-    truth_idx = index_by(trade_truth, lambda r: str(
-        deep_get(r, "identity", "correlation_id") or r.get("correlation_id", "")
-    ) or "")
-
-    rank_distribution: dict[int, int] = {}
-    selected_positions: list[int] = []
-    per_rank_r: dict[int, list[float]] = {}
-    selection_regrets: list[float] = []
-    best_vs_selected_correct = 0
-    evaluable_selection_cycles = 0
-
-    for ranking in portfolio_rankings:
-        cycle_id = ranking.get("cycle_id")
-        candidates = ranking.get("candidates", [])
-        if not candidates:
-            continue
-
-        selected_candidate = None
-        ranked_list: list[dict[str, Any]] = []
-
-        for cand in candidates:
-            pos = cand.get("rank_position", 0)
-            rank_distribution[pos] = rank_distribution.get(pos, 0) + 1
-
-            outcome = join_candidate_outcome(
-                cand, ranking, decision_idx, truth_idx, shadow_trades, boundary,
-            )
-            cand["_outcome"] = outcome
-            ranked_list.append(cand)
-
-            if cand.get("selection_status") == "SELECTED":
-                selected_candidate = cand
-
-            r = outcome_value(cand, precedence="shadow")
-            if r is not None:
-                per_rank_r.setdefault(pos, []).append(r)
-
-        if selected_candidate:
-            sel_pos = selected_candidate.get("rank_position", 0)
-            selected_positions.append(sel_pos)
-
-            outcomes_with_r = [
-                (c, outcome_value(c, precedence="shadow"))
-                for c in ranked_list
-                if c.get("_outcome", {}).get("has_shadow") or c.get("_outcome", {}).get("has_live")
-            ]
-            if len(outcomes_with_r) >= 2:
-                evaluable_selection_cycles += 1
-                best_outcome = max(outcomes_with_r, key=lambda x: x[1] if x[1] is not None else -999)
-                selected_r = outcome_value(selected_candidate, precedence="shadow")
-                best_r = best_outcome[1]
-                if best_r is not None and selected_r is not None:
-                    selection_regrets.append(best_r - selected_r)
-                    if selected_r >= best_r - 0.01:
-                        best_vs_selected_correct += 1
-
-    n_selected = len(selected_positions)
-    n_with_regret = len(selection_regrets)
-    top1_selection_rate = sum(1 for p in selected_positions if p == 1) / max(n_selected, 1)
-    avg_regret = statistics.mean(selection_regrets) if selection_regrets else None
-    ranking_accuracy = best_vs_selected_correct / max(evaluable_selection_cycles, 1)
-
-    rank_bucket_expectancy: dict[str, Any] = {}
-    for pos in sorted(per_rank_r.keys()):
-        rs = per_rank_r[pos]
-        rank_bucket_expectancy[str(pos)] = {
-            "n": len(rs),
-            "mean_r": round(sum(rs) / len(rs), 4),
-            "win_rate": round(sum(1 for v in rs if v > 0) / len(rs), 4),
-        }
-
-    has_shadow = sum(
-        1 for c in _iter_candidates(portfolio_rankings)
-        if c.get("_outcome", {}).get("has_shadow")
-    )
-    has_live = sum(
-        1 for c in _iter_candidates(portfolio_rankings)
-        if c.get("_outcome", {}).get("has_live")
-    )
-    matched_decision = sum(
-        1 for c in _iter_candidates(portfolio_rankings)
-        if c.get("_outcome", {}).get("matched_decision")
-    )
+    status_name = getattr(status, "value", status)
+    finding = _d6_classify(status_name if isinstance(status_name, str) else str(status), discovery_signal, validation_signal)
 
     overall = {
+        "canonical_question": "D6",
+        "hypothesis": "Candidate rank ordering (rank_position) predicts subsequent realised/shadow R; better-ranked candidates outperform, and it persists on later unseen cycles.",
+        "research_classification": "observational_rank_ordering_vs_outcome",
+        "causal_claim": "NONE — observational; shadow outcomes are counterfactual/simulated, not proof production ranking causes the outcome",
+        "distinct_from_port1": "PORT-1 asks selected-vs-best per cycle; D6 asks whether rank ORDERING predicts outcomes across positions. Separate runners and reports; neither completes the other.",
+        "unit_of_analysis": "one canonical_opportunity_id (candidate); account fanout and repeated horizons collapse",
+        "evidence_authority": "portfolio_rankings (rank_position) joined via decision_ledger to CURRENT shadow simulated_outcome.pnl_r_multiple",
+        "evidence_epoch": "CURRENT",
         "portfolio_rankings_read": ranking_rows,
-        "total_candidate_rows": total_candidate_rows,
-        "ranking_cycles": ranking_rows,
-        "selected_count": n_selected,
-        "top1_selection_rate": round(top1_selection_rate, 4),
-        "accuracy_best_selected": round(ranking_accuracy, 4),
-        "avg_selection_regret": round(avg_regret, 4) if avg_regret is not None else None,
-        "regret_evaluable_cycles": evaluable_selection_cycles,
-        "rank_distribution": dict(sorted(rank_distribution.items())),
-        "selected_rank_distribution": _bucket_positions(selected_positions),
-        "per_rank_outcome": rank_bucket_expectancy,
-        "outcome_join_coverage": {
-            "matched_decision": matched_decision,
-            "has_shadow_outcome": has_shadow,
-            "has_live_outcome": has_live,
-            "missing_outcome": total_candidate_rows - has_shadow,
+        "distinct_opportunities": diagnostics["distinct_opportunities"],
+        "paired_opportunities": paired,
+        "missing_outcome_count": diagnostics["missing_outcomes_excluded"],
+        "rank_signal": {
+            "definition": "Spearman between better-rank (-rank_position) and realised R; positive => better rank predicts higher R",
+            "overall": overall_signal,
+            "discovery": discovery_signal,
+            "later_unseen_validation": validation_signal,
+            "signal_threshold": _D6_RANK_SIGNAL_MIN,
         },
+        "outcome_distribution": {
+            "mean_r": round(sum(all_r) / len(all_r), 4) if all_r else None,
+            "median_r": round(statistics.median(all_r), 4) if all_r else None,
+            "win_rate": round(sum(1 for v in all_r if v > 0) / len(all_r), 4) if all_r else None,
+        },
+        "per_rank_outcome": _d6_bucket_stats(rows),
+        "discovery": {"n": len(discovery)},
+        "later_unseen_validation": {"n": len(validation)},
+        "finding_classification": finding,
+        "completion_reason": reason,
+        "limitations": [
+            "Shadow outcomes are counterfactual/simulated, not broker truth.",
+            "COMPLETE means the chronological rank-ordering evaluation ran validly, not that the ranker is good.",
+            "One canonical opportunity is one observation; account fanout and repeated horizons never inflate n.",
+            "Missing outcomes are excluded, never imputed; conflicting rank/outcome fails closed.",
+            "Rank buckets with n<15 are reported but not used for a directional claim.",
+            "Research only; production ranking/selection is never modified. Distinct from PORT-1.",
+        ],
+        "diagnostics": diagnostics,
+        "sufficiency": {
+            "minimum_total": _D6_MIN_TOTAL,
+            "minimum_discovery": _D6_MIN_DISCOVERY,
+            "minimum_validation": _D6_MIN_VALIDATION,
+            "minimum_bucket": _D6_MIN_BUCKET,
+        },
+        "quarantine_boundary": boundary.describe(),
     }
 
-    confidence = compute_confidence(n_selected, ranking_accuracy > 0.60)
-    n_joinable = has_shadow + has_live
-    if n_joinable < 5:
-        confidence = "LOW"
-        recommendation = "WAIT"
-        finding = f"Insufficient outcome-bearing ranking pairs ({n_joinable})"
-    elif ranking_accuracy >= 0.70 and confidence in ("HIGH", "MEDIUM"):
-        recommendation = "PROMOTE"
-        finding = (
-            f"Ranking accuracy {ranking_accuracy:.0%}. "
-            f"Top-1 selected {top1_selection_rate:.0%} of the time. "
-            "Avg regret " + (f"{avg_regret:+.3f}R." if avg_regret is not None else "N/A.")
-        )
-    elif ranking_accuracy >= 0.50:
-        recommendation = "MONITOR"
-        finding = f"Ranking accuracy {ranking_accuracy:.0%} is fair. Avg regret " + (f"{avg_regret:+.3f}R." if avg_regret is not None else "N/A.")
+    confidence = "MEDIUM" if status == ReadinessStatus.COMPLETE else "INSUFFICIENT_DATA"
+    if status == ReadinessStatus.COMPLETE:
+        recommendation = f"OBSERVATIONAL FINDING [{finding}]: validation rank signal {validation_signal:+.4f} (discovery {discovery_signal:+.4f})"
     else:
-        recommendation = "RECALIBRATE"
-        finding = f"Ranking accuracy {ranking_accuracy:.0%} is poor. Avg regret " + (f"{avg_regret:+.3f}R." if avg_regret is not None else "N/A.")
+        recommendation = f"{getattr(status, 'value', status)}: {reason}"
 
     report = build_report(
-        question_id="D6", status=ReadinessStatus.COMPLETE,
+        question_id="D6", status=status,
         overall=overall, confidence=confidence,
         dataset={
-            "portfolio_rankings_rows": ranking_rows,
-            "ranking_cycles": ranking_rows,
-            "total_candidate_rows": total_candidate_rows,
-            "selected_count": n_selected,
-            "outcome_bearing_candidates": n_joinable,
+            "source": "portfolio_rankings+shadow_trades",
+            "sample_size": paired,
+            "independent_observations": paired,
             "quarantine_boundary": boundary.describe(),
         },
         fingerprint=build_fingerprint(
-            total_candidate_rows, 0, source="portfolio_rankings",
-            validation_score=confidence, epoch="CURRENT",
+            paired, max(0, diagnostics["distinct_opportunities"] - paired),
+            source="portfolio_rankings", validation_score=confidence, epoch="CURRENT",
         ),
         recommendation=recommendation,
         assumptions=[
-            "Primary evidence = portfolio_rankings V1 (required)",
-            "Outcomes joined via decision_ledger (cycle_id, symbol) -> trade_truth / shadow_runtime",
-            "Shadow outcome preferred for cross-candidate comparability",
-            "Selection regret = best candidate shadow R - selected R (same cycle)",
-            "Quarantine boundary applied to decision timestamps for contamination classification",
+            "Primary evidence = portfolio_rankings V1 (rank_position); outcomes joined via decision_ledger to CURRENT shadow R.",
+            "One canonical_opportunity_id is one independent observation; account fanout and repeated horizons collapse first.",
+            "Rank ordering is pre-outcome; membership is never derived from realised outcome.",
+            "Missing outcomes are excluded, never imputed; conflicting rank/outcome fails closed.",
+            "Deterministic chronological discovery/validation; the rank relationship must persist on later unseen cycles.",
+            "D6 (rank-ordering) is distinct from PORT-1 (selected-vs-best); neither report completes the other.",
         ],
         provenance={
             "experiment_module": "research_engine.experiments.portfolio_ranking",
             "registry_id": "D6",
             "function": "run_portfolio_ranking",
+            "report_filename": D6_REPORT_FILENAME,
+            "partition": "deterministic chronological 60/40 by cycle time",
             "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
         },
     )
 
-    persist_report(report, "d6_portfolio_ranking.json")
+    persist_report(report, D6_REPORT_FILENAME)
     update_knowledge_map("D6", finding, recommendation)
     return report
 
