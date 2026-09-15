@@ -109,10 +109,11 @@ M1 = ResearchQuestion(
     validation_rules=(
         ValidationRule("h4_regime_coverage", ">=", 0.80, "H4 regime must be populated in most records"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 60, "Distinct canonical opportunities required for chronological validation"),
     ),
-    runner_module="research_engine.experiments.legacy_canonical",
-    runner_function="run_q06",
-    report_filename="q6_regime_accuracy.json",
+    runner_module="research_engine.experiments.market_prediction_rw2",
+    runner_function="run_m1",
+    report_filename="m1_h4_regime_prediction_v1.json",
     legacy_ids=("Q6", "Q23"),
 )
 
@@ -147,11 +148,12 @@ M3 = ResearchQuestion(
         ValidationRule("h4_regime_coverage", ">=", 0.80, "H4 regime required"),
         ValidationRule("market_phase_coverage", ">=", 0.80, "Phase must be populated"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 90, "Distinct canonical opportunities required for chronological validation"),
     ),
     depends_on=("M1",),
-    runner_module="research_engine.experiments.market_research",
+    runner_module="research_engine.experiments.market_prediction_rw2",
     runner_function="run_m3",
-    report_filename="m3_phase_vs_regime.json",
+    report_filename="m3_phase_incremental_prediction_v1.json",
 )
 
 M4 = ResearchQuestion(
@@ -593,11 +595,12 @@ M7 = ResearchQuestion(
         ValidationRule("h4_regime_coverage", ">=", 0.80, "H4 regime required"),
         ValidationRule("market_phase_coverage", ">=", 0.80, "Phase required"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 90, "Distinct canonical opportunities required for chronological validation"),
     ),
     depends_on=("M1", "M6"),
-    runner_module="research_engine.experiments.market_research",
+    runner_module="research_engine.experiments.market_prediction_rw2",
     runner_function="run_m7",
-    report_filename="m7_regime_phase_interaction.json",
+    report_filename="m7_regime_phase_prediction_v1.json",
 )
 
 M8 = ResearchQuestion(
@@ -611,10 +614,11 @@ M8 = ResearchQuestion(
     validation_rules=(
         ValidationRule("market_phase_coverage", ">=", 0.80, "Phase history required"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 60, "Distinct joined canonical opportunities required for chronological validation"),
     ),
-    runner_module="research_engine.experiments.market_temporal",
+    runner_module="research_engine.experiments.market_prediction_rw2",
     runner_function="run_m8",
-    report_filename="m8_phase_transition_behaviour.json",
+    report_filename="m8_phase_transition_prediction_v1.json",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1048,7 +1052,7 @@ M11 = ResearchQuestion(
     category=QuestionCategory.MARKET_CONTEXT,
     title="Context predictive value vs pattern",
     description="Does market context (regime + phase + bias) provide more predictive value for trade outcomes than the pattern identity itself?",
-    required_fields=("h4_regime", "market_phase", "pattern", "r_multiple"),
+    required_fields=("h4_regime", "market_phase", "h1_bias", "pattern", "r_multiple"),
     data_sources=(DataSource.SHADOW_TRADES, DataSource.DECISION_TRACE),
     priority=QuestionPriority.P0,
     validation_rules=(
@@ -1056,11 +1060,12 @@ M11 = ResearchQuestion(
         ValidationRule("market_phase_coverage", ">=", 0.80, "Phase required"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
         ValidationRule("lineage_coverage", ">=", 0.80, "Need decision context linked to outcomes"),
+        ValidationRule("sample_size", ">=", 120, "Distinct joined canonical opportunities required for chronological validation"),
     ),
     depends_on=("M1", "M9"),
-    runner_module="research_engine.experiments.market_research",
+    runner_module="research_engine.experiments.market_prediction_rw2",
     runner_function="run_m11",
-    report_filename="m11_context_vs_pattern.json",
+    report_filename="m11_context_vs_pattern_prediction_v1.json",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════

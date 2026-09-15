@@ -36,7 +36,7 @@ KNOWN_UNRESOLVED_AUTH = {
 }
 
 SEMANTIC_MISMATCH_QIDS = {
-    "M1", "M11", "D3", "D4", "D5", "X3",
+    "D3", "D4", "D5", "X3",
     "L1", "L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8", "EXEC1",
 }
 
@@ -325,13 +325,15 @@ def build_definitions_from_registry(registry):
     from research_engine.registry.wave_a_no_runner_definitions import (
         apply_wave_a_no_runner_designs,
     )
+    from research_engine.registry.rw2_definitions import apply_rw2_definitions
 
     definitions = apply_wave_a1_definitions(definitions)
     definitions = apply_wave_a2_definitions(definitions)
     definitions = apply_wave_a3_definitions(definitions)
     definitions = apply_wave_a4_definitions(definitions)
     definitions = apply_wave_a5_definitions(definitions)
-    return apply_wave_a_no_runner_designs(definitions)
+    definitions = apply_wave_a_no_runner_designs(definitions)
+    return apply_rw2_definitions(definitions)
 
 
 def validate_runner_registry_threshold_alignment(question, question_id):

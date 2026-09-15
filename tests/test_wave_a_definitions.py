@@ -146,7 +146,7 @@ def test_question_wording_from_description():
 def test_semantic_mismatch_detected():
     from research_engine.registry import REGISTRY_BY_ID
     from research_engine.registry.definition_validator import validate_runner_registry_threshold_alignment
-    mismatch_ids = {"M1", "M11", "D3", "D4", "D5", "X3", "L1", "L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8", "EXEC1"}
+    mismatch_ids = {"D3", "D4", "D5", "X3", "L1", "L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8", "EXEC1"}
     for mid in mismatch_ids:
         q = REGISTRY_BY_ID[mid]
         report = validate_runner_registry_threshold_alignment(q, mid)
@@ -416,11 +416,15 @@ from research_engine.registry.wave_a2_definitions import (  # noqa: E402
 def _build_pre_a2_definitions(monkeypatch):
     """Build the committed Wave A1 state with the A2 application disabled."""
     import research_engine.registry.wave_a2_definitions as wave_a2
+    import research_engine.registry.rw2_definitions as rw2
 
     original = wave_a2.apply_wave_a2_definitions
+    original_rw2 = rw2.apply_rw2_definitions
     monkeypatch.setattr(wave_a2, "apply_wave_a2_definitions", lambda definitions: definitions)
+    monkeypatch.setattr(rw2, "apply_rw2_definitions", lambda definitions: definitions)
     before = build_definitions_from_registry(REGISTRY)
     monkeypatch.setattr(wave_a2, "apply_wave_a2_definitions", original)
+    monkeypatch.setattr(rw2, "apply_rw2_definitions", original_rw2)
     return before
 
 
@@ -463,13 +467,14 @@ def test_wave_a2_resolved_health_and_unresolved_fail_closed():
         assert definition.metric_definition.strip(), qid
         assert definition.evidence_authorities, qid
 
-    for qid in WAVE_A2_UNRESOLVED:
+    for qid in WAVE_A2_UNRESOLVED - {"M8"}:
         unresolved = definitions[qid]
         assert not unresolved.hypothesis.strip(), qid
         assert not unresolved.population_definition.strip(), qid
         assert not unresolved.metric_definition.strip(), qid
         assert get_question_health(reports[qid]) == "UNDER_SPECIFIED", qid
-    assert get_question_health(reports["M8"]) == "UNDER_SPECIFIED"
+    assert get_question_health(reports["M8"]) == "VALID"
+    assert definitions["M8"].hypothesis.strip()
     assert "market_context" in WAVE_A2_UNRESOLVED_REASONS["M8"]
     assert "missing outcome to 0.0" in WAVE_A2_UNRESOLVED_REASONS["OPP-1"].replace(
         "a missing outcome", "missing outcome"
@@ -607,7 +612,7 @@ def test_wave_a22a_existing_sufficiency_and_metric_semantics_are_exact():
 
 def test_wave_a22a_preserves_a21_definitions(monkeypatch):
     before_all_a2 = _build_pre_a2_definitions(monkeypatch)
-    after_a22a = build_definitions_from_registry(REGISTRY)
+    after_a22a = apply_wave_a2_definitions(before_all_a2)
 
     # Reconstruct the A2.1 result from its unchanged override entries, then
     # compare every field with the cumulative A2 result.
@@ -802,13 +807,17 @@ from research_engine.registry.wave_a3_definitions import (  # noqa: E402
 def _build_pre_a3_definitions(monkeypatch):
     """Build the committed A1/A2 state with A3 application disabled."""
     import research_engine.registry.wave_a3_definitions as wave_a3
+    import research_engine.registry.rw2_definitions as rw2
 
     original = wave_a3.apply_wave_a3_definitions
+    original_rw2 = rw2.apply_rw2_definitions
     monkeypatch.setattr(
         wave_a3, "apply_wave_a3_definitions", lambda definitions: definitions
     )
+    monkeypatch.setattr(rw2, "apply_rw2_definitions", lambda definitions: definitions)
     before = build_definitions_from_registry(REGISTRY)
     monkeypatch.setattr(wave_a3, "apply_wave_a3_definitions", original)
+    monkeypatch.setattr(rw2, "apply_rw2_definitions", original_rw2)
     return before
 
 
@@ -831,10 +840,16 @@ def test_wave_a31_scope_before_and_after_health_are_exact(monkeypatch):
 
     for qid in WAVE_A3_TARGETS:
         assert get_question_health(before_reports[qid]) == "UNDER_SPECIFIED", qid
-        assert get_question_health(after_reports[qid]) == "UNDER_SPECIFIED", qid
-        assert not after[qid].hypothesis.strip(), qid
-        assert not after[qid].population_definition.strip(), qid
-        assert not after[qid].metric_definition.strip(), qid
+        if qid in {"M3", "M7"}:
+            assert get_question_health(after_reports[qid]) == "VALID", qid
+            assert after[qid].hypothesis.strip(), qid
+            assert after[qid].population_definition.strip(), qid
+            assert after[qid].metric_definition.strip(), qid
+        else:
+            assert get_question_health(after_reports[qid]) == "UNDER_SPECIFIED", qid
+            assert not after[qid].hypothesis.strip(), qid
+            assert not after[qid].population_definition.strip(), qid
+            assert not after[qid].metric_definition.strip(), qid
 
 
 def test_m3_and_m7_predictive_claims_remain_fail_closed():
@@ -1154,13 +1169,17 @@ from research_engine.registry.wave_a4_definitions import (  # noqa: E402
 def _build_pre_a4_definitions(monkeypatch):
     """Build the current A1/A2/A3 state with A4 application disabled."""
     import research_engine.registry.wave_a4_definitions as wave_a4
+    import research_engine.registry.rw2_definitions as rw2
 
     original = wave_a4.apply_wave_a4_definitions
+    original_rw2 = rw2.apply_rw2_definitions
     monkeypatch.setattr(
         wave_a4, "apply_wave_a4_definitions", lambda definitions: definitions
     )
+    monkeypatch.setattr(rw2, "apply_rw2_definitions", lambda definitions: definitions)
     before = build_definitions_from_registry(REGISTRY)
     monkeypatch.setattr(wave_a4, "apply_wave_a4_definitions", original)
+    monkeypatch.setattr(rw2, "apply_rw2_definitions", original_rw2)
     return before
 
 
@@ -1184,11 +1203,18 @@ def test_wave_a41_scope_and_before_to_after_health_are_exact(monkeypatch):
     after_reports = validate_all_definitions(after)
 
     for qid in WAVE_A4_1_TARGETS:
-        assert get_question_health(before_reports[qid]) == "SEMANTIC_MISMATCH", qid
-        assert get_question_health(after_reports[qid]) == "SEMANTIC_MISMATCH", qid
-        assert not after[qid].hypothesis.strip(), qid
-        assert not after[qid].population_definition.strip(), qid
-        assert not after[qid].metric_definition.strip(), qid
+        if qid in {"M1", "M11"}:
+            assert get_question_health(before_reports[qid]) == "UNDER_SPECIFIED", qid
+            assert get_question_health(after_reports[qid]) == "VALID", qid
+            assert after[qid].hypothesis.strip(), qid
+            assert after[qid].population_definition.strip(), qid
+            assert after[qid].metric_definition.strip(), qid
+        else:
+            assert get_question_health(before_reports[qid]) == "SEMANTIC_MISMATCH", qid
+            assert get_question_health(after_reports[qid]) == "SEMANTIC_MISMATCH", qid
+            assert not after[qid].hypothesis.strip(), qid
+            assert not after[qid].population_definition.strip(), qid
+            assert not after[qid].metric_definition.strip(), qid
 
 
 def test_m1_remains_descriptive_not_predictive_and_has_no_account_fanout():

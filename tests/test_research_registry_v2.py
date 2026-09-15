@@ -221,12 +221,12 @@ class TestReadyStatus:
         s1 = next(r for r in results if r.question_id == "S1")
         assert s1.status == QuestionStatus.READY
 
-    def test_regime_question_ready_with_h4_populated(self):
-        """M1 (regime predicts outcomes) should be READY when H4 is populated."""
+    def test_regime_question_not_ready_without_opportunity_chronology(self):
+        """Populated H4 alone cannot satisfy the repaired predictive M1 contract."""
         records = self._make_complete_records()
         results = audit_registry(shadow_records=records, trace_records=[])
         m1 = next(r for r in results if r.question_id == "M1")
-        assert m1.status == QuestionStatus.READY
+        assert m1.status in (QuestionStatus.BLOCKED, QuestionStatus.WAITING_DATA)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

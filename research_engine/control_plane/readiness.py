@@ -35,6 +35,11 @@ def resolve_readiness(
 
     if report_validity == ReportValidity.VALID_CURRENT and report_status == "COMPLETE":
         return ReadinessStatus.COMPLETE, "A VALID_CURRENT completed report exists"
+    if question.id in {"M1", "M3", "M7", "M8", "M11"} and report_validity == ReportValidity.VALID_CURRENT:
+        if report_status == "WAITING_DATA":
+            return ReadinessStatus.WAITING_DATA, "The CURRENT RW2 report has not met chronological/sample/cell sufficiency"
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, "The CURRENT RW2 report could not establish required authority, chronology, or join integrity"
 
     if evidence.error:
         missing = all(

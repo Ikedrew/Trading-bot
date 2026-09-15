@@ -661,6 +661,53 @@ def _management_population(
 def _population(question: Any, slices: list[DatasetSlice]) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
     by_source = {dataset.source: dataset for dataset in slices}
     metrics: dict[str, Any] = {}
+    if question.id in {"M1", "M3", "M7", "M8", "M11"}:
+        from research_engine.experiments.market_prediction_rw2 import (
+            build_opportunity_observations,
+            join_decision_context,
+            join_market_context,
+        )
+
+        observations, diagnostics = build_opportunity_observations(
+            by_source["shadow_trades"].current_records
+        )
+        if question.id == "M8":
+            observations, joined = join_market_context(
+                observations, by_source["market_context"].current_records
+            )
+            diagnostics.update(joined)
+        elif question.id == "M11":
+            observations, joined = join_decision_context(
+                observations, by_source["decision_trace"].current_records
+            )
+            diagnostics.update(joined)
+        conflicts = (
+            tuple(diagnostics.get("ambiguous_opportunities", ()))
+            + tuple(diagnostics.get("market_context_conflicts", ()))
+            + tuple(diagnostics.get("decision_context_conflicts", ()))
+        )
+        if conflicts:
+            diagnostics["rw2_blocker"] = (
+                f"Ambiguous or conflicting canonical RW2 join for "
+                f"{len(set(conflicts))} opportunities"
+            )
+        rows = [
+            {
+                "canonical_opportunity_id": row.canonical_opportunity_id,
+                "entity_id": row.entity_id,
+                "entry_time": row.decision_time.isoformat(),
+                "h4_regime": row.h4_regime,
+                "market_phase": row.market_phase,
+                "h1_bias": row.h1_bias,
+                "pattern": row.pattern,
+                "phase_transition": row.phase_transition,
+                "r_multiple": row.outcome_r,
+            }
+            for row in observations
+        ]
+        metrics.update(diagnostics)
+        excluded = diagnostics.get("raw_shadow_rows", 0) - len(rows)
+        return rows, max(0, int(excluded)), metrics
     if question.id == "D6":
         rankings = by_source["portfolio_rankings"].current_records
         rows = _portfolio_candidates(rankings)
@@ -747,6 +794,39 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
     source_names = [source.value for source in question.data_sources]
     source_names.extend(_RUNNER_SUPPLEMENTAL_SOURCES.get(question.id, ()))
     slices = [snapshot.get(source) for source in dict.fromkeys(source_names)]
+    # RW2's two non-shadow authorities have canonical V1 schemas but are not
+    # shadow-shaped, so classify them strictly and locally.  This must not
+    # broaden epoch treatment for any unrelated question.
+    if question.id in {"M8", "M11"}:
+        authority_source = "market_context" if question.id == "M8" else "decision_trace"
+        adjusted: list[DatasetSlice] = []
+        for dataset in slices:
+            if dataset.source != authority_source or not dataset.available:
+                adjusted.append(dataset)
+                continue
+            current_rows: list[dict[str, Any]] = []
+            transitional = legacy = 0
+            for row in dataset.records:
+                explicit = _recursive_value(row, ("data_epoch", "epoch"))
+                value = str(explicit or "").upper()
+                if value == "TRANSITIONAL":
+                    transitional += 1
+                elif value in {"CURRENT", "CURRENT_ONLY"} or (
+                    not explicit and row.get("schema_version") == current_schema(authority_source)
+                ):
+                    current_rows.append(row)
+                else:
+                    legacy += 1
+            adjusted.append(DatasetSlice(
+                source=dataset.source,
+                available=True,
+                records=dataset.records,
+                current_records=current_rows,
+                transitional_count=transitional,
+                legacy_count=legacy,
+                error=dataset.error,
+            ))
+        slices = adjusted
     source_dicts = [dataset.to_dict() for dataset in slices]
     errors = [f"{dataset.source}: {dataset.error}" for dataset in slices if dataset.error and dataset.available is False]
     requirements: list[RequirementResult] = []
@@ -803,6 +883,16 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
 
     rows, population_excluded, metrics = _population(question, slices)
     base_count = len(rows)
+    if metrics.get("rw2_blocker"):
+        requirements.append(RequirementResult(
+            type="join_integrity",
+            name="canonical_opportunity_join",
+            required="unambiguous",
+            current="conflicting",
+            satisfied=False,
+            reason=str(metrics["rw2_blocker"]),
+            blocking=True,
+        ))
     metrics["total_current_population"] = base_count
     metrics["transitional_excluded"] = sum(item.transitional_count for item in slices)
     metrics["legacy_excluded"] = sum(item.legacy_count for item in slices)

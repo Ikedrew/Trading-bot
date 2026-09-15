@@ -161,7 +161,9 @@ class RepairWave:
 # boundary by research_engine.control_plane.report_ownership and proven by
 # tests/test_rw1_report_ownership.py; every entry below still derives its own
 # structurally_operational value from its own gates.
-OPERATIONAL_IDS = frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
+RW2_OPERATIONAL_IDS = frozenset({"M1", "M3", "M7", "M8", "M11"})
+OPERATIONAL_IDS = frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED) | RW2_OPERATIONAL_IDS
+
 
 
 HUMAN_SEMANTIC_DECISIONS = {
@@ -174,17 +176,17 @@ HUMAN_SEMANTIC_DECISIONS = {
     ),
     "HD02": HumanSemanticDecision(
         "HD02", ("M1", "M3", "M7", "M11"),
-        "Choose whether predictive registry claims remain predictive or are narrowed to descriptive/associative claims.",
+        "RW2 approved preserving predictive registry claims rather than narrowing them to descriptive/associative claims.",
         ("Implement leakage-safe out-of-sample predictive evaluation", "Approve explicit registry narrowing"),
         ("More implementation and chronological validation; preserves intent", "Less code, but changes canonical claim"),
-        "Preserve canonical intent and implement predictive evaluation.", True,
+        "Preserve canonical intent and implement predictive evaluation (approved and implemented in RW2).", False,
     ),
     "HD03": HumanSemanticDecision(
         "HD03", ("M8",),
-        "Choose the canonical phase-transition evidence authority.",
+        "RW2 approved separate CURRENT market_context as the canonical phase-transition authority.",
         ("Separate CURRENT market_context joined to outcomes", "Embedded shadow decision snapshot only"),
         ("Preserves registry multi-source intent and needs a strict join", "Matches current runner but requires registry narrowing"),
-        "Use separate CURRENT market_context with a strict canonical-opportunity join.", True,
+        "Use separate CURRENT market_context with a strict canonical-opportunity join (approved and implemented in RW2).", False,
     ),
     "HD04": HumanSemanticDecision(
         "HD04", ("D2", "D3", "D4", "D5", "X5"),
@@ -303,10 +305,17 @@ REPAIR_WAVES = {
     ),
     "RW2": RepairWave(
         "RW2", "Market-context evidence and predictive semantics", ("M1", "M3", "M7", "M8", "M11"),
-        "Mapped calculations do not establish the registry's outcome/predictive or multi-source claims.", ("RW1",), ("HD02", "HD03"),
+        "Mapped calculations did not establish the registry's outcome/predictive or multi-source claims.", ("RW1",), (),
         ("market research runners", "CURRENT context/outcome joins", "market reports/readiness"), False,
         ("M1", "M3", "M7", "M8", "M11"), (),
-        "Each runner uses authoritative CURRENT context, opportunity-safe outcomes, declared cells and out-of-sample tests where predictive; COMPLETE enforces sufficiency.",
+        "Each runner uses authoritative CURRENT context, opportunity-safe outcomes, declared cells and chronological later-unseen validation; COMPLETE enforces total, partition and cell sufficiency.",
+        implemented=True,
+        implementation_evidence=(
+            "research_engine/experiments/market_prediction_rw2.py implements one observation per canonical opportunity, CURRENT-only authority, fail-closed joins and chronological discovery/later validation for all five targets.",
+            "M8 requires canonical market_context and treats embedded snapshot context as consistency evidence only; M11 joins authoritative decision_trace context to shadow pattern/outcome evidence.",
+            "Unique versioned reports and registry sample rules prevent cross-completion and distinguish WAITING_DATA, BLOCKED and scientifically COMPLETE results.",
+            "Focused RW2 tests prove fanout/horizon collapse, missing-label preservation, chronology, leakage rejection, cell sufficiency and derived 31/70 ledger accounting.",
+        ),
     ),
     "RW3": RepairWave(
         "RW3", "Prediction, calibration, and decision foundation", ("D2", "D3", "D4", "D5", "X5"),
