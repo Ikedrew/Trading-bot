@@ -15,6 +15,13 @@ Usage:
 
 from research_engine.v10.candidates.candidate_registry import CandidateRegistry
 from research_engine.v10.candidates.models import CandidateRecord, CandidateStatus
+from research_engine.v10.candidates.candidate_decision import (
+    CandidateDecisionStore,
+    DecisionResult,
+    HumanDecision,
+    get_human_decision,
+    record_human_decision,
+)
 from research_engine.v10.candidates.evaluation_report import CandidateEvaluationReport
 
-__all__ = ["CandidateRegistry", "CandidateRecord", "CandidateStatus", "CandidateEvaluationReport"]
+__all__ = ["CandidateRegistry", "CandidateRecord", "CandidateStatus", "CandidateEvaluationReport", "CandidateDecisionStore", "DecisionResult", "HumanDecision", "get_human_decision", "record_human_decision"]
