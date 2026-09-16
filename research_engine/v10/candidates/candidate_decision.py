@@ -5,6 +5,16 @@ Closes exactly ONE boundary:
     READY_FOR_REVIEW -> explicit human invocation -> durable decision
     -> CandidateRegistry.update_status() -> ACCEPTED or REJECTED
 
+Wave 4C.3 — baseline-safe promotion (FAIL CLOSED):
+    Before a human ACCEPT crosses the promotion boundary, the candidate's
+    recorded baseline is re-proven against the 4C.1 canonical baseline
+    authority (validate_candidate_baseline): real baseline_id, == active
+    canonical baseline, loadable snapshot, provenance == snapshot config_hash
+    == current production config hash. On failure the approval is NOT applied
+    (candidate stays READY_FOR_REVIEW), an auditable non-effective
+    BASELINE_BLOCKED row preserves the human intent, and no rebase/mutation
+    occurs. REJECT is not gated (rejecting a stale candidate stays possible).
+
 CandidateRegistry remains the SOLE lifecycle authority. This module owns only
 the human-decision RECORD. NEVER called automatically by ResearchCycleRunner
 or the candidate auto-evaluator. NEVER evaluates, shadows, applies, deploys,
@@ -290,6 +300,50 @@ def record_human_decision(
             f"Candidate '{candidate_id}' has no successful (IMPROVED) "
             "validation evidence: ACCEPT rejected"
         )
+
+    # ─── Wave 4C.3: baseline-bound promotion invariant (FAIL CLOSED) ─────────
+    # Immediately before a human ACCEPT may cross the promotion boundary
+    # (READY_FOR_REVIEW -> ACCEPTED), prove the candidate's recorded baseline
+    # is still canonical and current. Reuses the 4C.1/4C.2 authority ONLY
+    # (validate_candidate_baseline) — no second validator, pointer, registry
+    # or hash algorithm. Ordering: BEFORE any durable write, so a blocked
+    # approval never leaves a COMPLETED row (persisted truth never implies a
+    # successful approval) and the candidate never crosses to ACCEPTED on
+    # stale provenance. NO silent rebase, NO baseline/candidate mutation, NO
+    # fabricated REJECT. REJECT/ARCHIVED decisions are NOT gated: rejecting
+    # or deferring a stale candidate must remain possible.
+    if verdict == "ACCEPT":
+        from research_engine.v10.baselines.baseline_authority import (
+            validate_candidate_baseline,
+        )
+        baseline_ok, baseline_reason = validate_candidate_baseline(
+            candidate.baseline_id,
+            candidate.change_definition.get("baseline_config_hash", ""),
+        )
+        if not baseline_ok:
+            # Auditable non-effective row: HUMAN INTENT preserved
+            # (decision/actor/reason), SYSTEM ELIGIBILITY denied. outcome
+            # BASELINE_BLOCKED is never COMPLETED (get_decision() ignores
+            # it), so the effective decision stays empty and a later retry
+            # is permitted — same non-effective semantics as STATUS_FAILED.
+            blocked = HumanDecision(
+                candidate_id=candidate_id,
+                decision=verdict,
+                actor=actor.strip(),
+                reason=reason.strip(),
+                timestamp=timestamp_now(),
+                evaluation_id=evaluation_id,
+                status_before=candidate.status,
+                status_after="",
+                outcome="BASELINE_BLOCKED",
+                error=f"baseline safety invariant: {baseline_reason}",
+            )
+            store._append_row_atomic(blocked)
+            raise ValueError(
+                f"Candidate '{candidate_id}' ACCEPT blocked by the baseline "
+                f"safety invariant ({baseline_reason}): approval NOT applied, "
+                "candidate remains READY_FOR_REVIEW"
+            )
 
     status_before = candidate.status
     status_after = _DECISION_TO_STATUS[verdict]

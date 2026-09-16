@@ -18,6 +18,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+import research_engine.v10.baselines.baseline_authority as baseline_authority
+from research_engine.v10.baselines.baseline_authority import set_active
+from research_engine.v10.baselines.models import BaselineSnapshot
+from research_engine.v10.baselines.snapshot_registry import SnapshotRegistry
+from core.research_events import compute_config_hash
 from research_engine.v10.candidates.candidate_decision import (
     CandidateDecisionStore,
     get_human_decision,
@@ -26,22 +31,52 @@ from research_engine.v10.candidates.candidate_decision import (
 from research_engine.v10.candidates.candidate_registry import CandidateRegistry
 from research_engine.v10.candidates.models import CandidateRecord, CandidateStatus
 
+# Wave 4C.3: the canonical active baseline default candidates bind to. The
+# legacy pre-4C.1 "current_v10" placeholder no longer passes the promotion
+# invariant (ACCEPT fails closed on it), so fixtures bind to the real one.
+_TEST_BASELINE_ID = "V10_BASELINE_wave4btest"
+
 
 # ─── FIXTURES ─────────────────────────────────────────────────────
+
+@pytest.fixture(autouse=True)
+def _valid_baseline_env(tmp_path, monkeypatch):
+    """
+    Wave 4C.3: every test gets a VALID canonical active baseline on temporary
+    stores (production data/baselines/ is never touched). Candidates created
+    via _make_candidate bind to it with matching config provenance.
+    """
+    baselines_dir = str(tmp_path / "baselines")
+    monkeypatch.setattr(baseline_authority, "_BASELINES_DIR", baselines_dir)
+    monkeypatch.setattr(
+        baseline_authority, "_ACTIVE_POINTER_FILE",
+        str(Path(baselines_dir) / "active_baseline.json"),
+    )
+    SnapshotRegistry(baselines_dir=baselines_dir).save(BaselineSnapshot(
+        snapshot_id=_TEST_BASELINE_ID,
+        config_hash=compute_config_hash(),
+        identity_hash="wave4btest",
+    ))
+    set_active(_TEST_BASELINE_ID, actor="test", reason="4B decision fixture")
 
 def _make_candidate(
     candidate_id="OPT-4B-001",
     status=CandidateStatus.READY_FOR_REVIEW,
     with_success=True,
     success_id="EVAL-4b001",
+    baseline_id=_TEST_BASELINE_ID,
+    with_provenance=True,
 ):
+    change_definition = {"type": "direction_inversion"}
+    if with_provenance:
+        change_definition["baseline_config_hash"] = compute_config_hash()
     c = CandidateRecord(
         candidate_id=candidate_id,
         hypothesis_id="HYP-4b-wave-test",
-        baseline_id="current_v10",
+        baseline_id=baseline_id,
         component="DIRECTION_INVERSION",
         description="Wave 4B test candidate",
-        change_definition={"type": "direction_inversion"},
+        change_definition=change_definition,
         status=status,
     )
     return c, with_success, success_id
