@@ -87,15 +87,44 @@ def build_cycle_snapshot(*, cycle_id: str, fingerprint: str) -> dict[str, Any]:
         "dataset_fingerprint": fingerprint,
     }
 
+    # ─── canonical question results (run_all) ────────────────────────────
+    # run_all() already attaches finding-relevant fields (outcome, primary_metrics,
+    # sample_sizes, confidence, title, conclusion, question_id) to each result.
+    # Keep the full results for the Gap-8 bridge; the snapshot's "questions" field
+    # uses a stripped view (status / recommendation / sample / status_source) per
+    # the existing Gap-4 snapshot contract.
+    _all_results = run_all()
+
     # ─── question results (Gap-4 authoritative status contract) ───────────
     questions = {}
-    for qid, info in run_all().items():
+    for qid, info in _all_results.items():
         questions[qid] = {
             "status": info.get("status", "UNKNOWN_STATUS"),
             "recommendation": info.get("recommendation", ""),
             "sample": info.get("sample", 0),
             "status_source": info.get("status_source", ""),
         }
+
+    # ─── Gap-8 Wave-2: submit completed canonical question results to the
+    #   existing FindingTriggerEngine BEFORE _load_trigger_state() builds
+    #   snapshot["findings"].
+    #
+    #   Only COMPLETE results are offered to the engine. The engine's own
+    #   detect_from_finding() screening decides eligibility:
+    #     * outcome must be ANOMALOUS or NEGATIVE
+    #     * total sample must meet min_sample_size
+    #     * WAIT / INSUFFICIENT_DATA / ERROR / MALFORMED are never offered
+    #       (status != COMPLETE), and even if offered, the engine would
+    #       reject them on outcome grounds.
+    #   The existing engine is the single authority; this boundary never
+    #   hardcodes EX1/EX2, never reinvents thresholds, and never creates a
+    #   second persistence path.
+    from research_engine.lifecycle.finding_trigger import FindingTriggerEngine
+    _trigger_engine = FindingTriggerEngine()
+    for _qid, _info in _all_results.items():
+        if _info.get("status") != "COMPLETE":
+            continue
+        _trigger_engine.detect_from_finding(_info)
 
     # ─── hypotheses ────────────────────────────────────────────────────────
     hypotheses = {}

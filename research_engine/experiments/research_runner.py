@@ -142,6 +142,25 @@ def run_all() -> dict[str, dict]:
                 "status_source": status_source,
                 "sample": _extract_sample(report),
                 "recommendation": report.get("recommendation", ""),
+                # Finding-relevant fields for trigger detection (Gap 8 wiring).
+                # These carry the same shape detect_from_finding() expects so a
+                # completed question result can be evaluated against the existing
+                # FindingTriggerEngine without rebuilding the report dict.
+                "outcome": report.get("outcome", "") if isinstance(report, dict) else "",
+                "primary_metrics": (
+                    report.get("primary_metrics", {})
+                    if isinstance(report, dict) and isinstance(report.get("primary_metrics"), dict)
+                    else {}
+                ),
+                "sample_sizes": (
+                    report.get("sample_sizes", {})
+                    if isinstance(report, dict) and isinstance(report.get("sample_sizes"), dict)
+                    else {}
+                ),
+                "confidence": report.get("confidence", "") if isinstance(report, dict) else "",
+                "title": report.get("title", "") if isinstance(report, dict) else "",
+                "conclusion": report.get("conclusion", "") if isinstance(report, dict) else "",
+                "question_id": qid,
             }
         except Exception as e:
             results[qid] = {"status": "ERROR", "status_source": "error", "error": str(e)[:100]}
