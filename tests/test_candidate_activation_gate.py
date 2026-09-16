@@ -13,6 +13,11 @@ Covers:
 
 import pytest
 
+import research_engine.v10.baselines.baseline_authority as baseline_authority
+from research_engine.v10.baselines.baseline_authority import set_active
+from research_engine.v10.baselines.models import BaselineSnapshot
+from research_engine.v10.baselines.snapshot_registry import SnapshotRegistry
+from core.research_events import compute_config_hash
 from research_engine.v10.candidates.candidate_registry import CandidateRegistry
 from research_engine.v10.candidates.models import CandidateRecord, CandidateStatus
 from research_engine.lifecycle.candidate_activation_gate import (
@@ -22,24 +27,57 @@ from research_engine.lifecycle.candidate_activation_gate import (
     _UNSHADOWABLE_TYPES,
 )
 
+# Wave 4C.2: the canonical active baseline every default candidate is bound to.
+_TEST_BASELINE_ID = "V10_BASELINE_gate4c2test"
+
 
 # ═══════════════════════════════════════════════════════════════
 # FIXTURES
 # ═══════════════════════════════════════════════════════════════
 
+@pytest.fixture(autouse=True)
+def _valid_baseline_env(tmp_path, monkeypatch):
+    """
+    Wave 4C.2: every test gets a VALID canonical active baseline on temporary
+    stores (baseline authority is per-test redirected — production
+    data/baselines/ is never touched). Candidates created via _make_candidate
+    bind to it with matching config provenance, so the legacy pre-4C.1
+    "current_v10" placeholder (which now fails the activation invariant) is
+    no longer used anywhere in this module.
+    """
+    monkeypatch.setattr(
+        baseline_authority, "_BASELINES_DIR", str(tmp_path / "baselines")
+    )
+    monkeypatch.setattr(
+        baseline_authority, "_ACTIVE_POINTER_FILE",
+        str(tmp_path / "baselines" / "active_baseline.json"),
+    )
+    reg = SnapshotRegistry(baselines_dir=baseline_authority._BASELINES_DIR)
+    reg.save(BaselineSnapshot(
+        snapshot_id=_TEST_BASELINE_ID,
+        config_hash=compute_config_hash(),
+        identity_hash="gate4c2test",
+    ))
+    set_active(_TEST_BASELINE_ID, actor="test", reason="4C.2 gate fixture")
+
+
 def _make_candidate(
     candidate_id: str = "OPT-test001",
     hypothesis_id: str = "HYP-abc12345",
-    baseline_id: str = "current_v10",
+    baseline_id: str = _TEST_BASELINE_ID,
     change_type: str = "direction_inversion",
     status: str = CandidateStatus.PROPOSED,
+    with_provenance: bool = True,
     **kwargs,
 ) -> CandidateRecord:
+    change_definition = {"type": change_type, "action": "invert_pattern_direction"}
+    if with_provenance:
+        change_definition["baseline_config_hash"] = compute_config_hash()
     return CandidateRecord(
         candidate_id=candidate_id,
         hypothesis_id=hypothesis_id,
         baseline_id=baseline_id,
-        change_definition={"type": change_type, "action": "invert_pattern_direction"},
+        change_definition=change_definition,
         status=status,
         **kwargs,
     )

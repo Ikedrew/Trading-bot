@@ -26,10 +26,41 @@ This test uses ONLY synthetic data. It does NOT:
 import pytest
 from datetime import datetime, timezone, timedelta
 
+import research_engine.v10.baselines.baseline_authority as baseline_authority
+from research_engine.v10.baselines.baseline_authority import set_active
+from research_engine.v10.baselines.models import BaselineSnapshot
+from research_engine.v10.baselines.snapshot_registry import SnapshotRegistry
+from core.research_events import compute_config_hash
 from research_engine.v10.candidates.candidate_registry import CandidateRegistry
 from research_engine.v10.candidates.models import CandidateRecord, CandidateStatus
 from research_engine.lifecycle.candidate_activation_gate import activate_eligible_candidates
 from research_engine.lifecycle.candidate_auto_evaluator import auto_evaluate_candidates
+
+# Wave 4C.2: the canonical active baseline the e2e candidate is bound to.
+_TEST_BASELINE_ID = "V10_BASELINE_e2e4c2test"
+
+
+@pytest.fixture(autouse=True)
+def _valid_baseline_env(tmp_path, monkeypatch):
+    """
+    Wave 4C.2: valid canonical active baseline on temporary stores so the
+    e2e candidate passes the fail-closed activation invariant. The legacy
+    "current_v10" placeholder no longer activates (fail closed).
+    """
+    monkeypatch.setattr(
+        baseline_authority, "_BASELINES_DIR", str(tmp_path / "baselines")
+    )
+    monkeypatch.setattr(
+        baseline_authority, "_ACTIVE_POINTER_FILE",
+        str(tmp_path / "baselines" / "active_baseline.json"),
+    )
+    reg = SnapshotRegistry(baselines_dir=baseline_authority._BASELINES_DIR)
+    reg.save(BaselineSnapshot(
+        snapshot_id=_TEST_BASELINE_ID,
+        config_hash=compute_config_hash(),
+        identity_hash="e2e4c2test",
+    ))
+    set_active(_TEST_BASELINE_ID, actor="test", reason="4C.2 e2e fixture")
 
 
 def _make_candidate(candidate_id, change_type="direction_inversion", created_at=None):
@@ -39,10 +70,14 @@ def _make_candidate(candidate_id, change_type="direction_inversion", created_at=
     return CandidateRecord(
         candidate_id=candidate_id,
         hypothesis_id="HYP-e2e-test-12345678",
-        baseline_id="current_v10",
+        baseline_id=_TEST_BASELINE_ID,
         component="DIRECTION_INVERSION",
         description="E2E test candidate",
-        change_definition={"type": change_type, "action": "invert_pattern_direction"},
+        change_definition={
+            "type": change_type,
+            "action": "invert_pattern_direction",
+            "baseline_config_hash": compute_config_hash(),
+        },
         expected_outcome="+0.15R/trade",
         risk_level="MEDIUM",
         status=CandidateStatus.PROPOSED,

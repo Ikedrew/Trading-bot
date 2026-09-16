@@ -173,6 +173,101 @@ def load_baseline_snapshot(
     reg = registry or _default_registry()
     return reg.load(snapshot_id)
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# CANDIDATE BASELINE VALIDATION (Wave 4C.2 — activation invariant)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def validate_candidate_baseline(
+    candidate_baseline_id: str,
+    candidate_config_hash: str,
+    *,
+    registry: SnapshotRegistry | None = None,
+    pointer_file: str | Path | None = None,
+) -> tuple[bool, str]:
+    """
+    Prove the Wave 4C.2 baseline-bound activation invariant for ONE candidate.
+
+    Reuses the 4C.1 authority ONLY (this pointer file, this snapshot store,
+    this config-hash primitive). No second registry, no second identity
+    algorithm, no "current baseline" concept.
+
+    Required proofs, in evaluation order (FAIL CLOSED on the first failure):
+
+        1. candidate has a real baseline_id          → missing_baseline_id
+        2. active-baseline state is readable         → baseline_state_error
+        3. an active baseline exists                 → no_active_baseline
+        4. candidate baseline_id == active id        → stale_baseline
+        5. referenced snapshot exists/loadable       → missing_snapshot
+        6. candidate baseline_config_hash exists     → missing_baseline_provenance
+        7. candidate hash == snapshot config_hash    → config_provenance_mismatch
+        8. snapshot config_hash == current config    → stale_config
+           (an empty/unavailable current config hash is also fail-closed:
+            the match cannot be PROVEN)
+
+    Returns (ok, reason). `reason` is a deterministic, auditable token
+    (optionally with detail after ": ") suitable for persistence in skip
+    records. Never raises for validation failures; BaselineStateError from
+    the authority is converted to the fail-closed `baseline_state_error`
+    reason. Callers must NOT activate, rebase, or rewrite the candidate on
+    (False, ...).
+    """
+    # 1. Real baseline_id
+    if not isinstance(candidate_baseline_id, str) or not candidate_baseline_id.strip():
+        return False, "missing_baseline_id"
+
+    # 2/3/4. Durable active-baseline state (reuse get_active fail-closed)
+    try:
+        active = get_active(registry=registry, pointer_file=pointer_file)
+    except BaselineStateError as e:
+        return False, f"baseline_state_error: {str(e)[:120]}"
+    if active is None:
+        return False, "no_active_baseline"
+    if candidate_baseline_id != active.active_baseline_id:
+        return False, (
+            f"stale_baseline: candidate baseline '{candidate_baseline_id}' "
+            f"!= active baseline '{active.active_baseline_id}'"
+        )
+
+    # 5. Referenced snapshot must exist and be loadable (corrupt JSON also
+    #    fails this check — a corrupt snapshot is not a proven snapshot).
+    reg = registry or _default_registry()
+    snapshot = reg.load(candidate_baseline_id)
+    if snapshot is None:
+        return False, (
+            f"missing_snapshot: active baseline '{candidate_baseline_id}' "
+            f"cannot be loaded from the baseline store"
+        )
+
+    # 6. Candidate config provenance must exist
+    if not isinstance(candidate_config_hash, str) or not candidate_config_hash.strip():
+        return False, "missing_baseline_provenance"
+
+    # 7. Provenance must match the referenced snapshot's identity
+    if candidate_config_hash != snapshot.config_hash:
+        return False, (
+            f"config_provenance_mismatch: candidate provenance "
+            f"'{candidate_config_hash}' != snapshot config_hash "
+            f"'{snapshot.config_hash}'"
+        )
+
+    # 8. Snapshot identity must match the CURRENT production config, using the
+    #    SAME primitive the 4C.1 snapshot builder used at capture time.
+    try:
+        from core.research_events import compute_config_hash
+        current_hash = compute_config_hash()
+    except Exception as e:  # noqa: BLE001 — fail closed on any identity failure
+        return False, f"stale_config: current config identity unavailable ({str(e)[:80]})"
+    if current_hash in ("", "UNKNOWN"):
+        return False, "stale_config: current config identity unavailable"
+    if snapshot.config_hash != current_hash:
+        return False, (
+            f"stale_config: baseline config_hash '{snapshot.config_hash}' "
+            f"!= current config hash '{current_hash}'"
+        )
+
+    return True, "baseline_valid"
+
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ACTIVE BASELINE POINTER — READ / EXPLICIT ACTIVATION

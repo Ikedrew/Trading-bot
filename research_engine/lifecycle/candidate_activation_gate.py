@@ -15,6 +15,27 @@ This gate is called periodically by the research cycle runner. It does NOT:
 It ONLY transitions candidates from observation-waiting (PROPOSED) to observation-collecting
 (SHADOW_TESTING), allowing the candidate shadow hook to begin paired observations.
 
+Wave 4C.2 — baseline-bound activation invariant (FAIL CLOSED):
+    Before any PROPOSED → SHADOW_TESTING transition, the gate proves the
+    candidate's canonical baseline/config provenance against the Wave 4C.1
+    baseline authority (validate_candidate_baseline):
+        1. real baseline_id
+        2. candidate baseline_id == active canonical baseline_id
+        3. referenced baseline snapshot exists/loadable
+        4. candidate baseline_config_hash provenance exists
+        5. candidate provenance == snapshot config_hash
+        6. snapshot config_hash == current production config hash
+    On any failure the candidate is NOT activated (stays PROPOSED) and a
+    deterministic, auditable reason is recorded in ActivationResult.skips.
+    There is NO silent rebase and NO baseline/candidate mutation.
+
+Known limitation (documented, deliberately NOT expanded in 4C.2): baseline
+validation and the status transition are two sequential operations resolved
+in the same loop iteration; a concurrent active-baseline change in the
+sub-second window between them is not excluded by a distributed
+transaction. Full atomicity would require a larger architecture change.
+
+
 Lifecycle flow enabled:
     PROPOSED (born from VALIDATED conclusion)
         ↓ [this gate]
@@ -129,6 +150,28 @@ def activate_eligible_candidates(
                 )
                 continue
 
+            # ─── Wave 4C.2: baseline-bound activation invariant ──────────
+            # Fail-closed: if the candidate's canonical baseline/config
+            # provenance is stale, missing, or corrupt, DO NOT ACTIVATE. The
+            # candidate stays PROPOSED and the deterministic block reason is
+            # recorded in result.skips for audit. NO silent rebase, NO
+            # baseline mutation, NO candidate rewrite to a new baseline.
+            # (TOCTOU note: validation is resolved from the durable authority
+            # immediately before the transition in the same loop iteration;
+            # see module docstring limitation.)
+            baseline_ok, baseline_reason = _check_baseline_provenance(candidate)
+            if not baseline_ok:
+                result.candidates_ineligible += 1
+                result.skips.append({
+                    "candidate_id": candidate.candidate_id,
+                    "reason": f"baseline_provenance: {baseline_reason}",
+                })
+                logger.warning(
+                    "[ACTIVATION_GATE] Baseline gate blocked %s: %s",
+                    candidate.candidate_id, baseline_reason,
+                )
+                continue
+
             # Activate: PROPOSED → SHADOW_TESTING
             try:
                 registry.update_status(candidate.candidate_id, CandidateStatus.SHADOW_TESTING)
@@ -188,3 +231,31 @@ def _check_eligibility(candidate: CandidateRecord) -> tuple[bool, str]:
         return False, "No baseline_id — cannot compare"
 
     return True, "Eligible"
+
+
+def _check_baseline_provenance(candidate: CandidateRecord) -> tuple[bool, str]:
+    """
+    Wave 4C.2 — baseline-bound activation invariant (FAIL CLOSED).
+
+    A candidate may enter SHADOW_TESTING only if its recorded baseline
+    identity still matches the canonical active baseline authority AND its
+    recorded baseline config provenance is still valid. Delegates entirely to
+    the Wave 4C.1 authority (baseline_authority.validate_candidate_baseline):
+    no second pointer, registry, or hash algorithm is introduced.
+
+    Returns (ok, reason) with a deterministic, auditable reason token:
+        missing_baseline_id | baseline_state_error | no_active_baseline |
+        stale_baseline | missing_snapshot | missing_baseline_provenance |
+        config_provenance_mismatch | stale_config | baseline_valid
+    """
+    from research_engine.v10.baselines.baseline_authority import (
+        validate_candidate_baseline,
+    )
+
+    candidate_config_hash = candidate.change_definition.get(
+        "baseline_config_hash", ""
+    )
+    return validate_candidate_baseline(
+        candidate.baseline_id,
+        candidate_config_hash,
+    )
