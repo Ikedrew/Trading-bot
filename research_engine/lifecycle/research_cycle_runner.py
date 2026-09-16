@@ -306,7 +306,7 @@ class ResearchCycleRunner:
 
             # ─── INVESTIGATE (if DETECT_AND_INVESTIGATE) ──────────────
             if self._config.mode == ExecutionMode.DETECT_AND_INVESTIGATE:
-                eligible = [t for t in triggers if t.status == TriggerStatus.ELIGIBLE]
+                eligible = self._collect_eligible_intake(engine, triggers)
                 investigated = self._investigate_eligible(
                     engine, eligible[:self._config.max_investigations_per_cycle])
                 result.investigations_started = len(investigated)
@@ -553,6 +553,33 @@ class ResearchCycleRunner:
             pass
 
         return triggers
+
+    # ─── INTERNAL: ELIGIBLE INTAKE ────────────────────────────────────
+
+    def _collect_eligible_intake(self, engine: FindingTriggerEngine,
+                                 detected: list) -> list:
+        """Canonical investigation intake: fresh detections + persisted findings.
+
+        `_detect_findings()` returns only triggers detected in THIS cycle.
+        Canonical findings persisted by earlier cycles hydrate into the engine
+        via ``FindingTriggerEngine.__init__ → _load()`` and are therefore
+        present in ``engine.all_triggers()`` but absent from the freshly
+        detected list. Without them, persisted canonical findings could never
+        reach ``_investigate_eligible()``.
+
+        Only ``TriggerStatus.ELIGIBLE`` triggers qualify (the engine's own
+        screening contract decides eligibility; registered/investigating/
+        completed/dismissed/blocked triggers are never reinvestigated).
+
+        Identity is the canonical ``trigger_id``; a trigger surfacing through
+        both paths appears exactly once.
+        """
+        intake: dict[str, Any] = {}
+        for trigger in [*detected, *engine.all_triggers()]:
+            if trigger.status != TriggerStatus.ELIGIBLE:
+                continue
+            intake.setdefault(trigger.trigger_id, trigger)
+        return list(intake.values())
 
     # ─── INTERNAL: INVESTIGATE ────────────────────────────────────────
 
