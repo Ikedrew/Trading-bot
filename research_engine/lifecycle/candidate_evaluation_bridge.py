@@ -109,6 +109,64 @@ def evaluate_candidate(
         incumbent_records=incumbent_records,
     )
 
+    # ─── 4b. BASELINE IDENTITY PROVENANCE + STALENESS GATES (Wave 4C.1) ──
+    # Identity/provenance ONLY: binds the evaluation to the candidate's
+    # originating baseline and blocks READY_FOR_REVIEW promotion when the
+    # candidate's baseline is no longer the active baseline, or when the
+    # baseline's configuration identity has drifted from the current
+    # configuration. No statistical behaviour is modified.
+    from research_engine.v10.baselines.baseline_authority import (
+        BaselineStateError,
+        get_active,
+        load_baseline_snapshot,
+    )
+    from core.research_events import compute_config_hash
+
+    evaluation.baseline_id = candidate.baseline_id
+    baseline_snapshot = load_baseline_snapshot(candidate.baseline_id)
+    if baseline_snapshot is not None:
+        evaluation.config_hash = baseline_snapshot.config_hash
+
+    def _promotion_block_reasons() -> list[str]:
+        """
+        Reasons the candidate must NOT be promoted to READY_FOR_REVIEW.
+
+        Fail-closed semantics (narrow trigger-on-difference design):
+          - unreadable/corrupt active-baseline state → blocked (fail closed);
+          - active baseline established and != candidate.baseline_id → blocked
+            (stale_baseline);
+          - candidate's persisted baseline snapshot carries a config_hash that
+            differs from the current compute_config_hash() → blocked
+            (stale_config).
+        Legacy/pre-identity state (no active pointer, unknown baseline
+        snapshot, empty config_hash) is identity that simply cannot be
+        COMPARED — the gate triggers only on an actual detected mismatch, and
+        historical CandidateRecords are never rewritten.
+        """
+        reasons: list[str] = []
+        try:
+            active = get_active()
+        except BaselineStateError as e:
+            return [f"active_baseline_state_unreadable (fail closed): {e}"]
+        if active is not None and active.active_baseline_id != candidate.baseline_id:
+            reasons.append(
+                f"stale_baseline: candidate baseline '{candidate.baseline_id}' "
+                f"!= active baseline '{active.active_baseline_id}'"
+            )
+        current_hash = compute_config_hash()
+        if (
+            baseline_snapshot is not None
+            and baseline_snapshot.config_hash
+            and current_hash not in ("", "UNKNOWN")
+            and baseline_snapshot.config_hash != current_hash
+        ):
+            reasons.append(
+                f"stale_config: baseline config_hash "
+                f"'{baseline_snapshot.config_hash}' != current config hash "
+                f"'{current_hash}'"
+            )
+        return reasons
+
     # ─── 5. PERSIST VALIDATION RESULT ─────────────────────────────────
     # Map CandidateEvaluation fields to ValidationEntry fields
     decision_map = {
@@ -126,6 +184,24 @@ def evaluate_candidate(
         regressions.append("fails_outlier_removal")
     if evaluation.symbols_positive < 2:
         regressions.append(f"symbols_positive={evaluation.symbols_positive}")
+
+    # Wave 4C.1: staleness gate applies to the SHADOW_TESTING →
+    # READY_FOR_REVIEW promotion target only (narrowest fail-closed behaviour).
+    # A promotion-blocked candidate stays in SHADOW_TESTING; the validation
+    # entry records an INCONCLUSIVE decision plus the explicit staleness
+    # reason so the blocked promotion is fully auditable.
+    if evaluation.decision == "VALIDATED" and candidate.status == CandidateStatus.SHADOW_TESTING:
+        block_reasons = _promotion_block_reasons()
+        if block_reasons:
+            evaluation.promotion_blocked = True
+            evaluation.promotion_block_reason = "; ".join(block_reasons)
+            mapped_decision = "INCONCLUSIVE"
+            regressions.extend(block_reasons)
+            logger.warning(
+                "[CANDIDATE_EVAL_BRIDGE] READY_FOR_REVIEW blocked for %s: %s",
+                candidate_id,
+                evaluation.promotion_block_reason,
+            )
 
     try:
         registry.add_validation_result(
@@ -149,9 +225,18 @@ def evaluate_candidate(
     # Transition target depends on the CURRENT candidate state:
     #   From VALIDATING: VALIDATED (positive) / FAILED_VALIDATION (negative, allows retry)
     #   From SHADOW_TESTING: READY_FOR_REVIEW (positive) / REJECTED (negative)
+    # Wave 4C.1: a promotion-blocked candidate is NEVER transitioned to
+    # READY_FOR_REVIEW — a stale baseline/config must not silently validate.
     if evaluation.decision == "VALIDATED":
         if candidate.status == CandidateStatus.SHADOW_TESTING:
-            _safe_transition(registry, candidate_id, CandidateStatus.READY_FOR_REVIEW)
+            if evaluation.promotion_blocked:
+                logger.warning(
+                    "[CANDIDATE_EVAL_BRIDGE] %s stays in SHADOW_TESTING: %s",
+                    candidate_id,
+                    evaluation.promotion_block_reason,
+                )
+            else:
+                _safe_transition(registry, candidate_id, CandidateStatus.READY_FOR_REVIEW)
         else:
             _safe_transition(registry, candidate_id, CandidateStatus.VALIDATED)
     elif evaluation.decision == "REJECTED":

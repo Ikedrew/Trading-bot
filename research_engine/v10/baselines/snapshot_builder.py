@@ -10,7 +10,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -48,9 +47,6 @@ class SnapshotBuilder:
 
     def build(self) -> BaselineSnapshot:
         """Build a complete baseline snapshot from current state."""
-        now = datetime.now(timezone.utc)
-        snapshot_id = f"V10_BASELINE_{now.strftime('%Y%m%d_%H%M')}"
-
         # Collect all components
         environment = self._collect_environment()
         configuration = self._collect_configuration()
@@ -60,10 +56,45 @@ class SnapshotBuilder:
         dataset_meta = self._collect_dataset_metadata()
         research_state = self._collect_research_state(performance)
 
+        # ─── Wave 4C.1: canonical baseline identity ───────────────────────
+        # config_hash: the EXISTING material-configuration identity primitive
+        # (core.research_events.compute_config_hash()) — deliberately reused,
+        # not re-implemented. NOTE (established in Wave 4C.0, NOT expanded
+        # here): compute_config_hash()'s material-parameter coverage is
+        # incomplete; its hash therefore under-approximates true config
+        # identity. That limitation is documented, not repaired, in this wave.
+        #
+        # identity_hash: deterministic content hash over the captured state
+        # below (canonical sorted-key JSON; created_at/notes excluded because
+        # they are wall-clock/caller labels, not captured state). Equivalent
+        # captured state → identical identity_hash → identical snapshot_id:
+        # collision-safe, restart-stable, and NOT dependent on wall-clock
+        # minute resolution (the old V10_BASELINE_%Y%m%d_%H%M format).
+        from core.research_events import compute_config_hash
+        config_hash = compute_config_hash()
+
+        identity_content = {
+            "bot_version": self._bot_version,
+            "environment": environment,
+            "configuration": configuration,
+            "risk_configuration": risk_config,
+            "strategy_configuration": strategy_config,
+            "performance_metrics": performance,
+            "dataset_metadata": dataset_meta,
+            "research_state": research_state,
+        }
+        identity_hash = hashlib.sha256(
+            json.dumps(identity_content, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()[:16]
+
+        snapshot_id = f"V10_BASELINE_{identity_hash}"
+
         snapshot = BaselineSnapshot(
             snapshot_id=snapshot_id,
             bot_version=self._bot_version,
             notes=self._notes,
+            config_hash=config_hash,
+            identity_hash=identity_hash,
             environment=environment,
             configuration=configuration,
             risk_configuration=risk_config,

@@ -597,10 +597,26 @@ class ResearchOrchestrator:
 
             candidate_id = f"OPT-{hypothesis.hypothesis_id[-8:]}"
 
+            # ─── Wave 4C.1: canonical baseline identity binding ──────────
+            # The candidate references the REAL persisted active baseline —
+            # never the retired "current_v10" placeholder. Resolution uses the
+            # canonical bootstrap API and FAILS CLOSED: if trustworthy
+            # baseline identity cannot be established, the exception is
+            # caught below and NO candidate is created.
+            from research_engine.v10.baselines.baseline_authority import (
+                load_baseline_snapshot,
+                resolve_candidate_baseline,
+            )
+            baseline_id = resolve_candidate_baseline()
+            baseline_snapshot = load_baseline_snapshot(baseline_id)
+            baseline_config_hash = (
+                baseline_snapshot.config_hash if baseline_snapshot else ""
+            )
+
             record = CandidateRecord(
                 candidate_id=candidate_id,
                 hypothesis_id=hypothesis.hypothesis_id,
-                baseline_id="current_v10",
+                baseline_id=baseline_id,
                 component=hypothesis.category.value if hasattr(hypothesis.category, 'value') else "OTHER",
                 description=f"From lifecycle: {hypothesis.title}",
                 change_definition={
@@ -609,6 +625,9 @@ class ResearchOrchestrator:
                     "expected_impact": impact,
                     "risk_assessment": risk_level,
                     "experiment_id": result.experiment_id,
+                    # Wave 4C.1 provenance: configuration identity of the
+                    # baseline this candidate is bound to.
+                    "baseline_config_hash": baseline_config_hash,
                 },
                 expected_outcome=f"+{result.mean_r:.3f}R/trade (CI: {result.ci_lower:+.3f} to {result.ci_upper:+.3f})" if result.ci_lower else "",
                 risk_level=risk_level,

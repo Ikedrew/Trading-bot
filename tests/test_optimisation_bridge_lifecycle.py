@@ -13,11 +13,13 @@ Verifies:
 """
 import sys
 import json
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 sys.path.insert(0, ".")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from research_engine.lifecycle.orchestrator import ResearchOrchestrator, InvestigationResult
 from research_engine.lifecycle.hypothesis import (
@@ -27,6 +29,21 @@ from research_engine.lifecycle.experiment_protocol import (
     ExperimentDefinition, ExperimentResult, ExperimentType,
     PopulationSpec, SimulationSpec,
 )
+
+
+@pytest.fixture(autouse=True)
+def _fake_research_universe_s3():
+    """
+    Wave 4C.1: candidate creation binds to the canonical active baseline and
+    bootstraps it via SnapshotBuilder (which reads the research universe
+    through the sanctioned S3 layer). Install an in-memory fake S3 for every
+    test in this module so no network/credential dependency and no production
+    S3 access is possible.
+    """
+    from _s3_fake import install_fake_s3, reset_fake_s3
+    install_fake_s3()
+    yield
+    reset_fake_s3()
 
 
 @pytest.fixture

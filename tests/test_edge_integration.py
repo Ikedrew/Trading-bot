@@ -431,7 +431,7 @@ class TestLifecycleBridge:
         assert len(sub.registered) == 0
         assert len(orch.registry.all()) == 1  # history preserved, no duplicate
 
-    def test_validated_hypothesis_reaches_canonical_candidate_registry(self, orch):
+    def test_validated_hypothesis_reaches_canonical_candidate_registry(self, orch, monkeypatch):
         """Full path proof: edge -> hypothesis -> VALIDATED -> CandidateRegistry."""
         from research_engine.edge_candidates.lifecycle_bridge import (
             submit_edge_candidates_to_lifecycle,
@@ -440,23 +440,33 @@ class TestLifecycleBridge:
         from research_engine.lifecycle.experiment_protocol import ExperimentResult
         from research_engine.v10.candidates.candidate_registry import CandidateRegistry
 
-        submit_edge_candidates_to_lifecycle(
-            _gen_result([_accepted_edge()]), orchestrator=orch
-        )
-        h = orch.registry.all()[0]
-        h.transition(HypothesisStatus.TESTING, reason="test")
-        h.transition(HypothesisStatus.CHALLENGED, reason="test")
-        assert h.conclude(ConclusionType.VALIDATED, reason="governed validation", confidence="HIGH")
-        orch.registry.update(h)
+        # Wave 4C.1: candidate creation binds to the canonical active baseline
+        # and bootstraps it via SnapshotBuilder (research universe read through
+        # the sanctioned S3 layer). Use the in-memory fake S3 — no network, no
+        # production S3 access:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from _s3_fake import install_fake_s3, reset_fake_s3
+        install_fake_s3()
+        try:
+            submit_edge_candidates_to_lifecycle(
+                _gen_result([_accepted_edge()]), orchestrator=orch
+            )
+            h = orch.registry.all()[0]
+            h.transition(HypothesisStatus.TESTING, reason="test")
+            h.transition(HypothesisStatus.CHALLENGED, reason="test")
+            assert h.conclude(ConclusionType.VALIDATED, reason="governed validation", confidence="HIGH")
+            orch.registry.update(h)
 
-        result = ExperimentResult(
-            experiment_id="EXP-test", hypothesis_id=h.hypothesis_id,
-            n=120, mean_r=0.35, win_rate=0.58, oos_n=40, oos_mean_r=0.28,
-            symbols_positive=4, symbols_total=4,
-            survives_top20_removal=True, periods_positive=3, periods_total=3,
-            ci_lower=0.10, ci_upper=0.60,
-        )
-        record = orch.create_optimisation_candidate(h, result)
+            result = ExperimentResult(
+                experiment_id="EXP-test", hypothesis_id=h.hypothesis_id,
+                n=120, mean_r=0.35, win_rate=0.58, oos_n=40, oos_mean_r=0.28,
+                symbols_positive=4, symbols_total=4,
+                survives_top20_removal=True, periods_positive=3, periods_total=3,
+                ci_lower=0.10, ci_upper=0.60,
+            )
+            record = orch.create_optimisation_candidate(h, result)
+        finally:
+            reset_fake_s3()
         assert record is not None
         # Candidate entered the CANONICAL registry via the existing VALIDATED path
         reg = CandidateRegistry(storage_dir=_registry_dir())

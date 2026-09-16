@@ -238,6 +238,17 @@ def isolate_runtime_persistence_dirs(tmp_path, monkeypatch):
         "research_engine.lifecycle.orchestrator._REPORT_DIR",
         tmp_path / "reports" / "research" / "lifecycle",
     )
+    # Wave 4C.1 baseline authority: active-baseline pointer + snapshot store
+    # redirected to the isolated temp dir so NO test can mutate production
+    # data/baselines/ state via the baseline machinery:
+    monkeypatch.setattr(
+        "research_engine.v10.baselines.baseline_authority._BASELINES_DIR",
+        str(tmp_path / "baselines"),
+    )
+    monkeypatch.setattr(
+        "research_engine.v10.baselines.baseline_authority._ACTIVE_POINTER_FILE",
+        str(tmp_path / "baselines" / "active_baseline.json"),
+    )
     # QuarantineStore binds its default local_dir at class-definition time
     # (local_dir: str = _LOCAL_DIR), so patching the module attribute is
     # ineffective — wrap __init__ instead, preserving any explicitly injected

@@ -22,6 +22,14 @@ class BaselineSnapshot:
     created_at: str = ""
     bot_version: str = ""
     notes: str = ""
+    # Canonical identity: deterministic content/config identity used to detect
+    # equivalent baselines and to bind candidates/evaluations to a baseline.
+    # Populated by SnapshotBuilder; round-tripped verbatim through from_dict so
+    # identity survives a save → reload cycle. Empty strings on historical
+    # snapshots mean "pre-identity snapshot" and are handled fail-safe by the
+    # staleness gates (identity simply cannot be compared there).
+    config_hash: str = ""
+    identity_hash: str = ""
 
     # Environment
     environment: dict[str, Any] = field(default_factory=dict)
@@ -50,6 +58,8 @@ class BaselineSnapshot:
             "created_at": self.created_at,
             "bot_version": self.bot_version,
             "notes": self.notes,
+            "config_hash": self.config_hash,
+            "identity_hash": self.identity_hash,
             "environment": self.environment,
             "configuration": self.configuration,
             "risk_configuration": self.risk_configuration,
@@ -66,6 +76,8 @@ class BaselineSnapshot:
             created_at=data.get("created_at", ""),
             bot_version=data.get("bot_version", ""),
             notes=data.get("notes", ""),
+            config_hash=data.get("config_hash", ""),
+            identity_hash=data.get("identity_hash", ""),
             environment=data.get("environment", {}),
             configuration=data.get("configuration", {}),
             risk_configuration=data.get("risk_configuration", {}),

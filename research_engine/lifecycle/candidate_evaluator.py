@@ -92,6 +92,17 @@ class CandidateEvaluation:
     decision_reason: str = ""
     confidence: str = ""
 
+    # ─── Wave 4C.1: baseline identity/provenance ──────────────────────────
+    # Which persisted baseline/config this candidate was evaluated against.
+    # promotion_blocked marks a READY_FOR_REVIEW promotion that was suppressed
+    # because the candidate's baseline is no longer active or its config
+    # identity has drifted (stale_baseline / stale_config). Statistical
+    # behaviour is unchanged — these are identity/provenance fields only.
+    baseline_id: str = ""
+    config_hash: str = ""
+    promotion_blocked: bool = False
+    promotion_block_reason: str = ""
+
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in self.__dict__.items()}
 
