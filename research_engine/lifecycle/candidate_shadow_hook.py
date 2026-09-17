@@ -432,23 +432,98 @@ def open_candidate_shadows(
     return count
 
 
-def _candidate_applies(candidate: Any, *, symbol: str, pattern: str) -> bool:
-    """Determine if this candidate should shadow this specific opportunity."""
-    defn = candidate.change_definition
+# ─── Wave 4D.3: experiment scope is distinct from treatment definition ───────
+# TREATMENT parameters (change_definition["symbol"], ["stop_multiplier"], etc.)
+# describe WHAT the treatment changes. EXPERIMENT SCOPE describes WHICH
+# observations are eligible for treatment. The runtime MUST NOT infer scope
+# from a treatment parameter merely because it is named "symbol"/"pattern".
+#
+# Scope authority (smallest truthful representation over the existing contract):
+#   change_definition["scope"] = {"symbols": [...], "patterns": [...]}
+# is the ONLY authoritative, EXPLICIT scope object. It is optional; when absent
+# the documented default population is BROAD (the candidate is eligible for
+# every opportunity of its resolvable treatment). A legacy top-level "patterns"
+# key is preserved as a scope field for backward compatibility, because that was
+# already the documented/tested scope contract. A top-level "symbol" key is NOT
+# treated as generic scope: for symbol_exclusion it is a TREATMENT parameter
+# (the symbol being excluded); for any other type it is not scope at all.
+_SCOPE_KEY = "scope"
+
+
+class _ScopeError(ValueError):
+    """Raised when an explicit candidate scope object is malformed."""
+
+
+def _string_list(value: Any) -> list[str] | None:
+    """Coerce a scope value to a non-empty list[str], or None if unset.
+
+    Raises _ScopeError for a malformed explicit scope value (present but not a
+    list of non-empty strings) so the caller can fail closed.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, (list, tuple)):
+        raise _ScopeError("scope value must be a list of strings")
+    items: list[str] = []
+    for item in value:
+        if not isinstance(item, str) or not item.strip():
+            raise _ScopeError("scope list entries must be non-empty strings")
+        items.append(item)
+    return items or None
+
+
+def candidate_in_scope(candidate: Any, *, symbol: str, pattern: str) -> tuple[bool, str]:
+    """Wave 4D.3 — decide eligibility using EXPLICIT scope only (fail closed on
+    malformed explicit scope). Returns (in_scope, reason).
+
+    reason is one of:
+        in_scope | out_of_scope_symbol | out_of_scope_pattern |
+        malformed_scope | symbol_exclusion_wrong_symbol
+    """
+    defn = candidate.change_definition if isinstance(candidate.change_definition, dict) else {}
     change_type = defn.get("type", "")
 
-    # Pattern-specific candidates only apply to their pattern
-    target_patterns = defn.get("patterns", [])
-    if target_patterns and pattern not in target_patterns:
-        return False
+    # Explicit scope object is the ONLY authoritative scope source.
+    scope = defn.get(_SCOPE_KEY, {})
+    if scope and not isinstance(scope, dict):
+        return False, "malformed_scope"
+    scope = scope if isinstance(scope, dict) else {}
 
-    # Symbol-specific candidates only apply to their symbol
-    target_symbol = defn.get("symbol", "")
-    if target_symbol and symbol != target_symbol:
-        return False
+    try:
+        scope_symbols = _string_list(scope.get("symbols"))
+        # Legacy documented scope field: top-level "patterns" (pre-4D.3
+        # contract). Explicit scope.patterns takes precedence when present.
+        scope_patterns = _string_list(scope.get("patterns"))
+        if scope_patterns is None:
+            scope_patterns = _string_list(defn.get("patterns"))
+    except _ScopeError:
+        return False, "malformed_scope"
 
-    # Symbol exclusion applies only to the excluded symbol
+    if scope_patterns is not None and pattern not in scope_patterns:
+        return False, "out_of_scope_pattern"
+    if scope_symbols is not None and symbol not in scope_symbols:
+        return False, "out_of_scope_symbol"
+
+    # symbol_exclusion: "symbol" is a TREATMENT parameter (the excluded symbol),
+    # NOT experiment scope. It is only ever eligible on that symbol, but it opens
+    # no shadow by design (resolve_candidate_treatment returns
+    # symbol_exclusion_no_shadow). We keep the applicability truthful without
+    # converting the treatment parameter into a generic symbol scope.
     if change_type == "symbol_exclusion":
-        return symbol == defn.get("symbol", "")
+        excluded = defn.get("symbol", "")
+        if symbol != excluded:
+            return False, "symbol_exclusion_wrong_symbol"
 
-    return True
+    return True, "in_scope"
+
+
+def _candidate_applies(candidate: Any, *, symbol: str, pattern: str) -> bool:
+    """Determine if this candidate should shadow this specific opportunity.
+
+    Wave 4D.3: eligibility is decided by EXPLICIT experiment scope
+    (candidate_in_scope). Treatment parameters (e.g. a non-exclusion "symbol"
+    field) never silently narrow the experiment. Malformed explicit scope fails
+    closed (candidate does not apply).
+    """
+    in_scope, _reason = candidate_in_scope(candidate, symbol=symbol, pattern=pattern)
+    return in_scope
