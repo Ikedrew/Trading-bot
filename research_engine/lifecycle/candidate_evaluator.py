@@ -103,6 +103,13 @@ class CandidateEvaluation:
     promotion_blocked: bool = False
     promotion_block_reason: str = ""
 
+    # ─── Wave 4D.2: candidate treatment identity/provenance ───────────────
+    # The single deterministic treatment_id (from candidate_shadow_hook)
+    # shared by EVERY pair in the evaluated population, propagated verbatim
+    # from the historical candidate-shadow evidence. Empty means the
+    # population carried no valid treatment identity (or was empty).
+    treatment_id: str = ""
+
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in self.__dict__.items()}
 
@@ -201,6 +208,33 @@ class CandidateEvaluator:
             )
 
         result.eligible_pairs = len(pairs)
+
+        # ─── STEP 2b: TREATMENT IDENTITY HOMOGENEITY (Wave 4D.2) ─────
+        # Every pair must carry the SAME explicit candidate-side
+        # treatment_id propagated from the historical candidate-shadow
+        # evidence by candidate_pairing. A population with missing or
+        # mixed treatment identities is not ONE candidate experiment —
+        # it is never silently averaged. Fail closed: INCONCLUSIVE with
+        # an explicit reason; no statistics are computed.
+        if pairs:
+            pair_tids = {str(p.get("treatment_id") or "") for p in pairs}
+            if len(pair_tids) != 1 or "" in pair_tids:
+                result.n = len(pairs)
+                result.decision = "INCONCLUSIVE"
+                if "" in pair_tids:
+                    result.decision_reason = (
+                        "missing_treatment_identity: candidate pair(s) carry "
+                        "no treatment_id — population unusable (fail closed)"
+                    )
+                else:
+                    result.decision_reason = (
+                        f"mixed_treatment_population: {len(pair_tids)} "
+                        f"distinct treatment identities in one evaluation — "
+                        f"not one candidate experiment (fail closed)"
+                    )
+                result.confidence = "INSUFFICIENT"
+                return result
+            result.treatment_id = next(iter(pair_tids))
 
         # ─── STEP 3: MINIMUM SAMPLE GATE ─────────────────────────────
         result.n = len(pairs)

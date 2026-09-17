@@ -53,6 +53,11 @@ from research_engine.lifecycle.candidate_evaluation_bridge import evaluate_candi
 from research_engine.lifecycle.candidate_evaluator import EvaluationConfig
 from research_engine.v10.candidates.models import CandidateRecord, CandidateStatus
 from research_engine.v10.candidates.candidate_registry import CandidateRegistry
+from research_engine.lifecycle.candidate_shadow_hook import candidate_trade_id
+
+# Fixed 4D.1 treatment digest embedded in fixture candidate trade_ids
+# (production mint format: candidate_<id>_<cycle>_<symbol>_<tid>).
+_TREATMENT_ID = "a4d2c0de4d2feed1"
 from core.research_events import compute_config_hash
 
 
@@ -390,7 +395,7 @@ def _candidate_shadow(cor, candidate_r, *, candidate_id, symbol="EURUSD", ts=500
         "source": "shadow_trade_engine",
         "event_type": "CLOSE",
         "identity": {
-            "trade_id": f"candidate_{candidate_id}_{cor}",
+            "trade_id": candidate_trade_id(candidate_id, 1, symbol, _TREATMENT_ID),
             "correlation_id": cor,
             "canonical_opportunity_id": None,
             "symbol": symbol,

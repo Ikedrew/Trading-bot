@@ -58,6 +58,16 @@ Match rule (all required; any failure → the pair is NOT built):
        protects the future schema).
     6. Complete outcomes only: records without a usable R value are never
        counted.
+    7. Wave 4D.2 treatment-identity continuity (fail closed): every candidate
+       shadow must carry the Wave 4D.1 treatment_id embedded in its trade_id
+       (strictly parsed by candidate_shadow_hook.extract_treatment_id). A
+       candidate observation with a MISSING or MALFORMED treatment identity,
+       or whose embedded provenance cannot be reconciled with this candidate,
+       never enters an evaluable pair. Identical-outcome duplicates are
+       collapsed only when they also agree on treatment identity. The pair
+       row exposes the propagated treatment_id explicitly — the identity is
+       always EVIDENCE-derived (the historical shadow record), never
+       recomputed from the candidate's current change_definition.
 
 A candidate shadow with no honest incumbent comparator stays UNMATCHED — it is
 never paired heuristically and never counted.
@@ -72,9 +82,13 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from research_engine.lifecycle.candidate_shadow_hook import extract_treatment_id
+
 logger = logging.getLogger(__name__)
 
 _CANDIDATE_SHADOW_PREFIX = "CANDIDATE_"
+# trade_id prefix minted by candidate_shadow_hook.open_candidate_shadows
+_CANDIDATE_TRADE_ID_PREFIX = "candidate_"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -92,6 +106,13 @@ class PairingDiagnostics:
     candidate_missing_outcome: int = 0        # no usable R value
     candidate_empty_correlation: int = 0      # no lineage — never pairable
     candidate_before_boundary: int = 0        # pre-activation (not prospective)
+    candidate_missing_treatment: int = 0      # Wave 4D.2: no trade_id at all
+    candidate_malformed_treatment: int = 0    # Wave 4D.2: trade_id present but
+                                              # identity malformed / not this
+                                              # candidate's provenance
+    candidate_treatment_conflict: int = 0     # Wave 4D.2: same COR, identical
+                                              # outcome, conflicting treatment
+                                              # identities — never collapse
     candidate_deduped: int = 0                # identical replayed closes collapsed
     candidate_ambiguous: int = 0              # same COR, conflicting outcomes
     incumbent_records_total: int = 0
@@ -258,17 +279,41 @@ def build_prospective_pairs(
         if not f["correlation_id"]:
             diag.candidate_empty_correlation += 1
             continue
+        # ─── Wave 4D.2: treatment-identity continuity (FAIL CLOSED) ───────
+        # The treatment_id must come from the historical shadow evidence
+        # (the 4D.1 trade_id encoding). Missing/malformed/unreconcilable
+        # identity → the observation never enters an evaluable pair.
+        treatment_id = extract_treatment_id(f["trade_id"])
+        if treatment_id is None:
+            if f["trade_id"]:
+                diag.candidate_malformed_treatment += 1
+            else:
+                diag.candidate_missing_treatment += 1
+            continue
+        # Candidate-identity reconciliation: the embedded provenance must
+        # belong to THIS candidate (shadow_type equality already scoped the
+        # record; the trade_id prefix is the second, independent guard).
+        if not f["trade_id"].startswith(f"{_CANDIDATE_TRADE_ID_PREFIX}{candidate_id}_"):
+            diag.candidate_malformed_treatment += 1
+            continue
+        f["treatment_id"] = treatment_id
         if boundary and f["timestamp"] and f["timestamp"] < boundary:
             diag.candidate_before_boundary += 1
             continue
         cand_by_cor.setdefault(f["correlation_id"], []).append(f)
 
-    # duplicate candidate closes per opportunity: identical → dedupe;
-    # conflicting → ambiguous (excluded entirely — never fabricate a pair)
+    # duplicate candidate closes per opportunity: identical outcome AND
+    # identical treatment identity → dedupe; conflicting outcome → ambiguous;
+    # conflicting treatment identity → treatment conflict (excluded entirely —
+    # never fabricate or mix a pair's provenance)
     resolved_candidates: dict[str, dict[str, Any]] = {}
     for cor, rows in cand_by_cor.items():
         if len(rows) == 1:
             resolved_candidates[cor] = rows[0]
+            continue
+        distinct_t = {r["treatment_id"] for r in rows}
+        if len(distinct_t) > 1:
+            diag.candidate_treatment_conflict += len(rows)
             continue
         distinct_r = {round(float(r["r"]), 6) for r in rows}
         if len(distinct_r) == 1:
@@ -316,6 +361,11 @@ def build_prospective_pairs(
         pairs.append({
             "candidate_id": candidate_id,
             "correlation_id": cor,
+            # Wave 4D.2: explicit treatment-identity continuity. Propagated
+            # verbatim from the candidate-shadow evidence — never invented,
+            # never recomputed from current candidate state. The incumbent
+            # (baseline) side carries NO treatment identity by definition.
+            "treatment_id": cand["treatment_id"],
             "entity_id": cand["entity_id"] or inc["entity_id"],
             "symbol": cand["symbol"],
             "candidate_trade_id": cand["trade_id"],

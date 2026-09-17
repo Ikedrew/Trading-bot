@@ -17,6 +17,11 @@ Wave 4D.1 — treatment fidelity contract (FAIL CLOSED):
     embedded in the persisted trade_id as provenance. No production/baseline
     state is ever touched.
 
+    Wave 4D.2: candidate_trade_id() is the single MINT site for that
+    trade_id format and extract_treatment_id() is the strict, fail-closed
+    PARSE — candidate_pairing uses it to propagate the treatment identity
+    explicitly into every evaluable pair.
+
 CONTRACT:
     - Observation-only: never modifies production configuration
     - Never calls MT5Execution or broker
@@ -47,6 +52,7 @@ import hashlib
 import json
 import logging
 import math
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -54,6 +60,11 @@ logger = logging.getLogger(__name__)
 
 # Length of the deterministic treatment-identity hex digest.
 _TREATMENT_ID_LEN = 16
+# Strict shape of the treatment-identity digest segment inside trade_id.
+_TREATMENT_ID_RE = re.compile(r"^[0-9a-f]{16}$")
+
+# Prefix of every candidate-shadow trade_id minted by open_candidate_shadows.
+_CANDIDATE_TRADE_ID_PREFIX = "candidate_"
 
 # ─── Wave 4D.1: treatment fidelity contract ──────────────────────────────────
 # Types the shadow runtime can ACTUALLY apply as a DISTINCT treatment.
@@ -99,6 +110,40 @@ def _canonical_treatment_id(
         default=str,
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:_TREATMENT_ID_LEN]
+
+
+def candidate_trade_id(candidate_id: str, cycle_id: Any, symbol: str, treatment_id: str) -> str:
+    """Mint the candidate-shadow trade_id (Wave 4D.1 format).
+
+    This is the SINGLE authoritative representation of treatment identity in
+    persisted candidate-shadow evidence today:
+        candidate_<candidate_id>_<cycle_id>_<symbol>_<treatment_id>
+    Keep mint and parse (extract_treatment_id) co-located so the format can
+    never drift.
+    """
+    return f"{_CANDIDATE_TRADE_ID_PREFIX}{candidate_id}_{cycle_id}_{symbol}_{treatment_id}"
+
+
+def extract_treatment_id(trade_id: Any) -> str | None:
+    """Wave 4D.2 — strictly recover the treatment_id from a candidate-shadow
+    trade_id minted by open_candidate_shadows (see candidate_trade_id()).
+
+    Returns the 16-hex treatment_id, or None when the string is not EXACTLY
+    that shape (missing or malformed identity). Callers MUST fail closed on
+    None: no loose matching, no heuristic recovery, no silent acceptance.
+    """
+    s = trade_id if isinstance(trade_id, str) else ""
+    if not s.startswith(_CANDIDATE_TRADE_ID_PREFIX):
+        return None
+    head, sep, treatment_id = s.rpartition("_")
+    if not sep or not head:
+        return None
+    # "candidate_<tid>" alone carries no cycle/symbol segments — malformed.
+    if "_" not in head:
+        return None
+    if not _TREATMENT_ID_RE.fullmatch(treatment_id):
+        return None
+    return treatment_id
 
 
 def resolve_candidate_treatment(
@@ -339,9 +384,11 @@ def open_candidate_shadows(
                 # candidate-side evidence (shadow_trades dataset) carries the
                 # exact treatment identity alongside shadow_type =
                 # CANDIDATE_<candidate_id> and the pairing correlation_id.
-                trade_id = (
-                    f"candidate_{candidate.candidate_id}_{cycle_id}_{symbol}"
-                    f"_{resolution.treatment_id}"
+                # Wave 4D.2: candidate_trade_id() is the single mint site;
+                # extract_treatment_id() is the strict parse back.
+                trade_id = candidate_trade_id(
+                    candidate.candidate_id, cycle_id, symbol,
+                    resolution.treatment_id,
                 )
 
                 engine.open_trade(
