@@ -23,6 +23,13 @@ from research_engine.v10.baselines.baseline_authority import set_active
 from research_engine.v10.baselines.models import BaselineSnapshot
 from research_engine.v10.baselines.snapshot_registry import SnapshotRegistry
 from core.research_events import compute_config_hash
+import json
+
+from research_engine.lifecycle.candidate_evaluator import CandidateEvaluation
+from research_engine.lifecycle.candidate_recommendation import (
+    RecommendationStore,
+    create_recommendation,
+)
 from research_engine.v10.candidates.candidate_decision import (
     CandidateDecisionStore,
     get_human_decision,
@@ -30,6 +37,11 @@ from research_engine.v10.candidates.candidate_decision import (
 )
 from research_engine.v10.candidates.candidate_registry import CandidateRegistry
 from research_engine.v10.candidates.models import CandidateRecord, CandidateStatus
+
+# Wave 4E.2: the treatment identity carried by the shadow evidence of every
+# fixture candidate. Treatment identity always comes from the evaluation /
+# evidence chain — never recomputed from change_definition.
+_TEST_TREATMENT_ID = "4b0a11ce4b0a11ce"
 
 # Wave 4C.3: the canonical active baseline default candidates bind to. The
 # legacy pre-4C.1 "current_v10" placeholder no longer passes the promotion
@@ -127,14 +139,89 @@ def _to_review(reg_dir, candidate_id):
     return reg
 
 
+def _publish_recommendation(
+    tmp_path,
+    candidate_id,
+    *,
+    evaluation_id="EVAL-4b001",
+    treatment_id=_TEST_TREATMENT_ID,
+    decision="VALIDATED",
+    confidence="HIGH",
+    eligible_pairs=60,
+    promotion_blocked=False,
+    promotion_block_reason="",
+):
+    """Publish the canonical Wave 4E.1 recommendation a decision binds to.
+
+    Wave 4E.2 migration: the retired pre-4E.2 calling contract passed no
+    recommendation_id. Production now REQUIRES one, so the fixture builds a
+    genuine canonical recommendation whose provenance is derived from the
+    evaluation/evidence chain — baseline identity and config hash are taken
+    from the candidate's own recorded provenance, never invented here.
+    """
+    rec_dir = str(tmp_path / "rec")
+    reg = CandidateRegistry(storage_dir=str(tmp_path / "reg"))
+    cand = reg.get(candidate_id)
+    baseline_id = cand.baseline_id if cand is not None else ""
+    config_hash = (
+        cand.change_definition.get("baseline_config_hash", "")
+        if cand is not None else ""
+    )
+    evaluation = CandidateEvaluation(
+        evaluation_id=evaluation_id,
+        candidate_id=candidate_id,
+        timestamp="2026-09-17T12:00:00+00:00",
+        prospective_boundary="1970-01-01T00:00:00+00:00",
+        total_observations_raw=eligible_pairs * 2,
+        eligible_pairs=eligible_pairs,
+        excluded_unpaired=0,
+        excluded_pre_boundary=0,
+        n=eligible_pairs,
+        mean_baseline_r=-0.3,
+        mean_candidate_r=0.2,
+        mean_delta_r=0.5,
+        median_delta_r=0.5,
+        total_baseline_r=-0.3 * eligible_pairs,
+        total_candidate_r=0.2 * eligible_pairs,
+        candidate_wins=int(eligible_pairs * 0.6),
+        candidate_win_rate=0.6,
+        ci_lower=0.2,
+        ci_upper=0.8,
+        permutation_p=0.001,
+        oos_n=40,
+        oos_delta_r=0.3,
+        symbols_positive=3,
+        symbols_total=3,
+        periods_positive=3,
+        periods_total=5,
+        survives_outlier_removal=True,
+        worst_delta_r=-0.1,
+        risk_level="LOW",
+        decision=decision,
+        decision_reason="Candidate outperforms baseline",
+        confidence=confidence,
+        baseline_id=baseline_id,
+        config_hash=config_hash,
+        promotion_blocked=promotion_blocked,
+        promotion_block_reason=promotion_block_reason,
+        treatment_id=treatment_id,
+    )
+    rec = create_recommendation(
+        evaluation, store=RecommendationStore(recommendations_dir=rec_dir)
+    )
+    return rec_dir, rec.recommendation_id
+
+
 class TestAcceptHappyPath:
     def test_accept_records_decision_and_transitions(self, tmp_path):
         reg_dir, dec_dir = _seed(tmp_path)
         _to_review(reg_dir, "OPT-4B-001")
+        rec_dir, rec_id = _publish_recommendation(tmp_path, "OPT-4B-001")
         result = record_human_decision(
-            "OPT-4B-001", "ACCEPT", actor="researcher-1",
+            "OPT-4B-001", "ACCEPT", rec_id, actor="researcher-1",
             reason="Shadow evidence confirms +0.25R improvement",
             registry_dir=reg_dir, decisions_dir=dec_dir,
+            recommendations_dir=rec_dir,
         )
         assert result.ok and not result.duplicate
         d = result.decision
@@ -158,10 +245,13 @@ class TestRejectHappyPath:
         reg_dir, dec_dir = _seed(tmp_path, candidate_id="OPT-4B-R",
                                  with_success=False)
         _to_review(reg_dir, "OPT-4B-R")
+        rec_dir, rec_id = _publish_recommendation(tmp_path, "OPT-4B-R",
+                                                  evaluation_id="EVAL-none")
         result = record_human_decision(
-            "OPT-4B-R", "REJECT", actor="researcher-1",
+            "OPT-4B-R", "REJECT", rec_id, actor="researcher-1",
             reason="OOS inconsistent; do not promote",
             registry_dir=reg_dir, decisions_dir=dec_dir,
+            recommendations_dir=rec_dir,
         )
         assert result.ok
         assert result.decision.status_after == "REJECTED"
@@ -180,9 +270,13 @@ class TestWrongStartingState:
         reg.add_validation_result("OPT-4B-S", validation_id="EVAL-x",
                                   decision="IMPROVED", confidence="HIGH",
                                   sample_size=60, expectancy_delta=0.2)
+        rec_dir, rec_id = _publish_recommendation(tmp_path, "OPT-4B-S",
+                                                  evaluation_id="EVAL-x")
         with pytest.raises(ValueError, match="READY_FOR_REVIEW"):
-            record_human_decision("OPT-4B-S", "ACCEPT", actor="a", reason="r",
-                                  registry_dir=reg_dir, decisions_dir=dec_dir)
+            record_human_decision("OPT-4B-S", "ACCEPT", rec_id, actor="a",
+                                  reason="r",
+                                  registry_dir=reg_dir, decisions_dir=dec_dir,
+                                  recommendations_dir=rec_dir)
         got = CandidateRegistry(storage_dir=reg_dir).get("OPT-4B-S")
         assert got.status == CandidateStatus.SHADOW_TESTING
         assert _decisions_in(dec_dir) == []
@@ -190,12 +284,16 @@ class TestWrongStartingState:
     def test_second_accept_after_accepted_conflicts(self, tmp_path):
         reg_dir, dec_dir = _seed(tmp_path, candidate_id="OPT-4B-T")
         _to_review(reg_dir, "OPT-4B-T")
-        record_human_decision("OPT-4B-T", "ACCEPT", actor="a", reason="r",
-                              registry_dir=reg_dir, decisions_dir=dec_dir)
+        rec_dir, rec_id = _publish_recommendation(tmp_path, "OPT-4B-T")
+        record_human_decision("OPT-4B-T", "ACCEPT", rec_id, actor="a",
+                              reason="r",
+                              registry_dir=reg_dir, decisions_dir=dec_dir,
+                              recommendations_dir=rec_dir)
         with pytest.raises((ValueError, RuntimeError)):
-            record_human_decision("OPT-4B-T", "ACCEPT", actor="a",
+            record_human_decision("OPT-4B-T", "ACCEPT", rec_id, actor="a",
                                   reason="different reason",
-                                  registry_dir=reg_dir, decisions_dir=dec_dir)
+                                  registry_dir=reg_dir, decisions_dir=dec_dir,
+                                  recommendations_dir=rec_dir)
         got = CandidateRegistry(storage_dir=reg_dir).get("OPT-4B-T")
         assert got.status == CandidateStatus.ACCEPTED
         assert len(_decisions_in(dec_dir)) == 1
@@ -205,10 +303,12 @@ class TestActorReason:
     def test_missing_actor_fails(self, tmp_path):
         reg_dir, dec_dir = _seed(tmp_path, candidate_id="OPT-4B-A")
         _to_review(reg_dir, "OPT-4B-A")
+        rec_dir, rec_id = _publish_recommendation(tmp_path, "OPT-4B-A")
         with pytest.raises(ValueError, match="actor"):
-            record_human_decision("OPT-4B-A", "ACCEPT", actor="",
+            record_human_decision("OPT-4B-A", "ACCEPT", rec_id, actor="",
                                   reason="has reason",
-                                  registry_dir=reg_dir, decisions_dir=dec_dir)
+                                  registry_dir=reg_dir, decisions_dir=dec_dir,
+                                  recommendations_dir=rec_dir)
         got = CandidateRegistry(storage_dir=reg_dir).get("OPT-4B-A")
         assert got.status == CandidateStatus.READY_FOR_REVIEW
         assert _decisions_in(dec_dir) == []
@@ -216,10 +316,12 @@ class TestActorReason:
     def test_missing_reason_fails(self, tmp_path):
         reg_dir, dec_dir = _seed(tmp_path, candidate_id="OPT-4B-B")
         _to_review(reg_dir, "OPT-4B-B")
+        rec_dir, rec_id = _publish_recommendation(tmp_path, "OPT-4B-B")
         with pytest.raises(ValueError, match="reason"):
-            record_human_decision("OPT-4B-B", "REJECT", actor="human",
+            record_human_decision("OPT-4B-B", "REJECT", rec_id, actor="human",
                                   reason="  ",
-                                  registry_dir=reg_dir, decisions_dir=dec_dir)
+                                  registry_dir=reg_dir, decisions_dir=dec_dir,
+                                  recommendations_dir=rec_dir)
         got = CandidateRegistry(storage_dir=reg_dir).get("OPT-4B-B")
         assert got.status == CandidateStatus.READY_FOR_REVIEW
         assert _decisions_in(dec_dir) == []
@@ -230,12 +332,21 @@ class TestAcceptRequiresEvidence:
         reg_dir, dec_dir = _seed(tmp_path, candidate_id="OPT-4B-E",
                                  with_success=False)
         _to_review(reg_dir, "OPT-4B-E")
+        rec_dir, rec_id = _publish_recommendation(tmp_path, "OPT-4B-E")
         with pytest.raises(ValueError, match="no successful"):
-            record_human_decision("OPT-4B-E", "ACCEPT", actor="a", reason="r",
-                                  registry_dir=reg_dir, decisions_dir=dec_dir)
+            record_human_decision("OPT-4B-E", "ACCEPT", rec_id, actor="a",
+                                  reason="r",
+                                  registry_dir=reg_dir, decisions_dir=dec_dir,
+                                  recommendations_dir=rec_dir)
         got = CandidateRegistry(storage_dir=reg_dir).get("OPT-4B-E")
         assert got.status == CandidateStatus.READY_FOR_REVIEW
-        assert _decisions_in(dec_dir) == []
+        rows = [json.loads(row) for row in _decisions_in(dec_dir)]
+        assert len(rows) == 1
+        assert rows[0]["outcome"] == "RECOMMENDATION_BLOCKED"
+        assert rows[0]["decision"] == "ACCEPT"
+        assert rows[0]["status_after"] == ""
+        assert rows[0]["recommendation_id"] == rec_id
+        assert get_human_decision("OPT-4B-E", decisions_dir=dec_dir) is None
 
     def test_accept_with_only_inconclusive_rejected(self, tmp_path):
         reg_dir = str(tmp_path / "reg")
@@ -247,22 +358,41 @@ class TestAcceptRequiresEvidence:
                                   decision="INCONCLUSIVE", confidence="LOW",
                                   sample_size=10, expectancy_delta=0.0)
         _to_review(reg_dir, "OPT-4B-I")
+        rec_dir, rec_id = _publish_recommendation(tmp_path, "OPT-4B-I",
+                                                  evaluation_id="EVAL-inc")
         with pytest.raises(ValueError, match="no successful"):
-            record_human_decision("OPT-4B-I", "ACCEPT", actor="a", reason="r",
-                                  registry_dir=reg_dir, decisions_dir=dec_dir)
-        assert _decisions_in(dec_dir) == []
+            record_human_decision("OPT-4B-I", "ACCEPT", rec_id, actor="a",
+                                  reason="r",
+                                  registry_dir=reg_dir, decisions_dir=dec_dir,
+                                  recommendations_dir=rec_dir)
+        rows = [json.loads(row) for row in _decisions_in(dec_dir)]
+        assert len(rows) == 1
+        assert rows[0]["outcome"] == "RECOMMENDATION_BLOCKED"
+        assert rows[0]["decision"] == "ACCEPT"
+        assert rows[0]["status_after"] == ""
+        assert rows[0]["recommendation_id"] == rec_id
+        assert get_human_decision("OPT-4B-I", decisions_dir=dec_dir) is None
+        got = CandidateRegistry(storage_dir=reg_dir).get("OPT-4B-I")
+        assert got.status == CandidateStatus.READY_FOR_REVIEW
 
 
 class TestIdempotency:
     def test_identical_replay_is_duplicate(self, tmp_path):
         reg_dir, dec_dir = _seed(tmp_path, candidate_id="OPT-4B-D")
         _to_review(reg_dir, "OPT-4B-D")
-        r1 = record_human_decision("OPT-4B-D", "ACCEPT", actor="a", reason="r",
-                                   registry_dir=reg_dir, decisions_dir=dec_dir)
-        r2 = record_human_decision("OPT-4B-D", "ACCEPT", actor="a", reason="r",
-                                   registry_dir=reg_dir, decisions_dir=dec_dir)
+        rec_dir, rec_id = _publish_recommendation(tmp_path, "OPT-4B-D")
+        r1 = record_human_decision("OPT-4B-D", "ACCEPT", rec_id, actor="a",
+                                   reason="r",
+                                   registry_dir=reg_dir, decisions_dir=dec_dir,
+                                   recommendations_dir=rec_dir)
+        r2 = record_human_decision("OPT-4B-D", "ACCEPT", rec_id, actor="a",
+                                   reason="r",
+                                   registry_dir=reg_dir, decisions_dir=dec_dir,
+                                   recommendations_dir=rec_dir)
         assert r1.ok and not r1.duplicate
         assert r2.ok and r2.duplicate
+        assert r1.decision.recommendation_id == rec_id
+        assert r2.decision.recommendation_id == rec_id
         assert len(_decisions_in(dec_dir)) == 1
         got = CandidateRegistry(storage_dir=reg_dir).get("OPT-4B-D")
         assert got.status == CandidateStatus.ACCEPTED
@@ -270,16 +400,22 @@ class TestIdempotency:
     def test_conflicting_decision_fails_closed(self, tmp_path):
         reg_dir, dec_dir = _seed(tmp_path, candidate_id="OPT-4B-C")
         _to_review(reg_dir, "OPT-4B-C")
-        record_human_decision("OPT-4B-C", "ACCEPT", actor="a", reason="r",
-                              registry_dir=reg_dir, decisions_dir=dec_dir)
+        rec_dir, rec_id = _publish_recommendation(tmp_path, "OPT-4B-C")
+        record_human_decision("OPT-4B-C", "ACCEPT", rec_id, actor="a",
+                              reason="r",
+                              registry_dir=reg_dir, decisions_dir=dec_dir,
+                              recommendations_dir=rec_dir)
         with pytest.raises(ValueError, match="already has COMPLETED"):
-            record_human_decision("OPT-4B-C", "REJECT", actor="a", reason="r",
-                                  registry_dir=reg_dir, decisions_dir=dec_dir)
+            record_human_decision("OPT-4B-C", "REJECT", rec_id, actor="a",
+                                  reason="r",
+                                  registry_dir=reg_dir, decisions_dir=dec_dir,
+                                  recommendations_dir=rec_dir)
         got = CandidateRegistry(storage_dir=reg_dir).get("OPT-4B-C")
         assert got.status == CandidateStatus.ACCEPTED
         stored = get_human_decision("OPT-4B-C", decisions_dir=dec_dir)
         assert stored is not None and stored.decision == "ACCEPT"
         assert stored.reason == "r"
+        assert stored.recommendation_id == rec_id
         assert len(_decisions_in(dec_dir)) == 1
 
 
@@ -287,9 +423,11 @@ class TestRestartDurability:
     def test_decision_readable_after_reinstantiation(self, tmp_path):
         reg_dir, dec_dir = _seed(tmp_path, candidate_id="OPT-4B-P")
         _to_review(reg_dir, "OPT-4B-P")
-        record_human_decision("OPT-4B-P", "ACCEPT", actor="reviewer-7",
+        rec_dir, rec_id = _publish_recommendation(tmp_path, "OPT-4B-P")
+        record_human_decision("OPT-4B-P", "ACCEPT", rec_id, actor="reviewer-7",
                               reason="meets all gates",
-                              registry_dir=reg_dir, decisions_dir=dec_dir)
+                              registry_dir=reg_dir, decisions_dir=dec_dir,
+                              recommendations_dir=rec_dir)
         fresh = CandidateDecisionStore(decisions_dir=dec_dir)
         d = fresh.get_decision("OPT-4B-P")
         assert d is not None
@@ -301,6 +439,13 @@ class TestRestartDurability:
         assert d.status_after == "ACCEPTED"
         assert get_human_decision("OPT-4B-P",
                                   decisions_dir=dec_dir) is not None
+        # Wave 4E.2: the durable row keeps the exact recommendation identity
+        # and the exact provenance it was reviewed against — restart-stable,
+        # never re-derived from mutable candidate state.
+        assert d.recommendation_id == rec_id
+        assert d.treatment_id == _TEST_TREATMENT_ID
+        assert d.baseline_id == _TEST_BASELINE_ID
+        assert d.baseline_config_hash == compute_config_hash()
 
 
 class TestAutomationCannotApprove:

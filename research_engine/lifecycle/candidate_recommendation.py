@@ -170,6 +170,13 @@ class RecommendationStore:
                 return r
         return None
 
+    def get_by_recommendation_id(self, recommendation_id: str) -> CandidateRecommendation | None:
+        """Look up a recommendation by its deterministic recommendation_id (REC-{evaluation_id})."""
+        for r in self._recommendations:
+            if r.recommendation_id == recommendation_id:
+                return r
+        return None
+
     def get_by_candidate_id(self, candidate_id: str) -> list[CandidateRecommendation]:
         return [r for r in self._recommendations if r.candidate_id == candidate_id]
 

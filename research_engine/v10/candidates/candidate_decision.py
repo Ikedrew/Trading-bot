@@ -5,6 +5,18 @@ Closes exactly ONE boundary:
     READY_FOR_REVIEW -> explicit human invocation -> durable decision
     -> CandidateRegistry.update_status() -> ACCEPTED or REJECTED
 
+Wave 4E.2 — recommendation-bound human governance (FAIL CLOSED):
+    Every human decision now binds to ONE specific canonical
+    CandidateRecommendation (Wave 4E.1). Before anything is written, the
+    referenced recommendation must exist and its candidate_id / evaluation_id
+    / baseline_id / baseline_config_hash provenance must match the candidate's
+    own evidence. An ACCEPT additionally requires the recommendation to be
+    actionable (VALIDATED, not promotion_blocked, complete provenance,
+    sufficient sample, sufficient confidence) and, for REJECT, that the
+    recommendation is part of the candidate's recorded evidence. Failures are
+    auditable non-effective RECOMMENDATION_BLOCKED rows — never a fabricated
+    REJECT, never a substitute recommendation.
+
 Wave 4C.3 — baseline-safe promotion (FAIL CLOSED):
     Before a human ACCEPT crosses the promotion boundary, the candidate's
     recorded baseline is re-proven against the 4C.1 canonical baseline
@@ -65,8 +77,14 @@ class HumanDecision:
     evaluation_id: str = ""
     status_before: str = ""
     status_after: str = ""
-    outcome: str = "COMPLETED"  # COMPLETED | STATUS_FAILED
+    outcome: str = "COMPLETED"  # COMPLETED | STATUS_FAILED | RECOMMENDATION_BLOCKED
     error: str = ""
+    # ─── Wave 4E.2: recommendation provenance ─────────────────────────
+    # Binds this human decision to one specific canonical CandidateRecommendation.
+    recommendation_id: str = ""
+    treatment_id: str = ""
+    baseline_id: str = ""
+    baseline_config_hash: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -80,6 +98,10 @@ class HumanDecision:
             "status_after": self.status_after,
             "outcome": self.outcome,
             "error": self.error,
+            "recommendation_id": self.recommendation_id,
+            "treatment_id": self.treatment_id,
+            "baseline_id": self.baseline_id,
+            "baseline_config_hash": self.baseline_config_hash,
         }
 
     @classmethod
@@ -95,6 +117,10 @@ class HumanDecision:
             status_after=data.get("status_after", ""),
             outcome=data.get("outcome", "COMPLETED"),
             error=data.get("error", ""),
+            recommendation_id=data.get("recommendation_id", ""),
+            treatment_id=data.get("treatment_id", ""),
+            baseline_id=data.get("baseline_id", ""),
+            baseline_config_hash=data.get("baseline_config_hash", ""),
         )
 
 
@@ -132,6 +158,16 @@ class CandidateDecisionStore:
         """Effective COMPLETED decision for a candidate, if any."""
         for d in self._decisions:
             if d.candidate_id == candidate_id and d.outcome == "COMPLETED":
+                return d
+        return None
+
+    def get_decision_by_id(self, recommendation_id: str) -> HumanDecision | None:
+        """COMPLETED decision matching a specific recommendation_id."""
+        for d in self._decisions:
+            if (
+                d.recommendation_id == recommendation_id
+                and d.outcome == "COMPLETED"
+            ):
                 return d
         return None
 
@@ -209,26 +245,53 @@ def _supporting_evaluation_id(candidate) -> str:
     return latest_success
 
 
+def _candidate_evaluation_ids(candidate) -> set[str]:
+    """Every evaluation identity the candidate actually carries as evidence.
+
+    The 4D/4C bridge persists ``evaluation.evaluation_id`` as
+    ``ValidationEntry.validation_id`` for EVERY evaluation decision (IMPROVED /
+    WORSENED / INCONCLUSIVE), so this set is the candidate's durable record of
+    which evaluations belong to it. Used to bind a recommendation to the
+    candidate's real evidence instead of inferring it from mutable state.
+    """
+    ids: set[str] = set()
+    for entry in getattr(candidate, "validation_history", []) or []:
+        vid = getattr(entry, "validation_id", "") or ""
+        if vid:
+            ids.add(vid)
+    return ids
+
+
 def record_human_decision(
     candidate_id: str,
     decision: str,
+    recommendation_id: str,
     *,
     actor: str = "",
     reason: str = "",
     registry_dir: str | None = None,
     decisions_dir: str | None = None,
+    recommendations_dir: str | None = None,
 ) -> DecisionResult:
-    """Record an explicit human ACCEPT/REJECT for a READY_FOR_REVIEW candidate.
+    """Record an explicit human ACCEPT/REJECT bound to ONE canonical recommendation.
+
+    Wave 4E.2: every human decision must bind to a specific CandidateRecommendation
+    (from 4E.1). The recommendation's provenance must match the candidate's.
 
     Preconditions (fail closed — nothing written, nothing changed):
+        - recommendation_id non-empty and resolves to an existing recommendation
+        - recommendation.candidate_id must match candidate_id (no substitution)
+        - recommendation.evaluation_id must match the candidate's IMPROVED
+          validation evidence
+        - ACCEPT requires the recommendation to be actionable=True AND the
+          existing Wave 4C.3 baseline safety invariant to pass
+        - REJECT requires no positive evidence beyond recommendation binding
         - decision in {ACCEPT, REJECT}
         - actor and reason non-empty
         - candidate exists and status == READY_FOR_REVIEW
-        - ACCEPT requires existing IMPROVED ValidationEntry with validation_id;
-          REJECT requires no positive evidence.
         - no conflicting COMPLETED decision already recorded.
 
-    Idempotency: identical (candidate, evaluation, decision, actor, reason)
+    Idempotency: identical (candidate, recommendation, decision, actor, reason)
     replay returns ok=True, duplicate=True, writes no new row. Conflicting
     decisions raise ValueError and preserve the original. No reversal.
     """
@@ -243,6 +306,15 @@ def record_human_decision(
         raise ValueError("Human decision requires a non-empty actor")
     if not (reason or "").strip():
         raise ValueError("Human decision requires a non-empty reason")
+    # Wave 4E.2: a human decision must name the ONE canonical recommendation
+    # being reviewed. Without a recommendation identity there is no
+    # attributable evidence chain, so nothing is written and nothing changes.
+    if not (recommendation_id or "").strip():
+        raise ValueError(
+            f"Human decision for '{candidate_id}' requires a "
+            "recommendation_id: cannot decide without a canonical "
+            "recommendation to bind to"
+        )
 
     registry = (
         CandidateRegistry(storage_dir=registry_dir)
@@ -261,10 +333,73 @@ def record_human_decision(
     existing = store.get_decision(candidate_id)
 
     evaluation_id = _supporting_evaluation_id(candidate)
+    known_eval_ids = _candidate_evaluation_ids(candidate)
+
+    def _block_attempt(
+        reason_text: str,
+        *,
+        rec: object | None = None,
+    ) -> None:
+        """Persist a NON-EFFECTIVE blocked-attempt row, then fail closed.
+
+        Mirrors the existing BASELINE_BLOCKED semantics: human intent
+        (decision/actor/reason) is preserved as audit evidence while system
+        eligibility is denied. outcome is RECOMMENDATION_BLOCKED, never
+        COMPLETED, so get_decision() ignores it and the effective decision
+        stays empty. NEVER fabricates the opposite verdict.
+        """
+        blocked = HumanDecision(
+            candidate_id=candidate_id,
+            decision=verdict,
+            actor=actor.strip(),
+            reason=reason.strip(),
+            timestamp=timestamp_now(),
+            evaluation_id=evaluation_id,
+            status_before=candidate.status,
+            status_after="",
+            outcome="RECOMMENDATION_BLOCKED",
+            error=reason_text,
+            recommendation_id=(
+                rec.recommendation_id
+                if rec is not None
+                else (recommendation_id or "").strip()
+            ),
+            treatment_id=getattr(rec, "treatment_id", ""),
+            baseline_id=getattr(rec, "baseline_id", ""),
+            baseline_config_hash=getattr(rec, "baseline_config_hash", ""),
+        )
+        store._append_row_atomic(blocked)
+        raise ValueError(reason_text)
+
+    # ─── Wave 4E.2: canonical recommendation lookup ─────────────────────────
+    # Every human decision must bind to ONE specific canonical
+    # CandidateRecommendation: the recommendation is the durable interpretation
+    # of the evaluation evidence, and the human decision binds to that
+    # interpretation rather than to mutable candidate state.
+    #
+    # Ordering: the recommendation is RESOLVED here (so idempotency can compare
+    # canonical identity) but its provenance is VALIDATED further below, after
+    # the pre-existing state / evidence / baseline gates. Every existing gate
+    # therefore keeps its original audited ordering and error semantics.
+    from research_engine.lifecycle.candidate_recommendation import (
+        RecommendationStore,
+    )
+    rec_store = RecommendationStore(recommendations_dir=recommendations_dir)
+    recommendation = rec_store.get_by_recommendation_id(
+        recommendation_id.strip()
+    )
+    if recommendation is None:
+        _block_attempt(
+            f"recommendation_id '{recommendation_id.strip()}' not found in "
+            "the canonical recommendation store: cannot bind a human "
+            "decision without recommendation provenance",
+            rec=None,
+        )
 
     if existing is not None:
         if (
             existing.decision == verdict
+            and existing.recommendation_id == recommendation.recommendation_id
             and existing.evaluation_id == evaluation_id
             and existing.actor == actor.strip()
             and existing.reason == reason.strip()
@@ -294,11 +429,6 @@ def record_human_decision(
         raise ValueError(
             f"Candidate '{candidate_id}' is in state '{candidate.status}': "
             "human decisions require READY_FOR_REVIEW"
-        )
-    if verdict == "ACCEPT" and not evaluation_id:
-        raise ValueError(
-            f"Candidate '{candidate_id}' has no successful (IMPROVED) "
-            "validation evidence: ACCEPT rejected"
         )
 
     # ─── Wave 4C.3: baseline-bound promotion invariant (FAIL CLOSED) ─────────
@@ -337,6 +467,10 @@ def record_human_decision(
                 status_after="",
                 outcome="BASELINE_BLOCKED",
                 error=f"baseline safety invariant: {baseline_reason}",
+                recommendation_id=recommendation.recommendation_id,
+                treatment_id=recommendation.treatment_id,
+                baseline_id=recommendation.baseline_id,
+                baseline_config_hash=recommendation.baseline_config_hash,
             )
             store._append_row_atomic(blocked)
             raise ValueError(
@@ -344,6 +478,116 @@ def record_human_decision(
                 f"safety invariant ({baseline_reason}): approval NOT applied, "
                 "candidate remains READY_FOR_REVIEW"
             )
+
+    # ── Wave 4E.2: recommendation provenance binding (FAIL CLOSED) ──────────
+    # The durable governance evidence must let us prove:
+    #   human decision -> exact recommendation -> exact evaluation
+    #   -> exact candidate -> exact treatment -> exact baseline.
+    # Every identity here is read from the recommendation (the 4E.1 durable
+    # interpretation of the 4D.2 evaluation chain) or from the candidate's own
+    # recorded evidence — NEVER reconstructed from mutable change_definition.
+    if recommendation.candidate_id != candidate_id:
+        _block_attempt(
+            f"recommendation '{recommendation.recommendation_id}' "
+            f"candidate_id mismatch: recommendation candidate="
+            f"'{recommendation.candidate_id}' vs decision candidate="
+            f"'{candidate_id}'",
+            rec=recommendation,
+        )
+    # ACCEPT requires the candidate's own successful (IMPROVED) evidence.
+    if verdict == "ACCEPT" and not evaluation_id:
+        _block_attempt(
+            f"Candidate '{candidate_id}' has no successful (IMPROVED) "
+            "validation evidence: ACCEPT rejected",
+            rec=recommendation,
+        )
+    # The recommendation's evaluation must be part of THIS candidate's
+    # otherwise the recommendation must still be one of the candidate's own
+    # evaluations (no silent substitution of another candidate's evaluation).
+    if verdict == "ACCEPT":
+        if recommendation.evaluation_id != evaluation_id:
+            _block_attempt(
+                f"recommendation '{recommendation.recommendation_id}' "
+                f"evaluation_id mismatch: recommendation evaluation="
+                f"'{recommendation.evaluation_id}' vs candidate evidence "
+                f"evaluation='{evaluation_id}'",
+                rec=recommendation,
+            )
+    elif known_eval_ids and recommendation.evaluation_id not in known_eval_ids:
+        _block_attempt(
+            f"recommendation '{recommendation.recommendation_id}' "
+            f"evaluation_id '{recommendation.evaluation_id}' is not part of "
+            f"candidate '{candidate_id}' evaluation evidence",
+            rec=recommendation,
+        )
+    # Baseline identity must match the candidate's recorded baseline exactly.
+    if recommendation.baseline_id != candidate.baseline_id:
+        _block_attempt(
+            f"recommendation '{recommendation.recommendation_id}' "
+            f"baseline_id mismatch: recommendation baseline="
+            f"'{recommendation.baseline_id}' vs candidate baseline="
+            f"'{candidate.baseline_id}'",
+            rec=recommendation,
+        )
+    # Baseline config provenance must match (Wave 4C contract).
+    rec_config_hash = recommendation.baseline_config_hash
+    cand_config_hash = candidate.change_definition.get(
+        "baseline_config_hash", ""
+    )
+    if rec_config_hash != cand_config_hash:
+        _block_attempt(
+            f"recommendation '{recommendation.recommendation_id}' "
+            f"baseline_config_hash mismatch: recommendation config_hash="
+            f"'{rec_config_hash}' vs candidate config_hash="
+            f"'{cand_config_hash}'",
+            rec=recommendation,
+        )
+    # Treatment identity (4D.2 evidence chain). A missing treatment_id means
+    # the measured effect cannot be attributed to a concrete treatment, so
+    # promotion fails closed.
+    if verdict == "ACCEPT" and not (recommendation.treatment_id or "").strip():
+        _block_attempt(
+            f"recommendation '{recommendation.recommendation_id}' has no "
+            "treatment_id: cannot ACCEPT without evidence-attributed "
+            "treatment identity",
+            rec=recommendation,
+        )
+    # Mixed/malformed treatment evidence: one evaluation cannot have produced
+    # two different treatment identities. If the canonical store holds
+    # conflicting treatment identities for the same evaluation, the effect is
+    # not attributable and ACCEPT fails closed. Only the durable store is
+    # consulted — treatment identity is never recomputed from
+    # change_definition.
+    if verdict == "ACCEPT":
+        same_eval = [
+            r for r in rec_store.get_by_candidate_id(candidate_id)
+            if r.evaluation_id == recommendation.evaluation_id
+        ]
+        distinct_treatments = {
+            (r.treatment_id or "").strip()
+            for r in same_eval
+            if (r.treatment_id or "").strip()
+        }
+        if len(distinct_treatments) > 1:
+            _block_attempt(
+                f"recommendation '{recommendation.recommendation_id}' has "
+                "mixed treatment evidence for evaluation "
+                f"'{recommendation.evaluation_id}': conflicting treatment "
+                f"identities {sorted(distinct_treatments)}: ACCEPT blocked",
+                rec=recommendation,
+            )
+    # ACCEPT requires the recommendation to be ACTIONABLE (VALIDATED, not
+    # promotion_blocked, complete provenance, sufficient sample, sufficient
+    # confidence). Non-actionable research knowledge — INCONCLUSIVE,
+    # insufficient evidence, promotion_blocked, small sample — is truthfully
+    # preserved but can never be human-approved into ACCEPTED.
+    if verdict == "ACCEPT" and not recommendation.actionable:
+        _block_attempt(
+            f"recommendation '{recommendation.recommendation_id}' is not "
+            f"actionable: decision={recommendation.decision}, "
+            f"limitations={recommendation.limitations}: ACCEPT blocked",
+            rec=recommendation,
+        )
 
     status_before = candidate.status
     status_after = _DECISION_TO_STATUS[verdict]
@@ -356,6 +600,10 @@ def record_human_decision(
         evaluation_id=evaluation_id,
         status_before=status_before,
         status_after=status_after,
+        recommendation_id=recommendation.recommendation_id,
+        treatment_id=recommendation.treatment_id,
+        baseline_id=recommendation.baseline_id,
+        baseline_config_hash=recommendation.baseline_config_hash,
     )
 
     # Ordering: durable evidence FIRST (O_APPEND, never truncates), then the
