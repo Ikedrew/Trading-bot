@@ -65,6 +65,7 @@ class ApplicationRecord:
     recommendation_id: str = ""
     evaluation_id: str = ""
     treatment_id: str = ""
+    treatment_spec: str | None = None
     baseline_id: str = ""
     baseline_config_hash: str = ""
     human_decision_outcome: str = ""
@@ -86,6 +87,7 @@ class ApplicationRecord:
             "recommendation_id": self.recommendation_id,
             "evaluation_id": self.evaluation_id,
             "treatment_id": self.treatment_id,
+            "treatment_spec": self.treatment_spec,
             "baseline_id": self.baseline_id,
             "baseline_config_hash": self.baseline_config_hash,
             "human_decision_outcome": self.human_decision_outcome,
@@ -116,6 +118,7 @@ class ApplicationLedger:
         recommendation_id: str = "",
         evaluation_id: str = "",
         treatment_id: str = "",
+        treatment_spec: str | None = None,
         baseline_id: str = "",
         baseline_config_hash: str = "",
         human_decision_outcome: str = "",
@@ -148,6 +151,7 @@ class ApplicationLedger:
             recommendation_id=recommendation_id,
             evaluation_id=evaluation_id,
             treatment_id=treatment_id,
+            treatment_spec=treatment_spec,
             baseline_id=baseline_id,
             baseline_config_hash=baseline_config_hash,
             human_decision_outcome=human_decision_outcome,
@@ -187,6 +191,7 @@ class ApplicationLedger:
         decisions_dir: str | None = None,
         recommendations_dir: str | None = None,
         registry_dir: str | None = None,
+        evaluations_dir: str | None = None,
     ) -> ApplicationRecord:
         """Create the APPROVED_NOT_DEPLOYED application for ONE exact approval.
 
@@ -254,6 +259,11 @@ class ApplicationLedger:
             if approved != recorded:
                 raise ValueError(f"Decision/recommendation '{name}' mismatch: application blocked")
 
+        from research_engine.lifecycle.treatment_provenance import validate_evaluation_spec
+        if decision.treatment_spec != recommendation.treatment_spec:
+            raise ValueError("Decision/recommendation treatment_spec mismatch")
+        validate_evaluation_spec(recommendation, evaluations_dir)
+
         # Revalidate canonical evidence even on replay. Never reuse a different
         # recommendation, nor bless a conflicting low-level ledger row.
         for existing in self.list_all():
@@ -261,6 +271,7 @@ class ApplicationLedger:
                 if (
                     any(getattr(existing, name) != getattr(decision, name)
                         for name in self._REQUIRED_IDENTITIES)
+                    or existing.treatment_spec != decision.treatment_spec
                     or existing.human_decision_outcome != decision.outcome
                     or existing.actor != decision.actor
                     or existing.reason != decision.reason
@@ -293,6 +304,7 @@ class ApplicationLedger:
             recommendation_id=decision.recommendation_id,
             evaluation_id=decision.evaluation_id,
             treatment_id=decision.treatment_id,
+            treatment_spec=decision.treatment_spec,
             baseline_id=decision.baseline_id,
             baseline_config_hash=decision.baseline_config_hash,
             human_decision_outcome=decision.outcome,

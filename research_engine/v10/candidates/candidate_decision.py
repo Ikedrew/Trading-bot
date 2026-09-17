@@ -83,6 +83,7 @@ class HumanDecision:
     # Binds this human decision to one specific canonical CandidateRecommendation.
     recommendation_id: str = ""
     treatment_id: str = ""
+    treatment_spec: str | None = None
     baseline_id: str = ""
     baseline_config_hash: str = ""
 
@@ -100,6 +101,7 @@ class HumanDecision:
             "error": self.error,
             "recommendation_id": self.recommendation_id,
             "treatment_id": self.treatment_id,
+            "treatment_spec": self.treatment_spec,
             "baseline_id": self.baseline_id,
             "baseline_config_hash": self.baseline_config_hash,
         }
@@ -119,6 +121,7 @@ class HumanDecision:
             error=data.get("error", ""),
             recommendation_id=data.get("recommendation_id", ""),
             treatment_id=data.get("treatment_id", ""),
+            treatment_spec=data.get("treatment_spec"),
             baseline_id=data.get("baseline_id", ""),
             baseline_config_hash=data.get("baseline_config_hash", ""),
         )
@@ -272,6 +275,7 @@ def record_human_decision(
     registry_dir: str | None = None,
     decisions_dir: str | None = None,
     recommendations_dir: str | None = None,
+    evaluations_dir: str | None = None,
 ) -> DecisionResult:
     """Record an explicit human ACCEPT/REJECT bound to ONE canonical recommendation.
 
@@ -395,6 +399,11 @@ def record_human_decision(
             "decision without recommendation provenance",
             rec=None,
         )
+
+    from research_engine.lifecycle.treatment_provenance import validate_evaluation_spec
+    validate_evaluation_spec(recommendation, evaluations_dir)
+    if existing is not None and existing.treatment_spec != recommendation.treatment_spec:
+        raise ValueError("Decision treatment_spec substitution")
 
     if existing is not None:
         if (
@@ -602,6 +611,7 @@ def record_human_decision(
         status_after=status_after,
         recommendation_id=recommendation.recommendation_id,
         treatment_id=recommendation.treatment_id,
+        treatment_spec=recommendation.treatment_spec,
         baseline_id=recommendation.baseline_id,
         baseline_config_hash=recommendation.baseline_config_hash,
     )

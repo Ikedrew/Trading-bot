@@ -108,6 +108,12 @@ class ApplicationService:
                             if e.get("evaluation_id") == app["evaluation_id"]], "evaluation")
         require(all(evaluation.get("config_hash" if k == "baseline_config_hash" else k) == app[k]
                     for k in IDENTITIES if k != "recommendation_id"), "Evaluation provenance mismatch")
+        from research_engine.lifecycle.treatment_provenance import validate_treatment_spec
+        spec = validate_treatment_spec(app.get("treatment_spec"), app["treatment_id"], required=True)
+        require(all(record.get("treatment_spec") == spec for record in (decision, rec, evaluation)),
+                "treatment_spec provenance mismatch")
+        require(all(record.get("treatment_spec") == spec for record in apps),
+                "Application history treatment_spec conflict")
         candidate = CandidateRegistry(str(self.registry_dir)).get(cid)
         require(candidate is not None and candidate.baseline_id == app["baseline_id"]
                 and candidate.status == "ACCEPTED", "Candidate not accepted against exact baseline")
@@ -158,7 +164,7 @@ class ApplicationService:
             previous = json.loads(canonical(self.adapter.read_effective_state()))
             require(previous == old.configuration["wave5_fake_policy"], "Starting state drift")
             intended = {"kind": "wave5_fake_policy", "treatment_id": app["treatment_id"],
-                        "application_id": application_id}
+                        "treatment_spec": app["treatment_spec"], "application_id": application_id}
             self.adapter.validate_intended_state(json.loads(canonical(intended)))
             op = {"schema_version": 1, "operation_id": "OP-" + digest(application_id),
                   "application": app, "approval": proof, "old_pointer": active,

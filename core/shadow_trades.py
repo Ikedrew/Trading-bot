@@ -160,6 +160,7 @@ class ShadowTrade:
     # ─── SHADOW LINEAGE CONTRACT (approved specification) ────────────
     # These fields preserve the relationship between this shadow observation
     # and the authoritative Live V10 decision, per the approved Shadow Design.
+    treatment_spec: str | None = None  # Wave 5.3A frozen evidence; absent in legacy rows
     shadow_type: str = ""             # "HORIZON_ALTERNATIVE" | "CANDIDATE_*"; legacy values exist only in historical records
     v10_selected_horizon: str = ""    # What V10 HorizonEngine chose for this opportunity
     horizon_selection_status: str = ""  # "SELECTED" | "ALTERNATIVE" | "UNKNOWN" (legacy)
@@ -266,6 +267,7 @@ class ShadowTradeEngine:
         ask_at_entry: float = 0.0,
         # ─── Shadow lineage contract fields ───────────────────────────
         shadow_type: str = "",
+        treatment_spec: str | None = None,
         v10_selected_horizon: str = "",
         horizon_selection_status: str = "",
         evaluated_horizon: str = "",
@@ -308,6 +310,7 @@ class ShadowTradeEngine:
             ask_at_entry=ask_at_entry,
             # Shadow lineage contract
             shadow_type=shadow_type,
+            treatment_spec=treatment_spec,
             v10_selected_horizon=v10_selected_horizon,
             horizon_selection_status=horizon_selection_status,
             evaluated_horizon=evaluated_horizon or trade_horizon,
@@ -506,6 +509,7 @@ class ShadowTradeEngine:
                 "entity_id": trade.entity_id or None,
                 # Shadow lineage contract (approved specification)
                 "shadow_type": trade.shadow_type or None,
+                "treatment_spec": trade.treatment_spec,
                 "v10_selected_horizon": trade.v10_selected_horizon or None,
                 "horizon_selection_status": trade.horizon_selection_status or None,
                 "evaluated_horizon": trade.evaluated_horizon or None,
@@ -632,6 +636,7 @@ class ShadowTradeEngine:
                         trade_horizon=snap.get("trade_horizon", "") or "",
                         evaluated_horizon=identity.get("evaluated_horizon", "") or "",
                         shadow_type=identity.get("shadow_type", "") or "",
+                        treatment_spec=identity.get("treatment_spec"),
                     )
                     trade.recovered = True
                     self._active[tid] = trade
@@ -689,6 +694,7 @@ def _build_shadow_open_record(trade: "ShadowTrade") -> dict[str, Any]:
             "cycle_id": str(trade.cycle_id),
             "entity_id": trade.entity_id or None,
             "shadow_type": trade.shadow_type or None,
+            "treatment_spec": trade.treatment_spec,
             "evaluated_horizon": trade.evaluated_horizon or None,
         },
         "decision_snapshot": {

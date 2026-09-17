@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Any
 
 from research_engine.lifecycle.candidate_evaluator import CandidateEvaluation
+from research_engine.lifecycle.treatment_provenance import validate_treatment_spec
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ class CandidateRecommendation:
     evaluation_id: str = ""
     candidate_id: str = ""
     treatment_id: str = ""
+    treatment_spec: str | None = None
     baseline_id: str = ""
     baseline_config_hash: str = ""
     eligible_pairs: int = 0
@@ -86,6 +88,7 @@ class CandidateRecommendation:
             'evaluation_id': self.evaluation_id,
             'candidate_id': self.candidate_id,
             'treatment_id': self.treatment_id,
+            'treatment_spec': self.treatment_spec,
             'baseline_id': self.baseline_id,
             'baseline_config_hash': self.baseline_config_hash,
             'eligible_pairs': self.eligible_pairs,
@@ -125,6 +128,7 @@ class CandidateRecommendation:
             evaluation_id=data.get('evaluation_id', ''),
             candidate_id=data.get('candidate_id', ''),
             treatment_id=data.get('treatment_id', ''),
+            treatment_spec=data.get('treatment_spec'),
             baseline_id=data.get('baseline_id', ''),
             baseline_config_hash=data.get('baseline_config_hash', ''),
             eligible_pairs=data.get('eligible_pairs', 0),
@@ -187,7 +191,10 @@ class RecommendationStore:
         return [r for r in self._recommendations if r.actionable]
 
     def append(self, recommendation: CandidateRecommendation) -> bool:
-        if self.get_by_evaluation_id(recommendation.evaluation_id) is not None:
+        existing = self.get_by_evaluation_id(recommendation.evaluation_id)
+        if existing is not None:
+            if existing.treatment_spec != recommendation.treatment_spec:
+                raise ValueError('Recommendation treatment_spec substitution')
             logger.debug('[REC_STORE] duplicate - skipping')
             return False
         self._dir.mkdir(parents=True, exist_ok=True)
@@ -281,6 +288,7 @@ def create_recommendation(
         evaluation_id=evaluation.evaluation_id,
         candidate_id=evaluation.candidate_id,
         treatment_id=evaluation.treatment_id or '',
+        treatment_spec=validate_treatment_spec(evaluation.treatment_spec, evaluation.treatment_id),
         baseline_id=evaluation.baseline_id or '',
         baseline_config_hash=evaluation.config_hash or '',
         eligible_pairs=evaluation.eligible_pairs,

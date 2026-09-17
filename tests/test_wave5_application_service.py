@@ -93,8 +93,15 @@ def env(tmp_path, monkeypatch):
         baseline_id="OLD", config_hash="old-config", decision="VALIDATED",
         confidence="HIGH", eligible_pairs=60, survives_outlier_removal=True,
     )
+    from research_engine.lifecycle.treatment_provenance import canonical_spec
+    evaluation.treatment_spec = canonical_spec({
+        "change_type": "direction_inversion", "declared": {},
+        "scope": {"symbols": ["EURUSD"], "patterns": None},
+        "treatment_id": evaluation.treatment_id,
+    })
     create_recommendation(evaluation, store=RecommendationStore(dirs["recommendations_dir"]))
     evaluations = tmp_path / "evaluations"
+    monkeypatch.setattr("research_engine.lifecycle.candidate_evaluation_bridge._EVALUATIONS_DIR", evaluations)
     evaluations.mkdir()
     (evaluations / "C1.jsonl").write_text(json.dumps(evaluation.to_dict()) + "\n", encoding="utf-8")
     ledger = ApplicationLedger(tmp_path / "applications.jsonl")
@@ -119,6 +126,78 @@ def env(tmp_path, monkeypatch):
     e.previous, e.adapter_path = previous, adapter_path
     e.app_id = "APP-C1-REC-E1"
     return e
+
+
+def test_legacy_provenance_cannot_execute(env):
+    env.approve()
+    service = env.service()
+    for path in (service.application_path, service.decisions_dir / "decisions.jsonl",
+                 service.recommendations_dir / "recommendations.jsonl", service.evaluations_dir / "C1.jsonl"):
+        row = json.loads(path.read_text(encoding="utf-8"))
+        row.pop("treatment_spec", None)
+        path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+    assert env.ledger.list_all()[0].treatment_spec is None
+    pointer = service.pointer_file.read_bytes()
+    with pytest.raises(ValueError, match="treatment_spec"):
+        service.execute(env.app_id)
+    assert service.adapter.data()["applies"] == 0
+    assert service.pointer_file.read_bytes() == pointer
+    assert service.get_operation(env.app_id) is None
+
+
+@pytest.mark.parametrize("source", ["application", "decision", "recommendation", "evaluation"])
+def test_same_id_scope_substitution_blocks_execution(env, source):
+    from research_engine.lifecycle.treatment_provenance import canonical_spec
+    env.approve()
+    service = env.service()
+    paths = {"application": service.application_path,
+             "decision": service.decisions_dir / "decisions.jsonl",
+             "recommendation": service.recommendations_dir / "recommendations.jsonl",
+             "evaluation": service.evaluations_dir / "C1.jsonl"}
+    original = json.loads(paths[source].read_text(encoding="utf-8"))
+    spec = json.loads(original["treatment_spec"])
+    spec["scope"] = {"symbols": ["GBPUSD"], "patterns": None}
+    rewrite_row(paths[source], treatment_spec=canonical_spec(spec))
+    pointer = service.pointer_file.read_bytes()
+    ledger = service.application_path.read_bytes()
+    with pytest.raises(ValueError, match="treatment_spec"):
+        service.execute(env.app_id)
+    assert service.adapter.data()["applies"] == 0
+    assert service.pointer_file.read_bytes() == pointer
+    assert service.application_path.read_bytes() == ledger
+    assert service.get_operation(env.app_id) is None
+
+
+def test_candidate_mutation_does_not_supply_scope(env, monkeypatch):
+    app = env.approve()
+    service = env.service()
+    candidate = CandidateRegistry(str(service.registry_dir)).get("C1")
+    candidate.change_definition = {"type": "geometry_modification", "stop_multiplier": 9,
+                                   "scope": {"symbols": ["GBPUSD"]}}
+    monkeypatch.setattr(CandidateRegistry, "get", lambda self, cid: candidate)
+    op = service.execute(env.app_id)
+    assert op["intended_state"]["treatment_spec"] == app.treatment_spec
+    assert json.loads(app.treatment_spec)["scope"]["symbols"] == ["EURUSD"]
+    assert all(row.treatment_spec == app.treatment_spec for row in env.ledger.list_all())
+
+
+@pytest.mark.parametrize("boundary", ["decision", "application"])
+def test_recommendation_scope_substitution_blocks_boundary(env, boundary):
+    from research_engine.lifecycle.treatment_provenance import canonical_spec
+    if boundary == "application":
+        env.approve()
+    service = env.service()
+    path = service.recommendations_dir / "recommendations.jsonl"
+    rec = json.loads(path.read_text(encoding="utf-8"))
+    spec = json.loads(rec["treatment_spec"])
+    spec["scope"]["symbols"] = ["GBPUSD"]
+    rewrite_row(path, treatment_spec=canonical_spec(spec))
+    with pytest.raises(ValueError, match="treatment_spec"):
+        if boundary == "application":
+            env.ledger.create_application_from_approval("C1", "REC-E1", **env.dirs)
+        else:
+            env.approve()
+    assert service.adapter.data()["applies"] == 0
 
 
 def test_atomic_operation_roundtrip(tmp_path):

@@ -176,6 +176,7 @@ def _candidate_fields(rec: dict[str, Any]) -> dict[str, Any] | None:
         "entity_id": str(identity.get("entity_id") or ""),
         "symbol": str(identity.get("symbol", "") or ""),
         "shadow_type": str(identity.get("shadow_type") or ""),
+        "treatment_spec": identity.get("treatment_spec"),
         "timestamp": float(snap.get("timestamp_decision_utc") or 0.0),
         "r": out.get("pnl_r_multiple"),
         "mfe_r": out.get("mfe_r"),
@@ -318,7 +319,11 @@ def build_prospective_pairs(
         distinct_r = {round(float(r["r"]), 6) for r in rows}
         if len(distinct_r) == 1:
             diag.candidate_deduped += len(rows) - 1
-            resolved_candidates[cor] = rows[0]
+            resolved_candidates[cor] = dict(rows[0])
+            # Keep historical pairing/dedup identity unchanged. Conflicting
+            # scope evidence cannot supply a production-authorizable spec.
+            if any(r.get("treatment_spec") != rows[0].get("treatment_spec") for r in rows):
+                resolved_candidates[cor]["treatment_spec"] = None
         else:
             diag.candidate_ambiguous += len(rows)
 
@@ -366,6 +371,7 @@ def build_prospective_pairs(
             # never recomputed from current candidate state. The incumbent
             # (baseline) side carries NO treatment identity by definition.
             "treatment_id": cand["treatment_id"],
+            "treatment_spec": cand.get("treatment_spec"),
             "entity_id": cand["entity_id"] or inc["entity_id"],
             "symbol": cand["symbol"],
             "candidate_trade_id": cand["trade_id"],

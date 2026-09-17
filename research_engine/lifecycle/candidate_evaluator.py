@@ -109,6 +109,7 @@ class CandidateEvaluation:
     # from the historical candidate-shadow evidence. Empty means the
     # population carried no valid treatment identity (or was empty).
     treatment_id: str = ""
+    treatment_spec: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in self.__dict__.items()}
@@ -235,6 +236,15 @@ class CandidateEvaluator:
                 result.confidence = "INSUFFICIENT"
                 return result
             result.treatment_id = next(iter(pair_tids))
+            # Only unanimous, valid historical evidence can freeze provenance.
+            # Missing/mixed legacy scope does not invalidate research metrics.
+            from research_engine.lifecycle.treatment_provenance import validate_treatment_spec
+            specs = [p.get("treatment_spec") for p in pairs]
+            if specs and all(s == specs[0] for s in specs):
+                try:
+                    result.treatment_spec = validate_treatment_spec(specs[0], result.treatment_id)
+                except ValueError:
+                    result.treatment_spec = None
 
         # ─── STEP 3: MINIMUM SAMPLE GATE ─────────────────────────────
         result.n = len(pairs)

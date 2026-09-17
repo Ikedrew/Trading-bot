@@ -97,6 +97,7 @@ class TreatmentResolution:
     declared: dict[str, Any]
     params: dict[str, Any]
     treatment_id: str
+    treatment_spec: str | None = None
 
 
 def _canonical_treatment_id(
@@ -247,6 +248,15 @@ def resolve_candidate_treatment(
             return None, "malformed_computed_geometry"
 
     treatment_id = _canonical_treatment_id(change_type, declared, params)
+    from research_engine.lifecycle.treatment_provenance import canonical_spec
+    try:
+        scope = canonical_candidate_scope(change_definition)
+    except _ScopeError:
+        return None, "malformed_scope"
+    treatment_spec = canonical_spec({
+        "change_type": change_type, "declared": declared,
+        "scope": scope, "treatment_id": treatment_id,
+    })
     params = {**params, "treatment_id": treatment_id}
     return (
         TreatmentResolution(
@@ -254,6 +264,7 @@ def resolve_candidate_treatment(
             declared=declared,
             params=params,
             treatment_id=treatment_id,
+            treatment_spec=treatment_spec,
         ),
         "ok",
     )
@@ -412,6 +423,7 @@ def open_candidate_shadows(
                     ask_at_entry=ask,
                     # Candidate shadow lineage
                     shadow_type=f"CANDIDATE_{candidate.candidate_id}",
+                    treatment_spec=resolution.treatment_spec,
                     v10_action="CANDIDATE_SHADOW",
                 )
 
@@ -470,6 +482,20 @@ def _string_list(value: Any) -> list[str] | None:
             raise _ScopeError("scope list entries must be non-empty strings")
         items.append(item)
     return items or None
+
+
+def canonical_candidate_scope(defn: dict) -> dict:
+    """Freeze Wave 4D.3 membership, including empty-pattern legacy fallback."""
+    scope = defn.get(_SCOPE_KEY, {})
+    if scope and not isinstance(scope, dict):
+        raise _ScopeError("malformed scope")
+    scope = scope if isinstance(scope, dict) else {}
+    symbols = _string_list(scope.get("symbols"))
+    patterns = _string_list(scope.get("patterns"))
+    if patterns is None:
+        patterns = _string_list(defn.get("patterns"))
+    return {"symbols": sorted(set(symbols)) if symbols else None,
+            "patterns": sorted(set(patterns)) if patterns else None}
 
 
 def candidate_in_scope(candidate: Any, *, symbol: str, pattern: str) -> tuple[bool, str]:
