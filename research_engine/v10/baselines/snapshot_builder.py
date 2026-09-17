@@ -107,6 +107,26 @@ class SnapshotBuilder:
         logger.info(f"[BASELINE] Built snapshot: {snapshot_id}")
         return snapshot
 
+    @staticmethod
+    def from_verified_fake_state(previous: BaselineSnapshot, effective_state: dict,
+                                 operation_id: str) -> BaselineSnapshot:
+        """Capture injected fake policy without collecting unrelated live data.
+
+        Existing baseline context is frozen, not recollected at recovery. This
+        hash describes a fake policy authority ONLY, not core config identity.
+        """
+        data = json.loads(json.dumps(previous.to_dict(), allow_nan=False))
+        data["configuration"]["wave5_fake_policy"] = effective_state
+        data["config_hash"] = hashlib.sha256(json.dumps({
+            "parent_config": previous.config_hash, "fake_policy": effective_state,
+        }, sort_keys=True, allow_nan=False).encode()).hexdigest()
+        content = {k: v for k, v in data.items()
+                   if k not in ("snapshot_id", "created_at", "notes", "identity_hash")}
+        identity = hashlib.sha256(json.dumps(content, sort_keys=True, allow_nan=False).encode()).hexdigest()
+        data.update(snapshot_id=f"V10_BASELINE_{identity}", identity_hash=identity,
+                    notes=f"Verified fake policy operation {operation_id}")
+        return BaselineSnapshot.from_dict(data)
+
     def _collect_environment(self) -> dict[str, Any]:
         """Collect environment information."""
         return {
