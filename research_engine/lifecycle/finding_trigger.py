@@ -224,6 +224,10 @@ class FindingTrigger:
     dismissed_reason: str = ""
     detected_at: str = ""
     resolved_at: str = ""
+    # Wave 5.4: research/optimisation epoch (active baseline identity) this
+    # trigger belongs to. Empty for pre-Wave-5.4 records (backward compatible);
+    # deduplication is scoped to the SAME epoch only.
+    baseline_epoch: str = ""
 
     def __post_init__(self):
         if not self.trigger_id:
@@ -255,6 +259,7 @@ class FindingTrigger:
             "dismissed_reason": self.dismissed_reason,
             "detected_at": self.detected_at,
             "resolved_at": self.resolved_at,
+            "baseline_epoch": self.baseline_epoch,
         }
 
     @classmethod
@@ -282,6 +287,7 @@ class FindingTrigger:
             dismissed_reason=data.get("dismissed_reason", ""),
             detected_at=data.get("detected_at", ""),
             resolved_at=data.get("resolved_at", ""),
+            baseline_epoch=data.get("baseline_epoch", ""),
         )
 
 
@@ -949,6 +955,14 @@ class FindingTriggerEngine:
         """Apply eligibility rules. Returns trigger if eligible, None if dismissed."""
         trigger.status = TriggerStatus.SCREENED
 
+        # Wave 5.4: stamp the CURRENT research epoch (active production
+        # baseline identity, via the existing 4C.1 authority) so that
+        # deduplication below is epoch-scoped: a finding completed under a
+        # previous baseline does not suppress re-investigation after the
+        # active baseline advances.
+        from research_engine.v10.baselines.baseline_authority import research_epoch
+        trigger.baseline_epoch = trigger.baseline_epoch or research_epoch()
+
         # Rule 1: Sample size
         if trigger.sample_size < self._config.min_sample_size:
             trigger.status = TriggerStatus.DISMISSED
@@ -1019,6 +1033,13 @@ class FindingTriggerEngine:
         """
         for existing in self._triggers.values():
             if existing.status in (TriggerStatus.DISMISSED, TriggerStatus.BLOCKED):
+                continue
+            # Wave 5.4: dedup is scoped to the SAME baseline epoch. A trigger
+            # completed under a previous active baseline is historical
+            # knowledge — it must NOT suppress a new investigation after the
+            # active baseline advances (N → N+1). Within one epoch, duplicate
+            # suppression is unchanged.
+            if existing.baseline_epoch != trigger.baseline_epoch:
                 continue
             # Rule 1: Exact finding_id match
             if existing.finding_id == trigger.finding_id:

@@ -482,3 +482,21 @@ def resolve_candidate_baseline() -> str:
             result.drift_detail,
         )
     return result.snapshot.snapshot_id
+
+
+def research_epoch(
+    *,
+    registry: SnapshotRegistry | None = None,
+    pointer_file: str | Path | None = None,
+) -> str:
+    """Canonical research/optimisation epoch identity (Wave 5.4).
+
+    The epoch IS the active production baseline identity from the existing
+    4C.1 authority — no second identity system, no wall clock, no counter.
+    New optimisation cycles (finding re-detection, candidate creation) bind
+    to this value; when the active baseline advances N → N+1 the epoch
+    advances with it, and when no active baseline exists yet all pre-
+    bootstrap triggers share the empty-string epoch (historical behaviour).
+    """
+    state = get_active(registry=registry, pointer_file=pointer_file)
+    return state.active_baseline_id if state is not None else ""

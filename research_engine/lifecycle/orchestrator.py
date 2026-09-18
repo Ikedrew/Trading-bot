@@ -25,6 +25,7 @@ This module NEVER modifies production V10 autonomously.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import statistics
 from dataclasses import dataclass, field
@@ -595,7 +596,7 @@ class ResearchOrchestrator:
             if result.n < 50 or not result.survives_top20_removal:
                 risk_level = "HIGH"
 
-            candidate_id = f"OPT-{hypothesis.hypothesis_id[-8:]}"
+            base_candidate_id = f"OPT-{hypothesis.hypothesis_id[-8:]}"
 
             # ─── Wave 4C.1: canonical baseline identity binding ──────────
             # The candidate references the REAL persisted active baseline —
@@ -612,6 +613,17 @@ class ResearchOrchestrator:
             baseline_config_hash = (
                 baseline_snapshot.config_hash if baseline_snapshot else ""
             )
+
+            # ─── Wave 5.4: baseline-aware candidate identity ─────────────
+            # The same conceptual hypothesis may legitimately be investigated
+            # again after the active production baseline advances. Candidate
+            # identity must distinguish "hypothesis against Baseline N" from
+            # "the same hypothesis against Baseline N+1": a new epoch gets a
+            # NEW deterministic candidate bound to the new baseline, while the
+            # historical candidate is never mutated or rebound.
+            registry = CandidateRegistry()
+            candidate_id = self._resolve_candidate_id(
+                registry, base_candidate_id, baseline_id)
 
             record = CandidateRecord(
                 candidate_id=candidate_id,
@@ -634,12 +646,17 @@ class ResearchOrchestrator:
                 status="PROPOSED",
             )
 
-            # Register (idempotent — skip if exists)
-            try:
-                registry = CandidateRegistry()
+            # Register (idempotent). Same hypothesis + same baseline epoch →
+            # the persisted candidate is the truth and is returned unchanged.
+            # Same hypothesis + new baseline epoch → a NEW candidate record was
+            # resolved above and is created here.
+            existing = registry.get(candidate_id)
+            if existing is None:
                 registry.create(record)
-            except ValueError:
-                pass  # Already exists
+            else:
+                # Idempotent replay: return the persisted record, never a
+                # reconstructed lookalike, and never rebind/mutate history.
+                record = existing
 
             self._registry._log_event("OPTIMISATION_CANDIDATE_CREATED",
                                        hypothesis.hypothesis_id, candidate_id)
@@ -650,6 +667,35 @@ class ResearchOrchestrator:
             self._registry._log_event("CANDIDATE_CREATION_FAILED",
                                        hypothesis.hypothesis_id, str(e)[:100])
             return None
+
+    @staticmethod
+    def _epoch_suffix(baseline_id: str) -> str:
+        """Deterministic short epoch suffix derived from the baseline identity."""
+        return hashlib.sha256(baseline_id.encode("utf-8")).hexdigest()[:8]
+
+    def _resolve_candidate_id(self, registry: "CandidateRegistry",
+                              base_id: str, baseline_id: str) -> str:
+        """
+        Resolve the candidate ID for (hypothesis, baseline epoch) — Wave 5.4.
+
+        - No prior candidate for base_id → base_id (unchanged historical form).
+        - Prior candidate bound to the SAME baseline → base_id (idempotent
+          same-epoch replay).
+        - Prior candidate bound to a DIFFERENT baseline → a new deterministic
+          ID suffixed with the new baseline epoch; the old record is never
+          rewritten. Historical candidate IDs are never re-bound.
+        """
+        existing = registry.get(base_id)
+        if existing is None or existing.baseline_id == baseline_id:
+            return base_id
+        candidate_id = f"{base_id}-{self._epoch_suffix(baseline_id)}"
+        occupied = registry.get(candidate_id)
+        if occupied is not None and occupied.baseline_id != baseline_id:
+            raise ValueError(
+                f"candidate id '{candidate_id}' collides across baseline "
+                f"epochs; refusing to rebind historical evidence"
+            )
+        return candidate_id
 
     def _derive_change_definition(self, hypothesis, result, contract) -> dict | None:
         """Derive what the proposed change would be from the hypothesis category."""
