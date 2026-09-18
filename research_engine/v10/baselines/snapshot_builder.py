@@ -127,6 +127,32 @@ class SnapshotBuilder:
                     notes=f"Verified fake policy operation {operation_id}")
         return BaselineSnapshot.from_dict(data)
 
+    @staticmethod
+    def from_verified_real_state(previous: BaselineSnapshot, effective_state: dict,
+                                 operation_id: str) -> BaselineSnapshot:
+        """Capture verified real optimisation policy (Wave 5.3, direction_inversion).
+
+        Same freeze semantics as from_verified_fake_state: existing baseline
+        context is frozen, never recollected. The effective policy participates
+        in config/identity, so NORMAL vs direction_inversion and distinct
+        frozen scopes produce distinct identities.
+        """
+        from core.optimisation_policy import validate_effective_state
+
+        cleaned = validate_effective_state(
+            json.loads(json.dumps(effective_state, allow_nan=False)))
+        data = json.loads(json.dumps(previous.to_dict(), allow_nan=False))
+        data["configuration"]["optimisation_policy"] = cleaned
+        data["config_hash"] = hashlib.sha256(json.dumps({
+            "parent_config": previous.config_hash, "optimisation_policy": cleaned,
+        }, sort_keys=True, allow_nan=False).encode()).hexdigest()
+        content = {k: v for k, v in data.items()
+                   if k not in ("snapshot_id", "created_at", "notes", "identity_hash")}
+        identity = hashlib.sha256(json.dumps(content, sort_keys=True, allow_nan=False).encode()).hexdigest()
+        data.update(snapshot_id=f"V10_BASELINE_{identity}", identity_hash=identity,
+                    notes=f"Verified optimisation policy operation {operation_id}")
+        return BaselineSnapshot.from_dict(data)
+
     def _collect_environment(self) -> dict[str, Any]:
         """Collect environment information."""
         return {

@@ -208,6 +208,29 @@ def prepare_execution(
     except Exception:
         pass  # Candidate shadow must NEVER block production execution
 
+    # ─── 4c. PRODUCTION OPTIMISATION POLICY (Wave 5.3, explicit only) ──
+    # ONE canonical runtime consumption point: the durable effective policy
+    # (core/optimisation_policy.py) may only replace the incumbent intent
+    # here, after shadows, using the SAME-sample treatment_reference_entry
+    # carried above. NORMAL/out-of-scope returns incumbent unchanged.
+    # Missing policy file defaults to NORMAL (incumbent kept); a CORRUPT
+    # policy file fails closed by raising (never silently trade). An ACTIVE
+    # in-scope policy that cannot compute geometry fails closed by raising
+    # (never silently trading the wrong side).
+    from core.optimisation_policy import apply_production_intent as _apply_policy
+    from core.optimisation_policy import read_policy_file as _read_policy
+
+    _live_state = _read_policy()
+    _policy_out, _policy_applied = _apply_policy(
+        intent=_intent,
+        symbol=sym_state.symbol,
+        pattern=getattr(_intent, "pattern", "") or "",
+        treatment_reference_entry=_treatment_reference_entry,
+        policy_state=_live_state,
+    )
+    if _policy_applied:
+        _intent = _policy_out
+
     return ExecutionPrep(
         intent=_intent,
         correlation_id=_cor_id,

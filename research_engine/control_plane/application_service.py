@@ -76,6 +76,26 @@ class ApplicationService:
         path = self._path(application_id)
         return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
+    def _uses_real_policy(self):
+        from research_engine.control_plane.direction_inversion_adapter import (
+            DirectionInversionPolicyAdapter,
+        )
+
+        return isinstance(self.adapter, DirectionInversionPolicyAdapter)
+
+    def _intended_from_app(self, app, application_id):
+        if self._uses_real_policy():
+            from core.optimisation_policy import intended_state_from_approval
+
+            return intended_state_from_approval(application=app)
+        return {"kind": "wave5_fake_policy", "treatment_id": app["treatment_id"],
+                "treatment_spec": app["treatment_spec"], "application_id": application_id}
+
+    def _starting_policy(self, old):
+        if self._uses_real_policy():
+            return old.configuration["optimisation_policy"]
+        return old.configuration["wave5_fake_policy"]
+
     def _save(self, op):
         path = self._path(op["application"]["application_id"])
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -137,7 +157,10 @@ class ApplicationService:
     def _old(self, app):
         old = self.registry.load(app["baseline_id"])
         require(old is not None and old.config_hash == app["baseline_config_hash"], "Stale baseline config")
-        require("wave5_fake_policy" in old.configuration, "No captured starting fake state")
+        if self._uses_real_policy():
+            require("optimisation_policy" in old.configuration, "No captured starting fake state")
+        else:
+            require("wave5_fake_policy" in old.configuration, "No captured starting fake state")
         return old
 
     def _transition(self, op, state):
@@ -162,9 +185,8 @@ class ApplicationService:
             active = self._active()
             require(active["active_baseline_id"] == app["baseline_id"], "Stale active baseline")
             previous = json.loads(canonical(self.adapter.read_effective_state()))
-            require(previous == old.configuration["wave5_fake_policy"], "Starting state drift")
-            intended = {"kind": "wave5_fake_policy", "treatment_id": app["treatment_id"],
-                        "treatment_spec": app["treatment_spec"], "application_id": application_id}
+            require(previous == self._starting_policy(old), "Starting state drift")
+            intended = self._intended_from_app(app, application_id)
             self.adapter.validate_intended_state(json.loads(canonical(intended)))
             op = {"schema_version": 1, "operation_id": "OP-" + digest(application_id),
                   "application": app, "approval": proof, "old_pointer": active,
@@ -221,9 +243,14 @@ class ApplicationService:
         self._transition(op, "DEPLOYED")
         self._transition(op, "VERIFIED")
         if "snapshot" not in op:
-            snapshot = SnapshotBuilder.from_verified_fake_state(
-                BaselineSnapshot.from_dict(op["old_snapshot"]),
-                op["verification"]["actual"], op["operation_id"])
+            if self._uses_real_policy():
+                snapshot = SnapshotBuilder.from_verified_real_state(
+                    BaselineSnapshot.from_dict(op["old_snapshot"]),
+                    op["verification"]["actual"], op["operation_id"])
+            else:
+                snapshot = SnapshotBuilder.from_verified_fake_state(
+                    BaselineSnapshot.from_dict(op["old_snapshot"]),
+                    op["verification"]["actual"], op["operation_id"])
             op["snapshot"] = snapshot.to_dict()
             self._save(op)  # Freeze exact content before writing the registry.
         snapshot = BaselineSnapshot.from_dict(op["snapshot"])
