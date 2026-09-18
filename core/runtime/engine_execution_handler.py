@@ -49,6 +49,13 @@ class ExecutionPrep:
     """Canonical opportunity lineage root (remediation)."""
     observation_id: str = ""
     """Canonical bar observation ID."""
+    treatment_reference_entry: float | None = None
+    """Wave 5.3C canonical treatment reference (bid+ask)/2.
+    Same tick sample passed to candidate shadows; provenance only.
+    Never alters incumbent production direction/entry/SL/TP/volume.
+    Future production direction_inversion calls
+    canonical_direction_inversion(incumbent_direction,
+    treatment_reference_entry, incumbent_stop)."""
 
 
 def prepare_execution(
@@ -155,12 +162,36 @@ def prepare_execution(
     # Opens additional shadows for any candidates in SHADOW_TESTING.
     # Observation-only: never modifies production, never blocks execution.
     try:
+        from research_engine.lifecycle.direction_inversion_geometry import (  # noqa: PLC0415
+            canonical_treatment_reference_entry as _canon_ref,
+        )
+    except Exception:
+        _canon_ref = None
+    try:
+        _treatment_reference_entry = _canon_ref(bid, ask) if _canon_ref else None
+    except Exception:
+        _treatment_reference_entry = None
+    if _treatment_reference_entry is None:
+        try:
+            _treatment_reference_entry = (float(bid) + float(ask)) / 2.0
+        except Exception:
+            _treatment_reference_entry = None
+    _mid = _treatment_reference_entry
+    try:
+        import math as _mm2
+        if not isinstance(_mid, (int, float)) or isinstance(_mid, bool):
+            _mid = (bid + ask) / 2
+        elif not _mm2.isfinite(float(_mid)):
+            _mid = (bid + ask) / 2
+    except Exception:
+        _mid = (bid + ask) / 2
+    try:
         from research_engine.lifecycle.candidate_shadow_hook import open_candidate_shadows
         open_candidate_shadows(
             symbol=sym_state.symbol,
             cycle_id=cycle_id,
             direction=_intent.side.name,
-            entry_price=(bid + ask) / 2,
+            entry_price=_mid,
             stop_loss=_intent.sl,
             take_profit=_intent.tp,
             entry_time=float(closed_time),
@@ -172,6 +203,7 @@ def prepare_execution(
             bid=bid,
             ask=ask,
             strategy=new_result.get("strategy", ""),
+            treatment_reference_entry=_treatment_reference_entry,
         )
     except Exception:
         pass  # Candidate shadow must NEVER block production execution
@@ -182,4 +214,5 @@ def prepare_execution(
         decision_id=_decision_id,
         canonical_opportunity_id=canonical_opportunity_id or new_result.get("canonical_opportunity_id", ""),
         observation_id=observation_id or new_result.get("observation_id", ""),
+        treatment_reference_entry=_treatment_reference_entry,
     )

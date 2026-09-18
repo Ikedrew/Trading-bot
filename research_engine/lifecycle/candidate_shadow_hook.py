@@ -185,17 +185,29 @@ def resolve_candidate_treatment(
     declared: dict[str, Any]
 
     if change_type == "direction_inversion":
+        # Wave 5.3C fidelity repair: single canonical pure geometry.
         # Fixed, declared-by-contract treatment: invert direction, keep the
         # original risk distance, take profit at 3R. No declared parameters.
+        # Canonical reference_entry is the supplied midpoint (bid+ask)/2
+        # from the execution/preparation tick; R = abs(reference-entry -
+        # incumbent_stop). Delegates to the shared helper so shadow and
+        # future production derive identical geometry. The passed
+        # risk_distance is intentionally NOT used here: canonical R is
+        # derived inside the helper (identical on the real path where
+        # risk_distance == abs(entry_price - stop_loss)).
+        from research_engine.lifecycle.direction_inversion_geometry import (  # noqa: PLC0415
+            canonical_direction_inversion,
+        )
         declared = {}
-        inv_dir = "BUY" if direction == "SELL" else "SELL"
-        if inv_dir == "BUY":
-            new_sl = entry_price - risk_distance
-            new_tp = entry_price + risk_distance * 3.0
-        else:
-            new_sl = entry_price + risk_distance
-            new_tp = entry_price - risk_distance * 3.0
-        params = {"direction": inv_dir, "stop_loss": new_sl, "take_profit": new_tp}
+        _geo = canonical_direction_inversion(
+            incumbent_direction=direction,
+            reference_entry=entry_price,
+            incumbent_stop=stop_loss,
+        )
+        if _geo is None:
+            return None, "malformed_computed_geometry"
+        params = {"direction": _geo.inverted_direction,
+                  "stop_loss": _geo.stop, "take_profit": _geo.target}
 
     elif change_type == "geometry_modification":
         # The multiplier is a DECLARED treatment parameter. There is NO
@@ -321,6 +333,7 @@ def open_candidate_shadows(
     bid: float,
     ask: float,
     strategy: str = "",
+    treatment_reference_entry: float | None = None,
 ) -> int:
     """
     Open candidate shadow observations for all active SHADOW_TESTING candidates.
@@ -343,7 +356,19 @@ def open_candidate_shadows(
         if not candidates:
             return 0
 
-        risk_distance = abs(entry_price - stop_loss)
+        ref = treatment_reference_entry
+        try:
+            import math as _mm
+            bad = isinstance(ref, bool) or not isinstance(ref, (int, float))
+            bad = bad or not _mm.isfinite(float(ref))
+            ref = entry_price if bad else float(ref)
+        except Exception:
+            ref = entry_price
+        # Canonical R uses the treatment reference (same-sample midpoint),
+        # not a stale entry_price. On the real path ref == entry_price so
+        # this is identical; on legacy direct calls with entry_price only,
+        # ref falls back to entry_price (bit-identical behaviour).
+        risk_distance = abs(ref - stop_loss)
         if risk_distance <= 0:
             return 0
 
@@ -354,7 +379,7 @@ def open_candidate_shadows(
                 resolution, reason = resolve_candidate_treatment(
                     change_definition=candidate.change_definition,
                     direction=direction,
-                    entry_price=entry_price,
+                    entry_price=ref,
                     stop_loss=stop_loss,
                     take_profit=take_profit,
                     risk_distance=risk_distance,
