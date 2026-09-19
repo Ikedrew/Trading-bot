@@ -44,6 +44,15 @@ Evidence provenance actually persisted on historical observations:
 Dimensions NOT persisted on individual observations (the model fails closed
 when these would be required):
     - pattern is NOT on the paired-pair output (candidate_pairing.build_prospective_pairs).
+
+Wave 6.2B provenance carrier (NO eligibility science): EvidenceEligibilityDecision
+echoes the observation's already-existing canonical provenance verbatim --
+correlation_id (the opportunity identity that candidate_pairing uses for exact
+one-to-one lineage and replay-duplicate collapsing) and treatment_id (the frozen
+treatment identity). The echo exists ONLY so that later durable evidence-
+continuity aggregation can bind each decision to the exact observation it
+describes and prove duplicate-observation safety. Neither echoed field
+influences any eligibility branch, and no new observation identity is invented.
 """
 
 from __future__ import annotations
@@ -177,6 +186,10 @@ class HistoricalObservation:
     symbol: str | None = None
     pattern: str | None = None
     treatment_id: str | None = None
+    # Canonical opportunity identity (persisted on paired observations and used
+    # by candidate_pairing for exact one-to-one lineage). Echoed into the
+    # decision verbatim so Wave 6.2B can prove duplicate-observation safety.
+    correlation_id: str | None = None
 
 
 # -- Eligibility decision ------------------------------------------------------
@@ -203,6 +216,10 @@ class EvidenceEligibilityDecision:
     may_contribute_directly: bool
     fresh_evidence_required: bool
     limitations: tuple[str, ...]
+    # Wave 6.2B provenance carriers: ECHOED verbatim from the observation.
+    # They are never derived, never rewritten and never affect eligibility.
+    correlation_id: str | None = None
+    treatment_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -216,6 +233,8 @@ class EvidenceEligibilityDecision:
             "may_contribute_directly": self.may_contribute_directly,
             "fresh_evidence_required": self.fresh_evidence_required,
             "limitations": list(self.limitations),
+            "correlation_id": self.correlation_id,
+            "treatment_id": self.treatment_id,
         }
 
 
@@ -353,6 +372,8 @@ def _failed_decision(
         may_contribute_directly=may_cons,
         fresh_evidence_required=fresh,
         limitations=tuple(limitations),
+        correlation_id=observation.correlation_id,
+        treatment_id=observation.treatment_id,
     )
 
 
@@ -374,6 +395,8 @@ def _eligible_decision(
         may_contribute_directly=True,
         fresh_evidence_required=False,
         limitations=tuple(limitations),
+        correlation_id=observation.correlation_id,
+        treatment_id=observation.treatment_id,
     )
 
 
