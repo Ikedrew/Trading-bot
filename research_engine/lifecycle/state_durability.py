@@ -39,7 +39,7 @@ previous_checkpoint_id, cycle_id/dataset_fingerprint (when available),
 artifacts [{path, sha256, size}], status "complete".
 
 Excluded by construction: lock/PID/temp files, scheduled-run logs, derived
-reports/evaluations/evidence-cycle logs (reconstructable), raw production
+reports/evaluations/evidence-cycle logs (reconstructable); the frozen Wave-5 evaluation provenance (logs/research_lifecycle/evaluations/*.jsonl) is canonical and checkpointed, raw production
 evidence, credentials/secrets.
 
 Credential model (Gap 3 preserved): local development may set
@@ -77,11 +77,23 @@ CHECKPOINT_ARTIFACTS: tuple[str, ...] = (
     "logs/research_lifecycle/audit_log.jsonl",               # append-only audit history (C, retained)
     "logs/research_lifecycle/cycles/latest_success.json",    # last-successful-cycle pointer (A)
     "data/research/candidates/candidates.jsonl",             # candidate registry + validation history (A)
-    "analysis/summaries/research_knowledge.json",            # knowledge map (dedup depends on it) (A)
+    "analysis/summaries/research_knowledge.json",  # knowledge map (dedup depends on it) (A)
+    "data/research/lifecycle/recommendations/recommendations.jsonl",  # 4E.1 canonical recommendation truth (A)
+    "data/research/candidates/decisions.jsonl",  # 4E.2 canonical human decisions (A)
+    "data/research/governance/application.jsonl",  # 4E.3/5 VERIFIED-transition application ledger (A)
+    "data/research/lifecycle/impact_history/candidate_impact_history.jsonl",  # 6.1B append-only impact history (A)
+    "data/research/lifecycle/evidence_continuity/candidate_evidence_continuity.jsonl",  # 6.2B append-only continuity history (A)
+    "data/research/lifecycle/reconsideration_history/candidate_reconsideration_history.jsonl",  # 6.3B append-only reconsideration history (A)
 )
 
-# Glob-style additions: Gap-6 weekly snapshots (small, required for comparison).
+# Glob-style additions. Each member is a canonical recoverable directory
+# of small per-entity files (included only when files exist).
 _SNAPSHOT_GLOB = "logs/research_lifecycle/cycles/*_snapshot.json"
+_EVALUATIONS_GLOB = "logs/research_lifecycle/evaluations/*.jsonl"  # 5.3A frozen evaluation provenance (A)
+_OPERATIONS_GLOB = "data/research/governance/operations/*.json"   # 5 fsynced VERIFIED-transition operation file (A)
+# Tuple walked by _collect_local_artifacts so new per-entity globs are picked up
+# alongside the Gap-6 cycle snapshots.
+_CHECKPOINT_GLOBS: tuple[str, ...] = (_SNAPSHOT_GLOB, _EVALUATIONS_GLOB, _OPERATIONS_GLOB)
 
 _EXCLUDED_NAME_PARTS = (".lock", ".tmp", ".pem", ".env", ".aws", "scheduled_runs.log")
 
@@ -120,10 +132,11 @@ def _collect_local_artifacts() -> dict[str, bytes]:
     artifacts: dict[str, bytes] = {}
     root = Path(".")
     candidates: list[str] = list(CHECKPOINT_ARTIFACTS)
-    for snap in sorted(root.glob(_SNAPSHOT_GLOB)):
-        rel = snap.as_posix()
-        if rel not in candidates:
-            candidates.append(rel)
+    for pattern in _CHECKPOINT_GLOBS:
+        for found in sorted(root.glob(pattern)):
+            rel = found.as_posix()
+            if rel not in candidates:
+                candidates.append(rel)
     for rel in candidates:
         if _is_excluded(rel):
             continue
