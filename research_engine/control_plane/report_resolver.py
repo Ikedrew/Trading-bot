@@ -130,6 +130,55 @@ def _is_epoch_current(report: dict[str, Any]) -> bool:
     return _extract_epoch(report) in _CURRENT_EPOCHS
 
 
+def _resolve_structured_provenance(
+    report: dict[str, Any],
+) -> tuple[bool, ReportValidity | None, str]:
+    """Validate structured evidence provenance when a fingerprint carries it.
+
+    The first boolean distinguishes an absent structure (legacy compatibility)
+    from a present but invalid one (which must fail closed).
+    """
+    fingerprint = report.get("fingerprint", {})
+    if not isinstance(fingerprint, dict) or "evidence_provenance" not in fingerprint:
+        return False, None, ""
+
+    from research_engine.control_plane.evidence_provenance import (
+        CURRENT,
+        validate_evidence_provenance,
+    )
+
+    valid, state, reason = validate_evidence_provenance(
+        fingerprint.get("evidence_provenance")
+    )
+    if not valid:
+        return True, ReportValidity.INVALIDATED, reason
+    provenance = fingerprint["evidence_provenance"]
+    components = provenance["components"]
+    sources = [str(component["source"]) for component in components]
+    expected_source = sources[0] if len(sources) == 1 else "MULTI_SOURCE"
+    if (
+        fingerprint.get("records_used") != provenance.get("records_used")
+        or fingerprint.get("records_excluded") != provenance.get("records_excluded")
+        or fingerprint.get("sources") != sources
+        or fingerprint.get("source") != expected_source
+    ):
+        return (
+            True,
+            ReportValidity.INVALIDATED,
+            "Fingerprint summary contradicts structured evidence provenance",
+        )
+    declared_epoch = _extract_epoch(report)
+    if state != CURRENT:
+        return True, ReportValidity.STALE, reason
+    if declared_epoch != CURRENT:
+        return (
+            True,
+            ReportValidity.INVALIDATED,
+            "Structured CURRENT provenance contradicts the declared report epoch",
+        )
+    return True, None, reason
+
+
 def _identity_is_accepted(
     report: dict[str, Any],
     expected_question_id: str,
@@ -184,6 +233,11 @@ def resolve_report_validity(
         invalidation = is_report_invalidated(filename, fingerprint)
         if invalidation is not None:
             return ReportValidity.INVALIDATED, invalidation.reason
+    has_structured, structured_validity, structured_reason = (
+        _resolve_structured_provenance(report_data)
+    )
+    if has_structured and structured_validity is not None:
+        return structured_validity, structured_reason
     epoch = _extract_epoch(report_data)
     if not epoch:
         return ReportValidity.LEGACY, "No evidence epoch; pre-CURRENT report"

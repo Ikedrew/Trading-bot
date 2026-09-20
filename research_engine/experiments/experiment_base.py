@@ -165,6 +165,50 @@ def build_fingerprint(
     }
 
 
+def build_fingerprint_from_provenance(
+    evidence_provenance: dict[str, Any],
+    *,
+    validation_score: str = "UNKNOWN",
+) -> dict[str, Any]:
+    """Build a fingerprint tied to a validated evidence selection.
+
+    This is the only shared path that derives CURRENT from structured
+    provenance.  It never accepts an epoch override or caller-supplied counts.
+    """
+    from research_engine.control_plane.evidence_provenance import (
+        CURRENT,
+        validate_evidence_provenance,
+    )
+
+    valid, state, reason = validate_evidence_provenance(evidence_provenance)
+    epoch = CURRENT if valid and state == CURRENT else "UNVERIFIED"
+    components = evidence_provenance.get("components", []) if isinstance(
+        evidence_provenance, dict
+    ) else []
+    sources = [str(item.get("source", "")) for item in components if isinstance(item, dict)]
+    digest = str(evidence_provenance.get("digest", "")) if isinstance(
+        evidence_provenance, dict
+    ) else ""
+    return {
+        "dataset_id": f"evidence_{digest[:16]}" if digest else "evidence_unverified",
+        "records_used": (
+            int(evidence_provenance.get("records_used", 0))
+            if isinstance(evidence_provenance, dict) else 0
+        ),
+        "records_excluded": (
+            int(evidence_provenance.get("records_excluded", 0))
+            if isinstance(evidence_provenance, dict) else 0
+        ),
+        "source": sources[0] if len(sources) == 1 else "MULTI_SOURCE",
+        "sources": sources,
+        "epoch": epoch,
+        "architecture_version": "new_pipeline_v1.2",
+        "validation_score": validation_score,
+        "evidence_provenance": evidence_provenance,
+        "provenance_validation": reason,
+    }
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # READINESS VALIDATION
 # ═══════════════════════════════════════════════════════════════════════════════

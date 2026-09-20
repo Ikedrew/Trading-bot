@@ -13,7 +13,7 @@ import math
 from typing import Any, Callable, Mapping
 
 from research_engine.data_quality.classifier import DataEpoch, classify_record
-from core.production_data_contract import current_schema
+from core.production_data_contract import PRODUCTION_SCHEMA_REGISTRY, current_schema
 
 
 _PHYSICAL_DATASETS = {
@@ -242,7 +242,8 @@ def _known(value: Any) -> bool:
     )
 
 
-def _record_epoch(record: dict[str, Any], source: str) -> DataEpoch:
+def classify_evidence_record(record: dict[str, Any], source: str) -> DataEpoch:
+    """Classify one record using the control plane's authoritative epoch rules."""
     explicit = _recursive_value(record, ("data_epoch", "epoch"))
     if explicit:
         value = str(explicit).upper()
@@ -266,6 +267,58 @@ def _record_epoch(record: dict[str, Any], source: str) -> DataEpoch:
     if source in _CANONICAL_V1_SOURCES:
         return DataEpoch.CURRENT
     return classify_record(record)
+
+
+def canonical_evidence_source(source: str) -> str | None:
+    """Resolve a report-facing source name to a production-contract dataset."""
+    value = str(source or "").strip()
+    if not value:
+        return None
+    physical = _PHYSICAL_DATASETS.get(value, value)
+    if physical in PRODUCTION_SCHEMA_REGISTRY:
+        return physical
+    if value.endswith("_v1"):
+        candidate = value[:-3]
+        if candidate in PRODUCTION_SCHEMA_REGISTRY:
+            return candidate
+    return None
+
+
+def authoritative_evidence_schema(source: str) -> str | None:
+    """Return the current production schema for a recognised evidence source."""
+    canonical = canonical_evidence_source(source)
+    return current_schema(canonical) if canonical is not None else None
+
+
+def classify_authoritative_evidence_record(
+    record: dict[str, Any],
+    source: str,
+    *,
+    schema: str | None = None,
+) -> DataEpoch | None:
+    """Strictly classify evidence supplied to the provenance boundary.
+
+    Unlike ``EvidenceSnapshot``, which obtains source identity from its loader,
+    this boundary may receive caller-supplied records.  It therefore requires
+    every record to carry the expected production schema before applying the
+    same epoch rules used by the control plane.  ``None`` means the source or
+    record is incompatible/unclassifiable.
+    """
+    canonical = canonical_evidence_source(source)
+    expected_schema = authoritative_evidence_schema(source)
+    if (
+        canonical is None
+        or expected_schema is None
+        or not isinstance(record, dict)
+        or (schema is not None and str(schema) != expected_schema)
+        or str(record.get("schema_version", "")) != expected_schema
+    ):
+        return None
+    return classify_evidence_record(record, canonical)
+
+
+# Private compatibility alias for existing internal/tests that imported it.
+_record_epoch = classify_evidence_record
 
 
 def _normalise(record: dict[str, Any], source: str) -> dict[str, Any]:
