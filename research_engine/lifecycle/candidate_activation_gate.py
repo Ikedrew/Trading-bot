@@ -29,11 +29,10 @@ Wave 4C.2 — baseline-bound activation invariant (FAIL CLOSED):
     deterministic, auditable reason is recorded in ActivationResult.skips.
     There is NO silent rebase and NO baseline/candidate mutation.
 
-Known limitation (documented, deliberately NOT expanded in 4C.2): baseline
-validation and the status transition are two sequential operations resolved
-in the same loop iteration; a concurrent active-baseline change in the
-sub-second window between them is not excluded by a distributed
-transaction. Full atomicity would require a larger architecture change.
+Hardening 1.5: the final baseline validation and status transition are made
+under the baseline authority's process-local activation guard. The runtime
+instance lock excludes a second writer process; the local guard serializes
+in-process active-baseline changes through set_active().
 
 
 Lifecycle flow enabled:
@@ -156,9 +155,6 @@ def activate_eligible_candidates(
             # candidate stays PROPOSED and the deterministic block reason is
             # recorded in result.skips for audit. NO silent rebase, NO
             # baseline mutation, NO candidate rewrite to a new baseline.
-            # (TOCTOU note: validation is resolved from the durable authority
-            # immediately before the transition in the same loop iteration;
-            # see module docstring limitation.)
             baseline_ok, baseline_reason = _check_baseline_provenance(candidate)
             if not baseline_ok:
                 result.candidates_ineligible += 1
@@ -172,9 +168,31 @@ def activate_eligible_candidates(
                 )
                 continue
 
-            # Activate: PROPOSED → SHADOW_TESTING
+            # Revalidate at the actual commit boundary while excluding
+            # in-process set_active() calls. The preliminary proof above is
+            # not trusted across the validation-to-mutation window.
             try:
-                registry.update_status(candidate.candidate_id, CandidateStatus.SHADOW_TESTING)
+                from research_engine.v10.baselines.baseline_authority import (
+                    candidate_activation_guard,
+                )
+
+                with candidate_activation_guard():
+                    baseline_ok, baseline_reason = _check_baseline_provenance(candidate)
+                    if not baseline_ok:
+                        result.candidates_ineligible += 1
+                        result.skips.append({
+                            "candidate_id": candidate.candidate_id,
+                            "reason": f"baseline_provenance: {baseline_reason}",
+                        })
+                        logger.warning(
+                            "[ACTIVATION_GATE] Final baseline gate blocked %s: %s",
+                            candidate.candidate_id, baseline_reason,
+                        )
+                        continue
+                    registry.update_status(
+                        candidate.candidate_id,
+                        CandidateStatus.SHADOW_TESTING,
+                    )
                 activated += 1
                 result.candidates_activated += 1
                 result.activations.append({

@@ -38,6 +38,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -56,6 +58,13 @@ _ACTIVE_POINTER_FILE = "data/baselines/active_baseline.json"
 
 _POINTER_SCHEMA_VERSION = "active_baseline_v1"
 
+# Serializes the final candidate-activation proof with active-baseline pointer
+# and material-policy changes made through their authorities. This is
+# deliberately process-local:
+# the runtime's instance lock excludes a second writer process, while this
+# lock closes the in-process validation-to-status TOCTOU window.
+_ACTIVATION_AUTHORITY_LOCK = threading.RLock()
+
 # Distinguishable system/bootstrap identity (an audit label, NOT permission
 # infrastructure — no authentication is invented in this wave).
 BOOTSTRAP_ACTOR = "system:baseline_bootstrap"
@@ -71,6 +80,20 @@ class BaselineStateError(RuntimeError):
 
 class BaselineMissingError(BaselineStateError):
     """Activation attempted against a snapshot_id with no persisted snapshot."""
+
+
+@contextmanager
+def candidate_activation_guard():
+    """Keep final baseline validation authoritative through status commit.
+
+    Callers must perform their final ``validate_candidate_baseline`` while
+    inside this guard and commit the local candidate status before leaving it.
+    ``set_active`` and the local material-policy writer take the same
+    re-entrant lock, so accepted authority cannot change between those two
+    operations in this runtime.
+    """
+    with _ACTIVATION_AUTHORITY_LOCK:
+        yield
 
 
 @dataclass
@@ -308,6 +331,25 @@ def get_active(
 
 
 def set_active(
+    snapshot_id: str,
+    *,
+    actor: str,
+    reason: str,
+    registry: SnapshotRegistry | None = None,
+    pointer_file: str | Path | None = None,
+) -> ActiveBaselineState:
+    """Explicitly activate a snapshot, serialized with candidate activation."""
+    with _ACTIVATION_AUTHORITY_LOCK:
+        return _set_active_unlocked(
+            snapshot_id,
+            actor=actor,
+            reason=reason,
+            registry=registry,
+            pointer_file=pointer_file,
+        )
+
+
+def _set_active_unlocked(
     snapshot_id: str,
     *,
     actor: str,

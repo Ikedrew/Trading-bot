@@ -32,8 +32,21 @@ class DirectionInversionPolicyAdapter:
 
     def apply_effective_state(self, intended: dict[str, Any]) -> None:
         cleaned = _policy.validate_effective_state(json.loads(_policy.canonical(intended)))
-        _policy.write_policy_file(cleaned, self._path)
+        # This is the sole production writer for this material policy. Keep
+        # its local atomic file replacement from crossing a candidate's final
+        # baseline/config validation-to-status commit boundary.
+        from research_engine.v10.baselines.baseline_authority import (
+            candidate_activation_guard,
+        )
+
+        with candidate_activation_guard():
+            _policy.write_policy_file(cleaned, self._path)
 
     def restore_effective_state(self, previous: dict[str, Any]) -> None:
         cleaned = _policy.validate_effective_state(json.loads(_policy.canonical(previous)))
-        _policy.write_policy_file(cleaned, self._path)
+        from research_engine.v10.baselines.baseline_authority import (
+            candidate_activation_guard,
+        )
+
+        with candidate_activation_guard():
+            _policy.write_policy_file(cleaned, self._path)
