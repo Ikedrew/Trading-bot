@@ -1,10 +1,11 @@
 """
 Q1: Component → Reward Correlation Experiment
 
-Question: "Which decision components are correlated with positive trade outcomes?"
+Canonical D1: "Which of the 10 scoring components best predict actual
+R-multiple outcomes?"
 
-Joins decision_trace records (containing 10-factor component scores) with
-shadow trade outcomes (R-multiples) via correlation_id to determine which
+Joins canonical ``decision_trace_v1`` component scores with completed canonical
+shadow-runtime outcomes via ``canonical_opportunity_id`` to determine which
 scoring components have genuine predictive value.
 
 Produces:
@@ -13,9 +14,9 @@ Produces:
     Q1.3 — Component interaction analysis (aligned vs isolated)
 
 Data sources:
-    - logs/decision_trace/{SYMBOL}/{DATE}.jsonl (component scores)
-    - logs/shadow_trades/{SYMBOL}/{DATE}.jsonl (R-multiple outcomes)
-    Join key: correlation_id (primary), entity_id + cycle_id (fallback)
+    - decision_trace_v1 (component scores)
+    - shadow_runtime_v1, normalised to shadow_trades_v1 (R outcomes)
+    Join key: canonical_opportunity_id only
 
 This module ONLY reads data and produces analysis.
 It does NOT modify trading behaviour.
@@ -30,6 +31,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+MINIMUM_GOVERNED_SAMPLE = 50
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ATTRIBUTION RECORD
@@ -43,6 +46,7 @@ class AttributionRecord:
     correlation_id: str
     symbol: str
     cycle_id: int
+    canonical_opportunity_id: str = ""
     entity_id: str = ""
     timestamp_utc: str = ""
 
@@ -104,6 +108,10 @@ class ComponentRewardResult:
     total_decisions: int = 0
     decisions_with_outcome: int = 0
     join_rate: float = 0.0
+    unmatched_decisions: int = 0
+    unmatched_outcomes: int = 0
+    duplicate_decision_opportunities: list[str] = field(default_factory=list)
+    duplicate_outcome_opportunities: list[str] = field(default_factory=list)
 
     # Q1.1 — Per-component analysis
     component_stats: list[ComponentStats] = field(default_factory=list)
@@ -125,6 +133,10 @@ class ComponentRewardResult:
             "total_decisions": self.total_decisions,
             "decisions_with_outcome": self.decisions_with_outcome,
             "join_rate": round(self.join_rate, 4),
+            "unmatched_decisions": self.unmatched_decisions,
+            "unmatched_outcomes": self.unmatched_outcomes,
+            "duplicate_decision_opportunities": list(self.duplicate_decision_opportunities),
+            "duplicate_outcome_opportunities": list(self.duplicate_outcome_opportunities),
             "component_stats": [
                 {
                     "name": s.name,
@@ -182,6 +194,17 @@ def _extract_correlation_id(record: dict[str, Any]) -> str:
     return ""
 
 
+def _extract_canonical_opportunity_id(record: dict[str, Any]) -> str:
+    """Return the canonical opportunity lineage root, never a legacy alias."""
+    value = record.get("canonical_opportunity_id", "")
+    if value:
+        return str(value)
+    identity = record.get("identity", {})
+    if isinstance(identity, dict):
+        return str(identity.get("canonical_opportunity_id", "") or "")
+    return ""
+
+
 def _extract_r_multiple(record: dict[str, Any]) -> float | None:
     """Extract R-multiple from a shadow trade or trade_truth record."""
     # shadow_trades_v1 (simulated_outcome block)
@@ -217,62 +240,73 @@ def _extract_outcome_fields(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_attribution_records(
+def _build_attribution_records_with_diagnostics(
     decision_traces: list[dict[str, Any]],
     shadow_trades: list[dict[str, Any]],
-) -> list[AttributionRecord]:
+) -> tuple[list[AttributionRecord], dict[str, Any]]:
     """
-    Join decision_trace records with shadow trade outcomes via correlation_id.
+    Join canonical decision traces to primary shadow outcomes.
 
-    Primary join key: correlation_id
-    Fallback: entity_id match (if correlation_id missing on older records)
+    ``canonical_opportunity_id`` is the only join key. Duplicate decision or
+    primary-outcome rows make that opportunity ambiguous and are excluded with
+    explicit diagnostics; no positional, timestamp, correlation, or
+    symbol/cycle fallback is permitted.
 
     Returns AttributionRecords with component scores + outcomes.
     """
-    # Index shadow trades by correlation_id
-    shadow_by_cor: dict[str, dict[str, Any]] = {}
-    shadow_by_entity: dict[str, dict[str, Any]] = {}
-
+    shadow_groups: dict[str, list[dict[str, Any]]] = {}
     for shadow in shadow_trades:
-        cor_id = _extract_correlation_id(shadow)
-        if cor_id:
-            shadow_by_cor[cor_id] = shadow
-        # Also index by cycle_id + symbol as fallback
         identity = shadow.get("identity", shadow)
-        cycle = str(identity.get("cycle_id", shadow.get("cycle_id", "")))
-        sym = identity.get("symbol", shadow.get("symbol", ""))
-        if cycle and sym:
-            shadow_by_entity[f"{sym}_{cycle}"] = shadow
+        if not isinstance(identity, dict):
+            continue
+        if str(identity.get("shadow_type", "") or "") != "PRIMARY_HORIZON_SIMULATION":
+            continue
+        opportunity = _extract_canonical_opportunity_id(shadow)
+        if opportunity:
+            shadow_groups.setdefault(opportunity, []).append(shadow)
+
+    decision_groups: dict[str, list[dict[str, Any]]] = {}
+    for trace in decision_traces:
+        if not trace.get("pattern_detected", False) or not trace.get("components", {}):
+            continue
+        opportunity = _extract_canonical_opportunity_id(trace)
+        if opportunity:
+            decision_groups.setdefault(opportunity, []).append(trace)
+
+    duplicate_decisions = sorted(
+        opportunity for opportunity, rows in decision_groups.items() if len(rows) != 1
+    )
+    duplicate_outcomes = sorted(
+        opportunity for opportunity, rows in shadow_groups.items() if len(rows) != 1
+    )
+    ambiguous = set(duplicate_decisions) | set(duplicate_outcomes)
+    shadow_by_opportunity = {
+        opportunity: rows[0]
+        for opportunity, rows in shadow_groups.items()
+        if len(rows) == 1 and opportunity not in ambiguous
+    }
 
     # Build attribution records from decision traces
     records: list[AttributionRecord] = []
 
-    for trace in decision_traces:
-        # Only include traces where pattern was detected (non-trivial decisions)
-        if not trace.get("pattern_detected", False):
+    for opportunity, grouped_traces in sorted(decision_groups.items()):
+        if opportunity in ambiguous or len(grouped_traces) != 1:
             continue
-
-        components = trace.get("components", {})
-        if not components:
-            continue
-
+        trace = grouped_traces[0]
+        components = trace["components"]
         cor_id = _extract_correlation_id(trace)
         entity_id = trace.get("entity_id", "")
         cycle_id = int(trace.get("cycle_id", 0))
         symbol = trace.get("symbol", "")
 
-        # Try to join with shadow trade
-        shadow = None
-        if cor_id:
-            shadow = shadow_by_cor.get(cor_id)
-        if shadow is None and entity_id:
-            shadow = shadow_by_entity.get(f"{symbol}_{cycle_id}")
+        shadow = shadow_by_opportunity.get(opportunity)
 
         # Build the attribution record
         rec = AttributionRecord(
             correlation_id=cor_id,
             symbol=symbol,
             cycle_id=cycle_id,
+            canonical_opportunity_id=opportunity,
             entity_id=entity_id,
             timestamp_utc=trace.get("timestamp_utc", ""),
             action=trace.get("action", "NO_TRADE"),
@@ -308,6 +342,23 @@ def build_attribution_records(
         (sum(1 for r in records if r.has_outcome) / len(records) * 100) if records else 0,
     )
 
+    diagnostics = {
+        "duplicate_decision_opportunities": duplicate_decisions,
+        "duplicate_outcome_opportunities": duplicate_outcomes,
+        "unmatched_decisions": sum(1 for row in records if not row.has_outcome),
+        "unmatched_outcomes": len(set(shadow_by_opportunity) - set(decision_groups)),
+    }
+    return records, diagnostics
+
+
+def build_attribution_records(
+    decision_traces: list[dict[str, Any]],
+    shadow_trades: list[dict[str, Any]],
+) -> list[AttributionRecord]:
+    """Build D1 attribution rows under the canonical lineage contract."""
+    records, _ = _build_attribution_records_with_diagnostics(
+        decision_traces, shadow_trades,
+    )
     return records
 
 
@@ -419,10 +470,21 @@ def run_component_reward(
     result = ComponentRewardResult()
 
     # Build attributed records
-    records = build_attribution_records(decision_traces, shadow_trades)
+    records, diagnostics = _build_attribution_records_with_diagnostics(
+        decision_traces, shadow_trades,
+    )
     result.total_decisions = len(records)
     result.decisions_with_outcome = sum(1 for r in records if r.has_outcome)
     result.join_rate = result.decisions_with_outcome / result.total_decisions if result.total_decisions > 0 else 0.0
+    result.unmatched_decisions = diagnostics["unmatched_decisions"]
+    result.unmatched_outcomes = diagnostics["unmatched_outcomes"]
+    result.duplicate_decision_opportunities = diagnostics["duplicate_decision_opportunities"]
+    result.duplicate_outcome_opportunities = diagnostics["duplicate_outcome_opportunities"]
+
+    if result.duplicate_decision_opportunities or result.duplicate_outcome_opportunities:
+        result.conclusion = "Ambiguous duplicate canonical opportunity lineage; analysis blocked."
+        result.confidence = "INSUFFICIENT_DATA"
+        return result
 
     if result.decisions_with_outcome < 5:
         result.conclusion = "Insufficient matched data for component analysis."
@@ -513,29 +575,79 @@ def run() -> dict:
     """
     Run Q1 and persist result using standard research report framework.
 
-    Loads decision traces and shadow trades from S3 via the shared data-access layer.
+    Loads canonical decision traces and completed canonical shadow-runtime
+    lifecycles, then analyses only their independently attested CURRENT
+    populations.
     """
+    from research_engine.control_plane.evidence_provenance import (
+        build_evidence_provenance,
+        select_current_evidence,
+    )
     from research_engine.data_access.s3_source import get_default_source
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+    from research_engine.experiments.experiment_base import (
+        build_fingerprint_from_provenance,
+        build_report,
+        compute_confidence,
+    )
 
     _source = get_default_source()
+    raw_decisions = list(_source.read_dataset("decision_trace"))
+    raw_shadows = list(ingest_completed_shadow_trades())
 
-    decision_traces = list(_source.read_dataset("decision_trace"))
-
-    shadow_trades = []
-    for dataset in ["shadow_trades", "research_shadow_trades"]:
-        shadow_trades.extend(_source.read_dataset(dataset))
+    # Establish the evidence boundary before any join or calculation. The
+    # shadow population is the selected/primary decision outcome; horizon
+    # alternatives answer different questions and cannot become D1 labels.
+    decision_candidates = [
+        row for row in raw_decisions
+        if row.get("pattern_detected", False)
+        and isinstance(row.get("components"), dict)
+        and bool(row.get("components"))
+    ]
+    shadow_candidates = [
+        row for row in raw_shadows
+        if isinstance(row.get("identity"), dict)
+        and row["identity"].get("shadow_type") == "PRIMARY_HORIZON_SIMULATION"
+        and _extract_r_multiple(row) is not None
+    ]
+    decision_selection = select_current_evidence(
+        "decision_trace", decision_candidates,
+    )
+    shadow_selection = select_current_evidence(
+        "shadow_trades", shadow_candidates,
+    )
+    decision_traces = decision_selection.records_for_analysis()
+    shadow_trades = shadow_selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(
+        decision_selection, shadow_selection,
+    )
 
     result = run_component_reward(decision_traces, shadow_trades)
 
-    # Build canonical report
-    from research_engine.experiments.experiment_base import build_report, build_fingerprint, compute_confidence
-
-    recommendation = "WEIGHT_ADJUSTMENT" if result.best_predictor else "INSUFFICIENT_DATA"
+    conflicts = bool(
+        result.duplicate_decision_opportunities
+        or result.duplicate_outcome_opportunities
+    )
+    scientifically_sufficient = (
+        result.decisions_with_outcome >= MINIMUM_GOVERNED_SAMPLE
+        and result.join_rate >= 0.95
+    )
+    status = (
+        "BLOCKED" if conflicts else
+        "COMPLETE" if scientifically_sufficient else
+        "INSUFFICIENT_DATA"
+    )
+    recommendation = (
+        "WEIGHT_ADJUSTMENT" if status == "COMPLETE" and result.best_predictor
+        else status
+    )
     confidence = result.confidence if result.confidence else compute_confidence(result.decisions_with_outcome)
 
     report = build_report(
-        question_id="Q1",
-        status="COMPLETE" if result.decisions_with_outcome > 0 else "INSUFFICIENT_DATA",
+        question_id="D1",
+        status=status,
         overall={
             "total_decisions": result.total_decisions,
             "matched_outcomes": result.decisions_with_outcome,
@@ -545,10 +657,32 @@ def run() -> dict:
             **result.to_dict(),
         },
         confidence=confidence,
-        dataset={"source": "decision_trace + shadow_trades", "sample_size": result.decisions_with_outcome},
-        fingerprint=build_fingerprint(result.decisions_with_outcome, result.total_decisions - result.decisions_with_outcome, "decision_trace+shadow_trades"),
+        dataset={
+            "source": "decision_trace_v1 + canonical shadow_runtime_v1 outcomes",
+            "sample_size": result.decisions_with_outcome,
+            "decision_records_selected": len(decision_traces),
+            "primary_outcomes_selected": len(shadow_trades),
+            "non_primary_shadow_records_excluded": len(raw_shadows) - len(shadow_candidates),
+            "join_key": "canonical_opportunity_id",
+        },
+        fingerprint=build_fingerprint_from_provenance(
+            evidence_provenance, validation_score=confidence,
+        ),
         recommendation=recommendation,
-        provenance={"experiment_module": "research_engine.experiments.component_reward", "registry_id": "Q1", "function": "run", "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"},
+        assumptions=[
+            "One canonical_opportunity_id is one independent decision observation.",
+            "Only PRIMARY_HORIZON_SIMULATION is the D1 outcome label.",
+            "Duplicate decision or primary-outcome lineage blocks the report.",
+        ],
+        provenance={
+            "experiment_module": "research_engine.experiments.component_reward",
+            "registry_id": "D1",
+            "compatibility_id": "Q1",
+            "function": "run",
+            "evidence_epoch": evidence_provenance["state"],
+            "join_key": "canonical_opportunity_id",
+            "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
+        },
     )
 
     # Persist

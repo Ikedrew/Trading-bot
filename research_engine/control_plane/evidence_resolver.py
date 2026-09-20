@@ -266,6 +266,19 @@ def classify_evidence_record(record: dict[str, Any], source: str) -> DataEpoch:
             and _present(identity.get("correlation_id"))
         )
         return DataEpoch.CURRENT if is_canonical_v1 else classify_record(record)
+    if source == "decision_trace":
+        # decision_trace_v1 is a decision-time diagnostic authority, not a
+        # shadow lifecycle.  Requiring a shadow_trade_id here would make a
+        # valid trace permanently incapable of satisfying CURRENT provenance.
+        # Its canonical lineage root and entity identity are the applicable
+        # CURRENT contract; the strict provenance boundary separately verifies
+        # the physical schema identity before calling this classifier.
+        is_canonical_v1 = (
+            record.get("schema_version") == current_schema("decision_trace")
+            and _present(record.get("canonical_opportunity_id"))
+            and _present(record.get("entity_id"))
+        )
+        return DataEpoch.CURRENT if is_canonical_v1 else DataEpoch.LEGACY
     if explicit:
         return DataEpoch.CURRENT
     if source in _CANONICAL_V1_SOURCES:

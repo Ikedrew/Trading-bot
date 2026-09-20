@@ -3,7 +3,7 @@ Tests for Q1: Component → Reward Correlation experiment.
 
 Covers:
     - Attribution record creation from decision traces + shadow trades
-    - Join via correlation_id (primary)
+    - Join via canonical_opportunity_id only
     - Missing outcome handling
     - Missing component handling
     - Component analysis correctness
@@ -55,7 +55,9 @@ def _trace(
             "market_quality": 0.6,
         }
     return {
+        "schema_version": "decision_trace_v1",
         "correlation_id": cor_id,
+        "canonical_opportunity_id": f"OPP-{cor_id}",
         "entity_id": f"{symbol}_{cycle_id}",
         "symbol": symbol,
         "cycle_id": cycle_id,
@@ -81,13 +83,15 @@ def _shadow(
     exit_reason: str = "take_profit",
     bars_held: int = 12,
 ) -> dict:
-    """Build a minimal shadow trade record (shadow_trades_v2 schema)."""
+    """Build a minimal canonical shadow outcome record."""
     return {
-        "schema_version": "shadow_trades_v2",
+        "schema_version": "shadow_trades_v1",
         "identity": {
             "correlation_id": cor_id,
+            "canonical_opportunity_id": f"OPP-{cor_id}",
             "symbol": symbol,
             "cycle_id": str(cycle_id),
+            "shadow_type": "PRIMARY_HORIZON_SIMULATION",
         },
         "decision_snapshot": {
             "pattern": "ENGULFING",
@@ -107,8 +111,8 @@ def _shadow(
 # ─── ATTRIBUTION RECORD CREATION ──────────────────────────────────────────────
 
 class TestAttributionRecordCreation:
-    def test_basic_join_by_correlation_id(self):
-        """Records join on correlation_id."""
+    def test_basic_join_by_canonical_opportunity_id(self):
+        """Records join on the canonical opportunity lineage root."""
         traces = [_trace(cor_id="COR-100")]
         shadows = [_shadow(cor_id="COR-100", r_multiple=2.0)]
 
@@ -119,6 +123,16 @@ class TestAttributionRecordCreation:
         assert records[0].r_multiple == 2.0
         assert records[0].win is True
         assert records[0].correlation_id == "COR-100"
+
+    def test_matching_correlation_id_cannot_override_different_canonical_ids(self):
+        trace = _trace(cor_id="COR-SAME")
+        shadow = _shadow(cor_id="COR-SAME")
+        shadow["identity"]["canonical_opportunity_id"] = "OPP-DIFFERENT"
+
+        records = build_attribution_records([trace], [shadow])
+
+        assert len(records) == 1
+        assert records[0].has_outcome is False
 
     def test_no_match_produces_record_without_outcome(self):
         """Traces without matching shadow trades have has_outcome=False."""
