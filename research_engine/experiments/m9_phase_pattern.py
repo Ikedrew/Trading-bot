@@ -22,14 +22,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from research_engine.experiments.experiment_base import (
     ReadinessStatus,
-    build_fingerprint,
+    build_fingerprint_from_provenance,
     build_report,
     compute_confidence,
     load_shadow_trades,
     persist_report,
     update_knowledge_map,
 )
-from research_engine.data_quality.classifier import classify_record, DataEpoch
+from research_engine.control_plane.evidence_provenance import (
+    build_evidence_provenance,
+    select_current_evidence,
+)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -57,8 +60,9 @@ def run_m9_phase_pattern(shadow_trades: list[dict[str, Any]] | None = None) -> d
     if shadow_trades is None:
         shadow_trades = load_shadow_trades()
 
-    # Filter to CURRENT epoch only
-    current = [r for r in shadow_trades if classify_record(r) == DataEpoch.CURRENT]
+    selection = select_current_evidence("shadow_trades", shadow_trades)
+    current = selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(selection)
 
     # Filter to records with valid phase and outcome
     analysable = []
@@ -91,7 +95,7 @@ def run_m9_phase_pattern(shadow_trades: list[dict[str, Any]] | None = None) -> d
                      "current_records": len(current), "phase_labelled": n_total},
             confidence="INSUFFICIENT_DATA",
             dataset={"source": "shadow_trades_current_epoch", "sample_size": n_total},
-            fingerprint=build_fingerprint(n_total, len(current) - n_total, "shadow_trades"),
+            fingerprint=build_fingerprint_from_provenance(evidence_provenance),
             recommendation="WAIT",
             warnings=[f"Need {_MIN_TOTAL_SAMPLES - n_total} more phase-labelled trades"],
             provenance=_provenance(),
@@ -215,7 +219,10 @@ def run_m9_phase_pattern(shadow_trades: list[dict[str, Any]] | None = None) -> d
         confidence=compute_confidence(n_total, bool(positive_ev_cells)),
         dataset={"source": "shadow_trades_current_epoch", "sample_size": n_total,
                  "total_current": len(current), "phase_coverage": f"{n_total*100//len(current)}%"},
-        fingerprint=build_fingerprint(n_total, len(current) - n_total, "shadow_trades_current"),
+        fingerprint=build_fingerprint_from_provenance(
+            evidence_provenance,
+            validation_score=compute_confidence(n_total, bool(positive_ev_cells)),
+        ),
         recommendation=recommendation,
         assumptions=[
             "Uses CURRENT-epoch data only (post-lineage migration)",

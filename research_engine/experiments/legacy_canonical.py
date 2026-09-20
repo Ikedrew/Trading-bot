@@ -26,6 +26,7 @@ from research_engine.data_access.s3_source import get_default_source
 from research_engine.experiments.experiment_base import (
     ReadinessStatus,
     build_fingerprint,
+    build_fingerprint_from_provenance,
     build_report,
     compute_confidence,
     load_shadow_trades,
@@ -75,6 +76,39 @@ def _shadow_outcomes() -> list[dict]:
                 "bars_held": o.get("bars_held", 0),
             })
     return outcomes
+
+
+def _current_shadow_outcomes_for_e2() -> tuple[list[dict], dict]:
+    """Return E2 outcomes and provenance from one authoritative selection."""
+    from research_engine.control_plane.evidence_provenance import (
+        build_evidence_provenance,
+        select_current_evidence,
+    )
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+
+    selection = select_current_evidence(
+        "shadow_trades",
+        [*ingest_completed_shadow_trades(), *_load_jsonl(_SHADOW_DATASET)],
+    )
+    outcomes = []
+    for rec in selection.records_for_analysis():
+        o = rec.get("simulated_outcome", {})
+        ds = rec.get("decision_snapshot", {})
+        ident = rec.get("identity", {})
+        if o:
+            outcomes.append({
+                "r": o.get("pnl_r_multiple", 0),
+                "win": o.get("pnl_r_multiple", 0) > 0,
+                "score": ds.get("score", 0),
+                "pattern": ds.get("pattern", ""),
+                "direction": ds.get("direction", ""),
+                "symbol": ident.get("symbol", ""),
+                "exit_reason": o.get("exit_reason", ""),
+                "bars_held": o.get("bars_held", 0),
+            })
+    return outcomes, build_evidence_provenance(selection)
 
 
 def _provenance(qid: str, func: str) -> dict:
@@ -336,7 +370,7 @@ def run_q04() -> dict[str, Any]:
 
 def run_q05() -> dict[str, Any]:
     """Q5/E2/L1: Pattern degradation/expectancy."""
-    shadows = _shadow_outcomes()
+    shadows, evidence_provenance = _current_shadow_outcomes_for_e2()
     n = len(shadows)
     by_pattern = defaultdict(list)
     for s in shadows:
@@ -353,7 +387,7 @@ def run_q05() -> dict[str, Any]:
     return build_report(question_id="Q5", status=ReadinessStatus.COMPLETE if n > 0 else ReadinessStatus.INSUFFICIENT_DATA,
         overall={"pattern_performance": degradation, "finding": f"{len(degradation)} patterns analysed from {n} trades"},
         confidence=compute_confidence(n), dataset={"source": "shadow_trades", "sample_size": n},
-        fingerprint=build_fingerprint(n, 0, "shadow_trades"),
+        fingerprint=build_fingerprint_from_provenance(evidence_provenance),
         recommendation="COMPLETE", provenance=_provenance("Q5", "run_q05"))
 
 

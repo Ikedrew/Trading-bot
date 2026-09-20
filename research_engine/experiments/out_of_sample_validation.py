@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from research_engine.experiments.experiment_base import (
     ReadinessStatus,
     _deep_get,
-    build_fingerprint,
+    build_fingerprint_from_provenance,
     build_report,
     check_readiness,
     compute_confidence,
@@ -132,6 +132,15 @@ def run_out_of_sample_validation(shadow_trades: list[dict[str, Any]] | None = No
     if shadow_trades is None:
         shadow_trades = load_shadow_trades()
 
+    from research_engine.control_plane.evidence_provenance import (
+        build_evidence_provenance,
+        select_current_evidence,
+    )
+
+    selection = select_current_evidence("shadow_trades", shadow_trades)
+    shadow_trades = selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(selection)
+
     status, reason, coverage = check_readiness(
         shadow_trades, min_samples=_MIN_SAMPLES, require_lineage=True, require_outcome=True,
     )
@@ -140,7 +149,7 @@ def run_out_of_sample_validation(shadow_trades: list[dict[str, Any]] | None = No
             question_id="E5", status=status, overall={"reason": reason},
             confidence="INSUFFICIENT_DATA",
             dataset={"records_available": len(shadow_trades), "coverage": coverage},
-            fingerprint=build_fingerprint(0, len(shadow_trades)), recommendation="WAIT", warnings=[reason],
+            fingerprint=build_fingerprint_from_provenance(evidence_provenance), recommendation="WAIT", warnings=[reason],
         )
 
     ordered_trades = sorted(shadow_trades, key=_temporal_key)
@@ -151,7 +160,7 @@ def run_out_of_sample_validation(shadow_trades: list[dict[str, Any]] | None = No
             question_id="E5", status=ReadinessStatus.INSUFFICIENT_DATA,
             overall={"reason": f"Only {n} R-multiples (need {_MIN_SAMPLES})"},
             confidence="INSUFFICIENT_DATA", dataset={"r_multiples": n},
-            fingerprint=build_fingerprint(n, len(shadow_trades) - n), recommendation="WAIT",
+            fingerprint=build_fingerprint_from_provenance(evidence_provenance), recommendation="WAIT",
         )
 
     # Analyses
@@ -202,7 +211,9 @@ def run_out_of_sample_validation(shadow_trades: list[dict[str, Any]] | None = No
         },
         confidence=confidence,
         dataset={"total_records": len(shadow_trades), "r_multiples_used": n, "train_size": int(n * _TRAIN_FRACTION), "test_size": n - int(n * _TRAIN_FRACTION), "coverage": coverage},
-        fingerprint=build_fingerprint(n, len(shadow_trades) - n),
+        fingerprint=build_fingerprint_from_provenance(
+            evidence_provenance, validation_score=confidence,
+        ),
         recommendation=recommendation,
         assumptions=[f"Train/test split: {_TRAIN_FRACTION:.0%}/{1-_TRAIN_FRACTION:.0%} chronological", f"Rolling windows: {_NUM_ROLLING_WINDOWS}", f"Stability threshold: {_STABILITY_THRESHOLD:.0%} positive windows"],
         warnings=[w for w in [f"Drift detected: {drift:.4f}" if drift_significant else "", f"Low stability: {stability_score:.0%}" if stability_score < _STABILITY_THRESHOLD else ""] if w],

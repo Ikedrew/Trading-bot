@@ -26,14 +26,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from research_engine.experiments.experiment_base import (
     ReadinessStatus,
-    build_fingerprint,
+    build_fingerprint_from_provenance,
     build_report,
     compute_confidence,
     load_shadow_trades,
     persist_report,
     update_knowledge_map,
 )
-from research_engine.data_quality.classifier import classify_record, DataEpoch
+from research_engine.control_plane.evidence_provenance import (
+    build_evidence_provenance,
+    select_current_evidence,
+)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -93,8 +96,9 @@ def run_m10_strategy_family_per_phase(shadow_trades: list[dict[str, Any]] | None
     if shadow_trades is None:
         shadow_trades = load_shadow_trades()
 
-    # Filter to CURRENT epoch
-    current = [r for r in shadow_trades if classify_record(r) == DataEpoch.CURRENT]
+    selection = select_current_evidence("shadow_trades", shadow_trades)
+    current = selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(selection)
 
     # Extract analysable records
     analysable = []
@@ -129,7 +133,7 @@ def run_m10_strategy_family_per_phase(shadow_trades: list[dict[str, Any]] | None
                      "current_records": len(current), "phase_labelled": n_total},
             confidence="INSUFFICIENT_DATA",
             dataset={"source": "shadow_trades_current_epoch", "sample_size": n_total},
-            fingerprint=build_fingerprint(n_total, len(current) - n_total, "shadow_trades"),
+            fingerprint=build_fingerprint_from_provenance(evidence_provenance),
             recommendation="WAIT",
             warnings=[f"Need {_MIN_TOTAL_SAMPLES - n_total} more phase-labelled trades"],
             provenance=_provenance(),
@@ -280,7 +284,10 @@ def run_m10_strategy_family_per_phase(shadow_trades: list[dict[str, Any]] | None
                  "total_current": len(current),
                  "family_mapping_version": "1.0",
                  "families_classified": len(STRATEGY_FAMILIES)},
-        fingerprint=build_fingerprint(n_total, len(current) - n_total, "shadow_trades_current"),
+        fingerprint=build_fingerprint_from_provenance(
+            evidence_provenance,
+            validation_score=compute_confidence(n_total, interaction_detected),
+        ),
         recommendation=recommendation,
         assumptions=[
             "Pattern → family mapping is fixed (see STRATEGY_FAMILIES dict)",

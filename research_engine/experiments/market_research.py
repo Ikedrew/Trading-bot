@@ -30,8 +30,13 @@ from datetime import datetime, timezone
 from typing import Any
 
 from research_engine.data_quality.classifier import DataEpoch, classify_record
+from research_engine.control_plane.evidence_provenance import (
+    build_evidence_provenance,
+    select_current_evidence,
+)
 from research_engine.experiments.experiment_base import (
     build_fingerprint,
+    build_fingerprint_from_provenance,
     build_report,
     load_shadow_trades,
 )
@@ -317,8 +322,9 @@ def run_m2() -> dict[str, Any]:
     question_id = "M2"
     all_records = load_shadow_trades()
 
-    # Filter to CURRENT epoch only
-    current = [r for r in all_records if classify_record(r) == DataEpoch.CURRENT]
+    selection = select_current_evidence("shadow_trades", all_records)
+    current = selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(selection)
     total_records = len(all_records)
     current_count = len(current)
     excluded = total_records - current_count
@@ -365,10 +371,8 @@ def run_m2() -> dict[str, Any]:
         "total_loaded": current_count,
     }
 
-    fingerprint = build_fingerprint(
-        records_used=total_analysed,
-        records_excluded=excluded,
-        source="shadow_trades",
+    fingerprint = build_fingerprint_from_provenance(
+        evidence_provenance,
         validation_score=confidence,
     )
 
@@ -534,7 +538,9 @@ def run_m4() -> dict[str, Any]:
     question_id = "M4"
     all_records = load_shadow_trades()
 
-    current = [r for r in all_records if classify_record(r) == DataEpoch.CURRENT]
+    selection = select_current_evidence("shadow_trades", all_records)
+    current = selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(selection)
     total_records = len(all_records)
     current_count = len(current)
     excluded = total_records - current_count
@@ -582,10 +588,8 @@ def run_m4() -> dict[str, Any]:
         "total_loaded": current_count,
     }
 
-    fingerprint = build_fingerprint(
-        records_used=total_analysed,
-        records_excluded=excluded,
-        source="shadow_trades",
+    fingerprint = build_fingerprint_from_provenance(
+        evidence_provenance,
         validation_score=confidence,
     )
 
@@ -629,7 +633,9 @@ def run_m6() -> dict[str, Any]:
     question_id = "M6"
     all_records = load_shadow_trades()
 
-    current = [r for r in all_records if classify_record(r) == DataEpoch.CURRENT]
+    selection = select_current_evidence("shadow_trades", all_records)
+    current = selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(selection)
     total_records = len(all_records)
     current_count = len(current)
     excluded = total_records - current_count
@@ -654,10 +660,8 @@ def run_m6() -> dict[str, Any]:
         "total_loaded": current_count,
     }
 
-    fingerprint = build_fingerprint(
-        records_used=total_analysed,
-        records_excluded=excluded,
-        source="shadow_trades",
+    fingerprint = build_fingerprint_from_provenance(
+        evidence_provenance,
         validation_score=confidence,
     )
 

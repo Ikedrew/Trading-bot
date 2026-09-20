@@ -18,9 +18,12 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
 
-from research_engine.data_quality.classifier import DataEpoch, classify_record
+from research_engine.control_plane.evidence_provenance import (
+    build_evidence_provenance,
+    select_current_evidence,
+)
 from research_engine.experiments.experiment_base import (
-    build_fingerprint,
+    build_fingerprint_from_provenance,
     build_report,
     load_shadow_trades,
 )
@@ -274,8 +277,9 @@ def run_e4() -> dict[str, Any]:
     """
     question_id = "E4"
     all_records = load_shadow_trades()
-
-    current = [r for r in all_records if classify_record(r) == DataEpoch.CURRENT]
+    selection = select_current_evidence("shadow_trades", all_records)
+    current = selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(selection)
     total_records = len(all_records)
     current_count = len(current)
     excluded = total_records - current_count
@@ -337,10 +341,8 @@ def run_e4() -> dict[str, Any]:
         "total_loaded": current_count,
     }
 
-    fingerprint = build_fingerprint(
-        records_used=total_analysed,
-        records_excluded=excluded,
-        source="shadow_trades",
+    fingerprint = build_fingerprint_from_provenance(
+        evidence_provenance,
         validation_score=confidence,
     )
 
@@ -404,8 +406,9 @@ def run_l5() -> dict[str, Any]:
     """
     question_id = "L5"
     all_records = load_shadow_trades()
-
-    current = [r for r in all_records if classify_record(r) == DataEpoch.CURRENT]
+    selection = select_current_evidence("shadow_trades", all_records)
+    current = selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(selection)
     total_records = len(all_records)
     current_count = len(current)
     excluded = total_records - current_count
@@ -432,9 +435,8 @@ def run_l5() -> dict[str, Any]:
             "result": "No analysable records (need strategy + entry_time + r)",
         }
         dataset = {"source": "shadow_trades", "sample_size": 0}
-        fingerprint = build_fingerprint(
-            records_used=0, records_excluded=excluded,
-            source="shadow_trades", validation_score="INSUFFICIENT_DATA",
+        fingerprint = build_fingerprint_from_provenance(
+            evidence_provenance, validation_score="INSUFFICIENT_DATA",
         )
         return build_report(
             question_id=question_id,
@@ -592,10 +594,8 @@ def run_l5() -> dict[str, Any]:
         "total_loaded": current_count,
     }
 
-    fingerprint = build_fingerprint(
-        records_used=total_analysed,
-        records_excluded=excluded,
-        source="shadow_trades",
+    fingerprint = build_fingerprint_from_provenance(
+        evidence_provenance,
         validation_score=confidence,
     )
 
