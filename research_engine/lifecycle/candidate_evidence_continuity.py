@@ -60,6 +60,27 @@ CONTRACT:
       candidate / lifecycle mutation, no evaluation, recommendation, human
       decision, application, deployment or production mutation. Continuity
       history only.
+
+CHRONOLOGY (HARDENING 1.2):
+    No wall-clock timestamp is persisted, and none is required for
+    scientific correctness. Canonical chronology is deterministic and
+    reconstructable after restart/restore from persisted truth alone:
+
+      - the verified baseline sequence (historical_baseline_id ->
+        target_baseline_id, i.e. N -> N+1) plus the exact transition
+        references (impact_id, application_id) that bind this snapshot to
+        one persisted 6.1B impact record, and
+      - the append order of the append-only store.
+
+    Canonical listing/chain order is the deterministic key
+    (historical_baseline_id, target_baseline_id, continuity_id) -- never
+    wall-clock and never the active-baseline pointer.
+
+    Wall-clock time is descriptive-only and MUST NOT be added to
+    to_dict() / canonical_json(): that exact shape is simultaneously the
+    persisted serialization, the idempotent-duplicate oracle and the
+    fail-closed conflict check, so a non-deterministic field would break
+    deduplication, equality and restart determinism.
 """
 
 from __future__ import annotations

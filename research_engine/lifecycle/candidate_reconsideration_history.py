@@ -1,4 +1,27 @@
-"""Wave 6.3B — durable append-only reconsideration history."""
+"""Wave 6.3B — durable append-only reconsideration history.
+
+CHRONOLOGY (HARDENING 1.2):
+No wall-clock timestamp is persisted, and none is required for scientific
+correctness. Canonical chronology is deterministic and reconstructable after
+restart/restore from persisted truth alone:
+
+  - the verified baseline sequence (historical_baseline_id ->
+    target_baseline_id, i.e. N -> N+1) plus the exact transition references
+    (impact_id, continuity_id, application_id, operation_id) that bind this
+    record to the persisted 6.1B impact and 6.2B continuity truth, and
+  - the append order of the append-only store.
+
+Canonical listing order is the deterministic key
+(historical_baseline_id, target_baseline_id, reconsideration_id) -- never
+wall-clock. The successor_* binding is a separate, non-identity concern
+(scientific_key() deliberately excludes it).
+
+Wall-clock time is descriptive-only and MUST NOT be added to to_dict() /
+canonical_json(): that exact shape is simultaneously the persisted
+serialization, the idempotent-duplicate oracle and the fail-closed conflict
+check, so a non-deterministic field would break deduplication, equality and
+restart determinism.
+"""
 from __future__ import annotations
 
 import hashlib
