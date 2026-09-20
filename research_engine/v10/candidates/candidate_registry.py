@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -115,11 +117,64 @@ class CandidateRegistry:
     # ─── PERSISTENCE ──────────────────────────────────────────
 
     def _persist(self) -> None:
-        """Save all candidates to disk."""
+        """Save all candidates to disk.
+
+        Crash-safe whole-file replacement: the complete payload is written to
+        a temporary file in the SAME directory, flushed + fsynced, and only
+        then atomically moved over the canonical ``candidates.jsonl`` via
+        :func:`os.replace`.  Failures before/during replacement propagate and
+        leave the previous canonical file intact; temporary artefacts are
+        removed on a best-effort basis.
+        """
         self._dir.mkdir(parents=True, exist_ok=True)
         path = self._dir / "candidates.jsonl"
         lines = [json.dumps(c.to_dict(), default=str) for c in self._candidates.values()]
-        path.write_text("\n".join(lines) + "\n" if lines else "", encoding="utf-8")
+        payload = "\n".join(lines) + "\n" if lines else ""
+        data = payload.encode("utf-8")
+        fd, tmp_name = tempfile.mkstemp(
+            dir=str(self._dir), prefix="candidates.", suffix=".tmp"
+        )
+        try:
+            try:
+                os.write(fd, data)
+                os.fsync(fd)
+            finally:
+                # Always close before any unlink: Windows cannot remove an
+                # open file, so close-first keeps cleanup reliable.
+                os.close(fd)
+        except BaseException:
+            # Write/flush/fsync/close failed BEFORE replacement: previous
+            # canonical file is untouched; remove temp artefact best-effort.
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+            raise
+        try:
+            os.replace(tmp_name, path)
+        except BaseException:
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+            raise
+        try:
+            self._fsync_dir(self._dir)
+        except OSError:
+            pass
+
+    @staticmethod
+    def _fsync_dir(directory: Path) -> None:
+        """Best-effort directory fsync so the rename itself is durable.
+
+        No-op on platforms (e.g. Windows) where opening a directory fd is
+        unsupported — the resulting ``OSError`` is swallowed by the caller.
+        """
+        fd = os.open(str(directory), os.O_RDONLY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
 
     def _load(self) -> None:
         """Load candidates from disk."""
