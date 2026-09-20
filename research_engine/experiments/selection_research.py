@@ -49,6 +49,15 @@ import statistics
 from collections import defaultdict
 from typing import Any
 
+from research_engine.control_plane.evidence_provenance import (
+    EvidenceSelection,
+    build_evidence_provenance,
+    select_current_evidence,
+)
+from research_engine.experiments.experiment_base import (
+    build_fingerprint_from_provenance,
+)
+
 logger = logging.getLogger(__name__)
 
 _MIN_SAMPLE = 30          # overall status threshold (engine convention)
@@ -63,17 +72,8 @@ _PRIMARY = "PRIMARY_HORIZON_SIMULATION"
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def _load_simulation_population() -> list[dict[str, Any]]:
-    """
-    Load ALL completed shadow lifecycles (primary + horizon alternatives)
-    from the canonical shadow_runtime_v1 ingestion as flat research records.
-    Callers filter per-question so exclusion accounting stays honest.
-    """
-    from research_engine.data_access.shadow_runtime_ingestion import (
-        ingest_completed_shadow_trades,
-    )
-
-    raw = ingest_completed_shadow_trades()
+def _flatten_simulation_population(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Derive the analytical shape from already-selected canonical records."""
     population: list[dict[str, Any]] = []
     for rec in raw:
         sim = rec.get("simulated_outcome") or {}
@@ -98,11 +98,36 @@ def _load_simulation_population() -> list[dict[str, Any]]:
             "mae_r": sim.get("mae_r"),
             "exit_reason": str(sim.get("exit_reason", "") or ""),
         })
+    return population
+
+
+def _select_simulation_population(
+    shadow_trades: list[dict[str, Any]] | None,
+) -> tuple[list[dict[str, Any]], EvidenceSelection]:
+    """
+    Load ALL completed shadow lifecycles (primary + horizon alternatives)
+    from the canonical shadow_runtime_v1 ingestion as flat research records.
+    Callers filter per-question so exclusion accounting stays honest.
+    """
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+
+    raw = (list(shadow_trades) if shadow_trades is not None
+           else ingest_completed_shadow_trades())
+    selection = select_current_evidence("shadow_trades", raw)
+    population = _flatten_simulation_population(selection.records_for_analysis())
 
     logger.info(
         "[SELECTION_POPULATION] raw_completed=%d flat=%d",
         len(raw), len(population),
     )
+    return population, selection
+
+
+def _load_simulation_population() -> list[dict[str, Any]]:
+    """Compatibility helper returning the governed CURRENT population."""
+    population, _ = _select_simulation_population(None)
     return population
 
 
@@ -138,13 +163,12 @@ def _report(
     confidence: str,
     dataset: dict[str, Any],
     recommendation: str,
+    evidence_provenance: dict[str, Any],
     assumptions: list[str] | None = None,
     warnings: list[str] | None = None,
 ) -> dict[str, Any]:
     """Canonical Gap-4 report for selection-research questions."""
-    from research_engine.experiments.experiment_base import (
-        build_report, build_fingerprint,
-    )
+    from research_engine.experiments.experiment_base import build_report
 
     sample = dataset.get("sample_size", 0)
     return build_report(
@@ -153,7 +177,7 @@ def _report(
         overall=overall,
         confidence=confidence,
         dataset=dataset,
-        fingerprint=build_fingerprint(sample, 0, "shadow_runtime_v1"),
+        fingerprint=build_fingerprint_from_provenance(evidence_provenance),
         recommendation=recommendation,
         assumptions=assumptions or [],
         warnings=warnings or [],
@@ -183,8 +207,8 @@ def run_s2(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
 
     OBSERVATIONAL: horizon is not randomly assigned in the live system.
     """
-    population = (shadow_trades if shadow_trades is not None
-                  else _load_simulation_population())
+    population, shadow_selection = _select_simulation_population(shadow_trades)
+    evidence_provenance = build_evidence_provenance(shadow_selection)
     records = _outcome_records(population)
 
     by_horizon: dict[str, list[float]] = defaultdict(list)
@@ -209,6 +233,7 @@ def run_s2(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
             dataset={"sample_size": n_total,
                      "source": "shadow_runtime_v1 (simulation population)"},
             recommendation="INSUFFICIENT_DATA",
+            evidence_provenance=evidence_provenance,
             assumptions=["Requires >=30 outcome records across >=2 horizons."],
         )
 
@@ -253,6 +278,7 @@ def run_s2(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
                       "primary + horizon alternatives)",
         },
         recommendation=recommendation,
+        evidence_provenance=evidence_provenance,
         assumptions=[
             "Population = completed shadow lifecycles with finite realised R.",
             "Horizons come from the shadow runtime's evaluated_horizon fact "
@@ -294,8 +320,8 @@ def run_s3(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     A positive historical expectancy is research evidence only — never a
     production-ready claim.
     """
-    population = (shadow_trades if shadow_trades is not None
-                  else _load_simulation_population())
+    population, shadow_selection = _select_simulation_population(shadow_trades)
+    evidence_provenance = build_evidence_provenance(shadow_selection)
     records = _outcome_records(population)
 
     cells: dict[tuple[str, str], list[float]] = defaultdict(list)
@@ -321,6 +347,7 @@ def run_s3(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
             dataset={"sample_size": n_total,
                      "source": "shadow_runtime_v1 (simulation population)"},
             recommendation="INSUFFICIENT_DATA",
+            evidence_provenance=evidence_provenance,
             assumptions=[
                 "Requires >=30 outcome records with strategy+horizon identity."],
         )
@@ -370,6 +397,7 @@ def run_s3(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
             "COMBINATION_EVIDENCE_REPORTED" if positive
             else "NO_SUFFICIENT_POSITIVE_COMBINATION"
         ),
+        evidence_provenance=evidence_provenance,
         assumptions=[
             "Cells with N < 10 are excluded from conclusions but counted.",
             "All cells share the same shadow opportunity composition across "
@@ -400,8 +428,8 @@ def run_s4(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     consistent with Q16/edge conventions) so strategy cells are not inflated
     by horizon-alternative duplicates of the same opportunity.
     """
-    population = (shadow_trades if shadow_trades is not None
-                  else _load_simulation_population())
+    population, shadow_selection = _select_simulation_population(shadow_trades)
+    evidence_provenance = build_evidence_provenance(shadow_selection)
     primary = [rec for rec in population if rec["shadow_type"] == _PRIMARY]
     records = _outcome_records(primary)
 
@@ -431,6 +459,7 @@ def run_s4(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
             dataset={"sample_size": n_total,
                      "source": "shadow_runtime_v1 (primary-horizon population)"},
             recommendation="INSUFFICIENT_DATA",
+            evidence_provenance=evidence_provenance,
             assumptions=[
                 "Requires >=30 primary-horizon outcome records with "
                 "strategy+phase identity."],
@@ -502,6 +531,7 @@ def run_s4(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
                    for s in specialisation.values())
             else "NO_MATERIAL_PHASE_SPECIALISATION_OBSERVED"
         ),
+        evidence_provenance=evidence_provenance,
         assumptions=[
             "Specialisation contrast requires >=2 phase cells with N >= 10 "
             "per strategy; otherwise INSUFFICIENT_PHASE_COVERAGE is reported.",
@@ -588,8 +618,21 @@ def run_horizon1(
     selection is cross-checked against the selection engine's SELECTED fact
     for the same opportunity (agreement statistic).
     """
-    population = (shadow_trades if shadow_trades is not None
-                  else _load_simulation_population())
+    population, shadow_selection = _select_simulation_population(shadow_trades)
+    candidate_records = horizon_candidates
+    if candidate_records is None:
+        try:
+            from research_engine.data_access.loaders import load_horizon_candidates
+            candidate_records = load_horizon_candidates()
+        except Exception:  # missing required cross-check evidence fails closed
+            candidate_records = []
+    candidate_selection = select_current_evidence(
+        "horizon_candidates", candidate_records,
+    )
+    selected_candidates = candidate_selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(
+        shadow_selection, candidate_selection,
+    )
     opportunities = build_horizon1_population(population)
 
     comparable: list[dict[str, Any]] = []
@@ -640,9 +683,13 @@ def run_horizon1(
                 "ambiguous_excluded": n_ambiguous,
             },
             confidence=conf,
-            dataset={"sample_size": n_comparable,
-                     "source": "shadow_runtime_v1 (within-opportunity)"},
+            dataset={
+                "sample_size": n_comparable,
+                "source": "shadow_runtime_v1 (within-opportunity) + "
+                          "horizon_candidates_v1 (cross-check)",
+            },
             recommendation="INSUFFICIENT_DATA",
+            evidence_provenance=evidence_provenance,
             assumptions=[
                 "Requires >=30 opportunities with a selected-horizon outcome "
                 "AND >=1 alternative-horizon outcome for the SAME opportunity.",
@@ -680,7 +727,7 @@ def run_horizon1(
     }
 
     selection_agreement = _selection_engine_agreement(
-        comparable, horizon_candidates)
+        comparable, selected_candidates)
 
     if n_worse / n_comparable > 0.5:
         recommendation = "SELECTION_WEAKNESS_SIGNAL"
@@ -717,6 +764,7 @@ def run_horizon1(
                       "horizon_candidates_v1 (cross-check)",
         },
         recommendation=recommendation,
+        evidence_provenance=evidence_provenance,
         assumptions=[
             "Comparison is WITHIN-opportunity only: every comparable "
             "opportunity has simulated outcomes for its selected horizon and "
@@ -911,10 +959,16 @@ def run_strat1(
             load_strategy_candidates,
         )
         strategy_candidates = load_strategy_candidates()
-    population = (shadow_trades if shadow_trades is not None
-                  else _load_simulation_population())
+    candidate_selection = select_current_evidence(
+        "strategy_candidates", strategy_candidates,
+    )
+    selected_candidates = candidate_selection.records_for_analysis()
+    population, shadow_selection = _select_simulation_population(shadow_trades)
+    evidence_provenance = build_evidence_provenance(
+        candidate_selection, shadow_selection,
+    )
 
-    built = build_strat1_pairs(strategy_candidates, population)
+    built = build_strat1_pairs(selected_candidates, population)
     pairs = built["pairs"]
     n = len(pairs)
 
@@ -934,6 +988,7 @@ def run_strat1(
             dataset={"sample_size": n,
                      "source": "strategy_candidates_v1 + shadow_runtime_v1"},
             recommendation="INSUFFICIENT_DATA",
+            evidence_provenance=evidence_provenance,
             assumptions=[
                 "Requires >=30 selected-candidate/opportunity matches with "
                 "confidence and a primary shadow outcome.",
@@ -1003,6 +1058,7 @@ def run_strat1(
             "CONFIDENCE_CONTAINS_OUTCOME_SIGNAL" if has_signal
             else "NO_CONFIDENCE_OUTCOME_SIGNAL_DETECTED"
         ),
+        evidence_provenance=evidence_provenance,
         assumptions=[
             "Confidence/rank are pre-decision selection facts (persisted by "
             "strategy_candidates_v1 before any outcome exists); outcome R is "

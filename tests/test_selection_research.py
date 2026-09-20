@@ -41,7 +41,7 @@ def mk_shadow(
     phase: str = "EXPANSION",
     symbol: str = "AUDUSD",
 ) -> dict:
-    return {
+    flat = {
         "shadow_trade_id": f"nshadow_{opp}_{horizon}",
         "canonical_opportunity_id": opp,
         "symbol": symbol,
@@ -55,6 +55,30 @@ def mk_shadow(
         "mfe_r": max(r or 0, 0.5),
         "mae_r": -0.4,
         "exit_reason": "take_profit" if (r or 0) > 0 else "stop_loss",
+    }
+    return {
+        **flat,
+        "schema_version": "shadow_trades_v1",
+        "epoch": "CURRENT",
+        "identity": {
+            "shadow_trade_id": flat["shadow_trade_id"],
+            "canonical_opportunity_id": opp,
+            "symbol": symbol,
+            "shadow_type": shadow_type,
+            "evaluated_horizon": horizon,
+        },
+        "decision_snapshot": {
+            "strategy": strategy,
+            "pattern": flat["pattern"],
+            "market_phase": phase,
+            "h4_regime": flat["h4_regime"],
+        },
+        "simulated_outcome": {
+            "pnl_r_multiple": r,
+            "mfe_r": flat["mfe_r"],
+            "mae_r": flat["mae_r"],
+            "exit_reason": flat["exit_reason"],
+        },
     }
 
 
@@ -360,7 +384,8 @@ class TestHorizon1:
 
     def test_selection_engine_agreement_crosscheck(self):
         hc = [
-            {"canonical_opportunity_id": f"OPP-{i:04d}",
+            {"schema_version": "horizon_candidates_v1",
+             "canonical_opportunity_id": f"OPP-{i:04d}",
              "selection_status": "SELECTED", "horizon": "SCALP"}
             for i in range(40)
         ]
@@ -372,7 +397,8 @@ class TestHorizon1:
 
     def test_agreement_disagreement_detected(self):
         hc = [
-            {"canonical_opportunity_id": f"OPP-{i:04d}",
+            {"schema_version": "horizon_candidates_v1",
+             "canonical_opportunity_id": f"OPP-{i:04d}",
              "selection_status": "SELECTED", "horizon": "EXTENDED"}
             for i in range(40)
         ]
@@ -399,6 +425,7 @@ def mk_candidates(n_per_bucket: int = 12) -> list[dict]:
     for confidence in (0.9, 0.6, 0.3):
         for _ in range(n_per_bucket):
             cands.append({
+                "schema_version": "strategy_candidates_v1",
                 "candidate_id": f"C-sel-{r}",
                 "canonical_opportunity_id": f"SOPP-{r:04d}",
                 "strategy_family": "REVERSAL",

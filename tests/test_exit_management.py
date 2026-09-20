@@ -47,6 +47,7 @@ def _shadow(
     """Production-shaped shadow record from canonical ingestion."""
     return {
         "schema_version": "shadow_trades_v1",
+        "epoch": "CURRENT",
         "source": "shadow_runtime_ingestion",
         "identity": {
             "trade_id": shadow_id,

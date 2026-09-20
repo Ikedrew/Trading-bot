@@ -31,6 +31,15 @@ import math
 import statistics
 from typing import Any
 
+from research_engine.control_plane.evidence_provenance import (
+    EvidenceSelection,
+    build_evidence_provenance,
+    select_current_evidence,
+)
+from research_engine.experiments.experiment_base import (
+    build_fingerprint_from_provenance,
+)
+
 logger = logging.getLogger(__name__)
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -41,9 +50,9 @@ _MIN_SAMPLE = 30
 _MIN_SAMPLE_STRICT = 200  # per EX1–EX4 validation rules
 
 
-def _load_exit_population() -> list[dict[str, Any]]:
+def _flatten_exit_population(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
-    Load the exit-research population from canonical shadow_runtime_v1.
+    Flatten an already-loaded canonical shadow_runtime_v1 population.
 
     Returns a list of flat dicts, one per completed shadow lifecycle, with:
         shadow_trade_id, canonical_opportunity_id, symbol, pattern, direction,
@@ -54,11 +63,6 @@ def _load_exit_population() -> list[dict[str, Any]]:
     both). Records with None pnl_r are retained (exit analysis is valid
     even when realised R is absent, though some metrics require it).
     """
-    from research_engine.data_access.shadow_runtime_ingestion import (
-        ingest_completed_shadow_trades,
-    )
-
-    raw = ingest_completed_shadow_trades()
     population: list[dict[str, Any]] = []
     excluded_no_mfe = 0
     excluded_no_mae = 0
@@ -104,6 +108,29 @@ def _load_exit_population() -> list[dict[str, Any]]:
         len(raw), len(population), excluded_no_mfe, excluded_no_mae,
     )
     return population
+
+
+def _load_exit_population() -> list[dict[str, Any]]:
+    """Compatibility path used by the non-target EX1/EX2 runners."""
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+
+    return _flatten_exit_population(ingest_completed_shadow_trades())
+
+
+def _load_governed_exit_population(
+) -> tuple[list[dict[str, Any]], EvidenceSelection]:
+    """Attest canonical evidence before deriving EX3/EX4 analytical rows."""
+    from research_engine.data_access.shadow_runtime_ingestion import (
+        ingest_completed_shadow_trades,
+    )
+
+    selection = select_current_evidence(
+        "shadow_trades", ingest_completed_shadow_trades(),
+    )
+    population = _flatten_exit_population(selection.records_for_analysis())
+    return population, selection
 
 
 def _stats(values: list[float]) -> dict[str, Any]:
@@ -159,6 +186,7 @@ def _make_report(
     dataset: dict, recommendation: str,
     assumptions: list[str] | None = None,
     warnings: list[str] | None = None,
+    evidence_provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a canonical report for exit-management questions."""
     from research_engine.experiments.experiment_base import build_report, build_fingerprint
@@ -170,7 +198,11 @@ def _make_report(
         overall=overall,
         confidence=confidence,
         dataset=dataset,
-        fingerprint=build_fingerprint(sample, 0, "shadow_runtime_v1"),
+        fingerprint=(
+            build_fingerprint_from_provenance(evidence_provenance)
+            if evidence_provenance is not None
+            else build_fingerprint(sample, 0, "shadow_runtime_v1")
+        ),
         recommendation=recommendation,
         assumptions=assumptions or [],
         warnings=warnings or [],
@@ -182,7 +214,11 @@ def _make_report(
     )
 
 
-def _insufficient(question_id: str, population_n: int) -> dict[str, Any]:
+def _insufficient(
+    question_id: str,
+    population_n: int,
+    evidence_provenance: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Standard INSUFFICIENT_DATA report when population is too small."""
     conf = _confidence(population_n)
     return _make_report(
@@ -195,6 +231,7 @@ def _insufficient(question_id: str, population_n: int) -> dict[str, Any]:
         confidence=conf,
         dataset={"source": "shadow_runtime_v1(ingested)", "sample_size": population_n},
         recommendation="WAIT",
+        evidence_provenance=evidence_provenance,
     )
 
 
@@ -463,10 +500,11 @@ def run_ex3() -> dict[str, Any]:
 
     This is a REACHABILITY/DISTRIBUTION question, not an optimal-TP claim.
     """
-    population = _load_exit_population()
+    population, shadow_selection = _load_governed_exit_population()
+    evidence_provenance = build_evidence_provenance(shadow_selection)
     n = len(population)
     if n < _MIN_SAMPLE:
-        return _insufficient("EX3", n)
+        return _insufficient("EX3", n, evidence_provenance)
 
     mfes = [r["mfe_r"] for r in population if math.isfinite(r["mfe_r"])]
     thresholds = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0]
@@ -514,6 +552,7 @@ def run_ex3() -> dict[str, Any]:
         confidence=_confidence(n),
         dataset={"source": "shadow_runtime_v1(ingested)", "sample_size": n},
         recommendation=recommendation,
+        evidence_provenance=evidence_provenance,
         assumptions=[
             "MFE is the peak favourable excursion in R — the maximum distance the trade moved in favour",
             "Reachability = fraction of trades whose MFE >= threshold",
@@ -540,10 +579,11 @@ def run_ex4() -> dict[str, Any]:
 
     This is an ADVERSE-EXCURSION PROFILE, not an optimal-SL claim.
     """
-    population = _load_exit_population()
+    population, shadow_selection = _load_governed_exit_population()
+    evidence_provenance = build_evidence_provenance(shadow_selection)
     n = len(population)
     if n < _MIN_SAMPLE:
-        return _insufficient("EX4", n)
+        return _insufficient("EX4", n, evidence_provenance)
 
     maes = [r["mae_r"] for r in population if math.isfinite(r["mae_r"])]
 
@@ -605,6 +645,7 @@ def run_ex4() -> dict[str, Any]:
         confidence=_confidence(n),
         dataset={"source": "shadow_runtime_v1(ingested)", "sample_size": n},
         recommendation=recommendation,
+        evidence_provenance=evidence_provenance,
         assumptions=[
             "MAE is the peak adverse excursion in R (negative or zero) over the lifecycle",
             "Adverse profile = fraction of trades whose MAE <= threshold",
