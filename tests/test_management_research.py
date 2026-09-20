@@ -36,6 +36,7 @@ def _action(
     symbol: str = "EURUSD", corr: str = "COR-1",
 ) -> dict[str, Any]:
     return {
+        "schema_version": "management_actions_v1",
         "management_action_id": action_id,
         "trade_id": trade_id,
         "correlation_id": corr,

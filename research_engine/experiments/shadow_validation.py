@@ -20,6 +20,13 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
+from research_engine.control_plane.evidence_provenance import (
+    build_evidence_provenance,
+    select_current_evidence,
+)
+from research_engine.experiments.experiment_base import (
+    build_fingerprint_from_provenance,
+)
 from research_engine.correlation.linker import ResearchRecord
 
 logger = logging.getLogger(__name__)
@@ -222,29 +229,42 @@ def run() -> dict:
 
     # Canonical production shadow source: S3 shadow_runtime_v1 event stream,
     # reconstructed into completed shadow outcomes (internal research shape).
-    shadows = ingest_completed_shadow_trades()
-    truths = _source.read_dataset("trade_truth")
+    shadow_selection = select_current_evidence(
+        "shadow_trades", ingest_completed_shadow_trades(),
+    )
+    truth_selection = select_current_evidence(
+        "trade_truth_v1", _source.read_dataset("trade_truth"),
+    )
+    shadows = shadow_selection.records_for_analysis()
+    truths = truth_selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(
+        shadow_selection, truth_selection,
+    )
 
     # ─── structural gates (source availability / schema sanity) ──────────────
     if not shadows:
         return _blocked_report(
             "Canonical shadow source (shadow_runtime_v1 ingestion) returned NO "
-            "completed outcomes — source unavailable/collection gap."
+            "completed outcomes — source unavailable/collection gap.",
+            evidence_provenance,
         )
     if not truths:
         return _blocked_report(
             "Live source (trade_truth_v1) returned NO records — source "
-            "unavailable/collection gap."
+            "unavailable/collection gap.",
+            evidence_provenance,
         )
     if not any(extract_canonical_opportunity_id(s) for s in shadows):
         return _blocked_report(
             "No normalized shadow record carries canonical_opportunity_id — "
-            "schema mismatch between ingestion and matcher."
+            "schema mismatch between ingestion and matcher.",
+            evidence_provenance,
         )
     if not any(extract_canonical_opportunity_id(t) for t in truths):
         return _blocked_report(
             "No trade_truth record carries identity.canonical_opportunity_id — "
-            "schema mismatch between live outcomes and matcher."
+            "schema mismatch between live outcomes and matcher.",
+            evidence_provenance,
         )
 
     # ─── canonical one-to-one matching ────────────────────────────────────────
@@ -272,7 +292,7 @@ def run() -> dict:
         )
         recommendation = "WAIT"
 
-    from research_engine.experiments.experiment_base import build_report, build_fingerprint
+    from research_engine.experiments.experiment_base import build_report
 
     # Up to 3 real matched-pair lineage examples (join-key proof, not metrics).
     examples = [
@@ -309,7 +329,7 @@ def run() -> dict:
                       "(matched 1:1 by canonical_opportunity_id)",
             "sample_size": result.matched_trades,
         },
-        fingerprint=build_fingerprint(result.matched_trades, diagnostics.unmatched_shadow, "shadow_runtime_v1+trade_truth_v1"),
+        fingerprint=build_fingerprint_from_provenance(evidence_provenance),
         recommendation=recommendation,
         provenance={"experiment_module": "research_engine.experiments.shadow_validation", "registry_id": "Q16", "function": "run", "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"},
     )
@@ -324,9 +344,9 @@ def run() -> dict:
     return report
 
 
-def _blocked_report(reason: str) -> dict:
+def _blocked_report(reason: str, evidence_provenance: dict[str, Any]) -> dict:
     """Structural BLOCKED report — a wiring/schema/source problem, never 'no evidence'."""
-    from research_engine.experiments.experiment_base import build_report, build_fingerprint
+    from research_engine.experiments.experiment_base import build_report
 
     report = build_report(
         question_id="Q16",
@@ -350,7 +370,7 @@ def _blocked_report(reason: str) -> dict:
         },
         confidence="INSUFFICIENT_DATA",
         dataset={"source": "shadow_runtime_v1(ingested) + trade_truth_v1", "sample_size": 0},
-        fingerprint=build_fingerprint(0, 0, "shadow_runtime_v1+trade_truth_v1"),
+        fingerprint=build_fingerprint_from_provenance(evidence_provenance),
         recommendation="BLOCKED",
         provenance={"experiment_module": "research_engine.experiments.shadow_validation", "registry_id": "Q16", "function": "run", "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"},
     )

@@ -27,6 +27,10 @@ _CANONICAL_V1_SOURCES = frozenset({
     "portfolio_rankings", "portfolio_shadow", "execution_results_v1",
     "execution_context", "protection_audit_v1", "execution_attempts_v1",
     "risk_deviation_v1", "opportunities", "assessments",
+    # The strict provenance boundary normalises these versioned aliases to
+    # their physical production-contract dataset names before classification.
+    "execution_results", "protection_audit", "execution_attempts",
+    "risk_deviation",
 })
 _RUNNER_SUPPLEMENTAL_SOURCES = {
     # run_opp_1 loads these directly even though its registry data_sources tuple

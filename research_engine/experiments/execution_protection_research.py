@@ -53,6 +53,10 @@ import statistics
 from collections import defaultdict
 from typing import Any
 
+from research_engine.control_plane.evidence_provenance import (
+    build_evidence_provenance,
+    select_current_evidence,
+)
 from research_engine.control_plane.evidence_resolver import (
     join_execution_context_results,
     normalise_evidence_record,
@@ -112,11 +116,12 @@ def _report(
     confidence: str,
     dataset: dict[str, Any],
     recommendation: str,
+    evidence_provenance: dict[str, Any] | None = None,
     assumptions: list[str] | None = None,
     warnings: list[str] | None = None,
 ) -> dict[str, Any]:
     from research_engine.experiments.experiment_base import (
-        build_report, build_fingerprint,
+        build_report, build_fingerprint, build_fingerprint_from_provenance,
     )
     sample = dataset.get("sample_size", 0)
     return build_report(
@@ -125,7 +130,11 @@ def _report(
         overall=overall,
         confidence=confidence,
         dataset=dataset,
-        fingerprint=build_fingerprint(sample, 0, "execution_results"),
+        fingerprint=(
+            build_fingerprint_from_provenance(evidence_provenance)
+            if evidence_provenance is not None
+            else build_fingerprint(sample, 0, "execution_results")
+        ),
         recommendation=recommendation,
         assumptions=assumptions or [],
         warnings=warnings or [],
@@ -308,16 +317,32 @@ _REJECTION_EVIDENCE_LIMITATION = (
 
 
 def run_x1() -> dict[str, Any]:
-    res = _load_results()
-    ctx = _load_context()
+    result_selection = select_current_evidence(
+        "execution_results_v1", _load_results(),
+    )
+    context_selection = select_current_evidence(
+        "execution_context", _load_context(),
+    )
+    res = result_selection.records_for_analysis()
+    ctx = context_selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(
+        result_selection, context_selection,
+    )
     if not res:
         return _report(
             question_id="X1", status="INSUFFICIENT_DATA",
             overall={"n": 0, "detail": "No execution_results_v1 records."},
             confidence="INSUFFICIENT_DATA",
-            dataset={"sample_size": 0, "source": "execution_results_v1"},
+            dataset={
+                "sample_size": 0,
+                "source": "execution_results_v1 + execution_context_v1",
+            },
             recommendation="INSUFFICIENT_DATA",
-            assumptions=["Only execution_results_v1 records used."],
+            evidence_provenance=evidence_provenance,
+            assumptions=[
+                "X1 requires execution_results_v1 measured slippage joined "
+                "to execution_context_v1 by correlation_id.",
+            ],
         )
     n = len(res)
 
@@ -352,6 +377,7 @@ def run_x1() -> dict[str, Any]:
                      "measured_slippage": m,
                      "source": "execution_results_v1 (+ execution_context_v1)"},
             recommendation="INSUFFICIENT_DATA",
+            evidence_provenance=evidence_provenance,
             assumptions=[
                 "QUESTION -> PRIMARY EVIDENCE: X1 -> execution_results "
                 "measured slippage; execution_context session joined by "
@@ -388,6 +414,7 @@ def run_x1() -> dict[str, Any]:
                      "measured_slippage": m,
                      "source": "execution_results_v1 + execution_context_v1"},
             recommendation="INSUFFICIENT_DATA",
+            evidence_provenance=evidence_provenance,
             assumptions=["Measured execution slippage joined to context by correlation_id."],
             warnings=["Requires >=30 measured-slippage records with matched execution_context."],
         )
@@ -411,8 +438,9 @@ def run_x1() -> dict[str, Any]:
         confidence=_confidence(n),
         dataset={"sample_size": n,
                  "measured_slippage": m,
-                 "source": "execution_results_v1"},
+                 "source": "execution_results_v1 + execution_context_v1"},
         recommendation="SLIPPAGE_PROFILE_REPORTED",
+        evidence_provenance=evidence_provenance,
         assumptions=[
             "QUESTION -> PRIMARY EVIDENCE: X1 -> execution_results "
             "measured slippage; execution_context session joined by "
@@ -431,8 +459,17 @@ def run_x1() -> dict[str, Any]:
 # ============================================================
 
 def run_x2() -> dict[str, Any]:
-    res = _load_results()
-    att = _load_attempts()
+    result_selection = select_current_evidence(
+        "execution_results_v1", _load_results(),
+    )
+    attempt_selection = select_current_evidence(
+        "execution_attempts_v1", _load_attempts(),
+    )
+    res = result_selection.records_for_analysis()
+    att = attempt_selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(
+        result_selection, attempt_selection,
+    )
     n = len(res)
 
     overall: dict[str, Any] = {
@@ -452,6 +489,7 @@ def run_x2() -> dict[str, Any]:
                      "source": "execution_results_v1 (+ execution_attempts_v1 "
                                "when populated)"},
             recommendation="INSUFFICIENT_DATA",
+            evidence_provenance=evidence_provenance,
             assumptions=[
                 "Requires >=30 persisted execution records.",
             ],
@@ -513,6 +551,7 @@ def run_x2() -> dict[str, Any]:
                  "source": "execution_results_v1 (+ execution_attempts_v1 "
                            "when populated)"},
         recommendation="BROKER_EXECUTION_PROFILE_REPORTED",
+        evidence_provenance=evidence_provenance,
         assumptions=[
             "QUESTION -> PRIMARY EVIDENCE: X2 -> execution_results "
             "retcode/result_ok; execution_attempts secondary (per-attempt "
@@ -801,7 +840,11 @@ def run_exec1() -> dict[str, Any]:
 # ============================================================
 
 def run_prot1() -> dict[str, Any]:
-    prot = _load_protection()
+    protection_selection = select_current_evidence(
+        "protection_audit_v1", _load_protection(),
+    )
+    prot = protection_selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(protection_selection)
     if not prot:
         return _report(
             question_id="PROT1", status="INSUFFICIENT_DATA",
@@ -809,6 +852,7 @@ def run_prot1() -> dict[str, Any]:
             confidence="INSUFFICIENT_DATA",
             dataset={"sample_size": 0, "source": "protection_audit_v1"},
             recommendation="INSUFFICIENT_DATA",
+            evidence_provenance=evidence_provenance,
             assumptions=["PROT-1 reads protection_audit_v1 only."],
         )
 
@@ -864,6 +908,7 @@ def run_prot1() -> dict[str, Any]:
             overall=overall, confidence=conf,
             dataset={"sample_size": n, "source": "protection_audit_v1"},
             recommendation="INSUFFICIENT_DATA",
+            evidence_provenance=evidence_provenance,
             assumptions=["protection_audit_v1 is POST-FILL verification."],
             warnings=["Requires >=30 records for COMPLETE."],
         )
@@ -873,6 +918,7 @@ def run_prot1() -> dict[str, Any]:
         confidence=_confidence(n),
         dataset={"sample_size": n, "source": "protection_audit_v1"},
         recommendation="PROTECTION_INTEGRITY_REPORTED",
+        evidence_provenance=evidence_provenance,
         assumptions=[
             "PROT-1 is audit/research only — never places/modifies SL/TP.",
             "SL/TP match uses tolerance of 0.0001 price units.",

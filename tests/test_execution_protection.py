@@ -44,6 +44,7 @@ def _fake_result(
     protection_failure_reason: str = "",
 ) -> dict[str, Any]:
     return {
+        "schema_version": "execution_results_v1",
         "correlation_id": correlation_id,
         "decision_id": f"DEC-{correlation_id}",
         "canonical_opportunity_id": f"OPP-{correlation_id}",
@@ -74,6 +75,7 @@ def _fake_context(
     open_positions: int = 3,
 ) -> dict[str, Any]:
     return {
+        "schema_version": "execution_context_v1",
         "correlation_id": correlation_id,
         "canonical_opportunity_id": f"OPP-{correlation_id}",
         "symbol": symbol,
@@ -107,6 +109,7 @@ def _fake_attempt(
     spread_at_attempt: float = 1.5,
 ) -> dict[str, Any]:
     return {
+        "schema_version": "execution_attempts_v1",
         "attempt_id": attempt_id,
         "correlation_id": correlation_id,
         "decision_id": f"DEC-{correlation_id}",
@@ -135,6 +138,7 @@ def _fake_protection(
     position_ticket: int = 10001,
 ) -> dict[str, Any]:
     return {
+        "schema_version": "protection_audit_v1",
         "correlation_id": correlation_id,
         "symbol": "EURUSD",
         "position_ticket": position_ticket,
@@ -296,7 +300,9 @@ class TestX1:
         r = run_x1()
         assert r["status"] == "COMPLETE"
         assert r["overall"]["measured_slippage_count"] == 35
-        assert r["dataset"]["source"] == "execution_results_v1"
+        assert r["dataset"]["source"] == (
+            "execution_results_v1 + execution_context_v1"
+        )
 
     def test_slippage_only_measured_semantic(self, monkeypatch):
         results = ([_fake_result(correlation_id=f"COR-MEASURED-{i}") for i in range(35)] +

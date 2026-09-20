@@ -53,6 +53,14 @@ import statistics
 from collections import defaultdict
 from typing import Any
 
+from research_engine.control_plane.evidence_provenance import (
+    build_evidence_provenance,
+    select_current_evidence,
+)
+from research_engine.experiments.experiment_base import (
+    build_fingerprint_from_provenance,
+)
+
 logger = logging.getLogger(__name__)
 
 _MIN_SAMPLE = 30   # overall status gate (engine convention)
@@ -94,11 +102,12 @@ def _report(
     confidence: str,
     dataset: dict[str, Any],
     recommendation: str,
+    evidence_provenance: dict[str, Any],
     assumptions: list[str] | None = None,
     warnings: list[str] | None = None,
 ) -> dict[str, Any]:
     from research_engine.experiments.experiment_base import (
-        build_report, build_fingerprint,
+        build_report,
     )
     sample = dataset.get("sample_size", 0)
     return build_report(
@@ -107,7 +116,7 @@ def _report(
         overall=overall,
         confidence=confidence,
         dataset=dataset,
-        fingerprint=build_fingerprint(sample, 0, "risk_deviation"),
+        fingerprint=build_fingerprint_from_provenance(evidence_provenance),
         recommendation=recommendation,
         assumptions=assumptions or [],
         warnings=warnings or [],
@@ -185,7 +194,11 @@ def run_risk1() -> dict[str, Any]:
     respect the 1-R planned-risk definition?  How often does realised loss
     exceed the plan (ELEVATED / CRITICAL)?
     """
-    raw = _load_risk_deviation()
+    selection = select_current_evidence(
+        "risk_deviation_v1", _load_risk_deviation(),
+    )
+    raw = selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(selection)
     records: list[dict[str, Any]] = []
     excluded_no_trade_id = 0
     excluded_invalid_class = 0
@@ -212,6 +225,7 @@ def run_risk1() -> dict[str, Any]:
             confidence="LOW" if n else "INSUFFICIENT_DATA",
             dataset={"sample_size": n, "source": "risk_deviation_v1"},
             recommendation="INSUFFICIENT_DATA",
+            evidence_provenance=evidence_provenance,
             assumptions=[
                 "risk_deviation_v1 is a POST-OUTCOME diagnostic projection "
                 "(semantic_stage=post_outcome_analysis).",
@@ -295,6 +309,7 @@ def run_risk1() -> dict[str, Any]:
         dataset={"sample_size": n, "source": "risk_deviation_v1"},
         recommendation=_risk1_recommendation(
             len(loss_records), len(over_risk), len(critical), n),
+        evidence_provenance=evidence_provenance,
         assumptions=[
             "risk_deviation_v1 is a POST-OUTCOME diagnostic projection: "
             "it compares the realised loss magnitude to the 1-R definition "

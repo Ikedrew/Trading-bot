@@ -51,6 +51,7 @@ def _shadow(
     tid = trade_id or f"nshadow_1_{symbol}_{horizon}"
     return {
         "schema_version": "shadow_trades_v1",
+        "epoch": "CURRENT",
         "identity": {
             "trade_id": tid,
             "shadow_trade_id": tid,

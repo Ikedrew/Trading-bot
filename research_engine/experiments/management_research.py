@@ -31,6 +31,11 @@ import statistics
 from collections import defaultdict
 from typing import Any
 
+from research_engine.control_plane.evidence_provenance import (
+    build_evidence_provenance,
+    select_current_evidence,
+)
+
 logger = logging.getLogger(__name__)
 
 _MIN_SAMPLE_MGMT1 = 30
@@ -204,12 +209,29 @@ def run_mgmt1() -> dict[str, Any]:
         _confidence, _make_report, _MIN_SAMPLE,
     )
 
-    actions = _load_actions()
-    outcomes = _load_outcomes()
+    action_selection = select_current_evidence(
+        "management_actions_v1", _load_actions(),
+    )
+    outcome_selection = select_current_evidence(
+        "trade_truth_v1", _load_outcomes(),
+    )
+    actions = action_selection.records_for_analysis()
+    outcomes = outcome_selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(
+        action_selection, outcome_selection,
+    )
 
-    managed_actions, outcome_by_id, managed_trade_ids = build_trade_level_population(
+    managed_actions, outcome_by_id, _managed_trade_ids = build_trade_level_population(
         actions, outcomes)
     action_population = build_action_population(actions)
+    matched_action_population = [
+        action for action in action_population
+        if _find_outcome(action, outcome_by_id) is not None
+    ]
+    matched_managed_ids = {
+        action["trade_id"] for action in matched_action_population
+        if action["trade_id"]
+    }
 
     # Split trade_truth into managed and unmanaged
     managed_trades: list[dict[str, Any]] = []
@@ -241,6 +263,7 @@ def run_mgmt1() -> dict[str, Any]:
             confidence=conf,
             dataset={"source": "management_actions_v1 + trade_truth_v1", "sample_size": n_total},
             recommendation="WAIT",
+            evidence_provenance=evidence_provenance,
         )
 
     managed_stats = _descriptive(managed_trades) if managed_trades else {"n": 0}
@@ -250,7 +273,9 @@ def run_mgmt1() -> dict[str, Any]:
     coverage = round(len(managed_trades) / n_total, 4) if n_total else 0
 
     # Action count per managed trade
-    action_counts = [len(managed_actions.get(tid, [])) for tid in managed_trade_ids]
+    action_counts = [
+        len(managed_actions.get(tid, [])) for tid in matched_managed_ids
+    ]
 
     # Determine conclusion
     m_r = managed_stats.get("mean_r")
@@ -297,6 +322,10 @@ def run_mgmt1() -> dict[str, Any]:
             "mean_actions_per_managed_trade": round(
                 statistics.mean(action_counts), 2) if action_counts else 0,
             "total_management_actions": len(actions),
+            "matched_management_actions": len(matched_action_population),
+            "unmatched_management_actions": (
+                len(action_population) - len(matched_action_population)
+            ),
             "methodology": "observational association (not causal)",
         },
         confidence=_confidence(n_total),
@@ -305,6 +334,7 @@ def run_mgmt1() -> dict[str, Any]:
             "sample_size": n_total,
         },
         recommendation=recommendation,
+        evidence_provenance=evidence_provenance,
         assumptions=[
             "Management actions are NOT randomly assigned — selection bias is expected",
             "Managed and unmanaged trades may differ systematically in conditions",
@@ -351,10 +381,19 @@ def run_mgmt2() -> dict[str, Any]:
         _confidence, _make_report, _MIN_SAMPLE,
     )
 
-    actions = _load_actions()
-    outcomes = _load_outcomes()
+    action_selection = select_current_evidence(
+        "management_actions_v1", _load_actions(),
+    )
+    outcome_selection = select_current_evidence(
+        "trade_truth_v1", _load_outcomes(),
+    )
+    actions = action_selection.records_for_analysis()
+    outcomes = outcome_selection.records_for_analysis()
+    evidence_provenance = build_evidence_provenance(
+        action_selection, outcome_selection,
+    )
 
-    managed_actions, outcome_by_id, managed_trade_ids = build_trade_level_population(
+    managed_actions, outcome_by_id, _managed_trade_ids = build_trade_level_population(
         actions, outcomes)
 
     # Join actions to outcomes via trade_id or correlation_id
@@ -384,6 +423,14 @@ def run_mgmt2() -> dict[str, Any]:
         action_semantics[atype] = semantics
 
     n_with_outcome = sum(len(trades) for trades in action_type_trades.values())
+    flat_actions = managed_actions_flat(actions)
+    action_population_size = len(flat_actions)
+    matched_action_count = sum(
+        1 for action in flat_actions
+        if _find_outcome(action, outcome_by_id) is not None
+    )
+    unmatched_actions = action_population_size - matched_action_count
+    deduplicated_matched_actions = matched_action_count - len(seen_trade_action)
     if n_with_outcome < _MIN_SAMPLE_MGMT2:
         return _make_report(
             question_id="MGMT-2",
@@ -392,10 +439,14 @@ def run_mgmt2() -> dict[str, Any]:
                 "finding": f"Insufficient action-type outcome data: N={n_with_outcome} < {_MIN_SAMPLE_MGMT2}",
                 "action_types_found": sorted(action_type_trades.keys()),
                 "trades_with_outcomes": n_with_outcome,
+                "management_actions_total": action_population_size,
+                "unmatched_actions_excluded": unmatched_actions,
+                "duplicate_trade_action_records_excluded": deduplicated_matched_actions,
             },
             confidence="INSUFFICIENT_DATA" if n_with_outcome < 10 else "LOW",
             dataset={"source": "management_actions_v1 + trade_truth_v1", "sample_size": n_with_outcome},
             recommendation="WAIT",
+            evidence_provenance=evidence_provenance,
         )
 
     # Per-action-type analysis
@@ -433,6 +484,9 @@ def run_mgmt2() -> dict[str, Any]:
                        f"{sum(d['n'] for d in by_type.values())} trades with outcomes. "
                        f"{len(types_with_data)} types have sufficient N.",
             "sample_size": n_with_outcome,
+            "management_actions_total": action_population_size,
+            "unmatched_actions_excluded": unmatched_actions,
+            "duplicate_trade_action_records_excluded": deduplicated_matched_actions,
             "by_action_type": by_type,
             "methodology": "observational per-action-type outcome association (not causal)",
         },
@@ -442,6 +496,7 @@ def run_mgmt2() -> dict[str, Any]:
             "sample_size": n_with_outcome,
         },
         recommendation=recommendation,
+        evidence_provenance=evidence_provenance,
         assumptions=[
             "OBSERVATIONAL ASSOCIATION ONLY — management actions are not randomly assigned",
             "Selection confounding expected: SLTP_MODIFY occurs when the management layer decides to adjust levels",
