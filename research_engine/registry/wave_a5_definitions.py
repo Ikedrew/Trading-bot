@@ -1,8 +1,8 @@
 """Wave A5 canonical question-ownership classifications.
 
-This module records only declarative ownership boundaries for the five target
-relationships.  It does not alter scientific definition bodies, runners,
-reports, legacy lookup, evidence resolution, readiness, or runtime behaviour.
+This module records declarative ownership boundaries for the five target
+relationships and applies the adjudicated E3-owner/S1-superseded-alias V1
+definition clarification. It does not alter trading/runtime behaviour.
 """
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from research_engine.registry.research_question_models import (
+    QuestionLifecycle,
     ResearchQuestionDefinition,
 )
 
@@ -65,49 +66,65 @@ WAVE_A5_TARGETS = frozenset(
     for question_id in relationship
 )
 
+# HD01 scientific-definition clarification (V1; canonical IDs unchanged).
+E3_ACTIVE_V10_STRATEGY_FAMILIES = (
+    "LIQUIDITY_SWEEP_REVERSAL",
+    "FALSE_BREAK",
+    "TREND_CONTINUATION",
+    "BREAKOUT_EXPANSION",
+    "MEAN_REVERSION",
+    "RANGE_REACTION",
+)
+E3_EXCLUDED_STRATEGY_FAMILY = "NONE"
+E3_LEGACY_COMPATIBILITY_TAXONOMY = (
+    "REVERSAL", "CONTINUATION", "FALSE_BREAK",
+)
+E3_SUFFICIENCY_CONTRACT = {
+    "minimum_distinct_canonical_opportunities_per_family": 30,
+    "minimum_total_observations": 50,
+    "minimum_strategy_coverage": 0.50,
+    "minimum_outcome_coverage": 0.95,
+    "uncertainty": "95% mean interval using 1.96 sample-standard-errors",
+    "below_family_minimum": "INSUFFICIENT_EVIDENCE",
+}
+
 
 WAVE_A5_OWNERSHIP = {
     ("E3", "S1"): OwnershipRelationship(
         question_ids=("E3", "S1"),
-        relationship_types=("TRUE_ALIAS", "LEGACY_IDENTITY_COLLISION", "UNRESOLVED"),
+        relationship_types=("TRUE_ALIAS", "SUPERSEDED_IDENTITY", "ADJUDICATED"),
         scientific_intents=(
-            ("E3", "Identify which REVERSAL/CONTINUATION/FALSE_BREAK strategy types have positive expectancy."),
-            ("S1", "Test positive expectancy independently for each REVERSAL/CONTINUATION/FALSE_BREAK strategy type."),
+            ("E3", "Identify expectancy independently for each active non-NONE V10 StrategyFamily."),
+            ("S1", "Superseded alias of the E3 V10 StrategyFamily expectancy result."),
         ),
         scientifically_equivalent=True,
         highest_safe_sharing_level="full alias after explicit canonical-owner governance and semantic runner repair",
-        canonical_owners=(),
+        canonical_owners=(("research_engine.experiments.strategy_expectancy.run_e3", "E3"),
+                          ("e3_strategy_family_expectancy.json", "E3")),
         shared_helper_status=(
             "A strategy-to-outcome grouping and per-strategy expectancy calculation may be fully shared."
         ),
         runner_ownership_status=(
-            "Both map to legacy_canonical.run_q24, but it reads decision_trace and emits strategy activation counts; "
-            "it does not read shadow outcomes or calculate expectancy, so it answers neither canonical intent."
+            "E3 maps to strategy_expectancy.run_e3. S1 owns no runner and projects E3 explicitly. "
+            "Legacy run_q24 remains compatibility/history-only activation-frequency machinery."
         ),
         report_ownership_status=(
-            "Both claim q24_strategy_edge.json; the Q24 report can be accepted for both IDs but currently contains "
-            "activation frequency rather than expectancy."
+            "E3 solely owns e3_strategy_family_expectancy.json. S1 owns no report. "
+            "q24_strategy_edge.json cannot satisfy either canonical identity."
         ),
         legacy_identity_risk=(
-            "Both accept Q24. Canonical lookup by Q24 is ambiguous and the same legacy report identity is accepted "
-            "for both questions."
+            "Q24 is not a declared canonical alias for E3 or S1 and remains historical compatibility only."
         ),
         false_completion_risk=(
-            "A COMPLETE Q24 activation report can attach a non-expectancy finding/completion state to both E3 and S1."
+            "Closed: report ownership and alias projection prevent Q24 from attaching completion to E3/S1."
         ),
         unit_of_analysis_boundary=(
-            "The intended independent grain is one canonical strategy opportunity/outcome, not account executions; "
-            "the current runner instead counts positive-score decision traces."
+            "One completed PRIMARY_HORIZON_SIMULATION outcome per unique canonical_opportunity_id."
         ),
         required_separation=(
-            "No scientific split is required if governance designates one canonical owner and explicitly aliases or "
-            "supersedes the other. The repaired owner must use strategy-linked outcomes, emit the canonical owner ID, "
-            "and prevent an activation-count artifact from satisfying expectancy."
+            "E3 is the scientific owner; S1 is an explicit superseded alias. No separate S1 finding or artifact exists."
         ),
-        unresolved_reason=(
-            "The registry proves equivalent intent/requirements but does not designate which canonical ID owns the "
-            "alias relationship, and the shared runner/report is semantically invalid for both."
-        ),
+        unresolved_reason="",
     ),
     ("D6", "PORT-1"): OwnershipRelationship(
         question_ids=("D6", "PORT-1"),
@@ -279,5 +296,31 @@ WAVE_A5_OWNERSHIP = {
 def apply_wave_a5_definitions(
     definitions: dict[str, ResearchQuestionDefinition],
 ) -> dict[str, ResearchQuestionDefinition]:
-    """A5 records ownership metadata only; scientific definitions are unchanged."""
+    """Apply the adjudicated E3/S1 owner/alias scientific contract."""
+    e3 = definitions.get("E3")
+    if e3 is not None:
+        e3.question_wording = (
+            "Which active non-NONE V10 StrategyFamily values contain positive "
+            "expectancy on completed primary shadow outcomes?"
+        )
+        e3.research_intent = "Estimate opportunity-level simulated R expectancy by V10 StrategyFamily."
+        e3.hypothesis = "At least one active V10 StrategyFamily has positive expectancy with 95% uncertainty."
+        e3.null_hypothesis = "No active V10 StrategyFamily has established positive expectancy."
+        e3.population_definition = (
+            "CURRENT normalized shadow_trades_v1 completed PRIMARY_HORIZON_SIMULATION outcomes; "
+            "one unique canonical_opportunity_id observation; StrategyFamily.NONE excluded."
+        )
+        e3.metric_definition = (
+            "Per family N, mean simulated_outcome.pnl_r_multiple, win rate, and mean +/- 1.96 "
+            "sample-standard-errors; N<30 is INSUFFICIENT_EVIDENCE."
+        )
+        e3.minimum_sample = 50
+    s1 = definitions.get("S1")
+    if s1 is not None:
+        s1.lifecycle_status = QuestionLifecycle.SUPERSEDED
+        s1.scientific_owner_id = "E3"
+        s1.runner_module = ""
+        s1.runner_function = ""
+        s1.report_filename = ""
+        s1.legacy_ids = ()
     return definitions

@@ -61,18 +61,19 @@ E3 = ResearchQuestion(
     id="E3",
     category=QuestionCategory.SYSTEM_EDGE,
     title="Strategy expectancy",
-    description="Which strategy types (REVERSAL/CONTINUATION/FALSE_BREAK) contain positive expectancy?",
+    description=("Which active non-NONE V10 StrategyFamily values contain "
+                 "positive expectancy on completed primary shadow outcomes?"),
     required_fields=("strategy", "r_multiple"),
     data_sources=(DataSource.SHADOW_TRADES,),
     priority=QuestionPriority.P0,
     validation_rules=(
         ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy field required (not combined with horizon)"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome data required"),
+        ValidationRule("sample_size", ">=", 50, "Shared report-validity floor"),
     ),
-    runner_module="research_engine.experiments.legacy_canonical",
-    runner_function="run_q24",
-    report_filename="q24_strategy_edge.json",
-    legacy_ids=("Q24",),
+    runner_module="research_engine.experiments.strategy_expectancy",
+    runner_function="run_e3",
+    report_filename="e3_strategy_family_expectancy.json",
 )
 
 E4 = ResearchQuestion(
@@ -303,7 +304,8 @@ S1 = ResearchQuestion(
     id="S1",
     category=QuestionCategory.STRATEGY_HORIZON,
     title="Strategy expectancy by type",
-    description="Does each strategy type (REVERSAL/CONTINUATION/FALSE_BREAK) have positive expectancy independently?",
+    description=("Superseded alias of E3: expectancy for each active non-NONE "
+                 "V10 StrategyFamily on completed primary shadow outcomes."),
     required_fields=("strategy", "r_multiple"),
     data_sources=(DataSource.SHADOW_TRADES,),
     priority=QuestionPriority.P0,
@@ -311,10 +313,8 @@ S1 = ResearchQuestion(
         ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy values required"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
     ),
-    runner_module="research_engine.experiments.legacy_canonical",
-    runner_function="run_q24",
-    report_filename="q24_strategy_edge.json",
-    legacy_ids=("Q24",),
+    depends_on=("E3",),
+    scientific_owner_id="E3",
 )
 
 S2 = ResearchQuestion(

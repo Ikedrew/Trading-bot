@@ -176,11 +176,13 @@ D2_RW3_PROGRESS_IDS = frozenset({"D2", "D3", "D4", "D5", "X5"})
 # promotion-policy evaluation) all have canonical runners, unique reports, and
 # passing focused gates.
 D6_RW4_PROGRESS_IDS = frozenset({"D6", "PORT-1", "OPP-1", "P1"})
+RW5_E3_S1_OPERATIONAL_IDS = frozenset({"E3", "S1"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
     | D2_RW3_PROGRESS_IDS
     | D6_RW4_PROGRESS_IDS
+    | RW5_E3_S1_OPERATIONAL_IDS
 )
 
 
@@ -188,10 +190,10 @@ OPERATIONAL_IDS = (
 HUMAN_SEMANTIC_DECISIONS = {
     "HD01": HumanSemanticDecision(
         "HD01", ("E3", "S1"),
-        "Choose the surviving canonical owner and compatibility treatment for the equivalent E3/S1 intent.",
+        "ADJUDICATED: E3 is the surviving canonical owner; S1 is an explicit superseded alias.",
         ("E3 owner; S1 explicit alias/superseded identity", "S1 owner; E3 explicit alias/superseded identity"),
         ("Preserves E-family ownership and routes S1 explicitly", "Preserves strategy-family ownership and routes E3 explicitly"),
-        "No Wave-A-supported default; governance must select one owner before alias activation.", True,
+        "ADJUDICATED: E3 owns the result; S1 is an explicit superseded alias.", False,
     ),
     "HD02": HumanSemanticDecision(
         "HD02", ("M1", "M3", "M7", "M11"),
@@ -226,7 +228,7 @@ HUMAN_SEMANTIC_DECISIONS = {
         "Approve horizon/strategy adjustment estimators and provisional overall/cell thresholds.",
         ("Cluster-aware adjusted model with proposed thresholds", "Alternative predeclared estimator/thresholds"),
         ("Uses repeated horizons without pseudo-replication", "Acceptable only if equally explicit and cluster-safe"),
-        "Use the proposed cluster-aware contracts in the frozen no-runner design.", True,
+        "ADJUDICATED: use the proposed cluster-aware contracts in the frozen no-runner design.", False,
     ),
     "HD07": HumanSemanticDecision(
         "HD07", ("S7",),
@@ -366,7 +368,7 @@ REPAIR_WAVES = {
     ),
     "RW5": RepairWave(
         "RW5", "Strategy expectancy foundation", ("E3", "S1", "S5", "S6"),
-        "Strategy expectancy ownership is unresolved and adjusted strategy/horizon runners do not exist.", ("RW1",), ("HD01", "HD06"),
+        "E3/S1 ownership and expectancy are implemented; adjusted S5/S6 runners do not yet exist.", ("RW1",), ("HD01", "HD06"),
         ("canonical alias/owner routing", "strategy expectancy runners", "shadow repeated-measure helpers", "unique reports"), False,
         ("E3", "S1", "S5", "S6"), ("S7",),
         "The chosen E3/S1 owner and explicit alias share one valid expectancy result without duplicate ownership; S5/S6 cluster horizons by opportunity and meet cell rules.",
@@ -452,8 +454,6 @@ _assign(("D2", "D3", "D4", "D5", "X5"), "RW3", "prediction/calibration", "PREDIC
 # PORT-1 was repaired in RW4.2 and is structurally operational (no assignment).
 # OPP-1 was repaired in RW4.3 and is structurally operational (no assignment).
 # P1 was repaired in RW4.4 and is structurally operational (no assignment).
-_assign(("E3", "S1"), "RW5", "report ownership", "STRATEGY_EXPECTANCY_FOUNDATION",
-        "Equivalent intent lacks a chosen canonical owner and the shared runner reports activation counts, not expectancy.", human=True)
 _assign(("S5", "S6"), "RW5", "no runner", "NO_RUNNER_STRATEGY_FOUNDATION",
         "The approved proposed strategy/horizon contract has no runner, report, readiness, or completion implementation.", human=True)
 _assign(("S7",), "RW6", "no runner", "NO_RUNNER_STRATEGY_INTERACTION",
@@ -497,8 +497,8 @@ _QUESTION_ACTIONS = {
     "PORT-1": "Activate a complete selected-versus-best cycle definition while retaining run_port_1 and port1_portfolio_selection.json ownership.",
     "OPP-1": "Exclude missing outcomes from expectancy and replace legacy fallback joins with one conflict-rejecting canonical opportunity root.",
     "P1": "Join declared decision evidence and evaluate candidate promotion effects on EV, win rate, drawdown, frequency, and risk under the approved design.",
-    "E3": "After owner selection, route E3 explicitly to the repaired strategy-expectancy owner without duplicate finding ownership.",
-    "S1": "After owner selection, route S1 explicitly to the repaired strategy-expectancy owner without duplicate finding ownership.",
+    "E3": "Implemented: E3 owns governed V10 StrategyFamily expectancy at canonical-opportunity grain.",
+    "S1": "Implemented: S1 is an explicit superseded alias projecting E3 without an independent finding.",
     "S5": "Implement the frozen cluster-aware horizon-adjusted strategy-family runner and unique s5 report.",
     "S6": "Implement the frozen paired/clustered strategy-adjusted horizon runner and unique s6 report.",
     "S7": "Implement the frozen opportunity-clustered interaction runner after S5/S6, including multiplicity and 2x2 cell gates.",

@@ -20,6 +20,10 @@ OWNERSHIP CONTRACT (RW1)
 ------------------------
 q1_component_reward.json -> D1  (never L3)
 q5_pattern_degradation.json -> E2  (never L1)
+
+OWNERSHIP CONTRACT (Repair 2B.1)
+--------------------------------
+e3_strategy_family_expectancy.json -> E3  (S1 is a superseded alias, not a co-owner)
 """
 from __future__ import annotations
 

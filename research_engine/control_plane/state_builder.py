@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+from dataclasses import replace
 from functools import lru_cache
 from importlib.util import find_spec
 import json
@@ -517,6 +518,68 @@ def _build_selected_states(
         visiting.add(canonical_id)
         question = by_id[canonical_id]
         try:
+            scientific_owner_id = str(
+                getattr(question, "scientific_owner_id", "") or ""
+            )
+            if scientific_owner_id:
+                if scientific_owner_id not in by_id:
+                    raise ValueError(
+                        f"Alias {canonical_id} names unknown scientific owner "
+                        f"{scientific_owner_id}"
+                    )
+                owner = build(scientific_owner_id)
+                state = replace(
+                    owner,
+                    question_id=question.id,
+                    title=question.title,
+                    description=question.description,
+                    category=question.category.value,
+                    state_status=owner.state_status,
+                    readiness_status=owner.readiness_status,
+                    readiness_reason=(
+                        f"SUPERSEDED_ALIAS: {question.id} projects the governed "
+                        f"scientific result owned by {scientific_owner_id}: "
+                        f"{owner.readiness_reason}"
+                    ),
+                    required_sample_size=None,
+                    required_evidence=[f"scientific_owner:{scientific_owner_id}"],
+                    runner_status=RunnerStatus.ALIAS,
+                    runner_module="",
+                    runner_function="",
+                    latest_result={
+                        "relationship": "SUPERSEDED_ALIAS",
+                        "scientific_owner_id": scientific_owner_id,
+                        "authoritative_result": owner.latest_result,
+                    },
+                    report_validity_reason=(
+                        f"S1 owns no artifact; report validity is projected "
+                        f"explicitly from scientific owner {scientific_owner_id}: "
+                        f"{owner.report_validity_reason}"
+                    ),
+                    authoritative_report=None,
+                    report_history=[],
+                    report_history_count=0,
+                    candidate_status="NONE",
+                    candidate_id="",
+                    candidates=[],
+                    candidate_mapping_status="NONE",
+                    candidate_count=0,
+                    decision_status="NOT_REVIEWED",
+                    latest_decision=None,
+                    latest_application_event=None,
+                    governance_warnings=[
+                        f"{question.id} is a superseded alias; governance belongs to {scientific_owner_id}"
+                    ],
+                    next_governance_action=f"Use scientific owner {scientific_owner_id}",
+                    next_action=(
+                        f"Follow scientific owner {scientific_owner_id}; do not "
+                        "run this superseded alias independently"
+                    ),
+                    identity_status="SUPERSEDED_ALIAS",
+                    scientific_owner_id=scientific_owner_id,
+                )
+                states_by_id[canonical_id] = state
+                return state
             dependency_states = {
                 dependency: build(dependency).state_status
                 for dependency in question.depends_on

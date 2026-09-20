@@ -126,7 +126,11 @@ def _empty_dir(tmp_path: Path, name: str = "empty") -> Path:
 # ---------------------------------------------------------------------------
 
 def test_req1_q1_component_reward_belongs_to_d1():
-    assert ADJUDICATED_REPORT_OWNERS == {D1_ARTIFACT: "D1", E2_ARTIFACT: "E2"}
+    assert ADJUDICATED_REPORT_OWNERS == {
+        D1_ARTIFACT: "D1",
+        E2_ARTIFACT: "E2",
+        "e3_strategy_family_expectancy.json": "E3",
+    }
     assert canonical_report_owner(D1_ARTIFACT) == "D1"
     assert canonical_report_owner("analysis/reports/q1_component_reward.json") == "D1"
     assert canonical_report_owner("analysis\\reports\\q1_component_reward.json") == "D1"
@@ -382,9 +386,14 @@ def test_req12_ambiguous_shared_legacy_mappings_fail_closed(rw1_reports):
     assert resolve_report_ownership(E2_ARTIFACT, "S1").allowed is False
 
     # Ambiguous direct legacy lookup stays fail-closed for every shared identity.
-    for alias in ("Q1", "Q5", "Q24", "Q10"):
+    for alias in ("Q1", "Q5", "Q10"):
         with pytest.raises(KeyError):
             build_question_state(alias, reports_dir=rw1_reports, evidence_source={})
+    # 2B.1 removes E3/S1 from Q24 routing. The surviving E2 compatibility
+    # declaration cannot resolve or complete either strategy question.
+    assert build_question_state(
+        "Q24", reports_dir=rw1_reports, evidence_source={}
+    ).question_id == "E2"
 
     # Filename similarity is not ownership authority.
     assert is_adjudicated_report("q1_component_reward_v2.json") is False
@@ -496,34 +505,28 @@ def test_req14_report_existence_alone_cannot_create_completion(tmp_path, rw1_rep
 
 
 # ---------------------------------------------------------------------------
-# REQ 15: E3/S1 behaviour is unchanged (their ownership was NOT adjudicated)
+# REQ 15: E3/S1 ownership is explicitly adjudicated by Repair 2B.1
 # ---------------------------------------------------------------------------
 
-def test_req15_e3_s1_behaviour_is_unchanged(tmp_path):
+def test_req15_e3_s1_behaviour_is_adjudicated(tmp_path):
     e3 = REGISTRY_BY_ID["E3"]
     s1 = REGISTRY_BY_ID["S1"]
-    assert e3.report_filename == s1.report_filename == "q24_strategy_edge.json"
-    assert e3.legacy_ids == s1.legacy_ids == ("Q24",)
-    assert is_adjudicated_report("q24_strategy_edge.json") is False
+    assert e3.report_filename == "e3_strategy_family_expectancy.json"
+    assert s1.report_filename == ""
+    assert e3.legacy_ids == s1.legacy_ids == ()
+    assert s1.scientific_owner_id == "E3"
+    assert is_adjudicated_report(e3.report_filename) is True
 
     reports = _empty_dir(tmp_path)
     _write(reports, "q24_strategy_edge.json", _current_report("Q24"))
 
     for qid in ("E3", "S1"):
         state = build_question_state(qid, reports_dir=reports, evidence_source={})
-        assert state.report_validity == ReportValidity.VALID_CURRENT, qid
-        assert state.latest_report_status == "COMPLETE", qid
-        assert state.latest_finding == "Current finding", qid
-        assert state.authoritative_report is not None, qid
-        assert state.authoritative_report.canonical_question_id == qid, qid
-        assert state.authoritative_report.source_question_id == "Q24", qid
-        assert resolve_report_ownership("q24_strategy_edge.json", qid).allowed is True
-
-        entry = MASTER_REPAIR_LEDGER[qid]
-        assert not entry.structurally_operational, qid
-        assert entry.gates.canonical_identity == "HUMAN_DECISION_REQUIRED", qid
-        assert entry.gates.report_ownership == "FAIL", qid
-        assert entry.proposed_repair_wave == "RW5", qid
+        assert state.report_validity != ReportValidity.VALID_CURRENT, qid
+        assert state.latest_finding == "", qid
+        assert MASTER_REPAIR_LEDGER[qid].structurally_operational, qid
+    assert resolve_report_ownership("q24_strategy_edge.json", "E3").allowed is True
+    assert resolve_report_ownership("q24_strategy_edge.json", "S1").allowed is True
 
     # The two adjudicated RW1 artifacts are never attributed to E3/S1 workloads.
     for qid in ("E3", "S1"):
@@ -721,8 +724,8 @@ def test_req25_multi_account_and_scientific_contracts_are_unchanged():
         "L3": ("research_engine.experiments.component_reward", "run", D1_ARTIFACT, ("Q1",)),
         "E2": ("research_engine.experiments.legacy_canonical", "run_q05", E2_ARTIFACT, ("Q5", "Q24")),
         "L1": ("research_engine.experiments.legacy_canonical", "run_q05", E2_ARTIFACT, ("Q5",)),
-        "E3": ("research_engine.experiments.legacy_canonical", "run_q24", "q24_strategy_edge.json", ("Q24",)),
-        "S1": ("research_engine.experiments.legacy_canonical", "run_q24", "q24_strategy_edge.json", ("Q24",)),
+        "E3": ("research_engine.experiments.strategy_expectancy", "run_e3", "e3_strategy_family_expectancy.json", ()),
+        "S1": ("", "", "", ()),
         "R1": ("research_engine.experiments.legacy_canonical", "run_q10", "q10_guard_efficacy.json", ("Q10",)),
         "R2": ("research_engine.experiments.legacy_canonical", "run_q10", "q10_guard_efficacy.json", ("Q10",)),
     }

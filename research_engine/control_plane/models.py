@@ -25,6 +25,7 @@ class RunnerStatus(str, Enum):
     NO_RUNNER = "NO_RUNNER"
     NOT_RUN = "NOT_RUN"
     ERROR = "ERROR"
+    ALIAS = "ALIAS"
 
 
 class ReportValidity(str, Enum):
@@ -153,6 +154,8 @@ class QuestionState:
     latest_application_event: dict[str, Any] | None = None
     governance_warnings: list[str] = field(default_factory=list)
     next_governance_action: str = ""
+    identity_status: str = "CANONICAL_OWNER"
+    scientific_owner_id: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to dict for JSON output."""
@@ -210,6 +213,8 @@ class QuestionState:
             "latest_application_event": self.latest_application_event,
             "governance_warnings": self.governance_warnings,
             "next_governance_action": self.next_governance_action,
+            "identity_status": self.identity_status,
+            "scientific_owner_id": self.scientific_owner_id,
         }
 
 

@@ -143,6 +143,9 @@ class ResearchQuestionDefinition:
     # --- Legacy aliases ---
     legacy_ids: tuple[str, ...] = ()
 
+    # --- Governed scientific ownership ---
+    scientific_owner_id: str = ""  # non-empty only for explicit aliases
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "canonical_question_id": self.canonical_question_id,
@@ -164,6 +167,7 @@ class ResearchQuestionDefinition:
             "report_filename": self.report_filename,
             "depends_on": list(self.depends_on),
             "legacy_ids": list(self.legacy_ids),
+            "scientific_owner_id": self.scientific_owner_id,
         }
 
 
@@ -280,6 +284,11 @@ class ResearchQuestion:
     # --- LEGACY MAPPING ---
     legacy_ids: tuple[str, ...] = ()    # Old Q1-Q25 IDs this replaces
 
+    # --- GOVERNED SCIENTIFIC OWNERSHIP ---
+    # An alias remains a canonical identity but owns no independent runner or
+    # report. Its state is explicitly projected from this scientific owner.
+    scientific_owner_id: str = ""
+
     def to_dict(self) -> dict:
         """Serialize for reporting."""
         return {
@@ -299,6 +308,7 @@ class ResearchQuestion:
             "runner_function": self.runner_function,
             "report_filename": self.report_filename,
             "legacy_ids": list(self.legacy_ids),
+            "scientific_owner_id": self.scientific_owner_id,
         }
 
 

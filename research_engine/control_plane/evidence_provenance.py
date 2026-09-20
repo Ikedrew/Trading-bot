@@ -15,6 +15,7 @@ from enum import Enum
 import hashlib
 import json
 from typing import Any, Iterable, Mapping
+from collections import Counter
 
 from research_engine.control_plane.evidence_resolver import (
     authoritative_evidence_schema,
@@ -184,6 +185,60 @@ def use_evidence_as_supplied(
     return _select(source, records, schema=schema, current_only=False)
 
 
+def attest_current_subset(
+    source: str,
+    input_records: Iterable[Mapping[str, Any]],
+    selected_records: Iterable[Mapping[str, Any]],
+    *,
+    schema: str | None = None,
+) -> EvidenceSelection:
+    """Attest an exact analytical subset of an authoritative CURRENT input.
+
+    ``selected_records`` must be a duplicate-preserving subset of the CURRENT
+    records in ``input_records``.  This permits scientific filters and
+    conflict rejection to happen after epoch classification while preventing
+    callers from attaching CURRENT provenance to fabricated or stale rows.
+    """
+    supplied = [deepcopy(dict(record)) for record in input_records]
+    selected = [deepcopy(dict(record)) for record in selected_records]
+    expected_schema = authoritative_evidence_schema(source)
+    declared_schema = str(schema or expected_schema or "")
+    counts = _empty_counts()
+    current_material: Counter[str] = Counter()
+    for record in supplied:
+        epoch = classify_authoritative_evidence_record(
+            record, source, schema=declared_schema or None,
+        )
+        label = epoch.value if isinstance(epoch, DataEpoch) else INCOMPATIBLE
+        counts[label] += 1
+        if label == CURRENT:
+            current_material[_canonical_json(record)] += 1
+
+    selected_material = Counter(_canonical_json(record) for record in selected)
+    if selected_material - current_material:
+        raise ValueError(
+            "Selected evidence must be a duplicate-preserving subset of the "
+            "authoritative CURRENT input population"
+        )
+
+    used_counts = _empty_counts()
+    used_counts[CURRENT] = len(selected)
+    component = {
+        "source": str(source),
+        "schema": declared_schema,
+        "selection": "CURRENT_SUBSET",
+        "input_records": len(supplied),
+        "records_used": len(selected),
+        "records_excluded": len(supplied) - len(selected),
+        "epoch_counts": counts,
+        "used_epoch_counts": used_counts,
+        "state": _state_from_used_counts(used_counts),
+        "digest_algorithm": "sha256",
+        "digest": evidence_digest(selected),
+    }
+    return EvidenceSelection(records=tuple(selected), component=component)
+
+
 def build_evidence_provenance(
     *selections: EvidenceSelection,
 ) -> dict[str, Any]:
@@ -263,6 +318,13 @@ def validate_evidence_provenance(value: Any) -> tuple[bool, str, str]:
                 or excluded_count != input_count - counts[CURRENT]
             ):
                 return False, UNVERIFIED, "CURRENT_ONLY selection counts are inconsistent"
+        elif selection == "CURRENT_SUBSET":
+            if (
+                used_counts[CURRENT] > counts[CURRENT]
+                or any(used_counts[key] for key in _COUNT_KEYS if key != CURRENT)
+                or excluded_count != input_count - used_count
+            ):
+                return False, UNVERIFIED, "CURRENT_SUBSET selection counts are inconsistent"
         else:
             return False, UNVERIFIED, "Unknown evidence selection mode"
         derived_state = _state_from_used_counts(used_counts)

@@ -66,8 +66,10 @@ def test_definition_version_starts_at_1():
 
 def test_lifecycle_status_distinct_from_readiness():
     definitions = build_definitions_from_registry(REGISTRY)
-    for d in definitions.values():
-        assert d.lifecycle_status == QuestionLifecycle.ACTIVE
+    assert definitions["S1"].lifecycle_status == QuestionLifecycle.SUPERSEDED
+    for qid, definition in definitions.items():
+        if qid != "S1":
+            assert definition.lifecycle_status == QuestionLifecycle.ACTIVE
 
 
 def test_d2_repaired_authority_is_valid():
@@ -1767,23 +1769,22 @@ def test_wave_a5_relationship_scope_and_metadata_are_exact():
     assert all(item.to_dict() == item.to_dict() for item in WAVE_A5_OWNERSHIP.values())
 
 
-def test_e3_s1_equivalent_intent_does_not_bless_wrong_shared_runner():
+def test_e3_s1_equivalent_intent_uses_adjudicated_owner_and_alias():
     from research_engine.registry import REGISTRY_BY_ID
 
     item = WAVE_A5_OWNERSHIP[("E3", "S1")]
     e3, s1 = REGISTRY_BY_ID["E3"], REGISTRY_BY_ID["S1"]
     assert item.scientifically_equivalent is True
     assert "TRUE_ALIAS" in item.relationship_types
-    assert "UNRESOLVED" in item.relationship_types
-    assert item.canonical_owners == ()
+    assert "ADJUDICATED" in item.relationship_types
+    assert dict(item.canonical_owners)["e3_strategy_family_expectancy.json"] == "E3"
     assert e3.required_fields == s1.required_fields == ("strategy", "r_multiple")
     assert e3.data_sources == s1.data_sources
-    assert tuple((r.field, r.operator, r.threshold) for r in e3.validation_rules) == tuple(
-        (r.field, r.operator, r.threshold) for r in s1.validation_rules
-    )
-    assert e3.runner_function == s1.runner_function == "run_q24"
-    assert "answers neither canonical intent" in item.runner_ownership_status
-    assert "activation report" in item.false_completion_risk
+    assert e3.runner_function == "run_e3"
+    assert s1.runner_function == ""
+    assert s1.scientific_owner_id == "E3"
+    assert "S1 owns no runner" in item.runner_ownership_status
+    assert "Closed" in item.false_completion_risk
 
 
 def test_d6_port1_share_calculation_but_keep_distinct_ownership():
@@ -1878,8 +1879,8 @@ def test_wave_a5_does_not_mutate_operational_ownership_mappings():
     from research_engine.registry import REGISTRY_BY_ID
 
     expected = {
-        "E3": ("run_q24", "q24_strategy_edge.json", ("Q24",)),
-        "S1": ("run_q24", "q24_strategy_edge.json", ("Q24",)),
+        "E3": ("run_e3", "e3_strategy_family_expectancy.json", ()),
+        "S1": ("", "", ()),
         "D6": ("run_portfolio_ranking", "d6_portfolio_ranking.json", ()),
         "PORT-1": ("run_port_1", "port1_portfolio_selection.json", ()),
         "R1": ("run_q10", "q10_guard_efficacy.json", ("Q10",)),

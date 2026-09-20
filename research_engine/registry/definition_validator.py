@@ -289,6 +289,7 @@ def build_definitions_from_registry(registry):
             report_filename=q.report_filename,
             depends_on=q.depends_on,
             legacy_ids=q.legacy_ids,
+            scientific_owner_id=q.scientific_owner_id,
         )
     # Wave A1 Safe Definition Closure: enrich the closed target subset with
     # authoritative scientific definitions derived only from existing registry,
