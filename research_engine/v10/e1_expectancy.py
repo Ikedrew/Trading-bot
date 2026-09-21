@@ -9,6 +9,8 @@ with confidence intervals and distribution breakdown.
 
 from __future__ import annotations
 
+from research_engine.v10.base import format_metric
+
 import math
 import statistics
 from typing import Any
@@ -172,8 +174,8 @@ def _build_markdown(report: dict) -> str:
     md.append(f"| Win rate | {m['win_rate']:.1%} |")
     md.append(f"| Average R | {m['average_r']:.4f} |")
     md.append(f"| Expectancy | {m['expectancy_r']:.4f} R/trade |")
-    md.append(f"| Profit factor | {m['profit_factor']:.2f} |")
-    md.append(f"| Total PnL | ${m['total_pnl']:.2f} |")
+    md.append(f"| Profit factor | {format_metric(m['profit_factor'], '.2f')} |")
+    md.append(f"| Total PnL | ${format_metric(m['total_pnl'], '.2f')} |")
     md.append(f"| 95% CI | [{ci['ci_95_lower']:.4f}, {ci['ci_95_upper']:.4f}] |")
     md.append("")
     md.append("## By Pattern")

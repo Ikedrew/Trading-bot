@@ -93,6 +93,16 @@ def prepare_account_routes(
         volume = volume_for_account(
             target=target, snapshot=snapshot, symbol_row=row,
             strategy_family=strategy_family, horizon_type=horizon_type)
+        logging.getLogger(__name__).info(
+            "[ACCOUNT_SIZING] account=%s symbol=%s entry_type=%s side=%s "
+            "reference_entry=%s sizing_entry=%s bid=%s ask=%s sl=%s "
+            "stop_distance=%s risk_pct=%s risk_amount=%s balance=%s "
+            "volume=%s blocked=%s",
+            target.account_id, target.canonical_symbol, volume.entry_type,
+            getattr(target, "side", ""), volume.reference_entry,
+            volume.sizing_entry, volume.bid, volume.ask, volume.sl,
+            volume.stop_distance, volume.risk_pct, volume.risk_amount,
+            volume.balance, volume.volume, volume.blocked_reason or "-")
         if volume.blocked_reason and "SYMBOL_UNAVAILABLE" not in eligibility["reasons"]:
             eligibility = {**eligibility, "eligible": False,
                            "reasons": [*eligibility["reasons"],

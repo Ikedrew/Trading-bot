@@ -72,6 +72,13 @@ def _snapshots(accounts, *, drop_admirals=()):
                     row["trade_tick_value"] = 1.0
                 else:
                     row["trade_tick_value"] = TICKS[account.account_id]
+                # Executable-side quote used by MARKET-order sizing. Set per
+                # symbol scale so it matches the test decisions' entry prices
+                # (FX ≈ 1.1000x, index/metal ≈ 20000). BUY sizes off ask.
+                if row["canonical_symbol"] in ("NAS100", "US500", "XAUUSD"):
+                    row["bid"], row["ask"] = 19999.99, 20000.0
+                else:
+                    row["bid"], row["ask"] = 1.10001, 1.10002
         snapshots[account.account_id] = report
     return snapshots
 
@@ -129,8 +136,10 @@ def test_account_specific_balance_margin_volume(accounts, decision):
 
 def test_volume_below_min_blocks(accounts):
     snaps = _snapshots(accounts)
+    # SL is well beyond the broker minimum stop distance so the block is
+    # driven by VOLUME_BELOW_MIN (huge tick_value), not STOP_TOO_CLOSE.
     tiny = CanonicalDecision("o", "c", "d", "EURUSD", "BUY",
-                             1.10002, 1.10001, 1.10202, 0.1)
+                             1.10002, 1.09902, 1.10202, 0.1)
     for report in snaps.values():
         for row in report["symbols"]:
             if row["canonical_symbol"] == "EURUSD":
@@ -291,6 +300,11 @@ def test_execution_worker_pinned_routing_and_identity(accounts):
         def symbol_info_tick(self, name):
             return NS(bid=1.1, ask=1.10002)
 
+        def order_calc_profit(self, order_type, symbol, volume, price_open, price_close):
+            ticks = (price_close - price_open) / 0.00001
+            signed = 1.0 if order_type == self.ORDER_TYPE_BUY else -1.0
+            return ticks * 1.0 * float(volume) * signed
+
         def order_send(self, request):
             self.sent.append(request)
             return NS(retcode=10009, deal=7, order=8, comment="ok", price=1.1)
@@ -320,7 +334,8 @@ def test_execution_worker_pinned_routing_and_identity(accounts):
                        "trade_id": "t-" + account_id},
             "order": {"broker_symbol": broker_symbol, "requested_volume": 0.05,
                       "sl": 1.09, "tp": 1.12, "side": "BUY", "deviation": 20,
-                      "magic": 713001, "comment": "fanout-test"},
+                      "magic": 713001, "comment": "fanout-test",
+                      "risk_amount": 100.0},
         }
         out = execute_pinned(payload, mt5)
         assert out["executed"] is True and out["status"] == "FILLED"

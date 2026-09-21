@@ -216,6 +216,7 @@ def _build_event(trade: dict, recon_by_ticket: dict, governance_status: str) -> 
     r_multiple = trade.get("realised_r", 0)
 
     execution = {
+        **{k: trade[k] for k in ("execution_sizing_quality", "sizing_quality", "is_shadow") if k in trade},
         "ticket": ticket,
         "symbol": trade.get("symbol", ""),
         "direction": trade.get("direction", ""),

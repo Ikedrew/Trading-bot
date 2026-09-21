@@ -37,6 +37,8 @@ CLI:
 
 from __future__ import annotations
 
+from research_engine.v10.base import format_metric
+
 import json
 import logging
 import statistics
@@ -173,7 +175,7 @@ def build_segmentation(
     ranked_by_expectancy = sorted(instrument_rankings, key=lambda x: x["expectancy_r"], reverse=True)
     ranked_by_win_rate = sorted(instrument_rankings, key=lambda x: x["win_rate"], reverse=True)
     ranked_by_pf = sorted(
-        instrument_rankings,
+        [r for r in instrument_rankings if r["profit_factor"] is not None],
         key=lambda x: x["profit_factor"] if x["profit_factor"] < 900 else 0,
         reverse=True,
     )
@@ -383,10 +385,10 @@ def _build_markdown(report: dict) -> str:
         m = report["asset_class_summary"].get(name, {})
         if m.get("count", 0) == 0:
             continue
-        pf = f"{m.get('profit_factor', 0):.1f}" if m.get("profit_factor", 0) < 900 else "inf"
+        pf = "N/A" if m.get("profit_factor") is None else f"{m.get('profit_factor', 0):.1f}" if m.get("profit_factor", 0) < 900 else "inf"
         md.append(f"| {name} | {m['count']} | {m.get('win_rate',0):.0%} | "
                   f"{m.get('average_r',0):+.2f} | {m.get('expectancy_r',0):+.2f} | "
-                  f"{pf} | ${m.get('total_pnl',0):.2f} |")
+                  f"{pf} | ${format_metric(m.get('total_pnl',0), '.2f')} |")
 
     md.append("")
     md.append("## Instrument Summary")
@@ -394,10 +396,10 @@ def _build_markdown(report: dict) -> str:
     md.append("| Symbol | N | Win% | Avg R | Expectancy | PF | PnL | Confidence |")
     md.append("|---|---|---|---|---|---|---|---|")
     for sym, m in sorted(report["instrument_summary"].items(), key=lambda x: -x[1].get("count", 0)):
-        pf = f"{m.get('profit_factor',0):.1f}" if m.get("profit_factor", 0) < 900 else "inf"
+        pf = "N/A" if m.get("profit_factor") is None else f"{m.get('profit_factor',0):.1f}" if m.get("profit_factor", 0) < 900 else "inf"
         md.append(f"| {sym} | {m['count']} | {m.get('win_rate',0):.0%} | "
                   f"{m.get('average_r',0):+.2f} | {m.get('expectancy_r',0):+.2f} | "
-                  f"{pf} | ${m.get('total_pnl',0):.2f} | {m.get('confidence','')} |")
+                  f"{pf} | ${format_metric(m.get('total_pnl',0), '.2f')} | {m.get('confidence','')} |")
 
     md.append("")
     md.append("## Instrument Rankings")
@@ -442,7 +444,7 @@ if __name__ == "__main__":
     for name in ["FULL_RAW", "STANDARD", "ANOMALY_ONLY", "FX", "INDEX", "COMMODITY"]:
         m = result["asset_class_summary"].get(name, {})
         if m.get("count", 0) > 0:
-            print(f"    {name:14s}: n={m['count']:3d} win={m.get('win_rate',0):.0%} exp={m.get('expectancy_r',0):+.2f}R pnl=${m.get('total_pnl',0):.2f}")
+            print(f"    {name:14s}: n={m['count']:3d} win={m.get('win_rate',0):.0%} exp={m.get('expectancy_r',0):+.2f}R pnl=${format_metric(m.get('total_pnl',0), '.2f')}")
     print(f"\n  Top instruments (by expectancy):")
     for r in result["rankings"]["by_expectancy"][:5]:
         print(f"    {r['symbol']:8s}: exp={r['expectancy_r']:+.2f}R win={r['win_rate']:.0%} n={r['count']} ({r['confidence']})")

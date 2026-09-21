@@ -46,7 +46,8 @@ class DecisionDomain(ResearchDomain):
         decisions = []
         for e in universe_events:
             dec = e.get("decision", {})
-            ex = e.get("execution", {})
+            from research_engine.data_quality.execution_sizing import governed_record
+            ex = governed_record(e.get("execution", {}))
             quality = e.get("quality", {})
 
             decisions.append({

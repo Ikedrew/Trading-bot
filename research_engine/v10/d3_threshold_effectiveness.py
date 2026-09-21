@@ -9,6 +9,8 @@ expectancy, win rate, and profit factor.
 
 from __future__ import annotations
 
+from research_engine.v10.base import format_metric
+
 import math
 import statistics
 from typing import Any
@@ -119,7 +121,8 @@ def run(view: DatasetView = DatasetView.FULL, trades: list[dict] | None = None) 
     valid_results = [r for r in threshold_results if r["trades"] >= 10]
 
     best_expectancy = max(valid_results, key=lambda x: x["expectancy_r"]) if valid_results else None
-    best_pf = max(valid_results, key=lambda x: x["profit_factor"] if x["profit_factor"] < 900 else 0) if valid_results else None
+    monetary_results = [r for r in valid_results if r["profit_factor"] is not None]
+    best_pf = max(monetary_results, key=lambda x: x["profit_factor"] if x["profit_factor"] < 900 else 0) if monetary_results else None
 
     # Highest threshold with statistical reliability (n >= 30)
     reliable = [r for r in threshold_results if r["trades"] >= 30]
@@ -214,12 +217,12 @@ def _build_markdown(report: dict) -> str:
     # Baseline row
     b = report["baseline"]
     md.append(f"| *baseline* | {b['trades']} | 100% | {b['win_rate']:.0%} | "
-              f"{b['average_r']:+.2f} | {b['expectancy_r']:+.2f} | {b['profit_factor']:.1f} | {b['confidence']} | — |")
+              f"{b['average_r']:+.2f} | {b['expectancy_r']:+.2f} | {format_metric(b['profit_factor'], '.1f')} | {b['confidence']} | — |")
 
     for r in report["threshold_results"]:
         if r["trades"] == 0:
             continue
-        pf = f"{r['profit_factor']:.1f}" if r["profit_factor"] < 900 else "inf"
+        pf = "N/A" if r.get("profit_factor") is None else f"{format_metric(r['profit_factor'], '.1f')}" if r["profit_factor"] < 900 else "inf"
         marker = " **←**" if r == report.get("best_expectancy_threshold") else ""
         md.append(
             f"| {r['threshold']:.2f} | {r['trades']} | {r['retained_pct']:.0%} | "

@@ -61,6 +61,7 @@ class ResolutionManifest:
     semantic_mapping_version: str = "1.0.0"
     primitive_registry_version: str = "1.0.0"
     runner_version: str = "1.0.0"
+    sizing_excluded: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -73,6 +74,7 @@ class ResolutionManifest:
             "semantic_mapping_version": self.semantic_mapping_version,
             "primitive_registry_version": self.primitive_registry_version,
             "runner_version": self.runner_version,
+            "sizing_excluded": self.sizing_excluded,
         }
 
 
@@ -158,6 +160,12 @@ class ResearchContextResolver:
         else:
             population = primary_builder.records
             ctx.manifest.population_record_counts["all"] = len(population)
+
+        from research_engine.data_quality.execution_sizing import eligible_for_fields
+        fields = [f for ar in question.angle_requirements for f in ar.required_fields]
+        source_count = len(population)
+        population = [row for row in population if eligible_for_fields(row, fields)]
+        ctx.manifest.sizing_excluded = source_count - len(population)
 
         # 4. Check minimum sample size
         if len(population) < question.minimum_sample_size:

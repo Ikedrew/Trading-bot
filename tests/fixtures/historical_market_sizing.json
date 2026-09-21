@@ -1,0 +1,1022 @@
+{
+  "description": "Derived geometry only; raw execution_results remain immutable. Frozen local historical evidence snapshot. Not replacement trades.",
+  "sources": [
+    {
+      "path": "logs/execution_results/AUDUSD/2026-09-04.jsonl",
+      "sha256": "38882da636eebedec8ab66ee1293de259fc2cd08099b61cc9dbe22e6cd3226ab"
+    },
+    {
+      "path": "logs/execution_results/AUDUSD/2026-09-14.jsonl",
+      "sha256": "9adc33a4033bb6baaed0f9df310344d0d6d1e2619a69512c019ce700380be87c"
+    },
+    {
+      "path": "logs/execution_results/GBPUSD/2026-09-14.jsonl",
+      "sha256": "cb3e43c61610baa3b54e58dc5dbe9413e848928cb269adbd197b4f7a20fbd1a9"
+    },
+    {
+      "path": "logs/execution_results/GBPUSD/2026-09-15.jsonl",
+      "sha256": "483fd651a35b77be6d5a0407b8226672d7d0eda509b0d8babb1d4c86a7f1d805"
+    },
+    {
+      "path": "logs/execution_results/NAS100/2026-09-04.jsonl",
+      "sha256": "2aa2172c930d4996279c0ad99410544af30b931429f9f03f7397bb9409f7f456"
+    },
+    {
+      "path": "logs/execution_results/NZDUSD/2026-09-04.jsonl",
+      "sha256": "bc9faadc4b47f5a27cf45eded6875c4d4e14e07ff3a706c1029a02d4515a7ef3"
+    },
+    {
+      "path": "logs/execution_results/NZDUSD/2026-09-08.jsonl",
+      "sha256": "6a6c669f66425f9ee3c4febe9cf20e958fa71eb6aa4a8a9811b2cd61a61acb3e"
+    },
+    {
+      "path": "logs/execution_results/NZDUSD/2026-09-11.jsonl",
+      "sha256": "e6eebe113c5efdef214de22282699343d19a8acb561f07e62dee24923fba0fff"
+    },
+    {
+      "path": "logs/execution_results/NZDUSD/2026-09-14.jsonl",
+      "sha256": "68eba0053e0469a411b6f70d6a55fb2c63cb61890b2e002f8ba977b4ac421578"
+    },
+    {
+      "path": "logs/execution_results/USDCAD/2026-09-11.jsonl",
+      "sha256": "01d9589131fd26580ca1d5f13bd8c8603aefbc4bd96632ecd672ea8088cb96bc"
+    },
+    {
+      "path": "logs/execution_results/USDCAD/2026-09-14.jsonl",
+      "sha256": "6605d27db654d88be5bdaf949d8c85de4394551eb6e13493e65fd67e844c38c7"
+    },
+    {
+      "path": "logs/execution_results/USDCAD/2026-09-15.jsonl",
+      "sha256": "a72a060f9f5aba7d076fd82032e62f659a971b676fbd5ad0b5f1214d3e5dea27"
+    },
+    {
+      "path": "logs/execution_results/USDCAD/2026-09-16.jsonl",
+      "sha256": "414c3193e8c8dd9d9a8d1ccbda89d105c7ea7cd0bf340423b06d0d3950e950da"
+    },
+    {
+      "path": "logs/execution_results/USDCHF/2026-09-04.jsonl",
+      "sha256": "f448f0d46714f24465b33a1d18813d70b451173e26d6d5acf66f93ef42728657"
+    },
+    {
+      "path": "logs/execution_results/USDCHF/2026-09-14.jsonl",
+      "sha256": "acf4a592421b208800538881cafef3d1eb97b7b619cfdef7d2bcb8cad79bdbcd"
+    },
+    {
+      "path": "logs/execution_results/USDCHF/2026-09-15.jsonl",
+      "sha256": "2f08c277fdfc9d8dfd2c69a406194073f46ed8c21c926b93930134460a1db78f"
+    },
+    {
+      "path": "logs/execution_results/USDJPY/2026-09-09.jsonl",
+      "sha256": "63bc2a92a982f033a6d1c2612732472cbd2ebad3a34e0b35f8f2daa13d5e55a8"
+    },
+    {
+      "path": "logs/execution_results/USDJPY/2026-09-14.jsonl",
+      "sha256": "6aee2538fdecaf9add5608969789100b5758a2c1ffc35f3a86e61443b1d29bbd"
+    },
+    {
+      "path": "logs/execution_results/USDJPY/2026-09-16.jsonl",
+      "sha256": "99d442c7885a8b460c9e0b28ac7d219c494328d78e2019eaf2c9ddd55bdfc810"
+    },
+    {
+      "path": "logs/execution_results/XAUUSD/2026-09-09.jsonl",
+      "sha256": "5c6451c49d7eb2a6b97c5dc59af08aab1c8f9161119f1fc6d903e138c260d4fa"
+    },
+    {
+      "path": "logs/execution_results/XAUUSD/2026-09-10.jsonl",
+      "sha256": "4d885e13a0448d2adb8edb0d625845047e8144adeecd91d99e87e114263d5cab"
+    },
+    {
+      "path": "logs/execution_results/XAUUSD/2026-09-14.jsonl",
+      "sha256": "2f63f07af2823198e88aa49ddca8e66416cb19d40f63b9bc6e31932ed862a940"
+    },
+    {
+      "path": "logs/execution_results/XAUUSD/2026-09-15.jsonl",
+      "sha256": "c9a286cabe39601d2f3050cb840a261e947ac22f3aa0638a24274cb15a245aa3"
+    },
+    {
+      "path": "logs/execution_results/XAUUSD/2026-09-16.jsonl",
+      "sha256": "38970b70ea9421c52f4e954f4e57c978dd38c64f42a8d513833259be3af3b915"
+    }
+  ],
+  "counts": {
+    "CLEAN": 6,
+    "SUSPECT": 8,
+    "AFFECTED": 43,
+    "UNKNOWN": 0,
+    "total": 57
+  },
+  "fills": [
+    {
+      "key": [
+        "COR-20260904-12203-AUDUSD-6189",
+        "58233177",
+        ""
+      ],
+      "correlation_id": "COR-20260904-12203-AUDUSD-6189",
+      "deal_id": "58233177",
+      "account_id": "",
+      "fill_price": 0.72056,
+      "reference_entry": 0.720075,
+      "submitted_sl": 0.7199457142857143,
+      "distortion": 4.751381215469101,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260904-13974-NAS100-5858",
+        "58238526",
+        ""
+      ],
+      "correlation_id": "COR-20260904-13974-NAS100-5858",
+      "deal_id": "58238526",
+      "account_id": "",
+      "fill_price": 29566.7,
+      "reference_entry": 29496.0,
+      "submitted_sl": 29535.492857142857,
+      "distortion": 0.7901971423404007,
+      "quality": "SUSPECT",
+      "reason": "SUSPECT_SIZING_GEOMETRY"
+    },
+    {
+      "key": [
+        "COR-20260904-14072-NAS100-8E33",
+        "58238970",
+        ""
+      ],
+      "correlation_id": "COR-20260904-14072-NAS100-8E33",
+      "deal_id": "58238970",
+      "account_id": "",
+      "fill_price": 29579.7,
+      "reference_entry": 29496.0,
+      "submitted_sl": 29535.314285714285,
+      "distortion": 1.128997093023325,
+      "quality": "CLEAN",
+      "reason": "CLEAN_SIZING"
+    },
+    {
+      "key": [
+        "COR-20260904-14522-NZDUSD-FCA1",
+        "58241165",
+        ""
+      ],
+      "correlation_id": "COR-20260904-14522-NZDUSD-FCA1",
+      "deal_id": "58241165",
+      "account_id": "",
+      "fill_price": 0.58993,
+      "reference_entry": 0.58831,
+      "submitted_sl": 0.5893096428571429,
+      "distortion": 0.6205787781348768,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260904-15525-NZDUSD-821C",
+        "58247215",
+        ""
+      ],
+      "correlation_id": "COR-20260904-15525-NZDUSD-821C",
+      "deal_id": "58247215",
+      "account_id": "",
+      "fill_price": 0.59009,
+      "reference_entry": 0.58831,
+      "submitted_sl": 0.5892978571428572,
+      "distortion": 0.801879971077255,
+      "quality": "CLEAN",
+      "reason": "CLEAN_SIZING"
+    },
+    {
+      "key": [
+        "COR-20260904-19972-USDCHF-6FDE",
+        "58274490",
+        ""
+      ],
+      "correlation_id": "COR-20260904-19972-USDCHF-6FDE",
+      "deal_id": "58274490",
+      "account_id": "",
+      "fill_price": 0.80921,
+      "reference_entry": 0.807945,
+      "submitted_sl": 0.8088046428571428,
+      "distortion": 0.4715413377649131,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260904-20094-USDCHF-0A75",
+        "58274904",
+        ""
+      ],
+      "correlation_id": "COR-20260904-20094-USDCHF-0A75",
+      "deal_id": "58274904",
+      "account_id": "",
+      "fill_price": 0.80928,
+      "reference_entry": 0.807945,
+      "submitted_sl": 0.8088125,
+      "distortion": 0.5389048991353806,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260904-20472-USDCHF-A48D",
+        "58275748",
+        ""
+      ],
+      "correlation_id": "COR-20260904-20472-USDCHF-A48D",
+      "deal_id": "58275748",
+      "account_id": "",
+      "fill_price": 0.80949,
+      "reference_entry": 0.807945,
+      "submitted_sl": 0.8088107142857143,
+      "distortion": 0.7846534653466349,
+      "quality": "SUSPECT",
+      "reason": "SUSPECT_SIZING_GEOMETRY"
+    },
+    {
+      "key": [
+        "COR-20260904-20618-USDCHF-C422",
+        "58276161",
+        ""
+      ],
+      "correlation_id": "COR-20260904-20618-USDCHF-C422",
+      "deal_id": "58276161",
+      "account_id": "",
+      "fill_price": 0.80957,
+      "reference_entry": 0.807945,
+      "submitted_sl": 0.8088135714285715,
+      "distortion": 0.8708881578946963,
+      "quality": "CLEAN",
+      "reason": "CLEAN_SIZING"
+    },
+    {
+      "key": [
+        "COR-20260904-20724-USDCHF-30AE",
+        "58276503",
+        ""
+      ],
+      "correlation_id": "COR-20260904-20724-USDCHF-30AE",
+      "deal_id": "58276503",
+      "account_id": "",
+      "fill_price": 0.80957,
+      "reference_entry": 0.807945,
+      "submitted_sl": 0.8088125,
+      "distortion": 0.8731988472621881,
+      "quality": "CLEAN",
+      "reason": "CLEAN_SIZING"
+    },
+    {
+      "key": [
+        "COR-20260904-21307-NAS100-E168",
+        "58278945",
+        ""
+      ],
+      "correlation_id": "COR-20260904-21307-NAS100-E168",
+      "deal_id": "58278945",
+      "account_id": "",
+      "fill_price": 29625.9,
+      "reference_entry": 29578.6,
+      "submitted_sl": 29566.12142857143,
+      "distortion": 4.790497996566785,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260904-8791-AUDUSD-C3A7",
+        "58220011",
+        ""
+      ],
+      "correlation_id": "COR-20260904-8791-AUDUSD-C3A7",
+      "deal_id": "58220011",
+      "account_id": "",
+      "fill_price": 0.72055,
+      "reference_entry": 0.720075,
+      "submitted_sl": 0.7199085714285715,
+      "distortion": 3.8540772532189727,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260908-9257-NZDUSD-0AC7",
+        "57976914483",
+        ""
+      ],
+      "correlation_id": "COR-20260908-9257-NZDUSD-0AC7",
+      "deal_id": "57976914483",
+      "account_id": "",
+      "fill_price": 0.58439,
+      "reference_entry": 0.585105,
+      "submitted_sl": 0.5851721428571429,
+      "distortion": 11.648936170201173,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260909-4373-XAUUSD-12BF",
+        "58003247410",
+        ""
+      ],
+      "correlation_id": "COR-20260909-4373-XAUUSD-12BF",
+      "deal_id": "58003247410",
+      "account_id": "",
+      "fill_price": 4416.99,
+      "reference_entry": 4402.985,
+      "submitted_sl": 4411.323928571428,
+      "distortion": 0.6794723542764683,
+      "quality": "SUSPECT",
+      "reason": "SUSPECT_SIZING_GEOMETRY"
+    },
+    {
+      "key": [
+        "COR-20260910-210-XAUUSD-8579",
+        "3295964",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260910-210-XAUUSD-8579",
+      "deal_id": "3295964",
+      "account_id": "VANTAGE",
+      "fill_price": 4317.44,
+      "reference_entry": 4364.425,
+      "submitted_sl": 4353.868928571428,
+      "distortion": 3.4509929965826593,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260910-210-XAUUSD-8579",
+        "58030848137",
+        "METAQUOTES"
+      ],
+      "correlation_id": "COR-20260910-210-XAUUSD-8579",
+      "deal_id": "58030848137",
+      "account_id": "METAQUOTES",
+      "fill_price": 4317.37,
+      "reference_entry": 4364.425,
+      "submitted_sl": 4353.868928571428,
+      "distortion": 3.4576242514461155,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260911-12040-NZDUSD-4AF4",
+        "3299422",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260911-12040-NZDUSD-4AF4",
+      "deal_id": "3299422",
+      "account_id": "VANTAGE",
+      "fill_price": 0.58277,
+      "reference_entry": 0.5813250000000001,
+      "submitted_sl": 0.5824585714285715,
+      "distortion": 0.2747321991177922,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260911-12040-NZDUSD-4AF4",
+        "58036317135",
+        "METAQUOTES"
+      ],
+      "correlation_id": "COR-20260911-12040-NZDUSD-4AF4",
+      "deal_id": "58036317135",
+      "account_id": "METAQUOTES",
+      "fill_price": 0.58269,
+      "reference_entry": 0.5813250000000001,
+      "submitted_sl": 0.5824585714285715,
+      "distortion": 0.2041587901701177,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260911-14248-USDCAD-09E4",
+        "3300250",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260911-14248-USDCAD-09E4",
+      "deal_id": "3300250",
+      "account_id": "VANTAGE",
+      "fill_price": 1.38489,
+      "reference_entry": 1.383865,
+      "submitted_sl": 1.3841260714285712,
+      "distortion": 2.9261285909727093,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260911-17211-USDCAD-DB6B",
+        "3300925",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260911-17211-USDCAD-DB6B",
+      "deal_id": "3300925",
+      "account_id": "VANTAGE",
+      "fill_price": 1.38605,
+      "reference_entry": 1.383865,
+      "submitted_sl": 1.3841685714285714,
+      "distortion": 6.197647058821842,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260911-23127-USDCAD-40AE",
+        "3306387",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260911-23127-USDCAD-40AE",
+      "deal_id": "3306387",
+      "account_id": "VANTAGE",
+      "fill_price": 1.38768,
+      "reference_entry": 1.38689,
+      "submitted_sl": 1.3852842857142855,
+      "distortion": 1.4919928825622752,
+      "quality": "SUSPECT",
+      "reason": "SUSPECT_SIZING_GEOMETRY"
+    },
+    {
+      "key": [
+        "COR-20260911-8612-NZDUSD-EDAB",
+        "3298652",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260911-8612-NZDUSD-EDAB",
+      "deal_id": "3298652",
+      "account_id": "VANTAGE",
+      "fill_price": 0.58316,
+      "reference_entry": 0.5813250000000001,
+      "submitted_sl": 0.5828985714285715,
+      "distortion": 0.16613708579207467,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260911-8612-NZDUSD-EDAB",
+        "58034534656",
+        "METAQUOTES"
+      ],
+      "correlation_id": "COR-20260911-8612-NZDUSD-EDAB",
+      "deal_id": "58034534656",
+      "account_id": "METAQUOTES",
+      "fill_price": 0.58309,
+      "reference_entry": 0.5813250000000001,
+      "submitted_sl": 0.5828985714285715,
+      "distortion": 0.12165229232860564,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-10169-AUDUSD-49EE",
+        "3318997",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-10169-AUDUSD-49EE",
+      "deal_id": "3318997",
+      "account_id": "VANTAGE",
+      "fill_price": 0.71356,
+      "reference_entry": 0.71461,
+      "submitted_sl": 0.7143814285714286,
+      "distortion": 3.593750000001442,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-10809-USDJPY-E0A1",
+        "3319256",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-10809-USDJPY-E0A1",
+      "deal_id": "3319256",
+      "account_id": "VANTAGE",
+      "fill_price": 154.518,
+      "reference_entry": 154.039,
+      "submitted_sl": 154.33425,
+      "distortion": 0.6223539373412267,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-11019-GBPUSD-52C9",
+        "3319369",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-11019-GBPUSD-52C9",
+      "deal_id": "3319369",
+      "account_id": "VANTAGE",
+      "fill_price": 1.34827,
+      "reference_entry": 1.3503,
+      "submitted_sl": 1.3508232142857144,
+      "distortion": 4.879863481228257,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-11669-USDJPY-1AA4",
+        "3319746",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-11669-USDJPY-1AA4",
+      "deal_id": "3319746",
+      "account_id": "VANTAGE",
+      "fill_price": 154.546,
+      "reference_entry": 154.039,
+      "submitted_sl": 154.33435714285716,
+      "distortion": 0.7165659008462885,
+      "quality": "SUSPECT",
+      "reason": "SUSPECT_SIZING_GEOMETRY"
+    },
+    {
+      "key": [
+        "COR-20260914-12321-GBPUSD-AA82",
+        "3320383",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-12321-GBPUSD-AA82",
+      "deal_id": "3320383",
+      "account_id": "VANTAGE",
+      "fill_price": 1.34821,
+      "reference_entry": 1.3503,
+      "submitted_sl": 1.3508067857142858,
+      "distortion": 5.1240310077519275,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-12530-GBPUSD-E91B",
+        "3320441",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-12530-GBPUSD-E91B",
+      "deal_id": "3320441",
+      "account_id": "VANTAGE",
+      "fill_price": 1.34812,
+      "reference_entry": 1.3503,
+      "submitted_sl": 1.3508053571428573,
+      "distortion": 5.313780918727007,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-1356-GBPUSD-6314",
+        "3316378",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-1356-GBPUSD-6314",
+      "deal_id": "3316378",
+      "account_id": "VANTAGE",
+      "fill_price": 1.35015,
+      "reference_entry": 1.35142,
+      "submitted_sl": 1.3507928571428571,
+      "distortion": 1.0250569476081086,
+      "quality": "CLEAN",
+      "reason": "CLEAN_SIZING"
+    },
+    {
+      "key": [
+        "COR-20260914-13819-XAUUSD-E0E9",
+        "3321425",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-13819-XAUUSD-E0E9",
+      "deal_id": "3321425",
+      "account_id": "VANTAGE",
+      "fill_price": 4286.7,
+      "reference_entry": 4330.305,
+      "submitted_sl": 4323.2225,
+      "distortion": 5.1567243205079825,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-13819-XAUUSD-E0E9",
+        "58061255054",
+        "METAQUOTES"
+      ],
+      "correlation_id": "COR-20260914-13819-XAUUSD-E0E9",
+      "deal_id": "58061255054",
+      "account_id": "METAQUOTES",
+      "fill_price": 4286.77,
+      "reference_entry": 4330.305,
+      "submitted_sl": 4323.2225,
+      "distortion": 5.146840804800165,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-15122-XAUUSD-89D7",
+        "3322006",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-15122-XAUUSD-89D7",
+      "deal_id": "3322006",
+      "account_id": "VANTAGE",
+      "fill_price": 4287.22,
+      "reference_entry": 4330.305,
+      "submitted_sl": 4323.931071428571,
+      "distortion": 5.759567434302094,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-15122-XAUUSD-89D7",
+        "58062042711",
+        "METAQUOTES"
+      ],
+      "correlation_id": "COR-20260914-15122-XAUUSD-89D7",
+      "deal_id": "58062042711",
+      "account_id": "METAQUOTES",
+      "fill_price": 4287.19,
+      "reference_entry": 4330.305,
+      "submitted_sl": 4323.931071428571,
+      "distortion": 5.764274107692683,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-18239-USDJPY-4364",
+        "3323061",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-18239-USDJPY-4364",
+      "deal_id": "3323061",
+      "account_id": "VANTAGE",
+      "fill_price": 154.516,
+      "reference_entry": 154.274,
+      "submitted_sl": 154.4217857142857,
+      "distortion": 0.6375060415660294,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-22030-XAUUSD-90B2",
+        "58065134451",
+        "METAQUOTES"
+      ],
+      "correlation_id": "COR-20260914-22030-XAUUSD-90B2",
+      "deal_id": "58065134451",
+      "account_id": "METAQUOTES",
+      "fill_price": 4285.72,
+      "reference_entry": 4308.4349999999995,
+      "submitted_sl": 4322.765,
+      "distortion": 2.585136078157565,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-25076-USDCAD-D64B",
+        "3326257",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-25076-USDCAD-D64B",
+      "deal_id": "3326257",
+      "account_id": "VANTAGE",
+      "fill_price": 1.39273,
+      "reference_entry": 1.3894199999999999,
+      "submitted_sl": 1.3899785714285715,
+      "distortion": 4.925831202044157,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-31029-USDCAD-910A",
+        "3331752",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-31029-USDCAD-910A",
+      "deal_id": "3331752",
+      "account_id": "VANTAGE",
+      "fill_price": 1.3912499999999999,
+      "reference_entry": 1.3894199999999999,
+      "submitted_sl": 1.3907364285714285,
+      "distortion": 0.39012479652730325,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-31246-USDCAD-C1CD",
+        "3331863",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-31246-USDCAD-C1CD",
+      "deal_id": "3331863",
+      "account_id": "VANTAGE",
+      "fill_price": 1.39136,
+      "reference_entry": 1.391965,
+      "submitted_sl": 1.3907524999999998,
+      "distortion": 0.5010309278351041,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-5509-GBPUSD-AAF5",
+        "3317538",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-5509-GBPUSD-AAF5",
+      "deal_id": "3317538",
+      "account_id": "VANTAGE",
+      "fill_price": 1.34927,
+      "reference_entry": 1.35142,
+      "submitted_sl": 1.3508335714285715,
+      "distortion": 2.66626065773481,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-5936-GBPUSD-3540",
+        "3317646",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-5936-GBPUSD-3540",
+      "deal_id": "3317646",
+      "account_id": "VANTAGE",
+      "fill_price": 1.3491,
+      "reference_entry": 1.35142,
+      "submitted_sl": 1.3508714285714285,
+      "distortion": 3.229166666665798,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-8367-USDCHF-C7E9",
+        "3315194",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-8367-USDCHF-C7E9",
+      "deal_id": "3315194",
+      "account_id": "VANTAGE",
+      "fill_price": 0.81763,
+      "reference_entry": 0.816805,
+      "submitted_sl": 0.8169500000000001,
+      "distortion": 4.689655172411126,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-8828-USDCHF-707E",
+        "3315325",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-8828-USDCHF-707E",
+      "deal_id": "3315325",
+      "account_id": "VANTAGE",
+      "fill_price": 0.8178,
+      "reference_entry": 0.816805,
+      "submitted_sl": 0.8169535714285715,
+      "distortion": 5.697115384612047,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260914-9512-NZDUSD-4519",
+        "3315525",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-9512-NZDUSD-4519",
+      "deal_id": "3315525",
+      "account_id": "VANTAGE",
+      "fill_price": 0.57868,
+      "reference_entry": 0.5808599999999999,
+      "submitted_sl": 0.5799057142857142,
+      "distortion": 1.284431137724578,
+      "quality": "SUSPECT",
+      "reason": "SUSPECT_SIZING_GEOMETRY"
+    },
+    {
+      "key": [
+        "COR-20260914-9512-NZDUSD-4519",
+        "58055354717",
+        "METAQUOTES"
+      ],
+      "correlation_id": "COR-20260914-9512-NZDUSD-4519",
+      "deal_id": "58055354717",
+      "account_id": "METAQUOTES",
+      "fill_price": 0.57876,
+      "reference_entry": 0.5808599999999999,
+      "submitted_sl": 0.5799057142857142,
+      "distortion": 1.2005988023951504,
+      "quality": "CLEAN",
+      "reason": "CLEAN_SIZING"
+    },
+    {
+      "key": [
+        "COR-20260914-9943-NZDUSD-F732",
+        "3315697",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260914-9943-NZDUSD-F732",
+      "deal_id": "3315697",
+      "account_id": "VANTAGE",
+      "fill_price": 0.57862,
+      "reference_entry": 0.5808599999999999,
+      "submitted_sl": 0.5799060714285714,
+      "distortion": 1.3481842006739644,
+      "quality": "SUSPECT",
+      "reason": "SUSPECT_SIZING_GEOMETRY"
+    },
+    {
+      "key": [
+        "COR-20260914-9943-NZDUSD-F732",
+        "58055489727",
+        "METAQUOTES"
+      ],
+      "correlation_id": "COR-20260914-9943-NZDUSD-F732",
+      "deal_id": "58055489727",
+      "account_id": "METAQUOTES",
+      "fill_price": 0.57869,
+      "reference_entry": 0.5808599999999999,
+      "submitted_sl": 0.5799060714285714,
+      "distortion": 1.2748034444028848,
+      "quality": "SUSPECT",
+      "reason": "SUSPECT_SIZING_GEOMETRY"
+    },
+    {
+      "key": [
+        "COR-20260915-2815-XAUUSD-47B5",
+        "3352073",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260915-2815-XAUUSD-47B5",
+      "deal_id": "3352073",
+      "account_id": "VANTAGE",
+      "fill_price": 4310.12,
+      "reference_entry": 4287.075,
+      "submitted_sl": 4306.16,
+      "distortion": 0.2074927953890505,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260915-2815-XAUUSD-47B5",
+        "58093737889",
+        "METAQUOTES"
+      ],
+      "correlation_id": "COR-20260915-2815-XAUUSD-47B5",
+      "deal_id": "58093737889",
+      "account_id": "METAQUOTES",
+      "fill_price": 4310.2,
+      "reference_entry": 4287.075,
+      "submitted_sl": 4306.16,
+      "distortion": 0.2116845690332699,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260915-69410-USDCHF-8541",
+        "3341422",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260915-69410-USDCHF-8541",
+      "deal_id": "3341422",
+      "account_id": "VANTAGE",
+      "fill_price": 0.81852,
+      "reference_entry": 0.81801,
+      "submitted_sl": 0.8181439285714286,
+      "distortion": 2.8079999999999337,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260915-70891-GBPUSD-286C",
+        "3341894",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260915-70891-GBPUSD-286C",
+      "deal_id": "3341894",
+      "account_id": "VANTAGE",
+      "fill_price": 1.34663,
+      "reference_entry": 1.348655,
+      "submitted_sl": 1.3484217857142857,
+      "distortion": 7.6830015313960835,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260915-71309-GBPUSD-D6D5",
+        "3341965",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260915-71309-GBPUSD-D6D5",
+      "deal_id": "3341965",
+      "account_id": "VANTAGE",
+      "fill_price": 1.34657,
+      "reference_entry": 1.348655,
+      "submitted_sl": 1.3484242857142856,
+      "distortion": 8.037151702785106,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260915-86548-USDCAD-06F5",
+        "3347420",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260915-86548-USDCAD-06F5",
+      "deal_id": "3347420",
+      "account_id": "VANTAGE",
+      "fill_price": 1.39264,
+      "reference_entry": 1.390725,
+      "submitted_sl": 1.3914457142857144,
+      "distortion": 1.6570862239838469,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260916-25561-USDCAD-1835",
+        "3390987",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260916-25561-USDCAD-1835",
+      "deal_id": "3390987",
+      "account_id": "VANTAGE",
+      "fill_price": 1.39924,
+      "reference_entry": 1.3937650000000001,
+      "submitted_sl": 1.39389,
+      "distortion": 42.800000000023445,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260916-25561-USDCAD-1835",
+        "58116363381",
+        "METAQUOTES"
+      ],
+      "correlation_id": "COR-20260916-25561-USDCAD-1835",
+      "deal_id": "58116363381",
+      "account_id": "METAQUOTES",
+      "fill_price": 1.39917,
+      "reference_entry": 1.3937650000000001,
+      "submitted_sl": 1.39389,
+      "distortion": 42.240000000023024,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260916-2894-USDJPY-9324",
+        "3355732",
+        "VANTAGE"
+      ],
+      "correlation_id": "COR-20260916-2894-USDJPY-9324",
+      "deal_id": "3355732",
+      "account_id": "VANTAGE",
+      "fill_price": 155.443,
+      "reference_entry": 155.067,
+      "submitted_sl": 155.123,
+      "distortion": 5.714285714287817,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    },
+    {
+      "key": [
+        "COR-20260916-2894-USDJPY-9324",
+        "58096032558",
+        "METAQUOTES"
+      ],
+      "correlation_id": "COR-20260916-2894-USDJPY-9324",
+      "deal_id": "58096032558",
+      "account_id": "METAQUOTES",
+      "fill_price": 155.432,
+      "reference_entry": 155.067,
+      "submitted_sl": 155.123,
+      "distortion": 5.517857142858756,
+      "quality": "AFFECTED",
+      "reason": "MARKET_ENTRY_REFERENCE_SIZING_DEFECT"
+    }
+  ]
+}

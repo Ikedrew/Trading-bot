@@ -9,6 +9,8 @@ whether certain market environments produce better or worse results.
 
 from __future__ import annotations
 
+from research_engine.v10.base import format_metric
+
 import math
 import statistics
 from typing import Any
@@ -190,7 +192,7 @@ def _build_markdown(report: dict) -> str:
     md.append("|---|---|---|---|---|---|---|---|---|---|")
     for r in report["regime_results"]:
         sign = "+" if r["vs_baseline"] > 0 else ""
-        pf = f"{r['profit_factor']:.1f}" if r["profit_factor"] < 900 else "inf"
+        pf = "N/A" if r.get("profit_factor") is None else f"{format_metric(r['profit_factor'], '.1f')}" if r["profit_factor"] < 900 else "inf"
         md.append(
             f"| {r['regime']} | {r['trade_count']} | {r['confidence']} | "
             f"{r['win_rate']:.0%} | {r['average_r']:+.2f} | {r['expectancy_r']:+.2f} | "

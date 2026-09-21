@@ -9,6 +9,8 @@ confidence classification based on sample size.
 
 from __future__ import annotations
 
+from research_engine.v10.base import format_metric
+
 import statistics
 from typing import Any
 
@@ -151,7 +153,7 @@ def _build_markdown(report: dict) -> str:
     md.append("|---|---|---|---|---|---|---|---|---|")
     for p in report["pattern_results"]:
         sign = "+" if p["vs_baseline"] > 0 else ""
-        pf = f"{p['profit_factor']:.1f}" if p["profit_factor"] < 900 else "inf"
+        pf = "N/A" if p.get("profit_factor") is None else f"{format_metric(p['profit_factor'], '.1f')}" if p["profit_factor"] < 900 else "inf"
         md.append(
             f"| {p['pattern']} | {p['trade_count']} | {p['confidence']} | "
             f"{p['win_rate']:.0%} | {p['average_r']:+.2f} | {p['expectancy_r']:+.2f} | "

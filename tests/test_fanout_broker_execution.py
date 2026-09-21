@@ -78,6 +78,15 @@ class FakeExecMT5:
     def history_deals_get(self, *args, **kwargs):
         return []
 
+    def order_calc_profit(self, order_type, symbol, volume, price_open, price_close):
+        # Broker-faithful: money = (price move in ticks) * tick_value * volume,
+        # signed for direction. Loss (negative) when price moves against side.
+        ts = float(self.spec["trade_tick_size"])
+        tv = float(self.spec["trade_tick_value"])
+        ticks = (price_close - price_open) / ts
+        signed = 1.0 if order_type == self.ORDER_TYPE_BUY else -1.0
+        return ticks * tv * float(volume) * signed
+
     def order_send(self, request):
         self.sent.append(request)
         return NS(retcode=10009, deal=7, order=8, comment="ok", price=1.10002)
@@ -105,7 +114,11 @@ def _request(cfg, *, side="BUY", sl=1.09902, tp=1.10102,
                    "entry": 1.10002, "sl": sl, "tp": tp},
         "order": {"broker_symbol": broker_symbol, "requested_volume": volume,
                   "sl": sl, "tp": tp, "side": side, "deviation": 20,
-                  "magic": 713001, "comment": "fanout-test"},
+                  "magic": 713001, "comment": "fanout-test",
+                  # Permitted monetary risk budget (0.25% of the fake's $10k
+                  # balance) — comfortably covers the sane test geometry so the
+                  # new execution-time risk recheck does not false-reject.
+                  "risk_amount": 25.0},
     }
 
 

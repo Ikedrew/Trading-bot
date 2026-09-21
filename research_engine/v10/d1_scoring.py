@@ -13,6 +13,8 @@ Handles two component schemas separately:
 
 from __future__ import annotations
 
+from research_engine.v10.base import format_metric
+
 import math
 import statistics
 from typing import Any
@@ -242,7 +244,7 @@ def _build_markdown(report: dict) -> str:
     md.append("| Score Range | N | Win% | Avg R | Expectancy | PF | Conf |")
     md.append("|---|---|---|---|---|---|---|")
     for label, stats in report["score_analysis"].items():
-        pf = f"{stats['profit_factor']:.1f}" if stats["profit_factor"] < 900 else "inf"
+        pf = "N/A" if stats.get("profit_factor") is None else f"{format_metric(stats['profit_factor'], '.1f')}" if stats["profit_factor"] < 900 else "inf"
         md.append(f"| {label} | {stats['count']} | {stats['win_rate']:.0%} | "
                   f"{stats['average_r']:+.2f} | {stats['expectancy_r']:+.2f} | {pf} | {stats['confidence']} |")
     md.append("")

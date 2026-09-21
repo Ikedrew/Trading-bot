@@ -31,7 +31,10 @@ def compute_metrics(trades: list[dict[str, Any]]) -> dict[str, Any]:
 
     n = len(trades)
     r_vals = [t.get("realised_r", 0) for t in trades]
-    pnl_vals = [t.get("final_pnl", 0) or 0 for t in trades]
+    from research_engine.data_quality.execution_sizing import is_eligible, EvidencePurpose
+    monetary = [t for t in trades if is_eligible(t, EvidencePurpose.MONETARY_RISK)
+                and t.get("final_pnl") is not None]
+    pnl_vals = [t["final_pnl"] for t in monetary]
 
     winners = [t for t in trades if t.get("realised_r", 0) > 0]
     losers = [t for t in trades if t.get("realised_r", 0) <= 0]
@@ -62,11 +65,13 @@ def compute_metrics(trades: list[dict[str, Any]]) -> dict[str, Any]:
         "average_win_r": round(avg_win_r, 4),
         "average_loss_r": round(avg_loss_r, 4),
         "expectancy_r": round(expectancy_r, 4),
-        "total_pnl": round(sum(pnl_vals), 2),
-        "average_pnl": round(sum(pnl_vals) / n, 4),
-        "largest_winner": round(max(pnl_vals), 4) if pnl_vals else 0,
-        "largest_loser": round(min(pnl_vals), 4) if pnl_vals else 0,
-        "profit_factor": round(profit_factor, 2),
+        "monetary_sample_size": len(pnl_vals),
+        "monetary_excluded": n - len(pnl_vals),
+        "total_pnl": round(sum(pnl_vals), 2) if pnl_vals else None,
+        "average_pnl": round(sum(pnl_vals) / len(pnl_vals), 4) if pnl_vals else None,
+        "largest_winner": round(max(pnl_vals), 4) if pnl_vals else None,
+        "largest_loser": round(min(pnl_vals), 4) if pnl_vals else None,
+        "profit_factor": round(profit_factor, 2) if pnl_vals else None,
         "confidence": classify_confidence(n),
     }
 
@@ -103,3 +108,8 @@ def save_report(report: dict[str, Any], filename: str, reports_dir: str | None =
 def timestamp_now() -> str:
     """ISO timestamp for report generation."""
     return datetime.now(timezone.utc).isoformat()
+
+
+def format_metric(value, spec=".2f") -> str:
+    """Display excluded monetary evidence explicitly without breaking R reports."""
+    return "N/A" if value is None else format(value, spec)

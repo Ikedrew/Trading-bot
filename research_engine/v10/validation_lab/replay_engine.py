@@ -119,6 +119,7 @@ class ReplayEngine:
         for e in events:
             ex = e.get("execution", {})
             flat.append({
+                **ex,
                 "realised_r": ex.get("r_multiple", 0),
                 "final_pnl": ex.get("net_realised_pnl", 0),
             })

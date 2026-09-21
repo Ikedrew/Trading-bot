@@ -48,7 +48,8 @@ class MarketDomain(ResearchDomain):
         observations = []
         for e in universe_events:
             mkt = e.get("market", {})
-            ex = e.get("execution", {})
+            from research_engine.data_quality.execution_sizing import governed_record
+            ex = governed_record(e.get("execution", {}))
 
             observations.append({
                 "market_event_id": f"mkt_{ex.get('ticket', '')}",

@@ -10,6 +10,8 @@ concentration to determine if risk geometry supports or hinders performance.
 
 from __future__ import annotations
 
+from research_engine.v10.base import format_metric
+
 import statistics
 from typing import Any
 
@@ -119,12 +121,16 @@ def run(view: DatasetView = DatasetView.FULL, trades: list[dict] | None = None) 
     }
 
     # ─── 5. LOSS CONCENTRATION ────────────────────────────────
-    sorted_losses = sorted(losers, key=lambda t: t.get("final_pnl", 0))
+    from research_engine.data_quality.execution_sizing import filter_monetary_eligible
+    monetary_losers = [t for t in filter_monetary_eligible(losers, None) if t.get("final_pnl") is not None]
+    sorted_losses = sorted(monetary_losers, key=lambda t: t["final_pnl"])
     top5_losses = sorted_losses[:5]
-    total_loss_pnl = sum(t.get("final_pnl", 0) for t in losers)
+    total_loss_pnl = sum(t["final_pnl"] for t in monetary_losers)
     top5_pnl = sum(t.get("final_pnl", 0) for t in top5_losses)
     loss_analysis = {
         "total_losers": len(losers),
+        "monetary_sample_size": len(monetary_losers),
+        "monetary_excluded": len(losers) - len(monetary_losers),
         "total_loss_pnl": round(total_loss_pnl, 2),
         "top5_loss_pnl": round(top5_pnl, 2),
         "top5_pct_of_total": round(top5_pnl / total_loss_pnl, 4) if total_loss_pnl != 0 else 0,
@@ -206,7 +212,7 @@ def _build_markdown(report: dict) -> str:
     md.append("| Bucket | N | Win% | Avg R | Expectancy | PF | Conf |")
     md.append("|---|---|---|---|---|---|---|")
     for label, stats in report["rr_analysis"].items():
-        pf = f"{stats['profit_factor']:.1f}" if stats["profit_factor"] < 900 else "inf"
+        pf = "N/A" if stats.get("profit_factor") is None else f"{format_metric(stats['profit_factor'], '.1f')}" if stats["profit_factor"] < 900 else "inf"
         md.append(f"| {label} | {stats['count']} | {stats['win_rate']:.0%} | "
                   f"{stats['average_r']:+.2f} | {stats['expectancy_r']:+.2f} | {pf} | {stats['confidence']} |")
 

@@ -18,6 +18,66 @@ def _lineage(target: dict) -> dict:
     return {k: target.get(k) for k in keys}
 
 
+# Tiny numerical tolerance for float/broker-calc noise only. NOT a slippage
+# allowance — the configured risk budget remains the authority.
+_RISK_TOLERANCE = 1e-6
+
+
+def _validate_execution_risk(*, mt5, account, side: str, broker_symbol: str,
+                             market_price: float, sl: float, volume: float,
+                             risk_budget) -> tuple[bool, dict]:
+    """Final fail-closed monetary-risk check immediately before order_send.
+
+    Returns ``(ok, evidence)``. ``ok`` is True only when the realised SL risk
+    is within the permitted budget. On rejection ``evidence['comment']`` is one
+    of:
+
+      * EXECUTION_RISK_BUDGET_UNAVAILABLE — no permitted budget was carried.
+      * EXECUTION_RISK_CALC_FAILED        — broker risk calc unusable.
+      * EXECUTION_RISK_EXCEEDED           — realised SL risk > budget.
+
+    Risk is the |loss| if price moves from the fresh executable price to the
+    submitted SL for the requested volume, via the account's own broker spec
+    (mt5.order_calc_profit — no generic pip assumptions).
+    """
+    permitted = float(risk_budget) if isinstance(risk_budget, (int, float)) else None
+
+    def _evidence(**extra) -> dict:
+        base = {
+            "risk_budget": permitted,
+            "execution_price": float(market_price) if market_price else None,
+            "sl": float(sl) if sl else None,
+            "requested_volume": float(volume) if volume else None,
+            "execution_risk_amount": None,
+        }
+        base.update(extra)
+        return base
+
+    # Budget must be known for a live submission — never assume a default.
+    if permitted is None or permitted <= 0:
+        return False, _evidence(comment="EXECUTION_RISK_BUDGET_UNAVAILABLE")
+
+    order_type = mt5.ORDER_TYPE_BUY if side == "BUY" else mt5.ORDER_TYPE_SELL
+    try:
+        loss = mt5.order_calc_profit(order_type, broker_symbol, volume,
+                                     market_price, sl)
+    except Exception:
+        loss = None
+    if loss is None or not isinstance(loss, (int, float)):
+        return False, _evidence(comment="EXECUTION_RISK_CALC_FAILED")
+
+    execution_risk_amount = abs(float(loss))
+    evidence = _evidence(
+        execution_risk_amount=round(execution_risk_amount, 6),
+        excess_amount=round(execution_risk_amount - permitted, 6),
+        excess_ratio=(round(execution_risk_amount / permitted, 4) if permitted else None),
+    )
+    if execution_risk_amount > permitted + _RISK_TOLERANCE:
+        evidence["comment"] = "EXECUTION_RISK_EXCEEDED"
+        return False, evidence
+    return True, evidence  # within budget → allowed
+
+
 
 def execute_pinned(request: dict, mt5) -> dict:
     from core.mt5_symbol_spec import (
@@ -90,6 +150,23 @@ def execute_pinned(request: dict, mt5) -> dict:
                 "status": "BLOCKED", "comment": stops_error,
                 "canonical_sl": canonical_sl, "canonical_tp": canonical_tp,
                 "broker_sl": sl, "broker_tp": tp, **_lineage(target)}
+
+    # ─── EXECUTION-TIME RISK RECHECK (fail closed BEFORE order_send) ─────
+    # Price can move between account sizing and execution. Re-evaluate the
+    # realised SL risk of the requested volume against the worker's FRESH
+    # executable price and the SAME monetary budget that produced the volume.
+    # Reject (never silently resize) if it exceeds budget. This is the final
+    # blast-radius guard against oversized submissions.
+    risk_ok, risk_evidence = _validate_execution_risk(
+        mt5=mt5, account=account, side=side, broker_symbol=broker_symbol,
+        market_price=market, sl=sl, volume=volume,
+        risk_budget=order.get("risk_amount"))
+    if not risk_ok:
+        return {"account_id": account.account_id, "executed": False,
+                "status": "BLOCKED", **risk_evidence,
+                "canonical_sl": canonical_sl, "canonical_tp": canonical_tp,
+                "broker_sl": sl, "broker_tp": tp, **_lineage(target)}
+
     price = spec.normalize_price(float(tick.ask if side == "BUY" else tick.bid))
     broker_request = {
         "action": mt5.TRADE_ACTION_DEAL,
@@ -138,6 +215,10 @@ def execute_pinned(request: dict, mt5) -> dict:
             "ownership": ownership._asdict() if ownership else None,
             "lifecycle_side": side,
             "lifecycle_bid": float(tick.bid), "lifecycle_ask": float(tick.ask),
+            # Execution-time risk-recheck evidence (order passed the budget guard).
+            "risk_budget": risk_evidence.get("risk_budget"),
+            "execution_risk_amount": risk_evidence.get("execution_risk_amount"),
+            "execution_price": risk_evidence.get("execution_price"),
             "ok": ok, "retcode": int(getattr(result, "retcode", -1)),
             "deal": int(getattr(result, "deal", 0) or 0),
             "order": int(getattr(result, "order", 0) or 0),

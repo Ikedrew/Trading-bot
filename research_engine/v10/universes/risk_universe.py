@@ -69,6 +69,15 @@ class RiskUniverseBuilder(UniverseBuilder):
         if not self._raw:
             self.load()
 
+        from research_engine.data_quality.execution_sizing import (
+            annotate_record, build_trade_eligibility, governed_record,
+        )
+        from research_engine.data_access.s3_source import ResearchDataSourceError
+        try:
+            sizing = build_trade_eligibility(self._load_dataset("execution_results", symbol=self._symbol))
+        except ResearchDataSourceError as exc:
+            logger.warning("Sizing evidence unavailable; monetary/volume eligibility is UNKNOWN: %s", exc)
+            sizing = {}
         records = []
         excluded_no_entity_id = 0
         excluded_no_risk_data = 0
@@ -98,7 +107,7 @@ class RiskUniverseBuilder(UniverseBuilder):
 
             record = self._normalise(raw, risk)
             if record:
-                records.append(record)
+                records.append(governed_record(annotate_record(record, sizing)))
 
         total_excluded = (
             excluded_no_entity_id + excluded_no_risk_data + excluded_not_reached_risk

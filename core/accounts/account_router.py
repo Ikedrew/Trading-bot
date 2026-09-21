@@ -100,7 +100,12 @@ def _guarded_execute(execute_one: Callable[[dict], dict], item: dict) -> dict:
 def build_account_order_request(*, item: dict) -> dict:
     """Broker request for ONE account: resolved broker symbol + own volume/prices."""
     target = item["target"]
-    volume = float(item["volume"].volume) if hasattr(item.get("volume"), "volume") else float(item.get("volume") or 0.0)
+    vol_result = item.get("volume")
+    volume = float(vol_result.volume) if hasattr(vol_result, "volume") else float(vol_result or 0.0)
+    # Carry the permitted monetary risk budget that produced this volume so the
+    # worker can fail closed if price drift between sizing and execution would
+    # push the realised SL risk above budget. None when sizing did not run.
+    risk_amount = float(getattr(vol_result, "risk_amount", 0.0) or 0.0) if hasattr(vol_result, "risk_amount") else None
     return {
         "account_id": target.account_id,
         "broker": target.broker,
@@ -114,9 +119,11 @@ def build_account_order_request(*, item: dict) -> dict:
         "account_execution_id": target.account_execution_id,
         "trade_id": target.trade_id,
         "requested_volume": volume,
+        "risk_amount": risk_amount,
         "entry": float(target.entry),
         "sl": float(target.sl),
         "tp": float(target.tp),
+        "side": str(getattr(target, "side", "") or ""),
         "pattern": target.pattern,
         "observation_id": target.observation_id,
     }

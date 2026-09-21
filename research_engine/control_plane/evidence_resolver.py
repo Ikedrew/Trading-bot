@@ -1013,8 +1013,11 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
         if not satisfied:
             missing_fields.append(field_name)
 
+    from research_engine.data_quality.execution_sizing import eligible_for_fields
+    sizing_safe = [row for row in rows if eligible_for_fields(row, question.required_fields)]
+    metrics["excluded_sizing_quality"] = len(rows) - len(sizing_safe)
     usable = [
-        row for row in rows
+        row for row in sizing_safe
         if all(_known(_value(row, field_name)) for field_name in question.required_fields)
     ]
     if question.id == "EX2":

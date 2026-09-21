@@ -40,6 +40,12 @@ def compare_snapshots(
 
     performance_delta = {}
     for metric in perf_metrics:
+        if metric in {"profit_factor", "net_realised_pnl"} and (
+            b_perf.get(metric) is None or c_perf.get(metric) is None
+        ):
+            performance_delta[metric] = {"baseline": b_perf.get(metric), "candidate": c_perf.get(metric),
+                                         "change": None, "status": "MONETARY_EVIDENCE_UNAVAILABLE"}
+            continue
         b_val = b_perf.get(metric, 0) or 0
         c_val = c_perf.get(metric, 0) or 0
         change = c_val - b_val

@@ -76,6 +76,7 @@ class OutcomeEnrichment:
 
     def _build_lookup(self, execution_builder: UniverseBuilder) -> None:
         """Build entity_id → outcome mapping from execution records."""
+        from research_engine.data_quality.execution_sizing import is_eligible, EvidencePurpose
         for record in execution_builder.records:
             entity_id = record.get("entity_id", "")
             # Skip records where entity_id is just the trade_id fallback (pos_NNNNN)
@@ -92,7 +93,23 @@ class OutcomeEnrichment:
                     "r_multiple": r_multiple,
                     "execution_id": record.get("trade_id", ""),
                     "exit_reason": record.get("exit_reason", ""),
-                    "net_realised_pnl": record.get("net_realised_pnl"),
+                    # Monetary P&L is sizing-contaminated history when
+                    # execution sizing is not CLEAN: keep R (price-space,
+                    # always eligible) but gate the monetary field.
+                    "net_realised_pnl": (
+                        record.get("net_realised_pnl")
+                        if is_eligible(record, EvidencePurpose.MONETARY_RISK)
+                        and is_eligible(record, EvidencePurpose.VOLUME)
+                        else None
+                    ),
+                    "monetary_pnl_eligible": bool(
+                        is_eligible(record, EvidencePurpose.MONETARY_RISK)
+                        and is_eligible(record, EvidencePurpose.VOLUME)
+                    ),
+                    "execution_sizing_quality": record.get(
+                        "execution_sizing_quality", "UNKNOWN"
+                    ),
+                    "price_r_eligible": record.get("price_r_eligible", True),
                 }
 
         logger.info(
@@ -138,7 +155,16 @@ class OutcomeEnrichment:
                 record["outcome_available"] = True
                 record["execution_id"] = outcome["execution_id"]
                 record["exit_reason"] = outcome.get("exit_reason", "")
+                # Monetary P&L must not leak as clean strategy sizing when
+                # the execution sizing quality is not CLEAN (fail closed).
                 record["net_realised_pnl"] = outcome.get("net_realised_pnl")
+                record["monetary_pnl_eligible"] = outcome.get(
+                    "monetary_pnl_eligible", False
+                )
+                record["execution_sizing_quality"] = outcome.get(
+                    "execution_sizing_quality", "UNKNOWN"
+                )
+                record["price_r_eligible"] = outcome.get("price_r_eligible", True)
                 matched += 1
             else:
                 # Explicitly mark as unmatched — no fabricated outcome

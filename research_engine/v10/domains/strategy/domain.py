@@ -47,7 +47,8 @@ class StrategyDomain(ResearchDomain):
         observations = []
         for e in universe_events:
             strat = e.get("strategy", {})
-            ex = e.get("execution", {})
+            from research_engine.data_quality.execution_sizing import governed_record
+            ex = governed_record(e.get("execution", {}))
             dec = e.get("decision", {})
 
             observations.append({

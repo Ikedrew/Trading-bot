@@ -116,6 +116,9 @@ class ExperimentRunner:
                 filters_applied=filter_kwargs,
             )
 
+        from research_engine.data_quality.execution_sizing import eligible_for_fields
+        population = [e for e in population if eligible_for_fields(e, question.required_fields)]
+
         # Check minimum sample size
         if len(population) < question.minimum_sample_size:
             return ExperimentResult(
@@ -289,6 +292,7 @@ def _flatten_event(event: dict) -> dict:
     strat = event.get("strategy", {})
 
     return {
+        **{k: ex[k] for k in ("execution_sizing_quality", "sizing_quality", "is_shadow") if k in ex},
         "trade_id": event.get("trade_id", ""),
         "position_ticket": ex.get("ticket", 0),
         "symbol": ex.get("symbol", ""),

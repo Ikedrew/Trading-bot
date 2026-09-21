@@ -270,7 +270,7 @@ def _build_markdown(report: dict) -> str:
     for level in ["LOW", "MEDIUM", "HIGH"]:
         if level in report["quality_buckets"]:
             q = report["quality_buckets"][level]
-            pf = f"{q['profit_factor']:.1f}" if q["profit_factor"] < 900 else "inf"
+            pf = "N/A" if q.get("profit_factor") is None else f"{q['profit_factor']:.1f}" if q["profit_factor"] < 900 else "inf"
             md.append(f"| {level} | {q['count']} | {q['score_range']} | {q['win_rate']:.0%} | "
                       f"{q['average_r']:+.2f} | {q['expectancy_r']:+.2f} | {pf} | "
                       f"[{q['ci_lower']:+.2f}, {q['ci_upper']:+.2f}] |")

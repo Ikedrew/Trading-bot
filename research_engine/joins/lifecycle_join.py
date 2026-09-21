@@ -54,6 +54,12 @@ class LifecycleRecord:
     symbol: str = ""
     cycle_id: int = 0
     entity_id: str = ""
+    # Governed execution-sizing quality (purpose-specific eligibility).
+    # r_multiple is price-space (always eligible); pnl is monetary and only
+    # clean strategy sizing when monetary_pnl_eligible is True.
+    execution_sizing_quality: str = "UNKNOWN"
+    price_r_eligible: bool = True
+    monetary_pnl_eligible: bool = False
 
     # Stages (None = not available/not reached)
     opportunity: dict[str, Any] | None = None
@@ -98,6 +104,9 @@ class LifecycleRecord:
             "rejection_reason": self.rejection_reason,
             "r_multiple": self.r_multiple,
             "pnl": self.pnl,
+            "execution_sizing_quality": self.execution_sizing_quality,
+            "price_r_eligible": self.price_r_eligible,
+            "monetary_pnl_eligible": self.monetary_pnl_eligible,
         }
 
 
@@ -143,6 +152,15 @@ def join_lifecycle(
     _decision_idx = _index_decisions(decisions or [])
     _execution_idx = _index_by_key(executions or [], "correlation_id")
     _truth_idx = _index_by_key(trade_truths or [], _truth_correlation_key)
+    # Governed sizing overlay (read-only; never mutates raw evidence).
+    _sizing_eligibility: dict[str, Any] = {}
+    try:
+        from research_engine.data_quality.execution_sizing import (
+            build_trade_eligibility,
+        )
+        _sizing_eligibility = build_trade_eligibility(executions or [])
+    except Exception:
+        _sizing_eligibility = {}
 
     results: list[LifecycleRecord] = []
 
@@ -155,6 +173,7 @@ def join_lifecycle(
             decision_idx=_decision_idx,
             execution_idx=_execution_idx,
             truth_idx=_truth_idx,
+            sizing_eligibility=_sizing_eligibility or None,
         )
         results.append(record)
 
@@ -174,6 +193,7 @@ def _build_lifecycle_record(
     decision_idx: dict[str, list[dict]],
     execution_idx: dict[str, list[dict]],
     truth_idx: dict[str, list[dict]],
+    sizing_eligibility: dict[str, Any] | None = None,
 ) -> LifecycleRecord:
     """Build one lifecycle record from an opportunity and indexed downstream data."""
 
@@ -276,6 +296,27 @@ def _build_lifecycle_record(
             outcome_section = truth_matches[0].get("outcome", {})
             record.r_multiple = outcome_section.get("r_multiple_realised")
             record.pnl = outcome_section.get("pnl_realised")
+            # Governed sizing overlay: R stays eligible; monetary pnl is
+            # only clean strategy sizing when CLEAN (fail closed).
+            try:
+                from research_engine.data_quality.execution_sizing import (
+                    eligibility_for_trade,
+                )
+                _entry = eligibility_for_trade(
+                    correlation_id, sizing_eligibility
+                )
+                record.execution_sizing_quality = _entry.quality.value
+                record.price_r_eligible = True
+                record.monetary_pnl_eligible = bool(
+                    _entry.monetary_risk_eligible
+                    and _entry.volume_analysis_eligible
+                )
+            except Exception:
+                record.execution_sizing_quality = "UNKNOWN"
+                record.price_r_eligible = True
+                record.monetary_pnl_eligible = False
+            if not record.monetary_pnl_eligible:
+                record.pnl = None
         else:
             stages_missing.append("outcome")
     else:

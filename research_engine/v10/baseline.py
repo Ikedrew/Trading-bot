@@ -9,6 +9,8 @@ Storage: reports/research_cycles/baseline.json (latest)
 
 from __future__ import annotations
 
+from research_engine.v10.base import format_metric
+
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -89,7 +91,7 @@ def compare_baselines() -> dict[str, Any]:
     # Profit factor
     prev_pf = previous.get("profit_factor", 0)
     curr_pf = current.get("profit_factor", 0)
-    changes["profit_factor"] = f"{prev_pf:.2f} → {curr_pf:.2f}"
+    changes["profit_factor"] = f"{format_metric(prev_pf)} → {format_metric(curr_pf)}"
 
     # Experiment conclusion changes
     prev_exps = previous.get("experiments", {})

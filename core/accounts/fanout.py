@@ -35,6 +35,7 @@ class CanonicalDecision:
     volume_hint: float = 0.0  # canonical reference only; per-account volume recomputed
     pattern: str = ""
     observation_id: str = ""
+    entry_type: str = "MARKET"  # "MARKET" | "LIMIT" | "STOP" — drives sizing reference
 
 
 @dataclass(frozen=True)
@@ -54,8 +55,10 @@ class AccountTarget:
     entry: float
     sl: float
     tp: float
+    side: str = ""  # "BUY" | "SELL" — inherited from the canonical decision
     pattern: str = ""
     observation_id: str = ""
+    entry_type: str = "MARKET"  # "MARKET" | "LIMIT" | "STOP" — drives sizing reference
     metadata: dict = field(default_factory=dict)
 
 
@@ -113,8 +116,10 @@ def fan_out_canonical_decision(
             entry=float(decision.entry),
             sl=float(decision.sl),
             tp=float(decision.tp),
+            side=str(getattr(decision, "side", "") or "").upper(),
             pattern=decision.pattern,
             observation_id=decision.observation_id,
+            entry_type=str(getattr(decision, "entry_type", "MARKET") or "MARKET"),
         ))
     return tuple(targets)
 
@@ -141,4 +146,5 @@ def decision_from_intent(
         volume_hint=float(getattr(intent, "volume", 0.0) or 0.0),
         pattern=str(getattr(intent, "pattern", "") or ""),
         observation_id=observation_id,
+        entry_type=str(getattr(intent, "entry_type", "MARKET") or "MARKET"),
     )

@@ -25,6 +25,8 @@ Produces:
 
 from __future__ import annotations
 
+from research_engine.v10.base import format_metric
+
 import json
 import logging
 import time
@@ -304,9 +306,9 @@ def _build_cycle_markdown(
         m = summary["performance"].get(view, {})
         if m.get("count", 0) == 0:
             continue
-        pf = f"{m.get('profit_factor', 0):.1f}" if m.get("profit_factor", 0) < 900 else "inf"
+        pf = "N/A" if m.get("profit_factor") is None else f"{m.get('profit_factor', 0):.1f}" if m.get("profit_factor", 0) < 900 else "inf"
         md.append(f"| {view} | {m['count']} | {m.get('win_rate',0):.0%} | "
-                  f"{m.get('expectancy_r',0):+.2f} | {pf} | ${m.get('total_pnl',0):.2f} |")
+                  f"{m.get('expectancy_r',0):+.2f} | {pf} | ${format_metric(m.get('total_pnl',0), '.2f')} |")
 
     # Instrument rankings
     if summary.get("rankings"):
@@ -393,7 +395,7 @@ if __name__ == "__main__":
         m = result["performance"].get(view, {})
         if m.get("count", 0) > 0:
             print(f"    {view:14s}: n={m['count']:3d} win={m.get('win_rate',0):.0%} "
-                  f"exp={m.get('expectancy_r',0):+.2f}R pnl=${m.get('total_pnl',0):.2f}")
+                  f"exp={m.get('expectancy_r',0):+.2f}R pnl=${format_metric(m.get('total_pnl',0), '.2f')}")
 
     anom = result.get("anomaly_summary", {})
     if anom.get("flagged_count"):

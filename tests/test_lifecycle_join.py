@@ -178,7 +178,10 @@ class TestCompleteLifecycle:
         assert r.outcome is not None
         assert r.final_state == "EXECUTED"
         assert r.r_multiple == 2.11
-        assert r.pnl == 1.37
+        assert r.pnl is None  # Missing sizing provenance fails closed for money.
+        assert r.price_r_eligible is True
+        assert r.monetary_pnl_eligible is False
+        assert r.outcome["outcome"]["pnl_realised"] == 1.37  # Raw provenance retained.
 
     def test_complete_quality(self):
         results = join_lifecycle(

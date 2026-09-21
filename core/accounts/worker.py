@@ -134,6 +134,12 @@ class AccountReader:
             row['trade_tick_value'] = None
             row.update({k: None for k in SYMBOL_DESCRIPTION_FIELDS})
             row['contract_size'] = None
+            # Current executable-side prices. Captured so that MARKET-order
+            # position sizing uses the live broker price (ask for BUY, bid for
+            # SELL) instead of a stale strategy entry_reference. Left None when
+            # unavailable so sizing fails closed for MARKET orders.
+            row['bid'] = None
+            row['ask'] = None
             if row['status'] == 'available':
                 info = self.read('symbol_info', row['broker_symbol'])
                 if info is None:
@@ -147,6 +153,11 @@ class AccountReader:
                         row['status'] = 'invalid_spec'
                     else:
                         infos[canonical] = info
+                        tick = self.read('symbol_info_tick', info.name)
+                        _bid = getattr(tick, 'bid', None)
+                        _ask = getattr(tick, 'ask', None)
+                        row['bid'] = float(_bid) if isinstance(_bid, (int, float)) else None
+                        row['ask'] = float(_ask) if isinstance(_ask, (int, float)) else None
             result['symbols'].append(row)
 
 

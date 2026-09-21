@@ -35,6 +35,12 @@ def compare_metrics(
     degraded = []
 
     for metric in _COMPARISON_METRICS:
+        if metric in {"profit_factor", "total_pnl"} and (
+            baseline.get(metric) is None or candidate.get(metric) is None
+        ):
+            changes[metric] = {"before": baseline.get(metric), "after": candidate.get(metric),
+                               "delta": None, "status": "MONETARY_EVIDENCE_UNAVAILABLE"}
+            continue
         before = baseline.get(metric, 0) or 0
         after = candidate.get(metric, 0) or 0
         delta = after - before

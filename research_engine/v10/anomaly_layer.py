@@ -78,7 +78,9 @@ def classify_anomalies(
         }
 
     # Compute population stats for relative thresholds
-    pnl_vals = [t.get("final_pnl", 0) or 0 for t in trades]
+    from research_engine.data_quality.execution_sizing import is_eligible, EvidencePurpose
+    pnl_vals = [t["final_pnl"] for t in trades
+                if is_eligible(t, EvidencePurpose.MONETARY_RISK) and t.get("final_pnl") is not None]
     pnl_mean = statistics.mean(pnl_vals) if pnl_vals else 0
     pnl_stdev = statistics.stdev(pnl_vals) if len(pnl_vals) > 1 else 0
 
@@ -99,7 +101,8 @@ def classify_anomalies(
 
         # Rule 2: Extreme PnL (statistical outlier)
         pnl = t.get("final_pnl", 0) or 0
-        if pnl_stdev > 0 and abs(pnl - pnl_mean) > _EXTREME_PNL_STDEV * pnl_stdev:
+        if (is_eligible(t, EvidencePurpose.MONETARY_RISK) and pnl_stdev > 0
+                and abs(pnl - pnl_mean) > _EXTREME_PNL_STDEV * pnl_stdev):
             reasons.append("EXTREME_PNL")
 
         # Rule 3: Invalid risk geometry

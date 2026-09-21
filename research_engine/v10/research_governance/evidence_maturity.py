@@ -233,7 +233,7 @@ def estimate_consistency(result_data: dict[str, Any]) -> float:
     Returns 0.0-1.0 where 1.0 = perfectly consistent.
     """
     win_rate = result_data.get("win_rate", 0)
-    pf = result_data.get("profit_factor", 0)
+    pf = result_data.get("profit_factor") or 0  # Unavailable money adds no evidence.
     expectancy = result_data.get("expectancy_r", result_data.get("expectancy", 0))
 
     score = 0.0

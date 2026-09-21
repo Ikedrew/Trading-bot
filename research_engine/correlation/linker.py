@@ -34,7 +34,13 @@ class ResearchRecord:
     # Live outcome (from trade_truth)
     live_r: float | None = None
     live_exit_reason: str = ""
-    live_pnl: float = 0.0
+    live_pnl: float | None = None
+    # Governed execution-sizing quality (purpose-specific eligibility).
+    # live_r is price-space (always eligible); live_pnl is monetary and is
+    # only clean strategy sizing when monetary_pnl_eligible is True.
+    live_sizing_quality: str = "UNKNOWN"
+    price_r_eligible: bool = True
+    monetary_pnl_eligible: bool = False
 
     # Computed
     prediction_error: float | None = None
@@ -264,6 +270,7 @@ def _extract_r_multiple_live(record: dict[str, Any]) -> float | None:
 def match_shadow_to_live(
     shadow_trades: list[dict[str, Any]],
     trade_truths: list[dict[str, Any]],
+    execution_results: list[dict[str, Any]] | None = None,
 ) -> tuple[list[ResearchRecord], MatchDiagnostics]:
     """
     Canonical one-to-one shadow↔live matching for Q16/X4.
@@ -277,6 +284,18 @@ def match_shadow_to_live(
     full unmatched/ambiguous/excluded accounting.
     """
     diag = MatchDiagnostics(total_shadow=len(shadow_trades), total_live=len(trade_truths))
+
+    # Governed sizing overlay: deterministic per-trade eligibility built
+    # from execution_results when supplied. Raw records are never mutated.
+    sizing_eligibility: dict[str, Any] = {}
+    if execution_results is not None:
+        try:
+            from research_engine.data_quality.execution_sizing import (
+                build_trade_eligibility,
+            )
+            sizing_eligibility = build_trade_eligibility(execution_results)
+        except Exception:
+            sizing_eligibility = {}
 
     live_by_canon = _index_live_outcomes(trade_truths, diag)
     shadow_by_canon = _index_shadow_predictions(shadow_trades, diag)
@@ -321,8 +340,25 @@ def match_shadow_to_live(
         exit_info = truth.get("exit", {}) or {}
         live_r = _extract_r_multiple_live(truth)
         shadow_r = _extract_r_multiple_shadow(shadow)
+        live_corr = str(_extract_correlation_id(truth) or "")
+        sizing_quality = "UNKNOWN"
+        monetary_pnl_eligible = False
+        if sizing_eligibility:
+            try:
+                from research_engine.data_quality.execution_sizing import (
+                    eligibility_for_trade,
+                )
+                _entry = eligibility_for_trade(live_corr, sizing_eligibility)
+                sizing_quality = _entry.quality.value
+                monetary_pnl_eligible = bool(
+                    _entry.monetary_risk_eligible
+                    and _entry.volume_analysis_eligible
+                )
+            except Exception:
+                sizing_quality = "UNKNOWN"
+                monetary_pnl_eligible = False
         results.append(ResearchRecord(
-            correlation_id=str(_extract_correlation_id(truth) or ""),
+            correlation_id=live_corr,
             symbol=shadow_symbol or live_symbol,
             canonical_opportunity_id=canon,
             shadow_r=shadow_r,
@@ -333,7 +369,11 @@ def match_shadow_to_live(
             shadow_score=float(decision.get("score", 0.0) or 0.0),
             live_r=live_r,
             live_exit_reason=str(exit_info.get("exit_reason", "") or ""),
-            live_pnl=float(outcome.get("pnl_realised", outcome.get("net_profit", 0.0)) or 0.0),
+            live_pnl=(float(outcome.get("pnl_realised", outcome.get("net_profit", 0.0)) or 0.0)
+                      if monetary_pnl_eligible else None),
+            live_sizing_quality=sizing_quality,
+            price_r_eligible=True,
+            monetary_pnl_eligible=monetary_pnl_eligible,
             has_shadow=True,
             has_live=True,
         ))
@@ -349,13 +389,33 @@ def match_shadow_to_live(
         truth_identity = truth.get("identity", {}) or {}
         outcome = truth.get("outcome", {}) or {}
         exit_info = truth.get("exit", {}) or {}
+        live_only_corr = str(_extract_correlation_id(truth) or "")
+        live_only_quality = "UNKNOWN"
+        live_only_monetary = False
+        if sizing_eligibility:
+            try:
+                from research_engine.data_quality.execution_sizing import (
+                    eligibility_for_trade as _elig_for_trade,
+                )
+                _e = _elig_for_trade(live_only_corr, sizing_eligibility)
+                live_only_quality = _e.quality.value
+                live_only_monetary = bool(
+                    _e.monetary_risk_eligible and _e.volume_analysis_eligible
+                )
+            except Exception:
+                live_only_quality = "UNKNOWN"
+                live_only_monetary = False
         results.append(ResearchRecord(
-            correlation_id=str(_extract_correlation_id(truth) or ""),
+            correlation_id=live_only_corr,
             symbol=str(truth_identity.get("symbol", "") or ""),
             canonical_opportunity_id=canon,
             live_r=_extract_r_multiple_live(truth),
             live_exit_reason=str(exit_info.get("exit_reason", "") or ""),
-            live_pnl=float(outcome.get("pnl_realised", outcome.get("net_profit", 0.0)) or 0.0),
+            live_pnl=(float(outcome.get("pnl_realised", outcome.get("net_profit", 0.0)) or 0.0)
+                      if live_only_monetary else None),
+            live_sizing_quality=live_only_quality,
+            price_r_eligible=True,
+            monetary_pnl_eligible=live_only_monetary,
             has_live=True,
         ))
         diag.unmatched_live += 1
@@ -372,6 +432,7 @@ def match_shadow_to_live(
 def build_research_records(
     shadow_trades: list[dict[str, Any]],
     trade_truths: list[dict[str, Any]],
+    execution_results: list[dict[str, Any]] | None = None,
 ) -> list[ResearchRecord]:
     """
     Join shadow trades with trade truth records via the canonical lineage root.
@@ -381,5 +442,7 @@ def build_research_records(
     - Shadow only (signal produced but no live trade)
     - Live only (live trade without shadow record — unlikely but handled)
     """
-    results, _diag = match_shadow_to_live(shadow_trades, trade_truths)
+    results, _diag = match_shadow_to_live(
+        shadow_trades, trade_truths, execution_results
+    )
     return results

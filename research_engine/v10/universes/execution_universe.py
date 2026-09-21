@@ -66,6 +66,16 @@ class ExecutionUniverseBuilder(UniverseBuilder):
         records = []
         excluded_missing_trade_id = 0
         excluded_missing_r_multiple = 0
+        sizing_eligibility: dict[str, Any] = {}
+        try:
+            from research_engine.data_quality.execution_sizing import (
+                build_trade_eligibility,
+            )
+            sizing_eligibility = build_trade_eligibility(
+                self._load_dataset(_EXEC_RESULTS_DATASET, symbol=self._symbol)
+            )
+        except Exception:
+            sizing_eligibility = {}
 
         for raw in self._raw:
             # Pre-check exclusion reasons for tracking (trade_truth grain).
@@ -81,7 +91,28 @@ class ExecutionUniverseBuilder(UniverseBuilder):
 
             record = self._normalise(raw)
             if record:
-                records.append(record)
+                try:
+                    from research_engine.data_quality.execution_sizing import (
+                        eligibility_for_trade,
+                    )
+                    entry = eligibility_for_trade(
+                        record.get("correlation_id", ""), sizing_eligibility or None
+                    )
+                    record["execution_sizing_quality"] = entry.quality.value
+                    record["price_r_eligible"] = entry.price_r_eligible
+                    record["monetary_risk_eligible"] = entry.monetary_risk_eligible
+                    record["volume_analysis_eligible"] = (
+                        entry.volume_analysis_eligible
+                    )
+                    record["sizing_quality_reason"] = entry.reason
+                except Exception:
+                    record["execution_sizing_quality"] = "UNKNOWN"
+                    record["price_r_eligible"] = True
+                    record["monetary_risk_eligible"] = False
+                    record["volume_analysis_eligible"] = False
+                    record["sizing_quality_reason"] = "UNKNOWN_SIZING_QUALITY"
+                from research_engine.data_quality.execution_sizing import governed_record
+                records.append(governed_record(record))
 
         total_excluded = excluded_missing_trade_id + excluded_missing_r_multiple
         exclusions = {
