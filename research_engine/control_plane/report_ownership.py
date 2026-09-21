@@ -28,6 +28,14 @@ e3_strategy_family_expectancy.json -> E3  (S1 is a superseded alias, not a co-ow
 OWNERSHIP CONTRACT (Repair 2B.2)
 --------------------------------
 s5_strategy_identity_expectancy.json -> S5  (S6/S7/Q24/E3 can never own it)
+
+OWNERSHIP CONTRACT (Repair 2B.3)
+--------------------------------
+s6_horizon_expectancy.json -> S6  (S5/S7/Q24/E3 can never own it)
+
+OWNERSHIP CONTRACT (Repair 2B.4)
+--------------------------------
+s7_strategy_horizon_interaction.json -> S7  (S5/S6/E3 can never own it)
 """
 from __future__ import annotations
 
@@ -66,6 +74,16 @@ REPAIR_2B2_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
     "s5_strategy_identity_expectancy.json": "S5",
 }
 
+# Repair 2B.3 adjudicated ownership: S6 owns a distinct horizon report.  S5
+# remains the family-after-horizon owner and S7 remains unimplemented.
+REPAIR_2B3_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
+    "s6_horizon_expectancy.json": "S6",
+}
+
+REPAIR_2B4_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
+    "s7_strategy_horizon_interaction.json": "S7",
+}
+
 
 def _derive_adjudicated_owners() -> dict[str, str]:
     """Derive adjudicated report ownership from the frozen Wave-A5 findings."""
@@ -86,17 +104,22 @@ def _derive_adjudicated_owners() -> dict[str, str]:
 
 
 def _merge_adjudicated_owners() -> dict[str, str]:
-    """Merge Wave-A5-derived owners with the explicit 2B.2 adjudication."""
+    """Merge Wave-A5-derived owners with explicit later repair adjudications."""
     owners = dict(_derive_adjudicated_owners())
-    for filename, owner in REPAIR_2B2_ADJUDICATED_REPORT_OWNERS.items():
-        filename_key = _filename_key(filename)
-        existing = owners.get(filename_key)
-        if existing is not None and existing != owner:
-            raise RuntimeError(
-                f"conflicting adjudicated report owners for {filename_key}: "
-                f"{existing} and {owner}"
-            )
-        owners[filename_key] = owner
+    for repair_owners in (
+        REPAIR_2B2_ADJUDICATED_REPORT_OWNERS,
+        REPAIR_2B3_ADJUDICATED_REPORT_OWNERS,
+        REPAIR_2B4_ADJUDICATED_REPORT_OWNERS,
+    ):
+        for filename, owner in repair_owners.items():
+            filename_key = _filename_key(filename)
+            existing = owners.get(filename_key)
+            if existing is not None and existing != owner:
+                raise RuntimeError(
+                    f"conflicting adjudicated report owners for {filename_key}: "
+                    f"{existing} and {owner}"
+                )
+            owners[filename_key] = owner
     return dict(sorted(owners.items()))
 
 

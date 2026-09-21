@@ -173,11 +173,11 @@ def test_forward_registry_dependency_is_resolved_before_dependent(tmp_path):
     assert by_id["M10"].readiness_reason == "Dependency S1 is BLOCKED"
 
 
-def test_no_runner_remains_no_runner(tmp_path):
-    state = _state("S6", tmp_path, {"shadow_trades": [_shadow(1)]})
+def test_s7_now_declares_its_canonical_runner(tmp_path):
+    state = _state("S7", tmp_path, {"shadow_trades": [_shadow(1)]})
 
-    assert state.runner_status == RunnerStatus.NO_RUNNER
-    assert state.readiness_status.value == "NO_RUNNER"
+    assert state.runner_status == RunnerStatus.READY
+    assert state.readiness_status.value != "NO_RUNNER"
 
 
 def test_s5_now_declares_its_own_canonical_runner(tmp_path):

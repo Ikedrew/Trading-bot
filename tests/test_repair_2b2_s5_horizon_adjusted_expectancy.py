@@ -1044,17 +1044,21 @@ def test_j_declared_runner_and_report_are_required_for_readiness(tmp_path):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_k_s6_and_s7_remain_unimplemented_and_non_operational():
-    for question_id in ("S6", "S7"):
-        question = REGISTRY_BY_ID[question_id]
-        assert question.runner_module == ""
-        assert question.runner_function == ""
-        assert question.report_filename == ""
-        assert question_id not in STRUCTURALLY_OPERATIONAL_IDS
+def test_k_later_repairs_keep_s6_and_s7_distinct():
+    s6 = REGISTRY_BY_ID["S6"]
+    assert s6.runner_module == "research_engine.experiments.horizon_expectancy"
+    assert s6.runner_function == "run_s6"
+    assert s6.report_filename == "s6_horizon_expectancy.json"
+    assert "S6" in STRUCTURALLY_OPERATIONAL_IDS
 
+    s7 = REGISTRY_BY_ID["S7"]
+    assert s7.runner_module == "research_engine.experiments.strategy_horizon_interaction"
+    assert s7.runner_function == "run_s7"
+    assert s7.report_filename == "s7_strategy_horizon_interaction.json"
+    assert "S7" in STRUCTURALLY_OPERATIONAL_IDS
     runners = discover_runners()
-    assert "S6" not in runners
-    assert "S7" not in runners
+    assert "S6" in runners
+    assert "S7" in runners
 
 
 def test_k_e3_and_s1_ownership_is_unchanged_from_repair_2b1():
@@ -1101,12 +1105,12 @@ def test_k_registry_baseline_and_definition_versions_are_unchanged():
     assert definitions["S5"].definition_version == 1
 
 
-def test_k_repair_2b2_adds_exactly_s5_to_the_structural_baseline():
-    # Repair 2B.1 left 42/70 structurally operational; 2B.2 adds S5 only.
-    assert len(STRUCTURALLY_OPERATIONAL_IDS) == 43
+def test_k_s5_remains_operational_after_later_s6_s7_repairs():
+    # Repairs 2B.3/2B.4 add S6/S7 without altering S5.
+    assert len(STRUCTURALLY_OPERATIONAL_IDS) == 45
     assert "S5" in STRUCTURALLY_OPERATIONAL_IDS
+    assert "S6" in STRUCTURALLY_OPERATIONAL_IDS
     assert "E3" in STRUCTURALLY_OPERATIONAL_IDS
     assert "S1" in STRUCTURALLY_OPERATIONAL_IDS
-    for question_id in ("S6", "S7"):
-        assert question_id not in STRUCTURALLY_OPERATIONAL_IDS
+    assert "S7" in STRUCTURALLY_OPERATIONAL_IDS
 

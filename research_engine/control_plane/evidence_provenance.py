@@ -84,6 +84,20 @@ def _state_from_used_counts(counts: Mapping[str, int]) -> str:
     return CURRENT
 
 
+def _subset_state(
+    input_counts: Mapping[str, int], used_counts: Mapping[str, int],
+) -> str:
+    """Classify a CURRENT subset, including a proven empty analytical subset."""
+    state = _state_from_used_counts(used_counts)
+    if state == UNVERIFIED and int(input_counts.get(CURRENT, 0)) > 0:
+        # An empty subset selected from a non-empty authoritative CURRENT
+        # population is still a valid CURRENT scientific result (for example,
+        # no sufficient inferential grid).  It must not be relabelled stale or
+        # fabricated merely because the exact analysed population is empty.
+        return CURRENT
+    return state
+
+
 def _combined_digest(components: list[dict[str, Any]]) -> str:
     material = [
         {
@@ -232,7 +246,7 @@ def attest_current_subset(
         "records_excluded": len(supplied) - len(selected),
         "epoch_counts": counts,
         "used_epoch_counts": used_counts,
-        "state": _state_from_used_counts(used_counts),
+        "state": _subset_state(counts, used_counts),
         "digest_algorithm": "sha256",
         "digest": evidence_digest(selected),
     }
@@ -327,7 +341,11 @@ def validate_evidence_provenance(value: Any) -> tuple[bool, str, str]:
                 return False, UNVERIFIED, "CURRENT_SUBSET selection counts are inconsistent"
         else:
             return False, UNVERIFIED, "Unknown evidence selection mode"
-        derived_state = _state_from_used_counts(used_counts)
+        derived_state = (
+            _subset_state(counts, used_counts)
+            if selection == "CURRENT_SUBSET"
+            else _state_from_used_counts(used_counts)
+        )
         if component.get("state") != derived_state:
             return False, UNVERIFIED, "Evidence component state contradicts its used population"
         digest = component.get("digest")

@@ -661,14 +661,26 @@ S6 = ResearchQuestion(
     id="S6",
     category=QuestionCategory.STRATEGY_HORIZON,
     title="Horizon expectancy",
-    description="Which trade horizons (SCALP/INTRADAY/EXTENDED) contain real expectancy independently of strategy?",
-    required_fields=("trade_horizon", "r_multiple"),
+    description=(
+        "Which canonical trade horizons (SCALP/INTRADAY/EXTENDED) retain "
+        "expectancy after accounting for the six active V10 StrategyFamily values?"
+    ),
+    required_fields=("strategy", "trade_horizon", "r_multiple"),
     data_sources=(DataSource.SHADOW_TRADES,),
     priority=QuestionPriority.P1,
     validation_rules=(
         ValidationRule("horizon_coverage", ">=", 0.50, "Separate horizon field required"),
+        ValidationRule("strategy_coverage", ">=", 0.50, "Authoritative StrategyFamily required"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule(
+            "sample_size", ">=", 100,
+            "CURRENT horizon-simulation row floor; distinct canonical-opportunity "
+            "100/30/20 gates are enforced by the S6 runner",
+        ),
     ),
+    runner_module="research_engine.experiments.horizon_expectancy",
+    runner_function="run_s6",
+    report_filename="s6_horizon_expectancy.json",
 )
 
 S7 = ResearchQuestion(
@@ -680,11 +692,19 @@ S7 = ResearchQuestion(
     data_sources=(DataSource.SHADOW_TRADES,),
     priority=QuestionPriority.P1,
     validation_rules=(
-        ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy required"),
-        ValidationRule("horizon_coverage", ">=", 0.50, "Separate horizon required"),
+        ValidationRule("strategy_coverage", ">=", 0.50, "Authoritative StrategyFamily required"),
+        ValidationRule("horizon_coverage", ">=", 0.50, "Canonical evaluated horizon required"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule(
+            "sample_size", ">=", 150,
+            "CURRENT row floor; the S7 runner enforces 150 distinct opportunities, "
+            "30 per included cell, and a deterministic sufficient 2x2 grid",
+        ),
     ),
     depends_on=("S5", "S6"),
+    runner_module="research_engine.experiments.strategy_horizon_interaction",
+    runner_function="run_s7",
+    report_filename="s7_strategy_horizon_interaction.json",
 )
 
 # ADDITIONAL EXECUTION — X6 (intent-only, runner deferred)

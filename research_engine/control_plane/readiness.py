@@ -41,20 +41,25 @@ def resolve_readiness(
         if report_status == "BLOCKED":
             return ReadinessStatus.BLOCKED, "The CURRENT RW2 report could not establish required authority, chronology, or join integrity"
 
-    if question.id == "S5" and report_validity == ReportValidity.VALID_CURRENT:
+    if question.id in {"S5", "S6", "S7"} and report_validity == ReportValidity.VALID_CURRENT:
         # Implementation-complete is distinct from scientific completion: a
-        # CURRENT S5 report below the 100/30/20 distinct canonical-opportunity
+        # A CURRENT S5/S6 report below the 100/30/20 distinct canonical-opportunity
         # gates stays WAITING_DATA, never a finding.
         if report_status == "INSUFFICIENT_DATA":
             return (
                 ReadinessStatus.WAITING_DATA,
-                "The CURRENT S5 report has not met the 100/30/20 distinct "
-                "canonical-opportunity sufficiency gates",
+                (
+                    f"The CURRENT {question.id} report has not met the 150/30/minimum-2x2 "
+                    "distinct canonical-opportunity interaction gates"
+                    if question.id == "S7" else
+                    f"The CURRENT {question.id} report has not met the 100/30/20 distinct "
+                    "canonical-opportunity sufficiency gates"
+                ),
             )
         if report_status == "BLOCKED":
             return (
                 ReadinessStatus.BLOCKED,
-                "The CURRENT S5 report could not establish required evidence authority",
+                f"The CURRENT {question.id} report could not establish required evidence authority",
             )
 
     if evidence.error:

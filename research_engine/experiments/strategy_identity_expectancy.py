@@ -203,6 +203,24 @@ def _family_contrast(
     return c
 
 
+def _horizon_contrast(
+    horizon_index: int, n_params: int, n_families: int, n_family_dummies: int
+) -> list[float]:
+    """Contrast for the strategy-adjusted horizon marginal expectation.
+
+    Each horizon is evaluated at an equal-weighted mixture of all canonical
+    strategy families.  This is the dual of S5's equal-horizon family contrast
+    and is consumed by S6; adding it does not alter S5's emitted result.
+    """
+    c = [0.0] * n_params
+    c[0] = 1.0
+    for family_index in range(1, n_families):
+        c[family_index] = 1.0 / n_families
+    if horizon_index > 0:
+        c[1 + n_family_dummies + (horizon_index - 1)] = 1.0
+    return c
+
+
 def _solve_linear(matrix: list[list[float]], rhs: list[float]) -> list[float] | None:
     """Deterministic Gaussian elimination with partial pivoting."""
     n = len(rhs)
@@ -349,6 +367,30 @@ def _estimate_family_effects(
             },
         }
 
+    horizon_adjusted_effects: dict[str, dict[str, Any]] = {}
+    for horizon in CANONICAL_HORIZONS:
+        contrast = _horizon_contrast(
+            horizon_index[horizon], n_params, n_families, n_family_dummies,
+        )
+        estimate = sum(contrast[i] * beta[i] for i in range(n_params))
+        variance = sum(
+            contrast[i] * covariance[i][j] * contrast[j]
+            for i in range(n_params)
+            for j in range(n_params)
+        )
+        standard_error = math.sqrt(max(variance, 0.0))
+        horizon_adjusted_effects[horizon] = {
+            "estimate_r": round(estimate, 6),
+            "standard_error": round(standard_error, 6),
+            "interval_95": {
+                "method": "opportunity_clustered_sandwich",
+                "cluster": "canonical_opportunity_id",
+                "lower_r": round(estimate - Z_95 * standard_error, 6),
+                "upper_r": round(estimate + Z_95 * standard_error, 6),
+                "z": Z_95,
+            },
+        }
+
     horizon_effects = {
         horizon: round(
             beta[1 + n_family_dummies + index - 1] if index > 0 else 0.0,
@@ -358,6 +400,7 @@ def _estimate_family_effects(
     }
     return {
         "effects": effects,
+        "horizon_adjusted_effects": horizon_adjusted_effects,
         "horizon_effects_r_vs_scalp": horizon_effects,
         "estimable": True,
     }

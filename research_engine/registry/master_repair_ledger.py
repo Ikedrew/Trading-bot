@@ -176,16 +176,17 @@ D2_RW3_PROGRESS_IDS = frozenset({"D2", "D3", "D4", "D5", "X5"})
 # promotion-policy evaluation) all have canonical runners, unique reports, and
 # passing focused gates.
 D6_RW4_PROGRESS_IDS = frozenset({"D6", "PORT-1", "OPP-1", "P1"})
-# RW5 progress: E3/S1 became operational in Repair 2B.1 and S5 (the frozen
-# cluster-aware horizon-adjusted strategy-family runner and unique s5 report)
-# became operational in Repair 2B.2.  S6 remains outstanding in this wave.
-RW5_OPERATIONAL_PROGRESS_IDS = frozenset({"E3", "S1", "S5"})
+# RW5 complete: E3/S1 became operational in Repair 2B.1, S5 in Repair 2B.2,
+# and S6's strategy-adjusted horizon runner/report in Repair 2B.3.
+RW5_OPERATIONAL_PROGRESS_IDS = frozenset({"E3", "S1", "S5", "S6"})
+RW6_OPERATIONAL_IDS = frozenset({"S7"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
     | D2_RW3_PROGRESS_IDS
     | D6_RW4_PROGRESS_IDS
     | RW5_OPERATIONAL_PROGRESS_IDS
+    | RW6_OPERATIONAL_IDS
 )
 
 
@@ -235,10 +236,18 @@ HUMAN_SEMANTIC_DECISIONS = {
     ),
     "HD07": HumanSemanticDecision(
         "HD07", ("S7",),
-        "Approve interaction estimator, multiplicity method, and cell thresholds.",
-        ("Cluster-aware interaction with multiplicity control", "Alternative predeclared interaction design"),
-        ("Supports bounded family-by-horizon claims", "Must still preserve opportunity clustering"),
-        "Use the proposed cluster-aware interaction design.", True,
+        "ADJUDICATED: use the predeclared opportunity-normalized cluster-aware full-factorial "
+        "StrategyFamily x horizon interaction, joint Wald omnibus test, one global Holm "
+        "follow-up family, and deterministic 150/30/minimum-2x2 sufficient-grid contract.",
+        (
+            "Approved HD07 contract in S7_HD07_ADJUDICATED_CONTRACT",
+            "Alternative predeclared interaction design (not selected)",
+        ),
+        (
+            "Supports bounded family-by-horizon interaction claims with controlled family-wise error",
+            "Would require a new explicit human adjudication while preserving opportunity clustering",
+        ),
+        "ADJUDICATED: use S7_HD07_ADJUDICATED_CONTRACT.", False,
     ),
     "HD08": HumanSemanticDecision(
         "HD08", ("X6",),
@@ -371,19 +380,31 @@ REPAIR_WAVES = {
     ),
     "RW5": RepairWave(
         "RW5", "Strategy expectancy foundation", ("E3", "S1", "S5", "S6"),
-        "E3/S1 ownership and expectancy (2B.1) and the S5 horizon-adjusted "
-        "cluster-aware family runner (2B.2) are implemented; the S6 adjusted "
-        "horizon runner does not yet exist.", ("RW1",), ("HD01", "HD06"),
+        "E3/S1 ownership and expectancy (2B.1), S5 horizon-adjusted family "
+        "expectancy (2B.2), and S6 strategy-adjusted horizon expectancy (2B.3) "
+        "are implemented.", ("RW1",), ("HD01", "HD06"),
         ("canonical alias/owner routing", "strategy expectancy runners", "shadow repeated-measure helpers", "unique reports"), False,
         ("E3", "S1", "S5", "S6"), ("S7",),
-        "The chosen E3/S1 owner and explicit alias share one valid expectancy result without duplicate ownership; S5 clusters horizons by opportunity and meets 100/30/20 cell rules; S6 must do the same by horizon.",
+        "E3/S1 ownership is explicit; S5 and S6 retain distinct marginal estimands, cluster horizons by opportunity, and enforce the same 100/30/20 cell rules.",
+        implemented=True,
+        implementation_evidence=(
+            "Repair 2B.1 established E3 as scientific owner and S1 as its governed superseded alias.",
+            "Repair 2B.2 implemented S5's horizon-adjusted strategy-family expectancy with opportunity-normalized weighted least squares and clustered sandwich uncertainty.",
+            "Repair 2B.3 implements horizon_expectancy.run_s6 and uniquely owned s6_horizon_expectancy.json for the dual strategy-adjusted horizon marginal estimand.",
+            "Focused S5/S6 tests prove CURRENT provenance, 100/30/20 sufficiency, opportunity clustering, distinct report ownership, readiness separation, and that S7 remains unimplemented.",
+        ),
     ),
     "RW6": RepairWave(
         "RW6", "Strategy-horizon interaction", ("S7",),
-        "The interaction requires operational marginal foundations and a cluster-aware multiplicity-controlled design.", ("RW5",), ("HD07",),
+        "HD07 is adjudicated and S7's governed full-factorial interaction runner, unique report, readiness, and completion contracts are implemented.", ("RW5",), ("HD07",),
         ("strategy-horizon interaction runner", "cell sufficiency", "S7 report/readiness"), False,
         ("S7",), (),
         "A sufficient 2x2 grid produces cluster-aware interaction contrasts and bounded claims; sparse cells remain explicitly insufficient.",
+        implemented=True,
+        implementation_evidence=(
+            "Repair 2B.4 implements strategy_horizon_interaction.run_s7 and uniquely owned s7_strategy_horizon_interaction.json.",
+            "Focused tests prove deterministic sufficient-grid selection, opportunity-normalized clustered inference, Wald omnibus testing, global Holm follow-ups, CURRENT provenance, and null-result completion.",
+        ),
     ),
     "RW7": RepairWave(
         "RW7", "Execution authority and stability", ("X3", "EXEC1", "X6"),
@@ -459,12 +480,7 @@ _assign(("D2", "D3", "D4", "D5", "X5"), "RW3", "prediction/calibration", "PREDIC
 # PORT-1 was repaired in RW4.2 and is structurally operational (no assignment).
 # OPP-1 was repaired in RW4.3 and is structurally operational (no assignment).
 # P1 was repaired in RW4.4 and is structurally operational (no assignment).
-# S5 was implemented (structurally operational) in Repair 2B.2 and is part of
-# RW5_OPERATIONAL_PROGRESS_IDS; only S6 remains blocked in the RW5 category.
-_assign(("S6",), "RW5", "no runner", "NO_RUNNER_STRATEGY_FOUNDATION",
-        "The approved proposed horizon contract has no runner, report, readiness, or completion implementation.", human=True)
-_assign(("S7",), "RW6", "no runner", "NO_RUNNER_STRATEGY_INTERACTION",
-        "The proposed interaction contract has no runner and depends on operational S5/S6 foundations.", ("S5", "S6"), True)
+# S5, S6, and S7 are structurally operational after Repairs 2B.2/2B.3/2B.4.
 _assign(("X3",), "RW7", "runner mismatch", "EXECUTION_AUTHORITY_FOUNDATION",
         "Session-quality intent is not established by the current account execution metric/authority contract.")
 _assign(("EXEC1",), "RW7", "evidence authority", "EXECUTION_AUTHORITY_FOUNDATION",
@@ -507,8 +523,8 @@ _QUESTION_ACTIONS = {
     "E3": "Implemented: E3 owns governed V10 StrategyFamily expectancy at canonical-opportunity grain.",
     "S1": "Implemented: S1 is an explicit superseded alias projecting E3 without an independent finding.",
     "S5": "Implemented: S5 owns the horizon-adjusted cluster-aware V10 strategy-family expectancy with the unique s5 report.",
-    "S6": "Implement the frozen paired/clustered strategy-adjusted horizon runner and unique s6 report.",
-    "S7": "Implement the frozen opportunity-clustered interaction runner after S5/S6, including multiplicity and 2x2 cell gates.",
+    "S6": "Implemented: S6 owns the strategy-adjusted cluster-aware horizon expectancy and unique s6 report.",
+    "S7": "Implemented: S7 owns the HD07 full-factorial clustered interaction analysis and unique s7 report.",
     "X3": "Align session-quality metric, account grain, nested pre-execution session authority, measured slippage, and completion rule.",
     "EXEC1": "Make execution_results_v1 primary for broker outcomes and protection_audit separately authoritative for protection interventions.",
     "X6": "Implement strict result-to-context-to-trace joins and measured-slippage condition analysis from the frozen design.",
@@ -575,7 +591,7 @@ def _blocked_gates(qid: str, category: str) -> GateStatus:
     )
     definition_pass = qid in {"D1", "E2"}
     identity = HUMAN_DECISION_REQUIRED if qid in {"E3", "S1"} else PASS
-    scientific = PASS if definition_pass else (HUMAN_DECISION_REQUIRED if proposed else FAIL)
+    scientific = PASS if definition_pass or qid == "S7" else (HUMAN_DECISION_REQUIRED if proposed else FAIL)
     evidence = FUTURE_EVIDENCE_REQUIRED if future else (PASS if qid in {"D1", "E2", "D6", "PORT-1"} else PARTIAL)
     governance = HUMAN_DECISION_REQUIRED if qid in {
         "P1", "R1", "R2", "R3", "R4", "R5", "L2", "L7",

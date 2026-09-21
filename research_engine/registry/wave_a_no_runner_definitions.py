@@ -99,11 +99,116 @@ class NoRunnerDesign:
         return asdict(self)
 
 
-# Repair 2B.2: S5 is implemented (research_engine.experiments.
-# strategy_identity_expectancy.run_s5, report s5_strategy_identity_expectancy.json),
-# so it is no longer a no-runner target.  Its frozen design record below remains
-# the authoritative HD06 scientific contract.  S6/S7 remain unimplemented.
-WAVE_A_NO_RUNNER_TARGETS = frozenset({"S6", "S7", "X6", "L6", "G1", "G2", "G3"})
+# Repairs 2B.2/2B.3 implemented S5 and S6.  Their frozen design records below
+# remain the authoritative HD06 scientific contracts; S7 remains unimplemented.
+WAVE_A_NO_RUNNER_TARGETS = frozenset({"X6", "L6", "G1", "G2", "G3"})
+
+# Human-adjudicated HD07 scientific contract.  This is definition/governance
+# authority only: it does not declare a runner, active report, or operational
+# completion for S7.
+S7_HD07_ADJUDICATED_CONTRACT: dict[str, Any] = {
+    "status": "ADJUDICATED",
+    "scientific_question": (
+        "Test whether StrategyFamily expectancy in simulated R depends on "
+        "evaluated trade horizon (deviation from additivity)."
+    ),
+    "evidence_pipeline": (
+        "shadow_runtime_v1",
+        "canonical_lifecycle_reconstruction",
+        "normalized_CURRENT_shadow_trades_v1",
+        "eligible_StrategyFamily_x_horizon_rows",
+        "canonical_opportunity_clustered_analysis",
+    ),
+    "outcome_field": "simulated_outcome.pnl_r_multiple",
+    "strategy_field": "identity.strategy_id",
+    "strategy_families": (
+        "LIQUIDITY_SWEEP_REVERSAL",
+        "FALSE_BREAK",
+        "TREND_CONTINUATION",
+        "BREAKOUT_EXPANSION",
+        "MEAN_REVERSION",
+        "RANGE_REACTION",
+    ),
+    "excluded_strategy_family": "NONE",
+    "historical_strategy_mapping_inferred": False,
+    "horizon_field": "identity.evaluated_horizon",
+    "horizons": ("SCALP", "INTRADAY", "EXTENDED"),
+    "horizon_authority": "core.horizon.horizon_models.TradeHorizon",
+    "cluster_field": "identity.canonical_opportunity_id",
+    "repeated_measure_rule": (
+        "Horizon simulations within one canonical opportunity are repeated "
+        "measurements, never independent trades."
+    ),
+    "opportunity_weight": "w_oh = 1 / k_o",
+    "opportunity_total_weight": 1,
+    "model": "R ~ StrategyFamily + Horizon + StrategyFamily:Horizon",
+    "coding": "deterministic reference coding consistent with S5/S6",
+    "full_grid_shape": (6, 3),
+    "full_grid_interaction_df": 10,
+    "subgrid_interaction_df": "(F - 1) * (H - 1)",
+    "global_null": (
+        "All StrategyFamily x horizon interaction terms for the evaluated "
+        "sufficient grid are jointly zero."
+    ),
+    "alternative": "At least one interaction component differs from zero.",
+    "covariance": "canonical-opportunity clustered sandwich",
+    "bread": "A = X' W X",
+    "cluster_score": "s_o = sum_rows_in_o(w_oh * x_oh * residual_oh)",
+    "covariance_formula": "A^-1 (sum_o s_o s_o') A^-1",
+    "omnibus_test": "deterministic cluster-robust Wald-type joint interaction-block test",
+    "omnibus_alpha": 0.05,
+    "followup_gate": "omnibus p <= 0.05",
+    "followup_family": "within-strategy pairwise horizon contrasts only",
+    "full_grid_followup_count": 18,
+    "subgrid_followup_count": "F * C(H, 2)",
+    "forbidden_followups": (
+        "pairwise strategies within horizons",
+        "all cells against each other",
+        "best-cell rankings",
+        "arbitrary post-hoc contrasts",
+    ),
+    "multiplicity_method": "Holm step-down family-wise error-rate control",
+    "multiplicity_family": "one global family across all predeclared follow-up contrasts",
+    "followup_alpha": 0.05,
+    "omnibus_in_holm_family": False,
+    "minimum_distinct_opportunities_overall": 150,
+    "minimum_distinct_opportunities_per_included_cell": 30,
+    "minimum_grid": (2, 2),
+    "grid_objective": (
+        "maximize included valid cells",
+        "maximize included StrategyFamily values",
+        "maximize included horizons",
+        "tie-break by canonical StrategyFamily order then canonical horizon order",
+    ),
+    "grid_selection_inputs": "pre-outcome identity and sufficiency counts only",
+    "grid_selection_forbidden_inputs": (
+        "pnl_r_multiple",
+        "estimated expectancy",
+        "interaction strength",
+        "p-values",
+        "any outcome-derived quantity",
+    ),
+    "claim_boundary": "claims apply only to the selected sufficient evaluated grid",
+    "estimability_rule": (
+        "The full-factorial model and interaction covariance block must be "
+        "estimable; interaction terms may not be silently dropped."
+    ),
+    "contrast_variance": "c' V_cluster c",
+    "contrast_interval_95": "estimate +/- 1.96 * cluster-robust SE",
+    "complete_results": ("RELIABLE_INTERACTION", "NO_RELIABLE_INTERACTION"),
+    "insufficient_result": "INSUFFICIENT_EVIDENCE",
+    "provenance_requirements": (
+        "CURRENT selection before analysis",
+        "explicit stale/incompatible exclusions",
+        "exact analytical subset attestation",
+        "deterministic order-invariant digest",
+        "analytical change sensitivity",
+        "invalid subset/provenance fails closed",
+    ),
+    "proposed_module": "research_engine.experiments.strategy_horizon_interaction",
+    "proposed_function": "run_s7",
+    "report_identity": "s7_strategy_horizon_interaction.json",
+}
 
 _SHADOW_EVIDENCE = (
     ProposedEvidence(
@@ -263,22 +368,30 @@ WAVE_A_NO_RUNNER_DESIGNS: dict[str, NoRunnerDesign] = {
         null_hypothesis="StrategyFamily differences in mean simulated R do not vary by evaluated horizon.",
         research_classification="associative interaction repeated-measures",
         population_definition=(
-            "Validity-approved CURRENT completed shadow lifecycles with authoritative StrategyFamily, evaluated "
-            "horizon, canonical opportunity root, and simulated R."
+            "Governed shadow_runtime_v1 canonical lifecycle reconstruction normalized to CURRENT "
+            "shadow_trades_v1, restricted to eligible authoritative StrategyFamily x evaluated-horizon "
+            "rows with canonical_opportunity_id and finite simulated_outcome.pnl_r_multiple."
         ),
         unit_of_analysis="One canonical opportunity clustered across its StrategyFamily-by-horizon simulation cells.",
         metric_definition=(
-            "Cell mean/median R and win rate, interaction contrasts with 95% cluster-aware intervals, and multiplicity-"
-            "controlled family-by-horizon comparisons."
+            "Descriptive cell mean/median R and win rate; a cluster-robust Wald joint test of the full-factorial "
+            "interaction block; and, only after omnibus rejection, within-strategy pairwise horizon contrasts "
+            "with 95% clustered intervals and one global Holm step-down family."
         ),
         evidence_authority=_SHADOW_EVIDENCE,
         join_contract=(_SHADOW_JOIN,),
         epoch_requirement="Validity-approved CURRENT shadow evidence only; reject mixed epochs.",
-        minimum_sample="Proposed: 150 distinct canonical opportunities overall.",
-        cell_sufficiency="Proposed: >=30 distinct opportunities in every reported StrategyFamily-by-horizon cell.",
+        minimum_sample="ADJUDICATED: >=150 distinct canonical opportunities overall.",
+        cell_sufficiency=(
+            "ADJUDICATED: >=30 distinct opportunities in every included StrategyFamily-by-horizon cell; "
+            "deterministically select the maximal valid >=2x2 rectangular grid by cells, families, horizons, "
+            "then canonical taxonomy order, using no outcome-derived quantity."
+        ),
         completion_criterion=(
-            "The estimable interaction grid, interaction test, uncertainty, multiplicity rule, insufficient cells, "
-            "and exclusions are all reported; COMPLETE requires at least two sufficient strategies and two horizons."
+            "COMPLETE requires CURRENT provenance, >=150 opportunities, a deterministic estimable >=2x2 grid "
+            "with >=30 per included cell, valid opportunity-clustered covariance, and a valid alpha=.05 Wald "
+            "omnibus test. Both RELIABLE_INTERACTION and NO_RELIABLE_INTERACTION are complete outcomes; "
+            "failed scientific gates are INSUFFICIENT_EVIDENCE. Claims are bounded to the selected grid."
         ),
         dependencies=("S5 operational contract", "S6 operational contract", "completed shadow lifecycle authority"),
         runner_specification=RunnerSpecification(
@@ -289,24 +402,38 @@ WAVE_A_NO_RUNNER_DESIGNS: dict[str, NoRunnerDesign] = {
             unit_of_analysis="canonical opportunity cluster",
             joins=("OPEN-to-CLOSE shadow lifecycle join",),
             grouping=("StrategyFamily", "evaluated_horizon", "interaction cell"),
-            metrics=("cell expectancy", "interaction contrasts", "cluster-aware intervals", "multiplicity-adjusted tests"),
-            sufficiency=">=150 opportunities; >=30 per reported interaction cell; >=2x2 sufficient grid",
+            metrics=(
+                "descriptive cell expectancy",
+                "full-factorial interaction block",
+                "cluster-robust Wald omnibus test at alpha .05",
+                "omnibus-gated within-strategy horizon contrasts",
+                "one global Holm-adjusted follow-up family",
+            ),
+            sufficiency=">=150 opportunities; >=30 per included interaction cell; deterministic maximal >=2x2 grid",
             output="interaction matrix, contrasts, uncertainty, insufficiency and exclusions",
-            completion_rule="at least a 2x2 sufficient interaction grid is evaluated and all claims are bounded to it",
+            completion_rule=(
+                "RELIABLE_INTERACTION or NO_RELIABLE_INTERACTION after valid evaluation; otherwise "
+                "INSUFFICIENT_EVIDENCE. All claims are bounded to the selected sufficient grid."
+            ),
             fail_closed_conditions=("ambiguous lifecycle", "sparse interaction grid", "unknown labels", "missing root", "mixed epoch"),
         ),
         report_identity="s7_strategy_horizon_interaction.json",
         multi_account_rule="Account fanout is excluded and cannot inflate any strategy-horizon cell.",
-        repeated_measure_rule="All horizons for one opportunity form one repeated-measures cluster, not independent trades.",
+        repeated_measure_rule=(
+            "All horizons for one opportunity form one repeated-measures canonical_opportunity_id cluster, "
+            "not independent trades; each eligible row has weight 1/k_o so opportunity total weight is one."
+        ),
         leakage_rule="Only declared strategy/horizon factors enter the model; simulated R and future path are outcomes only.",
         evidence_gap_classification=DERIVABLE,
         existing_evidence_sufficient_in_principle=True,
         implementation_requirements=(
-            "Build a cluster-aware interaction runner and unique report after S5/S6 foundations exist.",
-            "Add deterministic cell eligibility, multiplicity, readiness, and completion contracts.",
+            "Implement the adjudicated opportunity-normalized full-factorial interaction with the exact "
+            "clustered sandwich covariance and joint Wald test recorded in S7_HD07_ADJUDICATED_CONTRACT.",
+            "Implement the outcome-independent maximal-grid objective, omnibus-gated within-strategy horizon "
+            "contrasts, one global Holm family, governed provenance, readiness, and completion contracts.",
         ),
         human_semantic_decisions=(
-            "HUMAN_SEMANTIC_DECISION_REQUIRED: approve the interaction estimator, multiplicity method, and thresholds.",
+            "ADJUDICATED HD07: use S7_HD07_ADJUDICATED_CONTRACT; implementation is no longer decision-blocked.",
         ),
     ),
     "X6": NoRunnerDesign(
