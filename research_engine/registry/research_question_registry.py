@@ -634,14 +634,27 @@ S5 = ResearchQuestion(
     id="S5",
     category=QuestionCategory.STRATEGY_HORIZON,
     title="Strategy identity expectancy",
-    description="Which strategy identities (REVERSAL/CONTINUATION/FALSE_BREAK) contain real expectancy independently of horizon?",
-    required_fields=("strategy", "r_multiple"),
+    description=(
+        "Which active non-NONE V10 StrategyFamily values retain expectancy after "
+        "accounting for the evaluated trade horizon (SCALP/INTRADAY/EXTENDED) "
+        "under which outcomes were simulated?"
+    ),
+    required_fields=("strategy", "trade_horizon", "r_multiple"),
     data_sources=(DataSource.SHADOW_TRADES,),
     priority=QuestionPriority.P0,
     validation_rules=(
         ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy required"),
+        ValidationRule("horizon_coverage", ">=", 0.50, "Evaluated horizon required"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule(
+            "sample_size", ">=", 100,
+            "CURRENT horizon-simulation row floor; distinct canonical-opportunity "
+            "100/30/20 gates are enforced by the S5 runner",
+        ),
     ),
+    runner_module="research_engine.experiments.strategy_identity_expectancy",
+    runner_function="run_s5",
+    report_filename="s5_strategy_identity_expectancy.json",
 )
 
 S6 = ResearchQuestion(

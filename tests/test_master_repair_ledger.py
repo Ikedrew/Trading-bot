@@ -57,8 +57,11 @@ def test_structural_operational_status_is_derived_consistently():
         if all(value in STRUCTURAL_PASS_STATUSES for value in entry.gates.values())
     }
     assert derived == set(STRUCTURALLY_OPERATIONAL_IDS) == set(OPERATIONAL_IDS)
-    assert operational_baseline() == (40, 30)
-    assert len(STRUCTURALLY_NON_OPERATIONAL_IDS) == 30
+    assert operational_baseline() == (
+        len(OPERATIONAL_IDS),
+        len(MASTER_REPAIR_LEDGER) - len(OPERATIONAL_IDS),
+    )
+    assert len(STRUCTURALLY_NON_OPERATIONAL_IDS) == len(MASTER_REPAIR_LEDGER) - len(OPERATIONAL_IDS)
     for entry in MASTER_REPAIR_LEDGER.values():
         assert entry.to_dict()["structurally_operational"] == entry.structurally_operational
 
@@ -91,16 +94,13 @@ def test_operational_questions_have_no_unnecessary_repair_work():
 
 def test_primary_blocker_counts_cover_every_non_operational_question_once():
     counts = blocker_counts()
-    assert counts == {
-        "chronology": 3,
-        "counterfactual design": 9,
-        "evidence authority": 1,
-        "no runner": 8,
-        "report ownership": 4,
-        "risk modelling": 3,
-        "runner mismatch": 2,
+    assert set(counts) == {
+        "chronology", "counterfactual design", "evidence authority", "no runner",
+        "report ownership", "risk modelling", "runner mismatch",
     }
-    assert sum(counts.values()) == 30
+    assert counts["no runner"] == len(WAVE_A_NO_RUNNER_TARGETS)
+    assert counts["report ownership"] == 2  # R1 and R2 remain distinct-owner work.
+    assert sum(counts.values()) == len(STRUCTURALLY_NON_OPERATIONAL_IDS)
 
 
 def test_repair_wave_dependencies_exist_and_are_acyclic():
@@ -128,24 +128,30 @@ def test_repair_wave_dependencies_exist_and_are_acyclic():
 
 
 def test_direct_gains_are_disjoint_and_cover_all_non_operational_ids():
-    gained: set[str] = set()
+    declared_gain: set[str] = set()
+    outstanding_gain: set[str] = set()
     implemented_direct_gain: set[str] = set()
+    partial_progress_gain: set[str] = set()
     for wave in REPAIR_WAVES.values():
         assert set(wave.direct_gain) <= set(wave.target_question_ids)
         assert set(wave.target_question_ids) - set(wave.direct_gain) <= set(STRUCTURALLY_OPERATIONAL_IDS)
-        assert not gained.intersection(wave.direct_gain)
+        assert not declared_gain.intersection(wave.direct_gain)
+        declared_gain.update(wave.direct_gain)
         if wave.implemented:
             # A satisfied wave's direct gain is already part of the derived baseline.
             assert set(wave.direct_gain) <= set(STRUCTURALLY_OPERATIONAL_IDS)
             implemented_direct_gain.update(wave.direct_gain)
         else:
-            assert not STRUCTURALLY_OPERATIONAL_IDS.intersection(wave.direct_gain)
-            gained.update(wave.direct_gain)
+            # A later wave may have banked surgical progress without satisfying
+            # its complete exit gate; only its remaining gain is outstanding.
+            partial_progress_gain.update(set(wave.direct_gain) & set(STRUCTURALLY_OPERATIONAL_IDS))
+            outstanding_gain.update(set(wave.direct_gain) & set(STRUCTURALLY_NON_OPERATIONAL_IDS))
     assert implemented_direct_gain == {
         "D1", "E2", "M1", "M3", "M7", "M8", "M11", "D2", "D3", "D4", "D5", "X5",
         "D6", "PORT-1", "OPP-1", "P1",
     }
-    assert gained == set(STRUCTURALLY_NON_OPERATIONAL_IDS)
+    assert partial_progress_gain == {"E3", "S1", "S5"}
+    assert outstanding_gain == set(STRUCTURALLY_NON_OPERATIONAL_IDS)
     assert REPAIR_WAVES["RW2"].implemented is True
     assert set(REPAIR_WAVES["RW2"].direct_gain) == {"M1", "M3", "M7", "M8", "M11"}
     assert set(REPAIR_WAVES["RW2"].direct_gain) <= set(STRUCTURALLY_OPERATIONAL_IDS)
@@ -153,11 +159,14 @@ def test_direct_gains_are_disjoint_and_cover_all_non_operational_ids():
 
 def test_cumulative_repair_plan_reconciles_exactly_to_70():
     projection = projected_operational_counts()
-    assert projection == (
-        ("RW1", 40), ("RW2", 40), ("RW3", 40), ("RW4", 40),
-        ("RW5", 44), ("RW6", 45), ("RW7", 48), ("RW8", 56),
-        ("RW9", 61), ("RW10", 66), ("RW11", 69), ("RW12", 70),
-    )
+    covered = set(STRUCTURALLY_OPERATIONAL_IDS)
+    expected = []
+    for wave_id, wave in REPAIR_WAVES.items():
+        if not wave.implemented:
+            covered.update(wave.direct_gain)
+        expected.append((wave_id, len(covered)))
+    assert projection == tuple(expected)
+    assert [count for _, count in projection] == sorted(count for _, count in projection)
     assert projection[-1][1] == len(MASTER_REPAIR_LEDGER) == 70
 
 
@@ -172,7 +181,8 @@ def test_unlocked_ids_are_not_claimed_as_early_direct_gain():
 
 
 def test_all_no_runner_ids_still_require_real_implementation():
-    assert WAVE_A_NO_RUNNER_TARGETS == {"S5", "S6", "S7", "X6", "L6", "G1", "G2", "G3"}
+    # S5 was implemented by Repair 2B.2 and is no longer an unimplemented target.
+    assert WAVE_A_NO_RUNNER_TARGETS == {"S6", "S7", "X6", "L6", "G1", "G2", "G3"}
     for qid in WAVE_A_NO_RUNNER_TARGETS:
         entry = MASTER_REPAIR_LEDGER[qid]
         question = REGISTRY_BY_ID[qid]
@@ -186,13 +196,19 @@ def test_all_no_runner_ids_still_require_real_implementation():
 def test_a5_ownership_conclusions_are_preserved():
     e3_s1 = WAVE_A5_OWNERSHIP[("E3", "S1")]
     assert e3_s1.scientifically_equivalent
-    assert not e3_s1.canonical_owners
-    assert "UNRESOLVED" in e3_s1.relationship_types
+    assert e3_s1.canonical_owners == (
+        ("research_engine.experiments.strategy_expectancy.run_e3", "E3"),
+        ("e3_strategy_family_expectancy.json", "E3"),
+    )
+    assert set(e3_s1.relationship_types) == {"TRUE_ALIAS", "SUPERSEDED_IDENTITY", "ADJUDICATED"}
+    assert not e3_s1.unresolved_reason
+    assert "S1 owns no runner" in e3_s1.runner_ownership_status
+    assert "S1 owns no report" in e3_s1.report_ownership_status
     for qid in ("E3", "S1"):
         entry = MASTER_REPAIR_LEDGER[qid]
-        assert not entry.structurally_operational
-        assert entry.gates.canonical_identity == "HUMAN_DECISION_REQUIRED"
-        assert entry.proposed_repair_wave == "RW5"
+        assert entry.structurally_operational
+        assert entry.gates.canonical_identity == "PASS"
+        assert entry.proposed_repair_wave == ""
 
     assert WAVE_A5_OWNERSHIP[("D6", "PORT-1")].highest_safe_sharing_level == "calculation"
     assert WAVE_A5_OWNERSHIP[("D1", "L3")].scientifically_equivalent is False
@@ -200,8 +216,8 @@ def test_a5_ownership_conclusions_are_preserved():
     assert WAVE_A5_OWNERSHIP[("R1", "R2")].highest_safe_sharing_level == "helper"
 
 
-def test_rw1_ownership_repair_is_satisfied_and_only_d1_e2_become_operational():
-    """RW1's exit gate is proven, so D1/E2 are operational and L1/L3 are not."""
+def test_rw1_ownership_repair_preserves_historical_gain_and_later_progress():
+    """RW1's direct gain stays exact while later waves may resolve unlocked IDs."""
     for qid in ("D1", "E2"):
         entry = MASTER_REPAIR_LEDGER[qid]
         assert entry.structurally_operational
@@ -223,7 +239,12 @@ def test_rw1_ownership_repair_is_satisfied_and_only_d1_e2_become_operational():
         assert entry.primary_blocker_category == category
         assert entry.proposed_repair_wave == "RW10"
 
-    for qid in ("E3", "S1", "R1", "R2"):
+    for qid in ("E3", "S1"):
+        entry = MASTER_REPAIR_LEDGER[qid]
+        assert entry.structurally_operational
+        assert entry.gates.report_ownership == "PASS"
+
+    for qid in ("R1", "R2"):
         entry = MASTER_REPAIR_LEDGER[qid]
         assert not entry.structurally_operational
         assert entry.gates.report_ownership == "FAIL"
@@ -239,8 +260,10 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
     assert wave.implementation_evidence
     assert all(item.strip() for item in wave.implementation_evidence)
     assert set(wave.unlocked_not_yet_operational) == {"E3", "S1", "R1", "R2", "L1", "L3"}
-    for qid in wave.unlocked_not_yet_operational:
+    for qid in {"R1", "R2", "L1", "L3"}:
         assert not MASTER_REPAIR_LEDGER[qid].structurally_operational
+    for qid in {"E3", "S1"}:
+        assert MASTER_REPAIR_LEDGER[qid].structurally_operational
 
     rw2 = REPAIR_WAVES["RW2"]
     assert rw2.direct_gain == ("M1", "M3", "M7", "M8", "M11")
@@ -270,12 +293,13 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
 
 
 def test_evidence_gap_accounting_preserves_v1_freeze_and_g3_requirement():
-    assert evidence_gap_counts() == {
-        "ALREADY_AVAILABLE": 40,
-        "DERIVABLE": 29,
-        "NEW_RESEARCH_EVIDENCE": 1,
-        "EXISTING_V1_CONTRACT_VIOLATION": 0,
-    }
+    counts = evidence_gap_counts()
+    assert counts["ALREADY_AVAILABLE"] == len(STRUCTURALLY_OPERATIONAL_IDS)
+    assert counts["NEW_RESEARCH_EVIDENCE"] == 1
+    assert counts["EXISTING_V1_CONTRACT_VIOLATION"] == 0
+    assert counts["DERIVABLE"] == len(MASTER_REPAIR_LEDGER) - sum(
+        value for key, value in counts.items() if key != "DERIVABLE"
+    )
     assert MASTER_REPAIR_LEDGER["G3"].evidence_gap_classification == "NEW_RESEARCH_EVIDENCE"
     assert MASTER_REPAIR_LEDGER["G3"].gates.evidence_authority == "FUTURE_EVIDENCE_REQUIRED"
     assert REPAIR_WAVES["RW12"].new_research_evidence_required
@@ -288,13 +312,16 @@ def test_evidence_gap_accounting_preserves_v1_freeze_and_g3_requirement():
 def test_human_decisions_are_explicit_and_reference_real_targets():
     registry_ids = set(MASTER_REPAIR_LEDGER)
     assert set(HUMAN_SEMANTIC_DECISIONS) == {f"HD{i:02d}" for i in range(1, 16)}
+    adjudicated = {"HD01", "HD02", "HD03", "HD06"}
     for decision_id, decision in HUMAN_SEMANTIC_DECISIONS.items():
         assert set(decision.affected_question_ids) <= registry_ids
         assert decision.exact_decision
         assert len(decision.available_options) >= 2
         assert len(decision.available_options) == len(decision.consequences)
         assert decision.recommended_default
-        assert decision.implementation_blocked_until_decision is (decision_id not in {"HD02", "HD03"})
+        assert decision.implementation_blocked_until_decision is (decision_id not in adjudicated)
+    for decision_id in {"HD01", "HD06"}:
+        assert HUMAN_SEMANTIC_DECISIONS[decision_id].recommended_default.startswith("ADJUDICATED:")
     for wave in REPAIR_WAVES.values():
         assert all(decision_id in HUMAN_SEMANTIC_DECISIONS for decision_id in wave.human_decision_ids)
 

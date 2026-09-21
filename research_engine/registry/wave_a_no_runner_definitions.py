@@ -99,7 +99,11 @@ class NoRunnerDesign:
         return asdict(self)
 
 
-WAVE_A_NO_RUNNER_TARGETS = frozenset({"S5", "S6", "S7", "X6", "L6", "G1", "G2", "G3"})
+# Repair 2B.2: S5 is implemented (research_engine.experiments.
+# strategy_identity_expectancy.run_s5, report s5_strategy_identity_expectancy.json),
+# so it is no longer a no-runner target.  Its frozen design record below remains
+# the authoritative HD06 scientific contract.  S6/S7 remain unimplemented.
+WAVE_A_NO_RUNNER_TARGETS = frozenset({"S6", "S7", "X6", "L6", "G1", "G2", "G3"})
 
 _SHADOW_EVIDENCE = (
     ProposedEvidence(

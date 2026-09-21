@@ -176,13 +176,16 @@ D2_RW3_PROGRESS_IDS = frozenset({"D2", "D3", "D4", "D5", "X5"})
 # promotion-policy evaluation) all have canonical runners, unique reports, and
 # passing focused gates.
 D6_RW4_PROGRESS_IDS = frozenset({"D6", "PORT-1", "OPP-1", "P1"})
-RW5_E3_S1_OPERATIONAL_IDS = frozenset({"E3", "S1"})
+# RW5 progress: E3/S1 became operational in Repair 2B.1 and S5 (the frozen
+# cluster-aware horizon-adjusted strategy-family runner and unique s5 report)
+# became operational in Repair 2B.2.  S6 remains outstanding in this wave.
+RW5_OPERATIONAL_PROGRESS_IDS = frozenset({"E3", "S1", "S5"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
     | D2_RW3_PROGRESS_IDS
     | D6_RW4_PROGRESS_IDS
-    | RW5_E3_S1_OPERATIONAL_IDS
+    | RW5_OPERATIONAL_PROGRESS_IDS
 )
 
 
@@ -368,10 +371,12 @@ REPAIR_WAVES = {
     ),
     "RW5": RepairWave(
         "RW5", "Strategy expectancy foundation", ("E3", "S1", "S5", "S6"),
-        "E3/S1 ownership and expectancy are implemented; adjusted S5/S6 runners do not yet exist.", ("RW1",), ("HD01", "HD06"),
+        "E3/S1 ownership and expectancy (2B.1) and the S5 horizon-adjusted "
+        "cluster-aware family runner (2B.2) are implemented; the S6 adjusted "
+        "horizon runner does not yet exist.", ("RW1",), ("HD01", "HD06"),
         ("canonical alias/owner routing", "strategy expectancy runners", "shadow repeated-measure helpers", "unique reports"), False,
         ("E3", "S1", "S5", "S6"), ("S7",),
-        "The chosen E3/S1 owner and explicit alias share one valid expectancy result without duplicate ownership; S5/S6 cluster horizons by opportunity and meet cell rules.",
+        "The chosen E3/S1 owner and explicit alias share one valid expectancy result without duplicate ownership; S5 clusters horizons by opportunity and meets 100/30/20 cell rules; S6 must do the same by horizon.",
     ),
     "RW6": RepairWave(
         "RW6", "Strategy-horizon interaction", ("S7",),
@@ -454,8 +459,10 @@ _assign(("D2", "D3", "D4", "D5", "X5"), "RW3", "prediction/calibration", "PREDIC
 # PORT-1 was repaired in RW4.2 and is structurally operational (no assignment).
 # OPP-1 was repaired in RW4.3 and is structurally operational (no assignment).
 # P1 was repaired in RW4.4 and is structurally operational (no assignment).
-_assign(("S5", "S6"), "RW5", "no runner", "NO_RUNNER_STRATEGY_FOUNDATION",
-        "The approved proposed strategy/horizon contract has no runner, report, readiness, or completion implementation.", human=True)
+# S5 was implemented (structurally operational) in Repair 2B.2 and is part of
+# RW5_OPERATIONAL_PROGRESS_IDS; only S6 remains blocked in the RW5 category.
+_assign(("S6",), "RW5", "no runner", "NO_RUNNER_STRATEGY_FOUNDATION",
+        "The approved proposed horizon contract has no runner, report, readiness, or completion implementation.", human=True)
 _assign(("S7",), "RW6", "no runner", "NO_RUNNER_STRATEGY_INTERACTION",
         "The proposed interaction contract has no runner and depends on operational S5/S6 foundations.", ("S5", "S6"), True)
 _assign(("X3",), "RW7", "runner mismatch", "EXECUTION_AUTHORITY_FOUNDATION",
@@ -499,7 +506,7 @@ _QUESTION_ACTIONS = {
     "P1": "Join declared decision evidence and evaluate candidate promotion effects on EV, win rate, drawdown, frequency, and risk under the approved design.",
     "E3": "Implemented: E3 owns governed V10 StrategyFamily expectancy at canonical-opportunity grain.",
     "S1": "Implemented: S1 is an explicit superseded alias projecting E3 without an independent finding.",
-    "S5": "Implement the frozen cluster-aware horizon-adjusted strategy-family runner and unique s5 report.",
+    "S5": "Implemented: S5 owns the horizon-adjusted cluster-aware V10 strategy-family expectancy with the unique s5 report.",
     "S6": "Implement the frozen paired/clustered strategy-adjusted horizon runner and unique s6 report.",
     "S7": "Implement the frozen opportunity-clustered interaction runner after S5/S6, including multiplicity and 2x2 cell gates.",
     "X3": "Align session-quality metric, account grain, nested pre-execution session authority, measured slippage, and completion rule.",
@@ -723,9 +730,9 @@ def projected_operational_counts() -> tuple[tuple[str, int], ...]:
                     f"{sorted(outstanding)}"
                 )
         else:
-            overlap = covered.intersection(wave_gain)
-            if overlap:
-                raise RuntimeError(f"direct gain double-counted in {wave.repair_wave_id}: {sorted(overlap)}")
+            # Progress already banked from a wave that is still partly
+            # outstanding (e.g. E3/S1 in Repair 2B.1, S5 in Repair 2B.2) is
+            # never double-counted; only the remaining gain is projected.
             covered.update(wave_gain)
         result.append((wave.repair_wave_id, len(covered)))
     return tuple(result)

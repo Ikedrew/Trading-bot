@@ -1,4 +1,4 @@
-"""Wave 6.1A — pure candidate baseline-impact classification tests.
+12"""Wave 6.1A — pure candidate baseline-impact classification tests.
 
 Proves the deterministic classification contract between a frozen candidate
 treatment_spec (Wave 5.3A canonical JSON) and a frozen deployed

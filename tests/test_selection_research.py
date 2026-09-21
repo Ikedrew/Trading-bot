@@ -609,12 +609,17 @@ class TestArchitecture:
             assert q.runner_module == "research_engine.experiments.selection_research"
 
     def test_redundant_questions_still_runnerless(self):
-        # S5/S6/S7 remain intent-only — no duplicate runners created
+        # S6/S7 remain intent-only — no duplicate runners created.  S5 owns its
+        # own canonical runner (Repair 2B.2) and must never be aliased onto the
+        # generic selection-research runner.
         from research_engine.registry.research_question_registry import (
             REGISTRY_BY_ID,
         )
-        for qid in ("S5", "S6", "S7"):
+        for qid in ("S6", "S7"):
             assert not REGISTRY_BY_ID[qid].runner_module
+        assert REGISTRY_BY_ID["S5"].runner_module != (
+            "research_engine.experiments.selection_research"
+        )
 
     def test_no_trading_mutation_imports(self):
         src = Path(

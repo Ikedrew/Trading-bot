@@ -24,6 +24,10 @@ q5_pattern_degradation.json -> E2  (never L1)
 OWNERSHIP CONTRACT (Repair 2B.1)
 --------------------------------
 e3_strategy_family_expectancy.json -> E3  (S1 is a superseded alias, not a co-owner)
+
+OWNERSHIP CONTRACT (Repair 2B.2)
+--------------------------------
+s5_strategy_identity_expectancy.json -> S5  (S6/S7/Q24/E3 can never own it)
 """
 from __future__ import annotations
 
@@ -56,6 +60,13 @@ def _filename_key(report_filename: str) -> str:
     return value.rsplit("/", 1)[-1].lower()
 
 
+# Repair 2B.2 adjudicated ownership: the S5 report is solely owned by S5.
+# S6 (implemented later in 2B.3), S7, E3, S1, and Q24 can never claim it.
+REPAIR_2B2_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
+    "s5_strategy_identity_expectancy.json": "S5",
+}
+
+
 def _derive_adjudicated_owners() -> dict[str, str]:
     """Derive adjudicated report ownership from the frozen Wave-A5 findings."""
     owners: dict[str, str] = {}
@@ -74,7 +85,22 @@ def _derive_adjudicated_owners() -> dict[str, str]:
     return dict(sorted(owners.items()))
 
 
-ADJUDICATED_REPORT_OWNERS: dict[str, str] = _derive_adjudicated_owners()
+def _merge_adjudicated_owners() -> dict[str, str]:
+    """Merge Wave-A5-derived owners with the explicit 2B.2 adjudication."""
+    owners = dict(_derive_adjudicated_owners())
+    for filename, owner in REPAIR_2B2_ADJUDICATED_REPORT_OWNERS.items():
+        filename_key = _filename_key(filename)
+        existing = owners.get(filename_key)
+        if existing is not None and existing != owner:
+            raise RuntimeError(
+                f"conflicting adjudicated report owners for {filename_key}: "
+                f"{existing} and {owner}"
+            )
+        owners[filename_key] = owner
+    return dict(sorted(owners.items()))
+
+
+ADJUDICATED_REPORT_OWNERS: dict[str, str] = _merge_adjudicated_owners()
 
 _BY_ID = {question.id: question for question in REGISTRY}
 

@@ -223,5 +223,10 @@ def test_static_governance_registry_and_ownership_are_adjudicated():
     assert all(definition.definition_version == 1 for definition in definitions.values())
     assert definitions["S1"].lifecycle_status.value == "SUPERSEDED"
     assert definitions["S1"].scientific_owner_id == "E3"
-    assert REGISTRY_BY_ID["S5"].runner_module == ""
+    assert REGISTRY_BY_ID["S5"].runner_module == (
+        "research_engine.experiments.strategy_identity_expectancy"
+    )
+    assert REGISTRY_BY_ID["S5"].runner_function == "run_s5"
+    assert REGISTRY_BY_ID["S5"].report_filename == "s5_strategy_identity_expectancy.json"
     assert REGISTRY_BY_ID["S6"].runner_module == ""
+    assert REGISTRY_BY_ID["S7"].runner_module == ""

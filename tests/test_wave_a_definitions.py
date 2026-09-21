@@ -125,7 +125,7 @@ def test_missing_epoch_requirement_detected():
 
 def test_missing_runner_is_info_not_error():
     definitions = build_definitions_from_registry(REGISTRY)
-    no_runner_ids = {"S5", "S6", "S7", "X6", "L6", "G1", "G2", "G3"}
+    no_runner_ids = {"S6", "S7", "X6", "L6", "G1", "G2", "G3"}
     for nid in sorted(no_runner_ids):
         d = definitions[nid]
         report = validate_definition(d)
@@ -1912,9 +1912,12 @@ from research_engine.registry.wave_a_no_runner_definitions import (  # noqa: E40
 
 
 def test_no_runner_design_scope_and_metadata_are_deterministic():
-    expected = {"S5", "S6", "S7", "X6", "L6", "G1", "G2", "G3"}
-    assert WAVE_A_NO_RUNNER_TARGETS == expected
-    assert set(WAVE_A_NO_RUNNER_DESIGNS) == expected
+    # Repair 2B.2 implemented S5, so it is no longer an unimplemented target;
+    # its frozen design record is retained as the authoritative HD06 contract.
+    targets = {"S6", "S7", "X6", "L6", "G1", "G2", "G3"}
+    designs = targets | {"S5"}
+    assert WAVE_A_NO_RUNNER_TARGETS == targets
+    assert set(WAVE_A_NO_RUNNER_DESIGNS) == designs
     for qid, design in WAVE_A_NO_RUNNER_DESIGNS.items():
         assert design.canonical_question_id == qid
         assert design.definition_version == 1
@@ -2045,14 +2048,17 @@ def test_g2_lineage_denominator_cannot_be_inflated_or_joined_by_fallback_alias()
 
 
 def test_no_runner_report_identities_are_unique_and_do_not_collide():
-    proposed = [design.report_identity for design in WAVE_A_NO_RUNNER_DESIGNS.values()]
+    historical = [design.report_identity for design in WAVE_A_NO_RUNNER_DESIGNS.values()]
+    proposed = [WAVE_A_NO_RUNNER_DESIGNS[qid].report_identity for qid in WAVE_A_NO_RUNNER_TARGETS]
     existing = {
         question.report_filename
         for question in REGISTRY
         if question.id not in WAVE_A_NO_RUNNER_TARGETS and question.report_filename
     }
-    assert len(proposed) == len(set(proposed)) == 8
+    assert len(historical) == len(set(historical)) == 8
+    assert len(proposed) == len(set(proposed)) == len(WAVE_A_NO_RUNNER_TARGETS)
     assert not set(proposed) & existing
+    assert WAVE_A_NO_RUNNER_DESIGNS["S5"].report_identity == REGISTRY_BY_ID["S5"].report_filename
 
 
 def test_no_runner_design_layer_preserves_a1_to_a5_and_every_definition():

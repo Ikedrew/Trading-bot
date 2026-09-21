@@ -174,10 +174,19 @@ def test_forward_registry_dependency_is_resolved_before_dependent(tmp_path):
 
 
 def test_no_runner_remains_no_runner(tmp_path):
-    state = _state("S5", tmp_path, {"shadow_trades": [_shadow(1)]})
+    state = _state("S6", tmp_path, {"shadow_trades": [_shadow(1)]})
 
     assert state.runner_status == RunnerStatus.NO_RUNNER
     assert state.readiness_status.value == "NO_RUNNER"
+
+
+def test_s5_now_declares_its_own_canonical_runner(tmp_path):
+    # Repair 2B.2 implemented S5, so it must no longer be reported as a
+    # no-runner question even when no report exists yet.
+    state = _state("S5", tmp_path, {"shadow_trades": [_shadow(1)]})
+
+    assert state.runner_status == RunnerStatus.READY
+    assert state.readiness_status.value != "NO_RUNNER"
 
 
 def test_legacy_and_transitional_records_never_count(tmp_path):
