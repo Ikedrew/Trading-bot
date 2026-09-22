@@ -35,6 +35,12 @@ CONSTRUCTION_MODEL_VERSION = "construction_v1"
 SIMULATION_MODEL_VERSION = "simulation_v1"
 """Lifecycle policy: fill model, ordering, costs, timeout policy, pip convention."""
 
+MARKET_TIMESTAMP_SEMANTICS = "canonical_utc_bar_open_v1"
+"""Canonical meaning of market timestamps written by the current producer."""
+
+MARKET_TIMESTAMP_NORMALIZATION_VERSION = "mt5_broker_to_utc_once_v1"
+"""The MT5 feed normalises broker/server bar time exactly once before shadow use."""
+
 # ─── Market-time constants ────────────────────────────────────────────────────
 
 M5_BAR_INTERVAL_S = 300
@@ -86,6 +92,25 @@ def market_block(field_prefix: str, raw_market_time: float, broker_offset_second
         field_prefix: int(raw_market_time),
         f"{field_prefix}_utc_epoch_s": derived["utc_epoch_s"],
         f"{field_prefix}_utc_iso8601": derived["utc_iso8601"],
+    }
+
+
+def utc_market_block(field_prefix: str, market_time_utc: float) -> dict[str, Any]:
+    """Persist a canonical UTC bar timestamp without applying another offset.
+
+    ``data.mt5_data`` owns the broker/server-to-UTC conversion.  Values passed
+    into the current shadow integration are therefore already UTC.  The
+    legacy-named base field is retained for schema compatibility, but both it
+    and its explicit UTC companion carry the same canonical epoch.
+    """
+    utc_epoch = int(market_time_utc)
+    iso = datetime.fromtimestamp(utc_epoch, tz=timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+    return {
+        field_prefix: utc_epoch,
+        f"{field_prefix}_utc_epoch_s": utc_epoch,
+        f"{field_prefix}_utc_iso8601": iso,
     }
 
 

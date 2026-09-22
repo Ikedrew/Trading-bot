@@ -35,10 +35,12 @@ from core.shadow.models import (
     EXIT_TIMEOUT,
     HORIZONS,
     M5_BAR_INTERVAL_S,
+    MARKET_TIMESTAMP_NORMALIZATION_VERSION,
+    MARKET_TIMESTAMP_SEMANTICS,
     SCHEMA_VERSION,
     SIMULATION_MODEL_VERSION,
     LifecycleState,
-    market_block,
+    utc_market_block,
 )
 from core.shadow.persistence import (
     ShadowEventWriter,
@@ -98,7 +100,7 @@ class ShadowRuntime:
         *,
         event_type: str,
         symbol: str,
-        market_time_raw: int,
+        market_time_utc: int,
         broker_offset: int,
         canonical_opportunity_id: str = "",
         observation_id: str = "",
@@ -116,8 +118,10 @@ class ShadowRuntime:
             "symbol": symbol,
             "horizon": horizon,
             "broker_offset_seconds": int(broker_offset),
+            "market_timestamp_semantics": MARKET_TIMESTAMP_SEMANTICS,
+            "market_timestamp_normalization_version": MARKET_TIMESTAMP_NORMALIZATION_VERSION,
         }
-        ev.update(market_block("event_market_time", market_time_raw, broker_offset))
+        ev.update(utc_market_block("event_market_time", market_time_utc))
         ev.update(_wall_stamp())
         return ev
 
@@ -125,7 +129,7 @@ class ShadowRuntime:
         self._writer.append(
             event=event,
             symbol=event.get("symbol", "UNKNOWN"),
-            market_time_raw=int(event.get("event_market_time", 0)),
+            market_time_utc=int(event.get("event_market_time_utc_epoch_s", 0)),
             broker_offset_seconds=int(event.get("broker_offset_seconds", 0)),
         )
 
@@ -139,7 +143,7 @@ class ShadowRuntime:
 
         ctx keys (assembled by core.shadow.integration):
             canonical_opportunity_id, entity_id, symbol, cycle_id,
-            bar_time_raw, direction, pattern, strategy, score,
+            bar_time_utc, direction, pattern, strategy, score,
             regime, h4_regime, h1_bias, market_phase, market_phase_confidence,
             bid, ask, structure {m5_candle_high/low, m15_nearest_support/
             resistance, h1_last_swing_high/low}, eligible_horizons [str],
@@ -154,11 +158,11 @@ class ShadowRuntime:
             return  # one PLAN per opportunity-cycle
 
         symbol = str(ctx.get("symbol", ""))
-        bar_time_raw = int(ctx.get("bar_time_raw", 0))
+        bar_time_utc = int(ctx.get("bar_time_utc", 0))
         off = get_broker_offset_seconds()
         direction = str(ctx.get("direction", "") or "").upper()
         has_direction = direction in ("BUY", "SELL")
-        if not symbol or bar_time_raw <= 0:
+        if not symbol or bar_time_utc <= 0:
             return
 
         eligible = set(ctx.get("eligible_horizons", []) or [])
@@ -167,7 +171,7 @@ class ShadowRuntime:
             for a in (ctx.get("horizon_assessments", []) or [])
         }
         structure = ctx.get("structure", {}) or {}
-        plan_id = f"nplan_{ctx.get('cycle_id', 0)}_{symbol}_{bar_time_raw}"
+        plan_id = f"nplan_{ctx.get('cycle_id', 0)}_{symbol}_{bar_time_utc}"
 
         entries: list[dict[str, Any]] = []
         constructed: list[dict[str, Any]] = []
@@ -237,7 +241,7 @@ class ShadowRuntime:
         plan_ev = self._envelope(
             event_type="PLAN",
             symbol=symbol,
-            market_time_raw=bar_time_raw,
+            market_time_utc=bar_time_utc,
             broker_offset=off,
             canonical_opportunity_id=root,
             observation_id=observation_id,
@@ -262,7 +266,7 @@ class ShadowRuntime:
         self._open_constructed(
             ctx=ctx,
             symbol=symbol,
-            bar_time_raw=bar_time_raw,
+            bar_time_utc=bar_time_utc,
             off=off,
             direction=direction,
             plan_id=plan_id,
@@ -275,7 +279,7 @@ class ShadowRuntime:
         *,
         ctx: dict[str, Any],
         symbol: str,
-        bar_time_raw: int,
+        bar_time_utc: int,
         off: int,
         direction: str,
         plan_id: str,
@@ -305,13 +309,13 @@ class ShadowRuntime:
             lifecycle = LifecycleState(
                 max_favourable_price=t.entry,
                 max_adverse_price=t.entry,
-                last_evaluated_bar_time=bar_time_raw,  # entry bar itself is never evaluated
+                last_evaluated_bar_time=bar_time_utc,  # entry bar itself is never evaluated
             )
 
             ev = self._envelope(
                 event_type="OPEN",
                 symbol=symbol,
-                market_time_raw=bar_time_raw,
+                market_time_utc=bar_time_utc,
                 broker_offset=off,
                 canonical_opportunity_id=root,
                 observation_id=observation_id,
@@ -386,8 +390,8 @@ class ShadowRuntime:
                     "lifecycle_initial": lifecycle.to_dict(),
                 }
             )
-            ev.update(market_block("opportunity_market_time", bar_time_raw, off))
-            ev.update(market_block("entry_market_time", bar_time_raw, off))
+            ev.update(utc_market_block("opportunity_market_time", bar_time_utc))
+            ev.update(utc_market_block("entry_market_time", bar_time_utc))
             self._write(ev)
 
             self._active[trade_id] = {
@@ -501,7 +505,7 @@ class ShadowRuntime:
         ev = self._envelope(
             event_type="PROGRESS",
             symbol=sim["definition"]["symbol"],
-            market_time_raw=sim["lifecycle"].last_evaluated_bar_time,
+            market_time_utc=sim["lifecycle"].last_evaluated_bar_time,
             broker_offset=get_broker_offset_seconds(),
             canonical_opportunity_id=sim["canonical_opportunity_id"],
             observation_id=sim.get("observation_id", ""),
@@ -550,14 +554,14 @@ class ShadowRuntime:
         ev = self._envelope(
             event_type="CLOSE",
             symbol=sim["definition"]["symbol"],
-            market_time_raw=exit_market_time,
+            market_time_utc=exit_market_time,
             broker_offset=off,
             canonical_opportunity_id=sim["canonical_opportunity_id"],
             observation_id=sim.get("observation_id", ""),
             shadow_trade_id=sim["trade_id"],
             horizon=sim["horizon"],
         )
-        ev.update(market_block("exit_market_time", exit_market_time, off))
+        ev.update(utc_market_block("exit_market_time", exit_market_time))
         ev.update(
             {
                 "exit_price": exit_price,

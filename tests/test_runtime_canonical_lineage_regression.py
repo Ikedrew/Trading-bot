@@ -220,7 +220,7 @@ def test_shadow_recovery_keeps_open_observation_id_into_progress_and_close(tmp_p
         "entity_id": f"{SYMBOL}_{BAR_TIME}",
         "symbol": SYMBOL,
         "cycle_id": 1,
-        "bar_time_raw": BAR_TIME,
+        "bar_time_utc": BAR_TIME,
         "direction": "SELL",
         "pattern": PATTERN,
         "strategy": "MEAN_REVERSION",

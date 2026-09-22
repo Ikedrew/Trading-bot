@@ -12,8 +12,8 @@ Partitioning:
     local:  {base_dir}/{SYMBOL}/{UTC-date}.jsonl
     S3:     shadow_runtime/schema_version={SV}/symbol={SYM}/date={D}/part-000.jsonl
 
-The UTC date derives from raw market time minus persisted broker_offset_seconds
-(fixes the legacy bug of interpreting broker seconds as UTC for partitioning).
+The UTC date derives directly from the canonical UTC market timestamp.  The
+persisted broker offset is provenance only and is never applied a second time.
 
 PROVISIONAL LOCATION: directory is provisional (config.SHADOW_RUNTIME_DIR,
 default "logs/shadow_runtime_v1"), isolated behind this module. Final
@@ -77,9 +77,9 @@ class ShadowEventWriter:
     def base_dir(self) -> str:
         return self._base_dir
 
-    def partition_path(self, symbol: str, market_time_raw: int, broker_offset_seconds: int) -> Path:
+    def partition_path(self, symbol: str, market_time_utc: int, broker_offset_seconds: int) -> Path:
         utc_date = datetime.fromtimestamp(
-            int(market_time_raw) - int(broker_offset_seconds), tz=timezone.utc
+            int(market_time_utc), tz=timezone.utc
         ).strftime("%Y-%m-%d")
         return Path(self._base_dir) / (symbol or "UNKNOWN") / f"{utc_date}.jsonl"
 
@@ -88,12 +88,12 @@ class ShadowEventWriter:
         *,
         event: dict[str, Any],
         symbol: str,
-        market_time_raw: int,
+        market_time_utc: int,
         broker_offset_seconds: int,
     ) -> None:
         """Append one event to the local stream (+ gated S3 mirror). Never raises."""
         try:
-            path = self.partition_path(symbol, market_time_raw, broker_offset_seconds)
+            path = self.partition_path(symbol, market_time_utc, broker_offset_seconds)
             path.parent.mkdir(parents=True, exist_ok=True)
             line = json.dumps(event, separators=(",", ":"), default=str) + "\n"
 
@@ -104,14 +104,14 @@ class ShadowEventWriter:
             finally:
                 os.close(fd)
 
-            self._mirror_s3(symbol, market_time_raw, broker_offset_seconds, line)
+            self._mirror_s3(symbol, market_time_utc, broker_offset_seconds, line)
         except Exception as exc:  # persistence must never affect any caller
             logger.debug("[SHADOW_RUNTIME_PERSIST_FAIL] %s", exc)
 
     def _mirror_s3(
         self,
         symbol: str,
-        market_time_raw: int,
+        market_time_utc: int,
         broker_offset_seconds: int,
         line: str,
     ) -> None:
@@ -127,7 +127,7 @@ class ShadowEventWriter:
             from core.shadow.models import SCHEMA_VERSION
 
             utc_date = datetime.fromtimestamp(
-                int(market_time_raw) - int(broker_offset_seconds), tz=timezone.utc
+                int(market_time_utc), tz=timezone.utc
             ).strftime("%Y-%m-%d")
             key = (
                 f"{_S3_PREFIX}/schema_version={SCHEMA_VERSION}"

@@ -228,7 +228,8 @@ def test_full_context_assembly_mapped_to_runtime(recorded):
     assert ctx["observation_id"] == OBSERVATION_ID
     assert ctx["entity_id"] == ENTITY_ID
     assert ctx["cycle_id"] == CYCLE_ID
-    assert ctx["bar_time_raw"] == BAR_TIME_RAW
+    assert ctx["bar_time_utc"] == BAR_TIME_RAW
+    assert "bar_time_raw" not in ctx
 
     # Direction + engine observation facts
     assert ctx["direction"] == "SELL"

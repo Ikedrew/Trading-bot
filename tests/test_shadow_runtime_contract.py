@@ -67,7 +67,7 @@ def _ctx(
         "entity_id": f"{SYMBOL}_1784800000",
         "symbol": SYMBOL,
         "cycle_id": cycle_id,
-        "bar_time_raw": bar_time,
+        "bar_time_utc": bar_time,
         "direction": direction,
         "pattern": "TWEEZER_TOP",
         "strategy": "REVERSAL",
@@ -208,7 +208,7 @@ def test_exact_fill_sl_first_when_both_touched(env):
     cons = [e for e in env.events() if e["event_type"] == "OPEN"][0]["construction"]
     sl, tp = cons["stop_loss"], cons["take_profit"]
     assert sl > tp  # SELL geometry sanity
-    t0 = _ctx()["bar_time_raw"]
+    t0 = _ctx()["bar_time_utc"]
     # Single closed bar touches BOTH levels → SL_FIRST wins, exact fill at SL.
     env.rt.evaluate_bar(symbol=SYMBOL, bar_time=t0 + 300,
                         bar_high=sl + 0.001, bar_low=tp - 0.001,
@@ -223,7 +223,7 @@ def test_exact_fill_tp(env):
     env.rt.handle_opportunity(_ctx())
     opens = [e for e in env.events() if e["event_type"] == "OPEN"][0]["construction"]
     sl, tp = opens["stop_loss"], opens["take_profit"]
-    t0 = _ctx()["bar_time_raw"]
+    t0 = _ctx()["bar_time_utc"]
     env.rt.evaluate_bar(symbol=SYMBOL, bar_time=t0 + 300,
                         bar_high=sl - 0.0005, bar_low=tp - 0.001, bar_close=tp)
     close = [e for e in env.events() if e["event_type"] == "CLOSE"][0]
@@ -234,7 +234,7 @@ def test_exact_fill_tp(env):
 def test_horizon_specific_timeout_scalp_9_bars(env):
     env.rt.handle_opportunity(_ctx(eligible=("SCALP",)))
     tid = _tid("SCALP")
-    t0 = _ctx()["bar_time_raw"]
+    t0 = _ctx()["bar_time_utc"]
     for bt, hi, lo, cl in _bars_after(t0, 9, 1.10040, 1.09990, 1.10000):
         env.rt.evaluate_bar(symbol=SYMBOL, bar_time=bt,
                             bar_high=hi, bar_low=lo, bar_close=cl)
@@ -250,7 +250,7 @@ def test_mfe_mae_and_progression_in_close(env):
     env.rt.handle_opportunity(_ctx())
     cons = [e for e in env.events() if e["event_type"] == "OPEN"][0]["construction"]
     tp = cons["take_profit"]
-    t0 = _ctx()["bar_time_raw"]
+    t0 = _ctx()["bar_time_utc"]
     for bt, hi, lo, cl in [
         (t0 + 300, 1.10020, 1.09985, 1.10000),
         (t0 + 600, 1.10010, 1.09600, 1.09750),   # low pierces TP → exact fill at TP
@@ -266,7 +266,7 @@ def test_mfe_mae_and_progression_in_close(env):
 
 def test_data_gap_recorded_never_fabricated(env):
     env.rt.handle_opportunity(_ctx())
-    t0 = _ctx()["bar_time_raw"]
+    t0 = _ctx()["bar_time_utc"]
     env.rt.evaluate_bar(symbol=SYMBOL, bar_time=t0 + 300,
                         bar_high=1.10010, bar_low=1.09990, bar_close=1.10000)
     env.rt.evaluate_bar(symbol=SYMBOL, bar_time=t0 + 1200,   # two bars missing
@@ -278,7 +278,7 @@ def test_data_gap_recorded_never_fabricated(env):
 def test_watermark_prevents_duplicate_evaluation(env):
     env.rt.handle_opportunity(_ctx())
     tid = _tid("INTRADAY")
-    t0 = _ctx()["bar_time_raw"]
+    t0 = _ctx()["bar_time_utc"]
     for _ in range(2):  # same closed bar delivered twice
         env.rt.evaluate_bar(symbol=SYMBOL, bar_time=t0 + 300,
                             bar_high=1.10010, bar_low=1.09990, bar_close=1.10000)
@@ -293,7 +293,7 @@ def test_recovery_reopens_active_and_continues_without_duplicate(env):
     # (checkpoint_interval = 12 bars → PROGRESS at bar 12).
     env.rt.handle_opportunity(_ctx())
     tid = _tid("INTRADAY")
-    t0 = _ctx()["bar_time_raw"]
+    t0 = _ctx()["bar_time_utc"]
     for bt, hi, lo, cl in _bars_after(t0, 12, 1.10010, 1.09990, 1.10000):
         env.rt.evaluate_bar(symbol=SYMBOL, bar_time=bt,
                             bar_high=hi, bar_low=lo, bar_close=cl)
@@ -324,7 +324,7 @@ def test_recovery_reopens_active_and_continues_without_duplicate(env):
 def test_recovered_open_progress_and_close_preserve_original_observation_id(env):
     env.rt.handle_opportunity(_ctx())
     tid = _tid("INTRADAY")
-    t0 = _ctx()["bar_time_raw"]
+    t0 = _ctx()["bar_time_utc"]
 
     rt2 = ShadowRuntime(writer=env.writer)
     assert rt2.snapshot(tid)["observation_id"] == OBSERVATION_ID
@@ -367,18 +367,20 @@ def test_legacy_shadow_data_is_never_read(tmp_path):
 
 # ─── Timestamp integrity & versioning ────────────────────────────────────────
 
-def test_market_time_raw_verbatim_utc_derived_wall_separate(env, monkeypatch):
+def test_current_market_time_is_utc_and_offset_is_provenance_only(env, monkeypatch):
     import core.shadow.runtime as rtmod
 
     monkeypatch.setattr(rtmod, "get_broker_offset_seconds", lambda: 10800)
     ctx = _ctx()
-    ctx["bar_time_raw"] = 1_784_800_500                 # raw broker seconds
+    ctx["bar_time_utc"] = 1_784_800_500
     env.rt.handle_opportunity(ctx)
     open_ev = [e for e in env.events() if e["event_type"] == "OPEN"][0]
-    assert open_ev["opportunity_market_time"] == 1_784_800_500          # untouched
-    assert open_ev["opportunity_market_time_utc_epoch_s"] == 1_784_800_500 - 10_800
+    assert open_ev["opportunity_market_time"] == 1_784_800_500
+    assert open_ev["opportunity_market_time_utc_epoch_s"] == 1_784_800_500
     assert open_ev["opportunity_market_time_utc_iso8601"].endswith("Z")
     assert open_ev["broker_offset_seconds"] == 10800
+    assert open_ev["market_timestamp_semantics"] == "canonical_utc_bar_open_v1"
+    assert open_ev["market_timestamp_normalization_version"] == "mt5_broker_to_utc_once_v1"
     assert isinstance(open_ev["recorded_at_utc_ms"], int)
     assert open_ev["recorded_at_utc_ms"] > 1_700_000_000_000            # wall clock
     assert open_ev["entry_market_time"] == 1_784_800_500
@@ -386,7 +388,7 @@ def test_market_time_raw_verbatim_utc_derived_wall_separate(env, monkeypatch):
 
 def test_every_event_carries_three_version_dimensions(env):
     env.rt.handle_opportunity(_ctx())
-    env.rt.evaluate_bar(symbol=SYMBOL, bar_time=_ctx()["bar_time_raw"] + 300,
+    env.rt.evaluate_bar(symbol=SYMBOL, bar_time=_ctx()["bar_time_utc"] + 300,
                         bar_high=1.10010, bar_low=1.09990, bar_close=1.10000)
     for ev in env.events():
         assert ev["schema_version"] == "shadow_runtime_v1"
@@ -396,7 +398,7 @@ def test_every_event_carries_three_version_dimensions(env):
 
 def test_full_lifecycle_plan_open_progress_close(env):
     env.rt.handle_opportunity(_ctx())                    # PLAN + OPEN
-    t0 = _ctx()["bar_time_raw"]
+    t0 = _ctx()["bar_time_utc"]
     for bt, hi, lo, cl in _bars_after(t0, 12, 1.10010, 1.09990, 1.10000):
         env.rt.evaluate_bar(symbol=SYMBOL, bar_time=bt,
                             bar_high=hi, bar_low=lo, bar_close=cl)
@@ -416,7 +418,7 @@ def test_close_preserves_observation_id(env):
     cons = [e for e in env.events() if e["event_type"] == "OPEN"][0]["construction"]
     env.rt.evaluate_bar(
         symbol=SYMBOL,
-        bar_time=_ctx()["bar_time_raw"] + 300,
+        bar_time=_ctx()["bar_time_utc"] + 300,
         bar_high=cons["stop_loss"] + 0.001,
         bar_low=cons["take_profit"] - 0.001,
         bar_close=cons["stop_loss"],

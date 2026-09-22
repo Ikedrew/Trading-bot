@@ -39,8 +39,8 @@ class _CapturingWriter:
     def base_dir(self) -> str:
         return self._base_dir
 
-    def append(self, *, event, symbol, market_time_raw, broker_offset_seconds):
-        del symbol, market_time_raw, broker_offset_seconds
+    def append(self, *, event, symbol, market_time_utc, broker_offset_seconds):
+        del symbol, market_time_utc, broker_offset_seconds
         self.events.append(copy.deepcopy(event))
 
 

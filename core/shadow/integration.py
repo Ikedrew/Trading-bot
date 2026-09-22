@@ -181,7 +181,9 @@ def handle_live_opportunity_shadow(
         "entity_id": entity_id,
         "symbol": symbol,
         "cycle_id": cycle_id,
-        "bar_time_raw": int(closed_time),
+        # MT5DataFeed normalises broker/server bar time exactly once.  The
+        # shadow boundary receives the resulting canonical UTC epoch.
+        "bar_time_utc": int(closed_time),
         "direction": direction,
         "pattern": new_result.get("pattern", "") or "",
         # A present V10 pipeline result is authoritative.  Only legacy callers
@@ -226,7 +228,7 @@ def handle_live_opportunity_shadow(
 def evaluate_closed_bar(
     *,
     symbol: str,
-    bar_time: int,
+    bar_time_utc: int,
     bar_high: float,
     bar_low: float,
     bar_close: float,
@@ -237,7 +239,7 @@ def evaluate_closed_bar(
 
     get_shadow_runtime().evaluate_bar(
         symbol=symbol,
-        bar_time=int(bar_time),
+        bar_time=int(bar_time_utc),
         bar_high=bar_high,
         bar_low=bar_low,
         bar_close=bar_close,

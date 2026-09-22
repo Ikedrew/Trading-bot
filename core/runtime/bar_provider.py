@@ -131,7 +131,7 @@ class BarProvider:
 
                 evaluate_closed_bar(
                     symbol=sym_state.symbol,
-                    bar_time=float(closed_time),
+                    bar_time_utc=float(closed_time),
                     bar_high=candles[closed_i].high,
                     bar_low=candles[closed_i].low,
                     bar_close=candles[closed_i].close,

@@ -18,6 +18,9 @@ from core.constants.timeframes import timeframe_name
 
 logger = logging.getLogger(__name__)
 
+CANDLE_TIMESTAMP_SEMANTICS = "canonical_utc_bar_open_v1"
+CANDLE_TIMESTAMP_NORMALIZATION_VERSION = "mt5_broker_to_utc_once_v1"
+
 
 # ─── TICK TIMESTAMP NORMALISATION (broker server → UTC) ───────────────────────
 # MT5 broker servers may run at a non-UTC timezone (e.g., Pepperstone = UTC+2/+3).
@@ -342,7 +345,16 @@ def _persist_candles_to_cache(
                 # Unified event bus
                 try:
                     from core.event_stream import emit_candle
-                    emit_candle(symbol, record, timeframe=timeframe_name(timeframe), source="mt5_data")
+                    event_record = dict(record)
+                    event_record.update({
+                        "timestamp_semantics": CANDLE_TIMESTAMP_SEMANTICS,
+                        "timestamp_normalization_version": CANDLE_TIMESTAMP_NORMALIZATION_VERSION,
+                        "source_broker_offset_seconds": int(source_utc_offset_seconds),
+                    })
+                    emit_candle(
+                        symbol, event_record,
+                        timeframe=timeframe_name(timeframe), source="mt5_data",
+                    )
                 except Exception:
                     pass
 

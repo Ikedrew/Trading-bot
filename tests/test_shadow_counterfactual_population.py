@@ -59,7 +59,7 @@ def _ctx(*, direction: str = "BUY", eligible=("SCALP",), **overrides) -> dict:
         "entity_id": ENTITY_ID,
         "symbol": SYMBOL,
         "cycle_id": CYCLE_ID,
-        "bar_time_raw": BAR_TIME,
+        "bar_time_utc": BAR_TIME,
         "direction": direction,
         "pattern": "TWEEZER_TOP",
         "strategy": "",

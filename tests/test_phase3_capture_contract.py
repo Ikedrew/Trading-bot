@@ -328,7 +328,7 @@ def _shadow_runtime(events):
 def _ctx(**over):
     ctx = {
         "canonical_opportunity_id": ID_A, "entity_id": "EURUSD_1784800000",
-        "symbol": "EURUSD", "cycle_id": 303, "bar_time_raw": 1784800000,
+        "symbol": "EURUSD", "cycle_id": 303, "bar_time_utc": 1784800000,
         "direction": "BUY", "pattern": "TWEEZER_TOP", "strategy": "S1",
         "score": 0.8, "regime": "TRENDING", "h4_regime": "TRENDING_UP",
         "h1_bias": "BULLISH", "market_phase": "EXPANSION",
@@ -350,7 +350,7 @@ class TestStep10ShadowCorrections:
     def test_open_basis_primary_type_and_full_facts(self):
         events: list[dict] = []
         rt = _shadow_runtime(events)
-        rt._open_constructed(ctx=_ctx(), symbol="EURUSD", bar_time_raw=1784800000,
+        rt._open_constructed(ctx=_ctx(), symbol="EURUSD", bar_time_utc=1784800000,
                              off=10800, direction="BUY", plan_id="P1",
                              constructed=[{"horizon": "SCALP", "trade": _trade()}])
         op = [e for e in events if e["event_type"] == "OPEN"][0]
@@ -370,7 +370,7 @@ class TestStep10ShadowCorrections:
         events: list[dict] = []
         rt = _shadow_runtime(events)
         rt._open_constructed(ctx=_ctx(v10_selected_horizon="SCALP"),
-                             symbol="EURUSD", bar_time_raw=1784800000,
+                             symbol="EURUSD", bar_time_utc=1784800000,
                              off=10800, direction="BUY", plan_id="P2",
                              constructed=[{"horizon": "SCALP", "trade": _trade()}])
         op = [e for e in events if e["event_type"] == "OPEN"][0]
@@ -380,7 +380,7 @@ class TestStep10ShadowCorrections:
         events: list[dict] = []
         rt = _shadow_runtime(events)
         rt._open_constructed(ctx=_ctx(v10_selected_horizon="INTRADAY"),
-                             symbol="EURUSD", bar_time_raw=1784800000,
+                             symbol="EURUSD", bar_time_utc=1784800000,
                              off=10800, direction="BUY", plan_id="P2b",
                              constructed=[{"horizon": "SCALP", "trade": _trade()}])
         op = [e for e in events if e["event_type"] == "OPEN"][0]
@@ -389,7 +389,7 @@ class TestStep10ShadowCorrections:
     def test_shadow_lifecycle_keeps_root_and_exits_on_stop(self):
         events: list[dict] = []
         rt = _shadow_runtime(events)
-        rt._open_constructed(ctx=_ctx(), symbol="EURUSD", bar_time_raw=1784800000,
+        rt._open_constructed(ctx=_ctx(), symbol="EURUSD", bar_time_utc=1784800000,
                              off=0, direction="BUY", plan_id="P3",
                              constructed=[{"horizon": "SCALP", "trade": _trade()}])
         tid = [e for e in events if e["event_type"] == "OPEN"][0]["shadow_trade_id"]
@@ -452,7 +452,7 @@ class TestEndToEndRootEquality:
         rt = _shadow_runtime(events)
         rt._open_constructed(ctx=_ctx(v10_selected_horizon="SCALP",
                                       canonical_opportunity_id=root),
-                             symbol="EURUSD", bar_time_raw=1784800000,
+                             symbol="EURUSD", bar_time_utc=1784800000,
                              off=10800, direction="BUY", plan_id="PE",
                              constructed=[{"horizon": "SCALP", "trade": _trade()}])
         rt.evaluate_bar(symbol="EURUSD", bar_time=1784801300, bar_high=1.2355,
