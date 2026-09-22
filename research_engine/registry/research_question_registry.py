@@ -465,8 +465,12 @@ EXEC1 = ResearchQuestion(
     category=QuestionCategory.EXECUTION,
     title="Execution failures",
     description="Do execution failures or adverse conditions degrade otherwise valid opportunities?",
-    required_fields=("result_ok", "retcode"),
-    data_sources=(DataSource.EXECUTION_RESULTS,),
+    required_fields=("correlation_id", "result_ok", "action", "spread_atr_ratio"),
+    data_sources=(
+        DataSource.EXECUTION_RESULTS,
+        DataSource.EXECUTION_CONTEXT,
+        DataSource.DECISION_TRACE,
+    ),
     priority=QuestionPriority.P1,
     validation_rules=(
         ValidationRule("sample_size", ">=", 30, "Minimum execution-result observations"),
@@ -707,9 +711,8 @@ S7 = ResearchQuestion(
     report_filename="s7_strategy_horizon_interaction.json",
 )
 
-# ADDITIONAL EXECUTION — X6 (intent-only, runner deferred)
 # ═══════════════════════════════════════════════════════════════════════════════
-# ADDITIONAL EXECUTION — X6 (intent-only, runner deferred)
+# ADDITIONAL EXECUTION — X6 (HD08-adjudicated execution stability, Repair 4B.4)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 X6 = ResearchQuestion(
@@ -717,10 +720,20 @@ X6 = ResearchQuestion(
     category=QuestionCategory.EXECUTION,
     title="Execution stability",
     description="Under what conditions (symbol, session, spread, volatility) does execution quality degrade?",
-    required_fields=("symbol", "slippage", "spread"),
-    data_sources=(DataSource.SLIPPAGE_JOURNAL, DataSource.EXECUTION_CONTEXT),
+    required_fields=("correlation_id", "symbol", "slippage", "spread_atr_ratio"),
+    data_sources=(
+        DataSource.EXECUTION_RESULTS,
+        DataSource.EXECUTION_CONTEXT,
+        DataSource.DECISION_TRACE,
+    ),
     priority=QuestionPriority.P2,
-    validation_rules=(),
+    validation_rules=(
+        ValidationRule("sample_size", ">=", 100, "Minimum matched execution-result observations"),
+    ),
+    runner_module="research_engine.experiments.execution_stability",
+    runner_function="run_x6",
+    report_filename="x6_execution_stability.json",
+    legacy_ids=(),
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════

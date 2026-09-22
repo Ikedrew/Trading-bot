@@ -180,6 +180,9 @@ D6_RW4_PROGRESS_IDS = frozenset({"D6", "PORT-1", "OPP-1", "P1"})
 # and S6's strategy-adjusted horizon runner/report in Repair 2B.3.
 RW5_OPERATIONAL_PROGRESS_IDS = frozenset({"E3", "S1", "S5", "S6"})
 RW6_OPERATIONAL_IDS = frozenset({"S7"})
+# RW7 surgical progress: Repairs 4B.2/4B.3/4B.4 make X3, EXEC1, and X6 all
+# operational, closing the execution-semantics repair area.
+RW7_OPERATIONAL_PROGRESS_IDS = frozenset({"X3", "EXEC1", "X6"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
@@ -187,6 +190,7 @@ OPERATIONAL_IDS = (
     | D6_RW4_PROGRESS_IDS
     | RW5_OPERATIONAL_PROGRESS_IDS
     | RW6_OPERATIONAL_IDS
+    | RW7_OPERATIONAL_PROGRESS_IDS
 )
 
 
@@ -251,10 +255,10 @@ HUMAN_SEMANTIC_DECISIONS = {
     ),
     "HD08": HumanSemanticDecision(
         "HD08", ("X6",),
-        "Choose the primary execution-quality endpoint, spread bins, volatility precedence, and thresholds.",
+        "ADJUDICATED: use producer-measured absolute slippage as the primary endpoint; explicit result_ok failure rate and retcode mix as separate secondary endpoints; use fixed spread_atr_ratio bands and decision_trace_v1.v10_market_state.regime.volatility_state with the approved 100/30 and 30/10 sufficiency thresholds.",
         ("Measured slippage primary; failures secondary", "Composite execution-quality endpoint"),
         ("Direct producer authority and interpretable units", "Broader but requires approved weighting"),
-        "Use producer-measured slippage as primary.", True,
+        "ADJUDICATED: use X6_HD08_ADJUDICATED_CONTRACT; no composite endpoint.", False,
     ),
     "HD09": HumanSemanticDecision(
         "HD09", ("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10"),
@@ -412,6 +416,17 @@ REPAIR_WAVES = {
         ("execution runners", "strict result-context-trace joins", "measured-slippage authority", "execution reports/readiness"), False,
         ("X3", "EXEC1", "X6"), (),
         "Account-grained results use producer-measured fields, immutable pre-execution conditions, canonical symbol checks, correlation clustering, and unique completion/report ownership.",
+        implemented=True,
+        implementation_evidence=(
+            "Repair 4B.2 implements execution_protection_research.run_x3 with the adjudicated "
+            "measured-slippage and explicit-result_ok endpoints and uniquely owned w4_x3_session_quality.json.",
+            "Repair 4B.3 implements execution_protection_research.run_exec1 with the governed "
+            "EXECUTE-only cluster-weighted realization model and uniquely owned w4_exec1_execution_failures.json.",
+            "Repair 4B.4 implements execution_stability.run_x6 exactly from X6_HD08_ADJUDICATED_CONTRACT: "
+            "strict result-context-trace joins, producer-measured absolute slippage, canonical-symbol/session/"
+            "spread-band/volatility dimensions, 100/30 overall and 30/10 cell gates, cluster-aware Wald tests "
+            "with within-dimension Holm follow-ups, and uniquely owned x6_execution_stability.json.",
+        ),
     ),
     "RW8": RepairWave(
         "RW8", "Exit counterfactual policy evaluation", ("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10"),
@@ -481,12 +496,7 @@ _assign(("D2", "D3", "D4", "D5", "X5"), "RW3", "prediction/calibration", "PREDIC
 # OPP-1 was repaired in RW4.3 and is structurally operational (no assignment).
 # P1 was repaired in RW4.4 and is structurally operational (no assignment).
 # S5, S6, and S7 are structurally operational after Repairs 2B.2/2B.3/2B.4.
-_assign(("X3",), "RW7", "runner mismatch", "EXECUTION_AUTHORITY_FOUNDATION",
-        "Session-quality intent is not established by the current account execution metric/authority contract.")
-_assign(("EXEC1",), "RW7", "evidence authority", "EXECUTION_AUTHORITY_FOUNDATION",
-        "Execution-result truth and protection-audit truth are not correctly separated for the canonical claim.")
-_assign(("X6",), "RW7", "no runner", "NO_RUNNER_EXECUTION_FOUNDATION",
-        "The proposed account-grained execution-stability contract has no runner/report and the registry names non-V1 slippage_journal.", human=True)
+# X6 was repaired in Repair 4B.4 and is structurally operational (no assignment).
 _assign(("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10"), "RW8", "counterfactual design", "EXIT_COUNTERFACTUAL_FOUNDATION",
         "The current observational diagnostic cannot establish the registry's alternative exit-policy claim.", human=True)
 _assign(("R1", "R2"), "RW9", "report ownership", "RISK_MODELLING_FOUNDATION",
@@ -525,9 +535,9 @@ _QUESTION_ACTIONS = {
     "S5": "Implemented: S5 owns the horizon-adjusted cluster-aware V10 strategy-family expectancy with the unique s5 report.",
     "S6": "Implemented: S6 owns the strategy-adjusted cluster-aware horizon expectancy and unique s6 report.",
     "S7": "Implemented: S7 owns the HD07 full-factorial clustered interaction analysis and unique s7 report.",
-    "X3": "Align session-quality metric, account grain, nested pre-execution session authority, measured slippage, and completion rule.",
-    "EXEC1": "Make execution_results_v1 primary for broker outcomes and protection_audit separately authoritative for protection interventions.",
-    "X6": "Implement strict result-to-context-to-trace joins and measured-slippage condition analysis from the frozen design.",
+    "X3": "Implement the adjudicated separate measured-slippage and explicit-result_ok rejection endpoints, clustered session comparisons, endpoint-specific 30/10 sufficiency, CURRENT provenance, and bounded completion.",
+    "EXEC1": "Implemented: EXEC1 owns the governed EXECUTE-only cluster-weighted successful-realization linear-probability model using continuous pre-execution spread_atr_ratio.",
+    "X6": "Implemented: X6 owns the HD08-adjudicated condition-stability analysis with strict result-context-trace joins, producer-measured absolute slippage, canonical-symbol/session/spread-band/volatility dimensions, and unique report ownership.",
     "R1": "Create a uniquely owned global risk-effectiveness runner/report using canonical decision outcomes and declared survival metrics.",
     "R2": "Create a separate per-guard attribution runner/report with an explicit guard exposure/treatment grain.",
     "R3": "Version loss/distribution/dependence assumptions and calculate probability of ruin on declared independent chronological outcomes.",
@@ -583,6 +593,7 @@ def _operational_gates() -> GateStatus:
 
 def _blocked_gates(qid: str, category: str) -> GateStatus:
     proposed = qid in WAVE_A_NO_RUNNER_TARGETS
+    execution_semantics_adjudicated = qid in {"X3", "EXEC1", "X6"}
     future = qid == "G3"
     runner_pass = qid in {"D1", "E2", "D6", "PORT-1"}
     report_pass = qid in {"D6", "PORT-1"} or (
@@ -591,7 +602,10 @@ def _blocked_gates(qid: str, category: str) -> GateStatus:
     )
     definition_pass = qid in {"D1", "E2"}
     identity = HUMAN_DECISION_REQUIRED if qid in {"E3", "S1"} else PASS
-    scientific = PASS if definition_pass or qid == "S7" else (HUMAN_DECISION_REQUIRED if proposed else FAIL)
+    if qid in {"X3", "EXEC1", "X6"}:
+        scientific = PASS
+    else:
+        scientific = PASS if definition_pass or qid == "S7" else (HUMAN_DECISION_REQUIRED if proposed else FAIL)
     evidence = FUTURE_EVIDENCE_REQUIRED if future else (PASS if qid in {"D1", "E2", "D6", "PORT-1"} else PARTIAL)
     governance = HUMAN_DECISION_REQUIRED if qid in {
         "P1", "R1", "R2", "R3", "R4", "R5", "L2", "L7",
@@ -600,15 +614,15 @@ def _blocked_gates(qid: str, category: str) -> GateStatus:
     return GateStatus(
         canonical_identity=identity,
         scientific_definition=scientific,
-        unit_of_analysis=PASS if qid in {"D1", "E2", "D6", "PORT-1"} else PARTIAL,
-        evidence_authority=evidence,
-        join_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} else PARTIAL,
-        epoch_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} else PARTIAL,
-        multi_account_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} else PARTIAL,
-        repeated_measure_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} else PARTIAL,
-        leakage_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} else PARTIAL,
-        metric_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} else PARTIAL,
-        sufficiency_contract=PASS if qid in {"D1", "E2"} else FAIL,
+        unit_of_analysis=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        evidence_authority=PASS if execution_semantics_adjudicated else evidence,
+        join_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        epoch_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        multi_account_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        repeated_measure_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        leakage_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        metric_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        sufficiency_contract=PASS if qid in {"D1", "E2"} or execution_semantics_adjudicated else FAIL,
         runner=PASS if runner_pass else FAIL,
         report_ownership=PASS if report_pass else FAIL,
         validity_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} else PARTIAL,

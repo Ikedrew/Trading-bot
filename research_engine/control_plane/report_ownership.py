@@ -36,6 +36,10 @@ s6_horizon_expectancy.json -> S6  (S5/S7/Q24/E3 can never own it)
 OWNERSHIP CONTRACT (Repair 2B.4)
 --------------------------------
 s7_strategy_horizon_interaction.json -> S7  (S5/S6/E3 can never own it)
+
+OWNERSHIP CONTRACT (Repair 4B.4)
+--------------------------------
+x6_execution_stability.json -> X6  (no other canonical question may own it)
 """
 from __future__ import annotations
 
@@ -84,6 +88,20 @@ REPAIR_2B4_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
     "s7_strategy_horizon_interaction.json": "S7",
 }
 
+REPAIR_4B2_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
+    "w4_x3_session_quality.json": "X3",
+}
+
+REPAIR_4B3_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
+    "w4_exec1_execution_failures.json": "EXEC1",
+}
+
+# Repair 4B.4 adjudicated ownership: X6 owns the HD08 execution-stability
+# report.  No other canonical question may claim it.
+REPAIR_4B4_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
+    "x6_execution_stability.json": "X6",
+}
+
 
 def _derive_adjudicated_owners() -> dict[str, str]:
     """Derive adjudicated report ownership from the frozen Wave-A5 findings."""
@@ -110,6 +128,9 @@ def _merge_adjudicated_owners() -> dict[str, str]:
         REPAIR_2B2_ADJUDICATED_REPORT_OWNERS,
         REPAIR_2B3_ADJUDICATED_REPORT_OWNERS,
         REPAIR_2B4_ADJUDICATED_REPORT_OWNERS,
+        REPAIR_4B2_ADJUDICATED_REPORT_OWNERS,
+        REPAIR_4B3_ADJUDICATED_REPORT_OWNERS,
+        REPAIR_4B4_ADJUDICATED_REPORT_OWNERS,
     ):
         for filename, owner in repair_owners.items():
             filename_key = _filename_key(filename)

@@ -648,6 +648,77 @@ def _execution_population(
     return rows, excluded, metrics
 
 
+def _exec1_population(
+    by_source: Mapping[str, DatasetSlice],
+) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
+    """Resolve EXEC1 through the same strict three-component research join."""
+    from research_engine.control_plane.execution_evidence import (
+        build_governed_execution_evidence,
+    )
+
+    evidence = build_governed_execution_evidence(
+        by_source["execution_results_v1"].current_records,
+        by_source["execution_context"].current_records,
+        by_source["decision_trace"].current_records,
+        require_decision_trace=True,
+    )
+    rows = []
+    for observation in evidence.observations:
+        rows.append({
+            **observation.result_fields,
+            "correlation_id": observation.cluster_id,
+            "result_ok": (
+                True if observation.status.value == "SUCCESS" else
+                False if observation.status.value == "FAILURE" else None
+            ),
+            "action": observation.action,
+            "spread_atr_ratio": observation.spread_atr_ratio,
+        })
+    excluded = sum(evidence.exclusion_accounting.values())
+    return rows, excluded, {
+        "governed_execution_results": evidence.account_result_count,
+        "distinct_correlation_id_decisions": evidence.distinct_decision_count,
+        "execution_exclusions": evidence.exclusion_accounting,
+    }
+
+
+def _x6_population(
+    by_source: Mapping[str, DatasetSlice],
+) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
+    """Resolve X6 through the same strict three-component research join."""
+    from research_engine.control_plane.execution_evidence import (
+        build_governed_execution_evidence,
+    )
+
+    evidence = build_governed_execution_evidence(
+        by_source["execution_results_v1"].current_records,
+        by_source["execution_context"].current_records,
+        by_source["decision_trace"].current_records,
+        require_decision_trace=True,
+    )
+    rows = []
+    for observation in evidence.observations:
+        rows.append({
+            **observation.result_fields,
+            "correlation_id": observation.cluster_id,
+            "result_ok": (
+                True if observation.status.value == "SUCCESS" else
+                False if observation.status.value == "FAILURE" else None
+            ),
+            "action": observation.action,
+            "spread_atr_ratio": observation.spread_atr_ratio,
+            "session_state": observation.session_state,
+            "volatility_state": observation.volatility_state,
+        })
+    excluded = sum(evidence.exclusion_accounting.values())
+    return rows, excluded, {
+        "governed_execution_results": evidence.account_result_count,
+        "distinct_correlation_id_decisions": evidence.distinct_decision_count,
+        "execution_exclusions": evidence.exclusion_accounting,
+    }
+
+
+
 def _management_outcome_for_action(
     action: dict[str, Any],
     indices: Mapping[str, Mapping[str, list[dict[str, Any]]]],
@@ -834,11 +905,9 @@ def _population(question: Any, slices: list[DatasetSlice]) -> tuple[list[dict[st
     if question.id in {"X1", "X3"}:
         return _execution_population(by_source)
     if question.id == "EXEC1":
-        rows = [
-            _normalise(row, "execution_results_v1")
-            for row in by_source["execution_results_v1"].current_records
-        ]
-        return rows, 0, metrics
+        return _exec1_population(by_source)
+    if question.id == "X6":
+        return _x6_population(by_source)
     if question.id == "PROT1":
         rows = [
             _normalise(row, "protection_audit_v1")

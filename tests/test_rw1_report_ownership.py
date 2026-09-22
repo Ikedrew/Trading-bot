@@ -676,13 +676,14 @@ def test_req24_rw1_modules_do_not_reach_into_data_collection_or_trading_code():
         forbidden = imported & _FORBIDDEN_IMPORT_ROOTS
         assert not forbidden, f"{module_path} imports {sorted(forbidden)}"
 
-    # The ownership contract is artifact-scoped only: it never mentions accounts,
-    # execution, collection, or MT5, so it cannot alter those behaviours.
+    # The ownership contract is artifact-scoped only.  Canonical report names may
+    # describe execution research, but the module must not reference runtime
+    # execution operations, collection, accounts, or MT5 behaviours.
     ownership_source = Path(
         "research_engine/control_plane/report_ownership.py"
     ).read_text(encoding="utf-8").lower()
     for forbidden_term in (
-        "mt5", "order_send", "account", "execution", "fanout",
+        "mt5", "order_send", "account", "fanout",
         "data_collection", "collector", "position", "trade",
     ):
         assert forbidden_term not in ownership_source, forbidden_term

@@ -249,20 +249,24 @@ def _check_statistical_validation(report: dict[str, Any], assessment: ValidityAs
         or overall.get("total_analysed")
         or 0
     )
-    if isinstance(sample_size, (int, float)) and sample_size >= MIN_SAMPLE_SIZE:
+    # EXEC1 has a frozen canonical 30-row clustered-analysis threshold.  Keep
+    # the generic 100/50 gates for every other experiment.
+    minimum = 30 if report.get("question_id") == "EXEC1" else MIN_SAMPLE_SIZE
+    relaxed_minimum = minimum if report.get("question_id") == "EXEC1" else MIN_SAMPLE_SIZE_RELAXED
+    if isinstance(sample_size, (int, float)) and sample_size >= minimum:
         assessment.gates_passed.append(GateResult(
-            "stats.sample_size", True, f"Sample size {int(sample_size)} >= {MIN_SAMPLE_SIZE}"
+            "stats.sample_size", True, f"Sample size {int(sample_size)} >= {minimum}"
         ))
-    elif isinstance(sample_size, (int, float)) and sample_size >= MIN_SAMPLE_SIZE_RELAXED:
+    elif isinstance(sample_size, (int, float)) and sample_size >= relaxed_minimum:
         assessment.gates_warned.append(GateResult(
             "stats.sample_size", False,
-            f"Sample size {int(sample_size)} is below {MIN_SAMPLE_SIZE} (marginal at {MIN_SAMPLE_SIZE_RELAXED}+)",
+            f"Sample size {int(sample_size)} is below {minimum} (marginal at {relaxed_minimum}+)",
             severity="WARNING",
         ))
     else:
         assessment.gates_failed.append(GateResult(
             "stats.sample_size", False,
-            f"Sample size {sample_size} is below minimum {MIN_SAMPLE_SIZE_RELAXED}",
+            f"Sample size {sample_size} is below minimum {relaxed_minimum}",
         ))
 
     # Gate 3b: Significance testing present (for comparative experiments)

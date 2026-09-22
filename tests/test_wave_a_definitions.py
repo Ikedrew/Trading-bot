@@ -125,7 +125,7 @@ def test_missing_epoch_requirement_detected():
 
 def test_missing_runner_is_info_not_error():
     definitions = build_definitions_from_registry(REGISTRY)
-    no_runner_ids = {"X6", "L6", "G1", "G2", "G3"}
+    no_runner_ids = {"L6", "G1", "G2", "G3"}
     for nid in sorted(no_runner_ids):
         d = definitions[nid]
         report = validate_definition(d)
@@ -153,7 +153,7 @@ def test_semantic_mismatch_detected():
     from research_engine.registry import REGISTRY_BY_ID
     from research_engine.registry.definition_validator import validate_runner_registry_threshold_alignment
     # D2, D3, D4 and D5 were repaired in RW3 and are no longer semantic mismatches.
-    mismatch_ids = {"X3", "L1", "L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8", "EXEC1"}
+    mismatch_ids = {"L1", "L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8"}
     for mid in mismatch_ids:
         q = REGISTRY_BY_ID[mid]
         report = validate_runner_registry_threshold_alignment(q, mid)
@@ -1236,10 +1236,11 @@ def test_wave_a41_scope_and_before_to_after_health_are_exact(monkeypatch):
         WAVE_A4_1_TARGETS | WAVE_A4_2_TARGETS | WAVE_A4_3_TARGETS
         | WAVE_A4_4_TARGETS
     )
-    assert WAVE_A4_RESOLVED == set()
-    assert WAVE_A4_UNRESOLVED == WAVE_A4_TARGETS
-    assert WAVE_A4_OVERRIDES == {}
-    assert set(WAVE_A4_UNRESOLVED_REASONS) == WAVE_A4_UNRESOLVED
+    assert WAVE_A4_RESOLVED == {"X3", "EXEC1"}
+    assert WAVE_A4_UNRESOLVED == WAVE_A4_TARGETS - {"X3", "EXEC1"}
+    assert set(WAVE_A4_OVERRIDES) == {"X3", "EXEC1"}
+    # Pre-repair mismatch narratives remain as historical design provenance.
+    assert set(WAVE_A4_UNRESOLVED_REASONS) == WAVE_A4_UNRESOLVED | {"X3", "EXEC1"}
 
     before = _build_pre_a4_definitions(monkeypatch)
     after = build_definitions_from_registry(REGISTRY)
@@ -1248,6 +1249,12 @@ def test_wave_a41_scope_and_before_to_after_health_are_exact(monkeypatch):
 
     for qid in WAVE_A4_1_TARGETS:
         if qid in {"M1", "M11"}:
+            assert get_question_health(before_reports[qid]) == "UNDER_SPECIFIED", qid
+            assert get_question_health(after_reports[qid]) == "VALID", qid
+            assert after[qid].hypothesis.strip(), qid
+            assert after[qid].population_definition.strip(), qid
+            assert after[qid].metric_definition.strip(), qid
+        elif qid in {"X3", "EXEC1"}:
             assert get_question_health(before_reports[qid]) == "UNDER_SPECIFIED", qid
             assert get_question_health(after_reports[qid]) == "VALID", qid
             assert after[qid].hypothesis.strip(), qid
@@ -1337,15 +1344,22 @@ def test_x3_preserves_account_grain_nested_session_and_measured_slippage():
     reason = WAVE_A4_UNRESOLVED_REASONS["X3"]
     assert "does not compute rejection or failure rates" in reason
     assert ">=30 matched observations" in reason
-    assert ">=10 observations" in reason
-    assert "descriptive account-execution slippage" in reason
+    assert ">=10 distinct correlation_id decisions" in reason
+    assert "Missing result_ok is excluded" in reason
+    assert "cluster-normalized weighted session model" in reason
+    assert "global Holm" in reason
+    assert "fully adjudicated" in reason
 
 
-def test_exec1_keeps_execution_results_primary_and_protection_separate():
+def test_exec1_uses_three_primary_authorities_and_keeps_protection_separate():
     from research_engine.registry import DataSource, REGISTRY_BY_ID
 
     question = REGISTRY_BY_ID["EXEC1"]
-    assert question.data_sources == (DataSource.EXECUTION_RESULTS,)
+    assert question.data_sources == (
+        DataSource.EXECUTION_RESULTS,
+        DataSource.EXECUTION_CONTEXT,
+        DataSource.DECISION_TRACE,
+    )
     assert DataSource.PROTECTION_AUDIT not in question.data_sources
     assert DataSource.EXECUTION_ATTEMPTS not in question.data_sources
 
@@ -1361,6 +1375,8 @@ def test_exec1_keeps_execution_results_primary_and_protection_separate():
     assert ">=30 result rows" in reason
     assert "per-symbol cells require >=10" in reason
     assert "descriptive execution-result reliability" in reason
+    assert "decision_trace_v1.action" in reason
+    assert "failed executions never receive synthetic R" in reason
 
 
 def test_wave_a41_preserves_prior_protected_later_and_all_non_targets(monkeypatch):
@@ -1369,6 +1385,8 @@ def test_wave_a41_preserves_prior_protected_later_and_all_non_targets(monkeypatc
 
     assert set(after) == set(before) == {question.id for question in REGISTRY}
     for qid in before:
+        if qid in {"X3", "EXEC1"}:
+            continue
         assert after[qid] is before[qid], qid
         assert after[qid].to_dict() == before[qid].to_dict(), qid
 
@@ -1497,11 +1515,13 @@ def test_wave_a42_preserves_a41_prior_waves_protected_and_later_targets(monkeypa
 
     assert set(after) == set(before) == {question.id for question in REGISTRY}
     for qid in before:
+        if qid in {"X3", "EXEC1"}:
+            continue
         assert after[qid] is before[qid], qid
         assert after[qid].to_dict() == before[qid].to_dict(), qid
 
     protected = {
-        "M1", "M11", "X3", "EXEC1", "M8", "OPP-1", "M3", "M7",
+        "M1", "M11", "M8", "OPP-1", "M3", "M7",
         "P1", "R3", "R4", "R5", "EX9", "D2", "X5",
     }
     later_a4 = {"L1", "L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8"}
@@ -1611,11 +1631,13 @@ def test_wave_a43_preserves_prior_protected_e2_d1_later_and_all_non_targets(monk
 
     assert set(after) == set(before) == {question.id for question in REGISTRY}
     for qid in before:
+        if qid in {"X3", "EXEC1"}:
+            continue
         assert after[qid] is before[qid], qid
         assert after[qid].to_dict() == before[qid].to_dict(), qid
 
     protected = {
-        "M1", "M11", "X3", "EXEC1", "D3", "D4", "D5", "M8",
+        "M1", "M11", "D3", "D4", "D5", "M8",
         "OPP-1", "M3", "M7", "P1", "R3", "R4", "R5", "EX9",
         "D2", "X5", "E2", "D1", "EX5", "EX6", "EX7", "EX8",
     }
@@ -1728,11 +1750,13 @@ def test_wave_a44_preserves_all_non_targets_prior_waves_and_protected(monkeypatc
 
     assert set(after) == set(before) == {question.id for question in REGISTRY}
     for qid in before:
+        if qid in {"X3", "EXEC1"}:
+            continue
         assert after[qid] is before[qid], qid
         assert after[qid].to_dict() == before[qid].to_dict(), qid
 
     protected = {
-        "M1", "M11", "X3", "EXEC1", "D3", "D4", "D5",
+        "M1", "M11", "D3", "D4", "D5",
         "L1", "L2", "L3", "L4", "M8", "OPP-1", "M3", "M7",
         "P1", "R3", "R4", "R5", "EX9", "D2", "X5", "EX1",
         "EX2", "EX10", "L7",
@@ -1871,6 +1895,8 @@ def test_wave_a5_is_metadata_only_and_preserves_every_definition():
     assert after is before
     assert set(after) == set(before)
     for qid in before:
+        if qid == "X3":
+            continue
         assert after[qid] is before[qid], qid
         assert after[qid].to_dict() == before[qid].to_dict(), qid
 
@@ -1914,8 +1940,8 @@ from research_engine.registry.wave_a_no_runner_definitions import (  # noqa: E40
 def test_no_runner_design_scope_and_metadata_are_deterministic():
     # Repairs 2B.2/2B.3/2B.4 implemented S5/S6/S7; frozen designs remain
     # authoritative historical contracts.
-    targets = {"X6", "L6", "G1", "G2", "G3"}
-    designs = targets | {"S5", "S6", "S7"}
+    targets = {"L6", "G1", "G2", "G3"}
+    designs = targets | {"S5", "S6", "S7", "X6"}
     assert WAVE_A_NO_RUNNER_TARGETS == targets
     assert set(WAVE_A_NO_RUNNER_DESIGNS) == designs
     for qid, design in WAVE_A_NO_RUNNER_DESIGNS.items():

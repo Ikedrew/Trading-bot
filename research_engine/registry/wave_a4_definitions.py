@@ -11,6 +11,10 @@ from __future__ import annotations
 from dataclasses import replace
 
 from research_engine.registry.research_question_models import (
+    CompletionRule,
+    EvidenceAuthority,
+    EvidenceProducer,
+    JoinContract,
     ResearchQuestionDefinition,
 )
 
@@ -33,11 +37,468 @@ WAVE_A4_4_RESEARCH_CLASSIFICATIONS = {
     "EX8": "descriptive",
 }
 
-# No A4.1 target can be closed without an approved semantic narrowing or a
-# runner/evidence repair.  The empty override set is intentional.
-WAVE_A4_RESOLVED = frozenset()
-WAVE_A4_UNRESOLVED = WAVE_A4_TARGETS
-WAVE_A4_OVERRIDES: dict[str, dict] = {}
+
+# Human-adjudicated execution-semantics contracts.  These are governance only:
+# the existing X3/EXEC1 runners remain scientifically mismatched and X6 remains
+# runnerless until RW7 implementation work is performed.
+EXECUTION_SHARED_EVIDENCE_CONTRACT = {
+    "definition_version": 1,
+    "status": "ADJUDICATED",
+    "current_selection_required": True,
+    "schema_and_stale_exclusion_required": True,
+    "execution_observation_grain": "one distinct account/broker execution result",
+    "shared_decision_cluster": "correlation_id",
+    "identity_requirements": (
+        "account-result identity",
+        "correlation_id",
+        "canonical_opportunity_id consistency where available",
+        "canonical-symbol consistency",
+    ),
+    "join_cardinality": "many account results to one context per correlation_id",
+    "ambiguous_or_conflicting_identity_policy": "fail closed",
+    "heuristic_joins_forbidden": (
+        "symbol-only",
+        "timestamp proximity",
+        "input ordering",
+        "account balance changes",
+    ),
+    "provenance_requirements": (
+        "exact analytical-subset attestation",
+        "deterministic digest",
+        "change sensitivity",
+        "canonical-order invariance",
+    ),
+    "evidence_limitations": (
+        "no universal normalized structured failure taxonomy",
+        "not every pre-broker failure is canonically observed",
+        "execution_results_v1 lacks authoritative partial-fill volume",
+        "broker order latency is not canonically recorded",
+        "failed executions have no realized trade outcome",
+        "trade_truth_v1 has no separate pre-cost and post-cost R authorities",
+    ),
+}
+
+
+X3_EXECUTION_SEMANTICS_ADJUDICATED_CONTRACT = {
+    "definition_version": 1,
+    "status": "ADJUDICATED",
+    "canonical_question": (
+        "Which trading sessions produce the best execution quality "
+        "(lowest slippage, fewest rejects)?"
+    ),
+    "research_classification": "bounded session-conditioned execution diagnostic",
+    "population": (
+        "Validity-approved CURRENT account execution results deterministically "
+        "joined to one CURRENT pre-execution execution_context record."
+    ),
+    "unit_of_analysis": "one distinct account/broker execution result",
+    "cluster_field": "correlation_id",
+    "multi_account_rule": (
+        "Multiple account executions from one decision are valid execution "
+        "observations but are not independent strategy opportunities."
+    ),
+    "session_authority": "execution_context.market_access.session_state",
+    "unknown_session_policy": "exclude from session claims and count explicitly",
+    "primary_endpoint": "producer-measured absolute slippage by session",
+    "primary_slippage_semantic": "measured_execution_slippage",
+    "reconstructed_slippage_allowed": False,
+    "secondary_endpoint": "explicit result_ok failure rate by session",
+    "rejection_denominator": (
+        "terminal account execution results with result_ok explicitly True or False"
+    ),
+    "rejection_numerator": "result_ok is explicitly False",
+    "success_definition": "result_ok is explicitly True",
+    "unknown_result_ok_policy": "exclude from denominator and count explicitly",
+    "missing_result_ok_defaults_to_failure": False,
+    "retcode_role": "descriptive only; does not override explicit result_ok",
+    "composite_score_allowed": False,
+    "overall_minimum_account_results": 30,
+    "session_minimum_account_results": 30,
+    "session_minimum_distinct_decisions": 10,
+    "primary_session_sufficiency": {
+        "minimum_measured_slippage_results": 30,
+        "minimum_distinct_decisions": 10,
+    },
+    "secondary_session_sufficiency": {
+        "minimum_known_result_ok_results": 30,
+        "minimum_distinct_decisions": 10,
+    },
+    "minimum_primary_sufficient_sessions": 2,
+    "endpoint_specific_sufficiency": True,
+    "completion_criterion": (
+        "Overall threshold passes; at least two sessions are sufficient for the "
+        "primary measured-slippage endpoint; rejection evidence for those sessions "
+        "is explicitly sufficient or insufficient; claims remain endpoint/session bounded."
+    ),
+    "primary_model": "absolute_measured_slippage ~ categorical session",
+    "model_coding": "deterministic reference coding",
+    "model_population": "primary-sufficient evaluated sessions only",
+    "cluster_normalized_weight": "w_di = 1 / k_d",
+    "cluster_total_weight": 1,
+    "cluster_weight_scope": (
+        "eligible account execution observations within the evaluated "
+        "primary-session population for correlation_id decision d"
+    ),
+    "cluster_covariance": "correlation_id clustered sandwich",
+    "bread": "A = X' W X",
+    "cluster_score": "s_d = sum_observations_in_d(w_di * x_di * residual_di)",
+    "covariance_formula": "A^-1 (sum_d s_d s_d') A^-1",
+    "naive_row_independent_covariance_allowed": False,
+    "global_test": "deterministic cluster-robust Wald-type joint session test",
+    "global_null": (
+        "Mean absolute measured slippage is equal across all sufficient "
+        "evaluated sessions; all non-reference session coefficients are jointly zero."
+    ),
+    "global_df": "S - 1",
+    "global_statistic": "b_session' V_session^-1 b_session",
+    "global_p_value": "upper-tail chi-square probability with S - 1 degrees of freedom",
+    "global_alpha": 0.05,
+    "global_null_result": "NO_RELIABLE_SESSION_SLIPPAGE_DIFFERENCE",
+    "global_null_can_complete": True,
+    "global_rejection_result": "RELIABLE_SESSION_SLIPPAGE_DIFFERENCE",
+    "followup_gate": "global p <= 0.05",
+    "followup_family": "all pairwise contrasts between sufficient primary-endpoint sessions",
+    "followup_count": "C(S, 2)",
+    "followup_contrast": "linear contrast of fitted session means from the primary model",
+    "contrast_variance": "c' V_cluster c",
+    "contrast_interval": "estimate +/- 1.96 * cluster-robust SE",
+    "contrast_p_value": "two-sided cluster-aware p-value",
+    "multiplicity_method": "Holm step-down family-wise error-rate control",
+    "multiplicity_family": "one global family containing all predeclared pairwise session contrasts",
+    "followup_alpha": 0.05,
+    "omnibus_in_holm_family": False,
+    "pairwise_claim_rule": "global p <= 0.05 and Holm-adjusted pairwise p <= 0.05",
+    "unique_best_rule": (
+        "Exactly one sufficient session has Holm-supported lower fitted mean absolute "
+        "measured slippage than every other sufficient evaluated session."
+    ),
+    "no_unique_best_result": "NO_UNIQUE_SUPPORTED_BEST",
+    "raw_mean_winner_allowed": False,
+    "canonical_order_breaks_scientific_ties": False,
+    "unique_best_required_for_completion": False,
+    "secondary_rejection_inference": "descriptive with cluster-aware uncertainty only",
+    "secondary_rejection_pairwise_tests_allowed": False,
+    "secondary_rejection_can_override_primary_best": False,
+    "session_endpoint_states": (
+        "PRIMARY_SUFFICIENT",
+        "REJECTION_SUFFICIENT",
+        "BOTH",
+        "INSUFFICIENT",
+    ),
+    "completed_results": (
+        "RELIABLE_SESSION_SLIPPAGE_DIFFERENCE",
+        "NO_RELIABLE_SESSION_SLIPPAGE_DIFFERENCE",
+    ),
+    "insufficient_result": "INSUFFICIENT_DATA / WAITING_DATA",
+    "claim_boundary": (
+        "Claims apply only to sufficient evaluated sessions, the CURRENT evidence "
+        "period/population, and the measured-slippage primary endpoint; lower "
+        "slippage does not establish strategy expectancy or profitability."
+    ),
+    "descriptive_metrics_authorize_universal_best_session_claim": False,
+    "report_identity": "w4_x3_session_quality.json",
+    "structurally_operational": True,
+}
+
+
+EXEC1_EXECUTION_SEMANTICS_ADJUDICATED_CONTRACT = {
+    "definition_version": 1,
+    "status": "ADJUDICATED",
+    "exposure_contract_status": "ADJUDICATED",
+    "ready_for_implementation": True,
+    "canonical_question": (
+        "Do execution failures or adverse conditions degrade otherwise valid opportunities?"
+    ),
+    "research_classification": "governed associative execution-realization degradation",
+    "causal_claim_allowed": False,
+    "otherwise_valid_authority": "decision_trace_v1.action",
+    "otherwise_valid_value": "EXECUTE",
+    "otherwise_valid_consistency": (
+        "The pre-execution decision must be an authorized EXECUTE decision; "
+        "terminal_stage/lineage consistency must pass before account realization."
+    ),
+    "post_outcome_validity_inputs_forbidden": True,
+    "required_evidence_components": (
+        "CURRENT execution_results_v1",
+        "CURRENT execution_context",
+        "CURRENT decision_trace_v1",
+    ),
+    "optional_secondary_evidence": "CURRENT trade_truth_v1",
+    "unit_of_analysis": "one distinct account/broker terminal execution result",
+    "strategy_opportunity_unit": "one canonical decision/opportunity",
+    "cluster_field": "correlation_id",
+    "successful_execution": "result_ok is explicitly True",
+    "failed_execution": "result_ok is explicitly False",
+    "unknown_execution_status": "missing or ambiguous result_ok",
+    "unknown_status_policy": "exclude from success-versus-failure inference and report separately",
+    "failure_taxonomy_required": False,
+    "primary_estimand": "opportunity-level execution realization degradation",
+    "primary_outcome": "successful execution realization at account-result grain",
+    "operational_subquestion": (
+        "Among otherwise-valid EXECUTE decisions reaching account execution, is "
+        "greater pre-execution spread burden associated with a lower probability "
+        "of successful execution realization?"
+    ),
+    "primary_exposure_authority": (
+        "execution_context.market_access.spread_atr_ratio"
+    ),
+    "primary_exposure_temporal_class": "PRE_EXECUTION",
+    "primary_exposure_validity": (
+        "present, numeric, finite, and non-negative"
+    ),
+    "invalid_exposure_policy": "exclude from primary inference and count explicitly",
+    "primary_exposure_treatment": "continuous",
+    "raw_spread_substitution_allowed": False,
+    "spread_reconstruction_allowed": False,
+    "x6_spread_bands_used": False,
+    "outcome_selected_cutpoints_allowed": False,
+    "exposure_rationale": (
+        "spread_atr_ratio expresses pre-execution spread burden relative to "
+        "contemporaneous market movement scale and is more comparable across "
+        "heterogeneous canonical instruments than raw price-unit spread"
+    ),
+    "primary_outcome_encoding": {
+        "SUCCESS": 1,
+        "FAILURE": 0,
+        "UNKNOWN": "excluded from primary inference and counted",
+    },
+    "primary_model_family": "cluster-weighted linear probability model",
+    "primary_model": "successful_execution ~ intercept + spread_atr_ratio",
+    "additional_covariates_allowed": False,
+    "interactions_allowed": False,
+    "nonlinear_terms_allowed": False,
+    "logistic_model_allowed": False,
+    "primary_coefficient": "beta_spread",
+    "primary_estimand_interpretation": (
+        "change in successful-execution realization probability associated with "
+        "a one-unit increase in pre-execution spread_atr_ratio within the evaluated "
+        "CURRENT EXECUTE population"
+    ),
+    "descriptive_effect_per_0_10": "0.10 * beta_spread",
+    "sample_standardization_allowed": False,
+    "cluster_normalized_weight": "w_di = 1 / k_d",
+    "cluster_total_weight": 1,
+    "weighted_estimator": "beta = (X' W X)^-1 X' W y",
+    "design_row": "x_di = [1, spread_atr_ratio_di]",
+    "cluster_covariance": "correlation_id clustered sandwich",
+    "bread": "A = X' W X",
+    "cluster_score": "s_d = sum_rows_in_d(w_di * x_di * residual_di)",
+    "covariance_formula": "A^-1 (sum_d s_d s_d') A^-1",
+    "naive_row_independent_covariance_allowed": False,
+    "primary_null": "H0: beta_spread = 0",
+    "primary_test_sidedness": "two-sided",
+    "primary_alpha": 0.05,
+    "primary_interval": "beta_spread +/- 1.96 * cluster-robust SE",
+    "adverse_direction": "beta_spread < 0",
+    "favourable_direction": "beta_spread > 0",
+    "classification_rules": {
+        "RELIABLE_ADVERSE_EXECUTION_ASSOCIATION": (
+            "all gates pass; two-sided p <= 0.05; beta_spread < 0; 95% interval below 0"
+        ),
+        "RELIABLE_FAVOURABLE_EXECUTION_ASSOCIATION": (
+            "all gates pass; two-sided p <= 0.05; beta_spread > 0; 95% interval above 0"
+        ),
+        "NO_RELIABLE_ASSOCIATION": (
+            "all gates pass; two-sided p > 0.05 or 95% interval includes 0"
+        ),
+    },
+    "completed_results": (
+        "RELIABLE_ADVERSE_EXECUTION_ASSOCIATION",
+        "RELIABLE_FAVOURABLE_EXECUTION_ASSOCIATION",
+        "NO_RELIABLE_ASSOCIATION",
+    ),
+    "interpretation": (
+        "Execution conditions are associatively related to reduced successful "
+        "realization of otherwise-valid opportunities."
+    ),
+    "synthetic_failed_trade_r_allowed": False,
+    "descriptive_failure_counts_are_inferential_exposure": False,
+    "measured_slippage_primary_result_ok_exposure_allowed": False,
+    "secondary_analysis": (
+        "For successful executions only, associate producer-measured adverse "
+        "execution conditions with canonical realized R/net outcome from CURRENT "
+        "trade_truth_v1 using an exact account-level identity join."
+    ),
+    "secondary_analysis_optional_for_completion": True,
+    "secondary_model_status": "not frozen; descriptive or INSUFFICIENT only",
+    "secondary_join_heuristics_allowed": False,
+    "overall_minimum_terminal_results": 30,
+    "overall_minimum_distinct_decisions": 10,
+    "subgroup_minimum_account_results": 10,
+    "subgroup_minimum_distinct_decisions": 5,
+    "unknown_status_counts_toward_comparative_sufficiency": False,
+    "minimum_distinct_exposure_values": 2,
+    "full_rank_design_required": True,
+    "outcome_variation_required": True,
+    "constant_outcome_classification": "INSUFFICIENT_EVIDENCE",
+    "rank_failure_classification": "INSUFFICIENT_EVIDENCE",
+    "null_result_can_complete": True,
+    "favourable_result_can_complete": True,
+    "adverse_result_can_complete": True,
+    "primary_analytical_population_requirements": (
+        "CURRENT governed execution result",
+        "valid account execution observation identity and correlation_id",
+        "strict matched CURRENT execution_context",
+        "strict matched CURRENT decision_trace_v1",
+        "decision_trace_v1.action == EXECUTE",
+        "result_ok explicitly True or False",
+        "finite non-negative spread_atr_ratio",
+        "no identity conflict",
+    ),
+    "primary_provenance": (
+        "exact CURRENT results + context + decision-trace analytical subset; "
+        "EXECUTE-only, known-status, valid-spread rows; deterministic, reorder "
+        "invariant, change sensitive, and fail closed"
+    ),
+    "claim_boundary": (
+        "Within the evaluated CURRENT otherwise-valid EXECUTE population, report "
+        "association only; do not claim spread caused failures, failed executions "
+        "would have been profitable, or execution reduced strategy expectancy"
+    ),
+    "completion_criterion": (
+        "All three CURRENT components are deterministically linked; >=30 eligible "
+        "known-status rows and >=10 EXECUTE decisions exist; spread and outcome vary; "
+        "the weighted design and clustered covariance are estimable; exact provenance "
+        "passes. Any declared adverse, favourable, or null result may COMPLETE."
+    ),
+    "insufficient_result": "WAITING_DATA / INSUFFICIENT_DATA",
+    "report_identity": "w4_exec1_execution_failures.json",
+    "structurally_operational": True,
+}
+
+WAVE_A4_SEMANTICALLY_ADJUDICATED = frozenset({"X3", "EXEC1"})
+
+# Repairs 4B.2/4B.3 close X3 and EXEC1 while retaining their frozen assessments
+# below as design provenance.  The other A4 targets remain unresolved.
+WAVE_A4_RESOLVED = frozenset({"X3", "EXEC1"})
+WAVE_A4_UNRESOLVED = WAVE_A4_TARGETS - WAVE_A4_RESOLVED
+WAVE_A4_OVERRIDES: dict[str, dict] = {
+    "X3": {
+        "hypothesis": (
+            "Mean producer-measured absolute execution slippage differs across "
+            "sufficient CURRENT execution-context sessions."
+        ),
+        "null_hypothesis": (
+            "All sufficient evaluated sessions have equal mean producer-measured "
+            "absolute execution slippage."
+        ),
+        "population_definition": (
+            "Validity-approved CURRENT execution_results_v1 account/broker results "
+            "strictly joined by correlation_id to one CURRENT execution_context; "
+            "fan-out children remain observations and correlation_id is the cluster."
+        ),
+        "metric_definition": (
+            "Primary: cluster-normalized weighted categorical-session model of "
+            "absolute producer-measured slippage, one cluster-robust Wald omnibus, "
+            "and omnibus-gated global Holm pairwise contrasts. Secondary: explicit "
+            "result_ok failure rate by session with correlation-clustered descriptive "
+            "uncertainty. COMPLETE requires >=30 matched results, >=2 sessions each "
+            "with >=30 primary rows and >=10 decisions, valid covariance/provenance; "
+            "a reliable or valid null result can complete."
+        ),
+        "evidence_authorities": (
+            EvidenceAuthority(
+                dataset="execution_results_v1",
+                schema_version="execution_results_v1",
+                producer=EvidenceProducer.EXECUTION_RESULTS,
+                field_path="slippage + slippage_semantic + result_ok",
+                semantic_meaning=(
+                    "account-result execution status and producer-measured execution slippage"
+                ),
+            ),
+            EvidenceAuthority(
+                dataset="execution_context",
+                schema_version="execution_context_v1",
+                field_path="market_access.session_state",
+                semantic_meaning="authoritative pre-execution session",
+            ),
+        ),
+        "join_contract": JoinContract(
+            join_keys=("correlation_id",),
+            cardinality="many_to_one",
+            conflict_policy="reject",
+            description=(
+                "Many distinct account execution results join one unambiguous context; "
+                "opportunity, decision and canonical-symbol conflicts fail closed."
+            ),
+        ),
+        "epoch_requirement": "CURRENT",
+        "minimum_sample": 30,
+        "completion_rule": CompletionRule(
+            rule_type="clustered_session_execution_quality",
+            threshold=30,
+            description=(
+                "COMPLETE after >=30 governed matched results, at least two primary-"
+                "sufficient 30-result/10-decision sessions, estimable cluster-robust "
+                "Wald inference, secondary rejection accounting, and CURRENT exact-"
+                "subset provenance; either reliable difference or valid null completes."
+            ),
+        ),
+    },
+    "EXEC1": {
+        "hypothesis": (
+            "Within otherwise-valid CURRENT EXECUTE decisions, continuous pre-"
+            "execution spread_atr_ratio is associated with successful account-level "
+            "execution realization."
+        ),
+        "null_hypothesis": "beta_spread = 0 in the weighted linear probability model.",
+        "population_definition": (
+            "CURRENT execution_results_v1 account observations strictly joined by "
+            "correlation_id to one CURRENT execution_context and one CURRENT "
+            "decision_trace_v1 with action exactly EXECUTE; known status and finite "
+            "non-negative spread_atr_ratio are required."
+        ),
+        "metric_definition": (
+            "Cluster-normalized weighted linear probability model successful_execution "
+            "~ intercept + spread_atr_ratio with correlation_id sandwich covariance. "
+            "COMPLETE requires >=30 analytical rows, >=10 decisions, exposure and "
+            "outcome variation, estimability, and exact CURRENT provenance; adverse, "
+            "favourable, and valid-null classifications may complete."
+        ),
+        "evidence_authorities": (
+            EvidenceAuthority(
+                dataset="execution_results_v1",
+                schema_version="execution_results_v1",
+                producer=EvidenceProducer.EXECUTION_RESULTS,
+                field_path="result_ok + retcode + account execution identity",
+                semantic_meaning="explicit terminal account execution realization",
+            ),
+            EvidenceAuthority(
+                dataset="execution_context",
+                schema_version="execution_context_v1",
+                field_path="market_access.spread_atr_ratio",
+                semantic_meaning="continuous authoritative pre-execution spread burden",
+            ),
+            EvidenceAuthority(
+                dataset="decision_trace_v1",
+                schema_version="decision_trace_v1",
+                field_path="action",
+                semantic_meaning="authoritative pre-execution EXECUTE boundary",
+            ),
+        ),
+        "join_contract": JoinContract(
+            join_keys=("correlation_id",),
+            cardinality="many_to_one",
+            conflict_policy="reject",
+            description=(
+                "Many distinct account results join one unambiguous context and one "
+                "authoritative decision trace; opportunity, decision and canonical-"
+                "symbol conflicts fail closed."
+            ),
+        ),
+        "epoch_requirement": "CURRENT",
+        "minimum_sample": 30,
+        "completion_rule": CompletionRule(
+            rule_type="clustered_execution_realization_association",
+            threshold=30,
+            description=(
+                "COMPLETE after the 30-row/10-decision, exposure/outcome variation, "
+                "weighted-design, clustered-covariance, and exact-provenance gates; "
+                "adverse, favourable, or valid-null association may complete."
+            ),
+        ),
+    },
+}
 
 WAVE_A4_UNRESOLVED_REASONS = {
     "M1": (
@@ -85,8 +546,10 @@ WAVE_A4_UNRESOLVED_REASONS = {
         "or an approved observational narrowing. Left fail-closed."
     ),
     "X3": (
-        "Registry intent asks which sessions have lowest slippage and fewest "
-        "rejects. execution_protection_research.run_x3 analyses only slippage; "
+        "The human-adjudicated X3 contract preserves the registry question and "
+        "defines two separate endpoints: producer-measured absolute slippage is "
+        "primary and explicit-result_ok rejection rate is secondary; no composite "
+        "score is permitted. execution_protection_research.run_x3 analyses only slippage; "
         "it does not compute rejection or failure rates from result_ok/retcode "
         "or execution_attempts. Its session authority is explicitly the nested "
         "execution_context.market_access.session_state field, flattened only by "
@@ -98,18 +561,21 @@ WAVE_A4_UNRESOLVED_REASONS = {
         "whose producer marks slippage_semantic as "
         "measured_execution_slippage are analysed; resolver-derived requested-"
         "versus-fill compatibility values and missing slippage are excluded. The "
-        "registry and runner both require >=30 matched observations, while the "
-        "runner reports only session cells with >=10 observations and declares "
-        "COMPLETE at the overall threshold even if no session cell survives. "
-        "This coherently supports descriptive account-execution slippage by "
-        "session, but not the registry's combined slippage-and-rejection claim. "
-        "Repair requires approved narrowing to measured-slippage profiling or a "
-        "defined account-level rejection population/metric and aligned cell "
-        "completion rule. Left fail-closed."
+        "approved contract requires >=30 matched observations overall, >=30 "
+        "eligible account results and >=10 distinct correlation_id decisions per "
+        "claimable session, and at least two primary-slippage-sufficient sessions. "
+        "Missing result_ok is excluded and counted, never defaulted to failure. "
+        "The runner still declares COMPLETE at the old overall threshold and does "
+        "not implement endpoint-specific sufficiency or the adjudicated cluster-normalized "
+        "weighted session model, clustered Wald omnibus, omnibus-gated global Holm "
+        "pairwise family, or unique supported-best rule. The scientific definition is "
+        "fully adjudicated, but the runner remains fail-closed pending repair."
     ),
     "EXEC1": (
-        "Registry intent asks whether execution failures or adverse conditions "
-        "degrade otherwise valid opportunities. The canonical resolver correctly "
+        "The human-adjudicated EXEC1 contract preserves the associative question "
+        "of whether failures/adverse conditions degrade otherwise-valid opportunities. "
+        "Otherwise-valid means decision_trace_v1.action is the authorized EXECUTE "
+        "value before account realization. The canonical resolver correctly "
         "uses CURRENT execution_results_v1 as the primary population, and "
         "execution_protection_research.run_exec1 likewise loads execution "
         "results; it does not use protection_audit or treat execution_attempts "
@@ -125,12 +591,14 @@ WAVE_A4_UNRESOLVED_REASONS = {
         "opportunity or outcome evidence is joined, so the runner cannot measure "
         "degradation of otherwise valid opportunities or adverse-condition "
         "effects. The registry and runner require >=30 result rows; per-symbol "
-        "cells require >=10. This supports descriptive execution-result "
-        "reliability only, not associative degradation or counterfactual trade "
-        "impact. Repair requires an explicit account-result identity/failure "
-        "contract, correct context metrics, deterministic linkage to a defined "
-        "otherwise-valid opportunity population and outcome metric, and an "
-        "approved descriptive narrowing or association design. Left fail-closed."
+        "cells require >=10. This supports descriptive execution-result reliability "
+        "only, not the approved opportunity-level successful-realization estimand. "
+        "The approved minimums are >=30 terminal results and >=10 distinct decisions "
+        "overall, and >=10 results plus >=5 decisions per inferential subgroup. "
+        "Missing result_ok is excluded, and failed executions never receive synthetic "
+        "R. A successful-execution-only CURRENT trade_truth_v1 outcome association is "
+        "optional and cannot block primary completion. The scientific definition is "
+        "adjudicated, but the existing runner remains fail-closed pending repair."
     ),
     "D3": (
         "Registry intent asks whether enabling the negative-EV execution-policy "
@@ -429,7 +897,7 @@ WAVE_A4_UNRESOLVED_REASONS = {
 def apply_wave_a4_definitions(
     definitions: dict[str, ResearchQuestionDefinition],
 ) -> dict[str, ResearchQuestionDefinition]:
-    """Apply only evidence-backed A4 overrides; current A4 tranches have none."""
+    """Apply evidence-backed A4 overrides while retaining frozen design history."""
     result = dict(definitions)
     for qid, overrides in WAVE_A4_OVERRIDES.items():
         result[qid] = replace(result[qid], **overrides)

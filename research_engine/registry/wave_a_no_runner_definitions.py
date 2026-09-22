@@ -99,9 +99,10 @@ class NoRunnerDesign:
         return asdict(self)
 
 
-# Repairs 2B.2/2B.3 implemented S5 and S6.  Their frozen design records below
-# remain the authoritative HD06 scientific contracts; S7 remains unimplemented.
-WAVE_A_NO_RUNNER_TARGETS = frozenset({"X6", "L6", "G1", "G2", "G3"})
+# Repairs 2B.2/2B.3/2B.4 implemented S5/S6/S7 and Repair 4B.4 implemented X6.
+# Their frozen design records below remain the authoritative HD06/HD08
+# scientific contracts; L6/G1/G2/G3 remain unimplemented.
+WAVE_A_NO_RUNNER_TARGETS = frozenset({"L6", "G1", "G2", "G3"})
 
 # Human-adjudicated HD07 scientific contract.  This is definition/governance
 # authority only: it does not declare a runner, active report, or operational
@@ -208,6 +209,72 @@ S7_HD07_ADJUDICATED_CONTRACT: dict[str, Any] = {
     "proposed_module": "research_engine.experiments.strategy_horizon_interaction",
     "proposed_function": "run_s7",
     "report_identity": "s7_strategy_horizon_interaction.json",
+}
+
+
+# HD08 authority for X6, implemented by Repair 4B.4 exactly from this contract:
+# the registry now declares research_engine.experiments.execution_stability.run_x6
+# as the canonical X6 runner and x6_execution_stability.json as its report.
+X6_HD08_ADJUDICATED_CONTRACT: dict[str, Any] = {
+    "definition_version": 1,
+    "status": "ADJUDICATED",
+    "implementation_blocked_until_decision": False,
+    "canonical_question": (
+        "Under what conditions (symbol, session, spread, volatility) does "
+        "execution quality degrade?"
+    ),
+    "research_classification": "descriptive associative execution diagnostics",
+    "evidence_components": (
+        "CURRENT execution_results_v1",
+        "CURRENT execution_context",
+        "CURRENT decision_trace_v1",
+    ),
+    "unit_of_analysis": "one distinct account execution result",
+    "cluster_field": "correlation_id",
+    "primary_endpoint": "producer-measured absolute slippage",
+    "primary_slippage_semantic": "measured_execution_slippage",
+    "secondary_endpoints": ("explicit result_ok failure rate", "retcode mix"),
+    "composite_endpoint_allowed": False,
+    "spread_authority": "execution_context.market_access.spread_atr_ratio",
+    "spread_bands": {
+        "LOW": "spread_atr_ratio < 0.10",
+        "NORMAL": "0.10 <= spread_atr_ratio < 0.25",
+        "HIGH": "spread_atr_ratio >= 0.25",
+        "MISSING_INVALID": "missing/non-finite/invalid spread_atr_ratio",
+    },
+    "raw_spread_substitution_allowed": False,
+    "raw_spread_descriptive_only": True,
+    "volatility_authority": "decision_trace_v1.v10_market_state.regime.volatility_state",
+    "volatility_authority_rationale": (
+        "The V10 RegimeState is the canonical classified regime/volatility layer "
+        "consumed by the horizon engine; h4.volatility_state is its upstream observation."
+    ),
+    "future_or_outcome_derived_volatility_allowed": False,
+    "condition_dimensions": (
+        "canonical symbol",
+        "session",
+        "spread band",
+        "pre-decision volatility band",
+    ),
+    "dimension_analysis": "individual dimensions; no unrestricted combinatorial interactions",
+    "minimum_matched_account_results": 100,
+    "minimum_distinct_decisions": 30,
+    "cell_minimum_account_results": 30,
+    "cell_minimum_distinct_decisions": 10,
+    "minimum_comparable_sufficient_cells_per_claimed_dimension": 2,
+    "sparse_dimension_policy": "report explicit INSUFFICIENT status; never omit silently",
+    "completion_criterion": (
+        "All three CURRENT components and strict joins are valid; overall result and "
+        "decision thresholds pass; measured slippage is estimable; every declared "
+        "dimension is sufficient or explicitly insufficient; and at least one dimension "
+        "contains two comparable sufficient cells."
+    ),
+    "null_result_can_complete": True,
+    "insufficient_overall_result": "WAITING_DATA / INSUFFICIENT_DATA",
+    "proposed_module": "research_engine.experiments.execution_stability",
+    "proposed_function": "run_x6",
+    "report_identity": "x6_execution_stability.json",
+    "structurally_operational": True,
 }
 
 _SHADOW_EVIDENCE = (
@@ -448,9 +515,10 @@ WAVE_A_NO_RUNNER_DESIGNS: dict[str, NoRunnerDesign] = {
         ),
         unit_of_analysis="One account execution result; multiple account results from one decision are valid execution observations but remain clustered by correlation_id.",
         metric_definition=(
-            "Primary: producer-measured execution slippage distribution. Secondary: result_ok/failure rate and retcode "
-            "mix; latency only where directly measured. Compare by canonical symbol, account/broker, session, spread "
-            "bands, and pre-decision volatility state without causal claims."
+            "Primary: producer-measured absolute execution slippage. Secondary: explicit result_ok failure rate and "
+            "retcode mix; no composite endpoint. Compare individual dimensions for canonical symbol, "
+            "session, execution_context spread_atr_ratio bands LOW <0.10, NORMAL [0.10,0.25), HIGH >=0.25, and "
+            "decision_trace_v1.v10_market_state.regime.volatility_state without causal claims or unrestricted interactions."
         ),
         evidence_authority=(
             ProposedEvidence(
@@ -467,8 +535,11 @@ WAVE_A_NO_RUNNER_DESIGNS: dict[str, NoRunnerDesign] = {
             ),
             ProposedEvidence(
                 dataset="decision_trace_v1",
-                fields=("correlation_id", "canonical_opportunity_id", "v10_market_state.h4.volatility_state", "v10_market_state.regime.volatility_state"),
-                semantic_authority="Pre-decision volatility classification; never an outcome-derived volatility label.",
+                fields=("correlation_id", "canonical_opportunity_id", "v10_market_state.regime.volatility_state"),
+                semantic_authority=(
+                    "Canonical pre-decision classified regime volatility; h4.volatility_state is the upstream "
+                    "observation and never takes precedence over the classified RegimeState field."
+                ),
                 gap_classification=ALREADY_AVAILABLE,
             ),
         ),
@@ -477,26 +548,27 @@ WAVE_A_NO_RUNNER_DESIGNS: dict[str, NoRunnerDesign] = {
             ProposedJoin("execution_context", "decision_trace_v1", ("correlation_id",), "one_to_one", "reject missing, duplicate, or symbol/root conflict", "attach pre-decision volatility state"),
         ),
         epoch_requirement="All joined records must be validity-approved CURRENT and schema-compatible; reject mixed epochs.",
-        minimum_sample="Proposed: 100 matched account execution results overall from at least 30 distinct correlation_ids.",
-        cell_sufficiency="Proposed: >=30 results and >=10 distinct decisions per reported categorical/bin cell; cluster by correlation_id.",
+        minimum_sample="100 matched account execution results overall from at least 30 distinct correlation_ids.",
+        cell_sufficiency=">=30 results and >=10 distinct decisions per reported categorical/bin cell; cluster by correlation_id.",
         completion_criterion=(
             "All declared dimensions have either a sufficient estimate or explicit INSUFFICIENT status, join/exclusion "
-            "rates are reported, and at least two sufficient condition cells exist for comparison."
+            "rates are reported, at least one dimension has two comparable sufficient cells, and a valid no-degradation "
+            "result may complete without a positive finding."
         ),
         dependencies=("canonical execution-result/context join helper", "producer-measured slippage semantic", "pre-decision volatility authority"),
         runner_specification=RunnerSpecification(
             proposed_module="research_engine.experiments.execution_stability",
             proposed_function="run_x6",
             inputs=("CURRENT execution_results_v1", "CURRENT execution_context", "CURRENT decision_trace_v1"),
-            filters=("valid producer-measured result fields", "unique result grain", "unambiguous correlation join", "symbol consistency"),
+            filters=("valid producer-measured result fields", "unique result grain", "unambiguous correlation join", "symbol consistency", "spread_atr_ratio bands only; no raw-spread substitution"),
             unit_of_analysis="account execution result clustered by canonical decision correlation_id",
             joins=("results-to-context correlation join", "context-to-trace correlation join"),
-            grouping=("canonical symbol", "account/broker", "session", "spread band", "pre-decision volatility state"),
-            metrics=("measured slippage distribution", "failure rate", "retcode mix", "measured latency where authoritative"),
+            grouping=("canonical symbol", "session", "spread_atr_ratio band", "decision_trace_v1.v10_market_state.regime.volatility_state"),
+            metrics=("producer-measured absolute slippage", "explicit result_ok failure rate", "retcode mix"),
             sufficiency=">=100 results, >=30 decisions; >=30 results and >=10 decisions/cell",
             output="condition tables, uncertainty, join quality, exclusions and cluster counts",
-            completion_rule="at least two comparable sufficient cells and exhaustive status for all declared dimensions",
-            fail_closed_conditions=("derived/unknown slippage semantic", "ambiguous join", "symbol conflict", "post-outcome volatility", "mixed epoch"),
+            completion_rule="at least one dimension with two comparable sufficient cells and exhaustive status for all declared dimensions; a valid null may complete",
+            fail_closed_conditions=("derived/unknown slippage semantic", "ambiguous join", "symbol conflict", "post-outcome volatility", "mixed epoch", "missing spread_atr_ratio cannot fall back to raw spread"),
         ),
         report_identity="x6_execution_stability.json",
         multi_account_rule=(
@@ -509,11 +581,11 @@ WAVE_A_NO_RUNNER_DESIGNS: dict[str, NoRunnerDesign] = {
         existing_evidence_sufficient_in_principle=True,
         implementation_requirements=(
             "Replace the future X6 authority design's non-V1 slippage_journal label with execution_results_v1; this is registry/runner design repair, not a V1 defect.",
-            "Build the two-stage strict join, condition bins, clustered analysis, readiness rules, and unique report.",
+            "Build the two-stage strict join, adjudicated spread_atr_ratio bins, individually analysed condition dimensions, clustered analysis, readiness rules, and unique report.",
             "Accept only producer-measured slippage and explicitly map broker symbol to canonical symbol with conflict rejection.",
         ),
         human_semantic_decisions=(
-            "HUMAN_SEMANTIC_DECISION_REQUIRED: choose the primary execution-quality endpoint, spread binning, volatility field precedence, and thresholds.",
+            "ADJUDICATED HD08: use X6_HD08_ADJUDICATED_CONTRACT; implementation is no longer decision-blocked.",
         ),
     ),
     "L6": NoRunnerDesign(

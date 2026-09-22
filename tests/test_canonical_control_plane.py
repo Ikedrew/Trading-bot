@@ -54,7 +54,7 @@ def test_questions_without_runner_are_not_dropped(tmp_path):
     states = build_all_question_states(reports_dir=tmp_path, evidence_source={})
     no_runner = {state.question_id for state in states if state.runner_status == RunnerStatus.NO_RUNNER}
 
-    assert no_runner == {"X6", "L6", "G1", "G2", "G3"}
+    assert no_runner == {"L6", "G1", "G2", "G3"}
     assert all(state.state_status == "NO_RUNNER" for state in states if state.question_id in no_runner)
 
 

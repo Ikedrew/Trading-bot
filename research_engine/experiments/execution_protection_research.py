@@ -571,80 +571,16 @@ def run_x2() -> dict[str, Any]:
 # X3 — Session execution quality
 # ============================================================
 
-def run_x3() -> dict[str, Any]:
-    res = _load_results()
-    ctx = _load_context()
-    if not ctx:
-        return _report(
-            question_id="X3", status="INSUFFICIENT_DATA",
-            overall={"n": 0, "detail": "No execution_context records found."},
-            confidence="INSUFFICIENT_DATA",
-            dataset={"sample_size": 0, "source": "execution_context_v1"},
-            recommendation="INSUFFICIENT_DATA",
-            assumptions=["ExecutionContext is PRE-EXECUTION."],
-        )
+def run_x3(
+    execution_results: list[dict[str, Any]] | None = None,
+    execution_contexts: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Canonical X3 entry point over the shared governed evidence foundation."""
+    from research_engine.experiments.x3_session_quality import build_x3_report
 
-    joined = join_context_to_results(res, ctx)
-    matched = [
-        pair for pair in joined["matched"]
-        if pair["result"].get("slippage_semantic") == _MEASURED
-        and pair["result"].get("slippage") is not None
-        and math.isfinite(float(pair["result"]["slippage"]))
-    ]
-    n = len(matched)
-    if n < _MIN_SAMPLE:
-        return _report(
-            question_id="X3", status="INSUFFICIENT_DATA",
-            overall={"n": n, "matched": n,
-                     "results_without_context": joined["results_without_context"],
-                     "contexts_without_results": joined["contexts_without_results"],
-                     "ambiguous": joined["ambiguous"]},
-            confidence="LOW" if n else "INSUFFICIENT_DATA",
-            dataset={"sample_size": n,
-                     "source": "execution_context_v1 + execution_results_v1"},
-            recommendation="INSUFFICIENT_DATA",
-            assumptions=["Matched on correlation_id (deterministic)."],
-        )
-
-    by_session: dict[str, list[float]] = defaultdict(list)
-    for pair in matched:
-        sess = pair["context"].get("session_state", "UNKNOWN") or "UNKNOWN"
-        slp = pair["result"].get("slippage")
-        if slp is not None and math.isfinite(float(slp)):
-            by_session[sess].append(float(slp))
-
-    overall: dict[str, Any] = {
-        "n": n, "matched": n,
-        "results_without_context": joined["results_without_context"],
-        "contexts_without_results": joined["contexts_without_results"],
-        "ambiguous": joined["ambiguous"],
-    }
-    session_metrics: dict[str, dict[str, Any]] = {}
-    for sess, vals in sorted(by_session.items()):
-        if len(vals) >= _MIN_CELL:
-            session_metrics[sess] = _group_stats(vals)
-    overall["per_session_slippage"] = session_metrics
-    overall["sessions_analysed"] = len(session_metrics)
-    overall["sessions_excluded_tiny_n"] = sum(
-        1 for v in by_session.values() if len(v) < _MIN_CELL)
-
-    return _report(
-        question_id="X3", status="COMPLETE",
-        overall=overall, confidence=_confidence(n),
-        dataset={"sample_size": n,
-                 "source": "execution_context_v1 + execution_results_v1"},
-        recommendation="SESSION_QUALITY_PROFILED",
-        assumptions=[
-            "X3 -> PRIMARY EVIDENCE: execution_context session_state; "
-            "execution_results slippage matched by correlation_id.",
-            "All condition fields are PRE-EXECUTION.",
-        ],
-        warnings=[
-            "Execution quality is NOT trade quality — low-slippage sessions "
-            "may still produce unprofitable trades.",
-            "Session cells with N < %d excluded." % _MIN_CELL,
-        ],
-    )
+    results = _load_results() if execution_results is None else execution_results
+    contexts = _load_context() if execution_contexts is None else execution_contexts
+    return build_x3_report(list(results), list(contexts))
 
 
 # ============================================================
@@ -744,7 +680,7 @@ def run_x5() -> dict[str, Any]:
 # EXEC-1 — Execution failures & adverse conditions
 # ============================================================
 
-def run_exec1() -> dict[str, Any]:
+def _legacy_run_exec1() -> dict[str, Any]:
     res = _load_results()
     ctx = _load_context()
     if not res:
@@ -837,6 +773,24 @@ def run_exec1() -> dict[str, Any]:
 
 # ============================================================
 # PROT-1 — Protection integrity
+# ============================================================
+
+def run_exec1(
+    execution_results: list[dict[str, Any]] | None = None,
+    execution_contexts: list[dict[str, Any]] | None = None,
+    decision_traces: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Canonical EXEC1 entry point over governed three-component evidence."""
+    from research_engine.experiments.exec1_execution_realization import build_exec1_report
+
+    results = _load_results() if execution_results is None else execution_results
+    contexts = _load_context() if execution_contexts is None else execution_contexts
+    traces = _load_decision_trace() if decision_traces is None else decision_traces
+    return build_exec1_report(list(results), list(contexts), list(traces))
+
+
+# ============================================================
+# PROT-1 protection integrity
 # ============================================================
 
 def run_prot1() -> dict[str, Any]:

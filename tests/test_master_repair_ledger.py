@@ -95,7 +95,7 @@ def test_operational_questions_have_no_unnecessary_repair_work():
 def test_primary_blocker_counts_cover_every_non_operational_question_once():
     counts = blocker_counts()
     assert set(counts) == {
-        "chronology", "counterfactual design", "evidence authority", "no runner",
+        "chronology", "counterfactual design", "no runner",
         "report ownership", "risk modelling", "runner mismatch",
     }
     assert counts["no runner"] == len(WAVE_A_NO_RUNNER_TARGETS)
@@ -149,6 +149,7 @@ def test_direct_gains_are_disjoint_and_cover_all_non_operational_ids():
     assert implemented_direct_gain == {
         "D1", "E2", "M1", "M3", "M7", "M8", "M11", "D2", "D3", "D4", "D5", "X5",
         "D6", "PORT-1", "OPP-1", "P1", "E3", "S1", "S5", "S6", "S7",
+        "X3", "EXEC1", "X6",
     }
     assert partial_progress_gain == set()
     assert outstanding_gain == set(STRUCTURALLY_NON_OPERATIONAL_IDS)
@@ -182,7 +183,8 @@ def test_unlocked_ids_are_not_claimed_as_early_direct_gain():
 
 def test_all_no_runner_ids_still_require_real_implementation():
     # S5/S6/S7 were implemented by Repairs 2B.2/2B.3/2B.4; designs remain history.
-    assert WAVE_A_NO_RUNNER_TARGETS == {"X6", "L6", "G1", "G2", "G3"}
+    # X6 was implemented by Repair 4B.4 and is no longer a no-runner target.
+    assert WAVE_A_NO_RUNNER_TARGETS == {"L6", "G1", "G2", "G3"}
     for qid in WAVE_A_NO_RUNNER_TARGETS:
         entry = MASTER_REPAIR_LEDGER[qid]
         question = REGISTRY_BY_ID[qid]
@@ -252,7 +254,7 @@ def test_rw1_ownership_repair_preserves_historical_gain_and_later_progress():
 
 def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
     implemented = [wave_id for wave_id, wave in REPAIR_WAVES.items() if wave.implemented]
-    assert implemented == ["RW1", "RW2", "RW3", "RW4", "RW5", "RW6"]
+    assert implemented == ["RW1", "RW2", "RW3", "RW4", "RW5", "RW6", "RW7"]
 
     wave = REPAIR_WAVES["RW1"]
     assert wave.direct_gain == ("D1", "E2")
@@ -293,9 +295,14 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
     assert rw6.direct_gain == ("S7",)
     assert rw6.implementation_evidence
 
-    # Every wave after RW6 is still outstanding and records no implementation claims.
+    rw7 = REPAIR_WAVES["RW7"]
+    assert rw7.direct_gain == ("X3", "EXEC1", "X6")
+    assert set(rw7.direct_gain) <= set(STRUCTURALLY_OPERATIONAL_IDS)
+    assert rw7.implementation_evidence
+
+    # Every wave after the implemented RW7 is still outstanding.
     for wave_id, other in REPAIR_WAVES.items():
-        if wave_id in {"RW1", "RW2", "RW3", "RW4", "RW5", "RW6"}:
+        if wave_id in {"RW1", "RW2", "RW3", "RW4", "RW5", "RW6", "RW7"}:
             continue
         assert not other.implemented
         assert other.implementation_evidence == ()
@@ -321,7 +328,7 @@ def test_evidence_gap_accounting_preserves_v1_freeze_and_g3_requirement():
 def test_human_decisions_are_explicit_and_reference_real_targets():
     registry_ids = set(MASTER_REPAIR_LEDGER)
     assert set(HUMAN_SEMANTIC_DECISIONS) == {f"HD{i:02d}" for i in range(1, 16)}
-    adjudicated = {"HD01", "HD02", "HD03", "HD06", "HD07"}
+    adjudicated = {"HD01", "HD02", "HD03", "HD06", "HD07", "HD08"}
     for decision_id, decision in HUMAN_SEMANTIC_DECISIONS.items():
         assert set(decision.affected_question_ids) <= registry_ids
         assert decision.exact_decision
@@ -329,7 +336,7 @@ def test_human_decisions_are_explicit_and_reference_real_targets():
         assert len(decision.available_options) == len(decision.consequences)
         assert decision.recommended_default
         assert decision.implementation_blocked_until_decision is (decision_id not in adjudicated)
-    for decision_id in {"HD01", "HD06", "HD07"}:
+    for decision_id in {"HD01", "HD06", "HD07", "HD08"}:
         assert HUMAN_SEMANTIC_DECISIONS[decision_id].recommended_default.startswith("ADJUDICATED:")
     for wave in REPAIR_WAVES.values():
         assert all(decision_id in HUMAN_SEMANTIC_DECISIONS for decision_id in wave.human_decision_ids)

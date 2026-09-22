@@ -35,6 +35,40 @@ def resolve_readiness(
 
     if report_validity == ReportValidity.VALID_CURRENT and report_status == "COMPLETE":
         return ReadinessStatus.COMPLETE, "A VALID_CURRENT completed report exists"
+    if question.id == "X3":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return (
+                ReadinessStatus.BLOCKED,
+                "No valid CURRENT governed X3 report exists",
+            )
+        if report_status == "INSUFFICIENT_DATA":
+            return (
+                ReadinessStatus.WAITING_DATA,
+                "The CURRENT X3 report has not met the 30 overall, 30/10 per-session, two-session, or estimability gates",
+            )
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, "The CURRENT X3 report failed governed execution-evidence authority"
+    if question.id == "EXEC1":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No valid CURRENT governed EXEC1 report exists"
+        if report_status == "INSUFFICIENT_DATA":
+            return (
+                ReadinessStatus.WAITING_DATA,
+                "The CURRENT EXEC1 report has not met its 30-row, 10-decision, variation, or estimability gates",
+            )
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, "The CURRENT EXEC1 report failed governed execution-evidence authority"
+    if question.id == "X6":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No valid CURRENT governed X6 report exists"
+        if report_status == "INSUFFICIENT_DATA":
+            return (
+                ReadinessStatus.WAITING_DATA,
+                "The CURRENT X6 report has not met the 100/30 overall, 30/10 per-cell, "
+                "two-comparable-cell, or estimability gates",
+            )
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, "The CURRENT X6 report failed governed execution-evidence authority"
     if question.id in {"M1", "M3", "M7", "M8", "M11", "D2"} and report_validity == ReportValidity.VALID_CURRENT:
         if report_status == "WAITING_DATA":
             return ReadinessStatus.WAITING_DATA, "The CURRENT RW2 report has not met chronological/sample/cell sufficiency"

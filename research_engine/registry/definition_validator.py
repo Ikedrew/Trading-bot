@@ -23,8 +23,7 @@ from research_engine.registry.research_question_models import (
 KNOWN_UNRESOLVED_AUTH: dict[str, list[str]] = {}
 
 SEMANTIC_MISMATCH_QIDS = {
-    "X3",
-    "L1", "L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8", "EXEC1",
+    "L1", "L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8",
 }
 
 

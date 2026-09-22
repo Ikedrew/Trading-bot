@@ -44,7 +44,10 @@ def _context(index: int, *, epoch: str = "CURRENT") -> dict:
         "correlation_id": f"corr-{index}",
         "canonical_opportunity_id": f"opp-{index}",
         "symbol": "EURUSD",
-        "market_access": {"session_state": "LONDON", "spread": 1.2},
+        "market_access": {
+            "session_state": "LONDON", "spread": 1.2,
+            "spread_atr_ratio": 0.05 + index / 1000,
+        },
         "infrastructure": {"latency_ms": 5.0, "feed_state": "OK"},
         "risk_environment": {"drawdown_pct": 1.0, "open_positions": 1},
     }
@@ -79,6 +82,18 @@ def _protection(index: int, *, epoch: str = "CURRENT") -> dict:
         "protection_failure_reason": "",
         "correction_attempted": False,
         "correction_success": False,
+    }
+
+
+def _trace(index: int, *, epoch: str = "CURRENT") -> dict:
+    return {
+        "schema_version": "decision_trace_v1", "data_epoch": epoch,
+        "correlation_id": f"corr-{index}",
+        "canonical_opportunity_id": f"opp-{index}",
+        "decision_id": f"decision-{index}",
+        "entity_id": f"entity-{index}",
+        "symbol": "EURUSD", "action": "EXECUTE",
+        "v10_market_state": {"regime": {"volatility_state": "NORMAL"}},
     }
 
 
@@ -155,11 +170,14 @@ def _assert_current(report: dict) -> None:
     assert report["fingerprint"]["epoch"] == CURRENT
 
 
-def _patch_execution(monkeypatch, *, results=None, contexts=None, attempts=None, protections=None):
+def _patch_execution(
+    monkeypatch, *, results=None, contexts=None, attempts=None, protections=None, traces=None,
+):
     monkeypatch.setattr(execution, "_load_results", lambda: results or [])
     monkeypatch.setattr(execution, "_load_context", lambda: contexts or [])
     monkeypatch.setattr(execution, "_load_attempts", lambda: attempts or [])
     monkeypatch.setattr(execution, "_load_protection", lambda: protections or [])
+    monkeypatch.setattr(execution, "_load_decision_trace", lambda: traces or [])
 
 
 def test_x1_truthfully_proves_results_and_context_and_excludes_stale(monkeypatch):
@@ -318,6 +336,7 @@ def test_all_seven_source_mappings_and_non_target_safety(monkeypatch, tmp_path):
     _patch_execution(
         monkeypatch, results=results, contexts=contexts,
         attempts=attempts, protections=protections,
+        traces=[_trace(index) for index in range(35)],
     )
     monkeypatch.setattr(risk, "_load_risk_deviation", lambda: [_risk(i) for i in range(35)])
     monkeypatch.setattr(management, "_load_actions", lambda: [_action(i) for i in range(35)])
@@ -337,11 +356,11 @@ def test_all_seven_source_mappings_and_non_target_safety(monkeypatch, tmp_path):
     for report in reports.values():
         _assert_current(report)
 
-    # The same shared execution helper remains fail-closed for non-target X3/EXEC1.
-    assert execution.run_x3()["fingerprint"]["epoch"] == "UNVERIFIED"
-    assert execution.run_exec1()["fingerprint"]["epoch"] == "UNVERIFIED"
+    # X3 and EXEC1 now use their governed CURRENT execution evidence contracts.
+    assert execution.run_x3()["fingerprint"]["epoch"] == "CURRENT"
+    assert execution.run_exec1()["fingerprint"]["epoch"] == "CURRENT"
     from research_engine.registry.research_question_registry import REGISTRY_BY_ID
-    assert not REGISTRY_BY_ID["X6"].runner_module
+    assert REGISTRY_BY_ID["X6"].runner_module
     for question_id in ("R1", "R2", "R3", "R4", "R5", "D1"):
         assert question_id not in reports
 
