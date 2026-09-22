@@ -15,12 +15,23 @@ import sys
 from .config import AccountConfig, CANONICAL_SYMBOLS, read_terminal_origin, terminal_key
 from .eligibility import SPEC_FIELDS, evaluate, valid_spec
 from .identity import CanonicalExecutionRequest, execution_targets, scoped_id
-from .terminal import running_terminals, terminal_lease
+from .terminal import (
+    TERMINAL_INVENTORY_OBSERVED, TERMINAL_INVENTORY_TIMEOUT,
+    TERMINAL_INVENTORY_UNAVAILABLE, TerminalInventoryError,
+    running_terminals, terminal_lease, terminal_process_inventory,
+)
 
 ACCOUNT_FIELDS = ('balance', 'equity', 'margin', 'margin_free', 'margin_level',
                   'leverage', 'currency', 'trade_allowed', 'trade_expert')
 SYMBOL_DESCRIPTION_FIELDS = ('description', 'path', 'currency_base', 'currency_profit',
                              'trade_calc_mode', 'start_time', 'expiration_time')
+# Failure codes that are already canonical account-runtime reasons and must
+# never be collapsed into a generic worker code (the real reason stays
+# observable to routing/diagnostics).
+_PASSTHROUGH_CODES = frozenset({
+    'ACCOUNT_WORKER_BUSY', TERMINAL_INVENTORY_TIMEOUT, TERMINAL_INVENTORY_UNAVAILABLE,
+})
+
 
 
 class AccountReadError(RuntimeError):
@@ -224,8 +235,13 @@ def run_worker(config, request=None, *, include_symbol_inventory=False):
     if not config.enabled or config.errors():
         return unavailable(config, config.errors() or ['DISABLED'])
     try:
-        paths = running_terminals()
-        if terminal_key(config.terminal_path) not in {terminal_key(p) for p in paths}:
+        # Liveness PRE-FLIGHT only. An INCONCLUSIVE inventory (host-load
+        # timeout) must never be reported as "terminal not running": a frozen
+        # PowerShell query previously poisoned every account's snapshot. The
+        # authoritative decider stays mt5.initialize + AccountReader.verify
+        # (identity, terminal path, data path), which still fails closed.
+        paths, inventory_state = terminal_process_inventory(running_terminals)
+        if paths is not None and terminal_key(config.terminal_path) not in {terminal_key(p) for p in paths}:
             return unavailable(config, ['TERMINAL_NOT_RUNNING_OR_NOT_VISIBLE'])
         with terminal_lease(config.terminal_path):
             import MetaTrader5 as mt5
@@ -240,14 +256,22 @@ def run_worker(config, request=None, *, include_symbol_inventory=False):
                 reader = AccountReader(config, mt5)
                 reader.verify()
                 with terminal_lease(reader._data_path):
-                    return reader.snapshot(request, include_symbol_inventory=include_symbol_inventory)
+                    result = reader.snapshot(request, include_symbol_inventory=include_symbol_inventory)
+                if inventory_state != TERMINAL_INVENTORY_OBSERVED:
+                    # Degraded pre-flight evidence, reported but never used as a
+                    # block: the snapshot above is attached + identity verified.
+                    result['terminal_inventory'] = inventory_state
+                return result
             finally:
                 mt5.shutdown()  # Disconnect this worker's IPC; never stop terminal.
     except AccountReadError as exc:
         return unavailable(config, [str(exc)])
+    except TerminalInventoryError as exc:
+        # Known inventory read failure (not a timeout): keep the REAL reason.
+        return unavailable(config, [str(exc) or TERMINAL_INVENTORY_UNAVAILABLE])
     except Exception as exc:
         # Never echo exception text: MT5/platform messages may contain secrets.
-        code = str(exc) if str(exc) in ('ACCOUNT_WORKER_BUSY', 'TERMINAL_INVENTORY_UNAVAILABLE') else 'WORKER_READ_FAILED'
+        code = str(exc) if str(exc) in _PASSTHROUGH_CODES else 'WORKER_READ_FAILED'
         return unavailable(config, [code])
 
 

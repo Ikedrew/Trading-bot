@@ -9,32 +9,107 @@ import subprocess
 import sys
 
 from .config import configuration_blocks, terminal_key
-from .terminal import hidden_process_flags
+from .terminal import INVENTORY_TIMEOUT_ENV, hidden_process_flags
 from .worker import unavailable
 
 WORKER_MODULE = 'core.accounts.worker'
 ROOT = Path(__file__).resolve().parents[2]
 
+# Per-account worker deadline. Never a hard-coded budget: operators raise/lower
+# it with MT5_ACCOUNT_WORKER_TIMEOUT_SECONDS (the default is only a fallback).
+WORKER_TIMEOUT_ENV = 'MT5_ACCOUNT_WORKER_TIMEOUT_SECONDS'
+DEFAULT_WORKER_TIMEOUT_SECONDS = 25.0
 
-def run_isolated(account, request=None, *, timeout=25, include_symbol_inventory=False):
+# Canonical account-runtime codes worth surfacing from a dead child's stderr.
+# ONLY these known tokens are ever echoed: raw stderr may contain platform text,
+# paths or account data and is never forwarded across the process boundary.
+_CHILD_STDERR_CODES = (
+    'TERMINAL_INVENTORY_TIMEOUT', 'TERMINAL_INVENTORY_UNAVAILABLE',
+    'ACCOUNT_WORKER_BUSY', 'WORKER_TIMEOUT', 'WORKER_FAILED',
+    'TimeoutExpired', 'MemoryError', 'ModuleNotFoundError', 'ImportError',
+)
+
+# Well-known Windows NTSTATUS exits as subprocess reports them (signed).
+_WINDOWS_EXIT_CODES = {
+    -1073741819: 'WORKER_CRASHED_ACCESS_VIOLATION',
+    -1073741571: 'WORKER_CRASHED_STACK_OVERFLOW',
+    -1073741515: 'WORKER_CRASHED_MISSING_DLL',
+    -1073741701: 'WORKER_CRASHED_DLL_INIT_FAILED',
+}
+
+
+def worker_timeout(env=None) -> float:
+    """Configured per-account worker deadline in seconds (env override)."""
+    env = os.environ if env is None else env
+    raw = str(env.get(WORKER_TIMEOUT_ENV, '') or '').strip()
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_WORKER_TIMEOUT_SECONDS
+    return value if value > 0 else DEFAULT_WORKER_TIMEOUT_SECONDS
+
+
+def _exit_code_label(returncode) -> str:
+    try:
+        code = int(returncode)
+    except (TypeError, ValueError):
+        return 'WORKER_EXIT_UNKNOWN'
+    # Windows reports NTSTATUS exits signed; the unsigned hex form is the
+    # stable, searchable representation.
+    return 'WORKER_EXIT_0x%08X' % (code & 0xFFFFFFFF) if code < 0 else f'WORKER_EXIT_{code}'
+
+
+def _stderr_code(stderr: str) -> str:
+    text = str(stderr or '')
+    if not text.strip():
+        return ''
+    for token in _CHILD_STDERR_CODES:
+        if token in text:
+            return token
+    return 'WORKER_STDERR_PRESENT'
+
+
+def child_failure_reasons(result) -> list[str]:
+    """Observable, secret-free failure detail for a child that did not exit 0.
+
+    Surfaces the child return code (decimal or Windows NTSTATUS hex), a known
+    crash label when the code matches one, and an allow-listed stderr code.
+    """
+    reasons = [_exit_code_label(getattr(result, 'returncode', None))]
+    code = getattr(result, 'returncode', None)
+    crash = _WINDOWS_EXIT_CODES.get(code) if isinstance(code, int) else None
+    if crash:
+        reasons.append(crash)
+    detail = _stderr_code(getattr(result, 'stderr', '') or '')
+    if detail:
+        reasons.append(detail)
+    return reasons
+
+
+def run_isolated(account, request=None, *, timeout=None, include_symbol_inventory=False):
+    budget = worker_timeout() if timeout is None else float(timeout)
     payload = {'account': asdict(account), 'request': asdict(request) if request else None}
     payload['include_symbol_inventory'] = include_symbol_inventory
     # Workers use saved terminal sessions, so no account/AWS/Discord secrets need
     # to cross this boundary. No secret is included in argv, JSON or error output.
+    # MT5_TERMINAL_INVENTORY_TIMEOUT_SECONDS is a non-secret tunable and is
+    # forwarded so the configured inventory budget reaches the child worker.
     child_env = {k: v for k, v in os.environ.items() if k.upper() in {
         'PATH', 'SYSTEMROOT', 'WINDIR', 'TEMP', 'TMP', 'USERPROFILE',
         'APPDATA', 'LOCALAPPDATA', 'PROGRAMFILES', 'PROGRAMFILES(X86)',
-        'COMMONPROGRAMFILES', 'COMSPEC', 'SYSTEMDRIVE',
+        'COMMONPROGRAMFILES', 'COMSPEC', 'SYSTEMDRIVE', INVENTORY_TIMEOUT_ENV,
     }}
     child_env['PYTHONIOENCODING'] = 'utf-8'
     try:
         result = subprocess.run(
             [sys.executable, '-m', WORKER_MODULE], input=json.dumps(payload),
-            capture_output=True, encoding='utf-8', timeout=timeout, cwd=ROOT,
+            capture_output=True, encoding='utf-8', timeout=budget, cwd=ROOT,
             env=child_env, creationflags=hidden_process_flags(),
         )
         if result.returncode:
-            return unavailable(account, ['WORKER_FAILED'])
+            # Real child failure: raise code + stderr detail, never a bare
+            # generic reason (the incident needed a missing inventory timeout).
+            return unavailable(account, child_failure_reasons(result))
         response = json.loads(result.stdout)
         if (response.get('account_id'), response.get('broker'), response.get('server'), response.get('login')) != account.identity:
             return unavailable(account, ['WORKER_RESPONSE_IDENTITY_MISMATCH'])
@@ -48,9 +123,15 @@ def run_isolated(account, request=None, *, timeout=25, include_symbol_inventory=
         return unavailable(account, ['WORKER_FAILED'])
 
 
-def diagnose(accounts, request=None, *, timeout=25, config_only=False,
+def diagnose(accounts, request=None, *, timeout=None, config_only=False,
              include_symbol_inventory=False,
              global_execution_enabled: bool | None = None):
+    """Concurrent per-account snapshots; one account never blocks another.
+
+    ``timeout`` is the per-account worker deadline in seconds. When omitted it
+    resolves to :func:`worker_timeout` (MT5_ACCOUNT_WORKER_TIMEOUT_SECONDS),
+    never to a hard-coded budget.
+    """
     accounts = tuple(accounts)
     if len({a.account_id for a in accounts}) != len(accounts):
         raise ValueError('DUPLICATE_ACCOUNT_ID')

@@ -7,7 +7,11 @@ import sys
 from dataclasses import asdict
 
 from .config import AccountConfig
-from .terminal import running_terminals, terminal_lease
+from .terminal import (
+    TERMINAL_INVENTORY_OBSERVED, TERMINAL_INVENTORY_UNAVAILABLE,
+    TerminalInventoryError, running_terminals, terminal_lease,
+    terminal_process_inventory,
+)
 from .worker import AccountReader, AccountReadError, unavailable
 
 
@@ -235,8 +239,12 @@ def run_execution_worker(account, payload, *, mt5=None) -> dict:
     if not account.enabled or account.errors():
         return unavailable(account, account.errors() or ["DISABLED"])
     try:
-        paths = running_terminals()
-        if terminal_key(account.terminal_path) not in {terminal_key(p) for p in paths}:
+        # Liveness PRE-FLIGHT only. An INCONCLUSIVE inventory (host-load
+        # timeout) must never block a verified order — the authoritative
+        # deciders stay mt5.initialize + the identity verification performed
+        # inside execute_pinned (AccountReader.verify before/after order_send).
+        paths, inventory_state = terminal_process_inventory(running_terminals)
+        if paths is not None and terminal_key(account.terminal_path) not in {terminal_key(p) for p in paths}:
             return {"account_id": account.account_id, "executed": False,
                     "status": "FAILED", "comment": "TERMINAL_NOT_RUNNING"}
         with terminal_lease(account.terminal_path):
@@ -249,9 +257,14 @@ def run_execution_worker(account, payload, *, mt5=None) -> dict:
                 if not mt5.initialize(account.terminal_path, **options):
                     return {"account_id": account.account_id, "executed": False,
                             "status": "FAILED", "comment": "INITIALIZE_FAILED"}
-                return execute_pinned({"account": asdict(account),
-                                       "target": payload["target"],
-                                       "order": payload["order"]}, mt5)
+                outcome = execute_pinned({"account": asdict(account),
+                                          "target": payload["target"],
+                                          "order": payload["order"]}, mt5)
+                if inventory_state != TERMINAL_INVENTORY_OBSERVED:
+                    # Degraded pre-flight evidence only; the order path itself
+                    # remains identity-verified and fail-closed.
+                    outcome.setdefault("terminal_inventory", inventory_state)
+                return outcome
             finally:
                 try:
                     mt5.shutdown()
@@ -260,6 +273,10 @@ def run_execution_worker(account, payload, *, mt5=None) -> dict:
     except AccountReadError as exc:
         return {"account_id": account.account_id, "executed": False,
                 "status": "FAILED", "comment": str(exc)}
+    except TerminalInventoryError as exc:
+        return {"account_id": account.account_id, "executed": False,
+                "status": "FAILED",
+                "comment": str(exc) or TERMINAL_INVENTORY_UNAVAILABLE}
     except Exception:
         return {"account_id": account.account_id, "executed": False,
                 "status": "WORKER_FAILED", "comment": "WORKER_READ_FAILED"}

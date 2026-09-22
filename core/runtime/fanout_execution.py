@@ -39,10 +39,14 @@ ROOT = str(Path(__file__).resolve().parents[2])
 # Same pinned-account worker env isolation as core/accounts/manager.run_isolated:
 # no account/AWS/Discord secret crosses the process boundary, and no login
 # switching is ever possible (workers attach to the already-logged-in terminal).
+# MT5_TERMINAL_INVENTORY_TIMEOUT_SECONDS is a non-secret tunable and is
+# forwarded so the configured terminal-inventory budget reaches the execution
+# worker too (one inventory policy, configurable in the worker environment).
 _WORKER_ENV_KEYS = frozenset({
     "PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "USERPROFILE",
     "APPDATA", "LOCALAPPDATA", "PROGRAMFILES", "PROGRAMFILES(X86)",
     "COMMONPROGRAMFILES", "COMSPEC", "SYSTEMDRIVE",
+    "MT5_TERMINAL_INVENTORY_TIMEOUT_SECONDS",
 })
 
 MULTI_ACCOUNT_FANOUT_ENABLED = "MULTI_ACCOUNT_FANOUT_ENABLED"
