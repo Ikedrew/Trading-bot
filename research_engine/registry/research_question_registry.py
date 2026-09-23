@@ -1297,7 +1297,7 @@ EX10 = ResearchQuestion(
         ValidationRule("sample_size", ">=", 200, "Need sufficient sample for temporal split"),
     ),
     depends_on=("EX1", "EX2"),
-    runner_module="research_engine.experiments.exit_depth",
+    runner_module="research_engine.experiments.exit_policy_walk_forward",
     runner_function="run_ex10",
     report_filename="ex10_walk_forward.json",
 )

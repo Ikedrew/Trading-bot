@@ -62,6 +62,17 @@ def resolve_readiness(
             return ReadinessStatus.BLOCKED, (
                 f"The CURRENT {question.id} report failed HD09 dimension, inference, family, or provenance validity"
             )
+    if question.id == "EX10":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No valid CURRENT governed EX10 HD09 walk-forward report exists"
+        if report_status == "WAITING_DATA":
+            return ReadinessStatus.WAITING_DATA, (
+                "The CURRENT EX10 report has valid machinery but insufficient five-fold governed evidence"
+            )
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, (
+                "The CURRENT EX10 report failed chronology, leakage, selection, inference, or provenance validity"
+            )
     if question.id == "X3":
         if report_validity != ReportValidity.VALID_CURRENT:
             return (

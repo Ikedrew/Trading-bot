@@ -112,6 +112,7 @@ HD09_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
     "ex7_regime_exit.json": "EX7",
     "ex8_pattern_exit.json": "EX8",
     "ex9_timeout_loss.json": "EX9",
+    "ex10_walk_forward.json": "EX10",
 }
 
 

@@ -183,9 +183,9 @@ RW6_OPERATIONAL_IDS = frozenset({"S7"})
 # RW7 surgical progress: Repairs 4B.2/4B.3/4B.4 make X3, EXEC1, and X6 all
 # operational, closing the execution-semantics repair area.
 RW7_OPERATIONAL_PROGRESS_IDS = frozenset({"X3", "EXEC1", "X6"})
-# RW8 governed research progress: only EX1, EX2, and EX9 are implemented.  The
-# other five HD09 questions remain structurally blocked.
-RW8_OPERATIONAL_PROGRESS_IDS = frozenset({"EX1", "EX2", "EX9"})
+# RW8 governed research progress: EX1, EX2, EX9, and the valid five-fold EX10
+# walk-forward evaluation are operational.
+RW8_OPERATIONAL_PROGRESS_IDS = frozenset({"EX1", "EX2", "EX9", "EX10"})
 # EX7 now has a valid sufficient governed HD09 interaction result.  EX5, EX6,
 # and EX8 have implemented machinery but remain WAITING_DATA on their frozen
 # level/coverage gates and therefore do not enter the operational baseline.

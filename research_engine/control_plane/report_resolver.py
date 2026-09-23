@@ -247,6 +247,13 @@ def resolve_report_validity(
         )
         if not governed_valid:
             return ReportValidity.INVALIDATED, governed_reason
+    if expected_question_id == "EX10":
+        from research_engine.experiments.exit_policy_walk_forward import (
+            validate_governed_ex10_report,
+        )
+        governed_valid, governed_reason = validate_governed_ex10_report(report_data)
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
     if isinstance(fingerprint, dict):
         invalidation = is_report_invalidated(filename, fingerprint)
         if invalidation is not None:
