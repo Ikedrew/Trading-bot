@@ -280,10 +280,14 @@ HUMAN_SEMANTIC_DECISIONS = {
     ),
     "HD10": HumanSemanticDecision(
         "HD10", ("R1", "R2", "R3", "R4", "R5"),
-        "Approve global/per-guard risk estimands, risk assumptions, chronology, model set, and optimisation criterion.",
+        "ADJUDICATED: preserve genuine risk-policy effectiveness and simulation intent using "
+        "RISK_POLICY_BASELINE_V1, distinct R1 global-effectiveness and R2 per-guard-attribution "
+        "estimands, the frozen R3-R5 V1 models, account-safe clustering, and the question-specific "
+        "contracts in HD10_ADJUDICATED_CONTRACT.",
         ("Versioned risk-policy evaluation and simulation design", "Narrow to descriptive risk diagnostics"),
         ("Answers effectiveness/value questions", "Cannot support improvement or optimality claims"),
-        "Implement distinct R1/R2 estimands and versioned R3-R5 simulation assumptions.", True,
+        "ADJUDICATED: use research_engine.registry.risk_policy_adjudication.HD10_ADJUDICATED_CONTRACT.",
+        False,
     ),
     "HD11": HumanSemanticDecision(
         "HD11", ("L1", "L2", "L3", "L4", "L7"),
@@ -451,7 +455,8 @@ REPAIR_WAVES = {
         "Global effectiveness, guard attribution, drawdown chronology, and model assumptions are conflated or unspecified.", ("RW1", "RW3"), ("HD10",),
         ("risk evidence helpers", "separate R1/R2 runners/reports", "versioned risk simulation", "chronological drawdown evaluation"), False,
         ("R1", "R2", "R3", "R4", "R5"), (),
-        "R1 and R2 have distinct estimands/owners; R3-R5 publish versioned assumptions and reproduce chronological scenario fixtures with no account fanout.",
+        "R1 and R2 have distinct estimands/owners; R3-R5 publish versioned assumptions and reproduce chronological scenario fixtures with no account fanout. Implementations must satisfy "
+        "research_engine.registry.risk_policy_adjudication.HD10_ADJUDICATED_CONTRACT version hd10_risk_policy_estimation_and_simulation_v1 (research-only; no runtime application authority).",
     ),
     "RW10": RepairWave(
         "RW10", "Learning chronology and architecture validation", ("L1", "L2", "L3", "L4", "L7"),
