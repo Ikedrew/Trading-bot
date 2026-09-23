@@ -59,16 +59,13 @@ def test_hd10_is_closed_by_one_named_complete_authority_with_no_operational_gain
     assert HD10_ADJUDICATED_CONTRACT["option"] == "A"
     assert HD10_ADJUDICATED_CONTRACT["questions"] == TARGETS
 
-    # Adjudication is governance only: no question becomes operational.
-    assert operational_baseline() == (54, 16)
-    assert "R1" not in STRUCTURALLY_NON_OPERATIONAL_IDS
-    for question_id in ("R2", "R3", "R4", "R5"):
-        assert question_id in STRUCTURALLY_NON_OPERATIONAL_IDS, question_id
+    assert operational_baseline() == (58, 12)
+    assert set(TARGETS).isdisjoint(STRUCTURALLY_NON_OPERATIONAL_IDS)
 
     wave = REPAIR_WAVES["RW9"]
     assert wave.human_decision_ids == ("HD10",)
-    assert wave.implemented is False
-    assert wave.implementation_evidence == ()
+    assert wave.implemented is True
+    assert wave.implementation_evidence
     assert wave.unlocked_not_yet_operational == ()
     assert "HD10_ADJUDICATED_CONTRACT" in wave.exit_gate
     assert HD10_ADJUDICATION_VERSION in wave.exit_gate
@@ -135,11 +132,10 @@ def test_r1_and_r2_have_distinct_estimands_reports_and_no_count_evidence():
     assert LEGACY_REPORT_COMPATIBILITY[LEGACY_ARTIFACT] == ("Q10",)
     assert "never" in REPORT_VALIDITY_CONTRACT["compatibility_aliases"]
 
-    # RW9.2 gives R1 its dedicated canonical artifact.  R2 remains on the
-    # legacy compatibility route until its separate RW9.3 implementation.
+    # RW9.2/RW9.3 give both questions distinct dedicated canonical artifacts.
     assert REGISTRY_BY_ID["R1"].report_filename == REPORT_OWNERSHIP["R1"]
     assert REGISTRY_BY_ID["R1"].legacy_ids == ("Q10",)
-    assert REGISTRY_BY_ID["R2"].report_filename == LEGACY_ARTIFACT
+    assert REGISTRY_BY_ID["R2"].report_filename == REPORT_OWNERSHIP["R2"]
     assert REGISTRY_BY_ID["R2"].legacy_ids == ("Q10",)
 
 

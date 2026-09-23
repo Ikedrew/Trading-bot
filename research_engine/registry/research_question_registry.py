@@ -770,9 +770,9 @@ R2 = ResearchQuestion(
         ValidationRule("lineage_coverage", ">=", 0.80, "Need trace→shadow join for counterfactual"),
         ValidationRule("outcome_coverage", ">=", 0.50, "Shadow outcomes for rejected signals needed"),
     ),
-    runner_module="research_engine.experiments.legacy_canonical",
-    runner_function="run_q10",
-    report_filename="q10_guard_efficacy.json",
+    runner_module="research_engine.experiments.r2_guard_attribution",
+    runner_function="run_r2",
+    report_filename="r2_guard_attribution.json",
     legacy_ids=("Q10",),
 )
 

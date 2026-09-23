@@ -261,6 +261,28 @@ def resolve_report_validity(
         governed_valid, governed_reason = validate_r1_report(report_data)
         if not governed_valid:
             return ReportValidity.INVALIDATED, governed_reason
+    if expected_question_id == "R2":
+        from research_engine.experiments.r2_guard_attribution import (
+            validate_r2_report,
+        )
+        governed_valid, governed_reason = validate_r2_report(report_data)
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
+    if expected_question_id == "R3":
+        from research_engine.experiments.probability_of_ruin import validate_r3_report
+        governed_valid, governed_reason = validate_r3_report(report_data)
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
+    if expected_question_id == "R4":
+        from research_engine.experiments.drawdown_threshold import validate_r4_report
+        governed_valid, governed_reason = validate_r4_report(report_data)
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
+    if expected_question_id == "R5":
+        from research_engine.experiments.position_sizing import validate_r5_report
+        governed_valid, governed_reason = validate_r5_report(report_data)
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
     if isinstance(fingerprint, dict):
         invalidation = is_report_invalidated(filename, fingerprint)
         if invalidation is not None:

@@ -246,10 +246,10 @@ def test_registry_versions_count_ledger_and_production_boundary_are_unchanged():
         not any(issue.category == "INVALID_VERSION" for issue in result.results)
         for result in health.values()
     )
-    assert operational_baseline() == (54, 16)
+    assert operational_baseline() == (58, 12)
 
-    assert REGISTRY_BY_ID["R2"].runner_function == "run_q10"
-    assert REGISTRY_BY_ID["R2"].report_filename == "q10_guard_efficacy.json"
+    assert REGISTRY_BY_ID["R2"].runner_function == "run_r2"
+    assert REGISTRY_BY_ID["R2"].report_filename == "r2_guard_attribution.json"
     assert [REGISTRY_BY_ID[qid].report_filename for qid in ("R3", "R4", "R5")] == [
         "r3_probability_of_ruin.json",
         "r4_drawdown_threshold.json",

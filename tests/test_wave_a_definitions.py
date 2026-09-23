@@ -1059,7 +1059,9 @@ def test_historical_risk_reports_and_unverified_reruns_are_non_authoritative():
         validity, _ = resolve_report_validity(
             filename, unverified_report, expected_question_id=qid
         )
-        assert validity == ReportValidity.STALE, qid
+        # Dedicated RW9.4 validators reject the pre-contract schema before an
+        # unverified epoch can be considered as a canonical report.
+        assert validity == ReportValidity.INVALIDATED, qid
         assert "default to UNVERIFIED" in WAVE_A3_UNRESOLVED_REASONS[qid]
 
 
@@ -1838,9 +1840,9 @@ def test_r1_r2_same_risk_data_does_not_share_scientific_ownership():
     assert "DISTINCT_REPORT_REQUIRED" in item.relationship_types
     assert "LEGACY_IDENTITY_COLLISION" in item.relationship_types
     assert r1.runner_function == "run_r1"
-    assert r2.runner_function == "run_q10"
+    assert r2.runner_function == "run_r2"
     assert r1.report_filename == "r1_risk_layer_effectiveness.json"
-    assert r2.report_filename == "q10_guard_efficacy.json"
+    assert r2.report_filename == "r2_guard_attribution.json"
     assert r1.legacy_ids == r2.legacy_ids == ("Q10",)
     assert "neither overall risk benefit nor per-guard value" in item.runner_ownership_status
     assert "falsely complete both distinct claims" in item.false_completion_risk
@@ -1912,7 +1914,7 @@ def test_wave_a5_does_not_mutate_operational_ownership_mappings():
         "D6": ("run_portfolio_ranking", "d6_portfolio_ranking.json", ()),
         "PORT-1": ("run_port_1", "port1_portfolio_selection.json", ()),
         "R1": ("run_r1", "r1_risk_layer_effectiveness.json", ("Q10",)),
-        "R2": ("run_q10", "q10_guard_efficacy.json", ("Q10",)),
+        "R2": ("run_r2", "r2_guard_attribution.json", ("Q10",)),
         "D1": ("run", "q1_component_reward.json", ("Q1",)),
         "L3": ("run", "q1_component_reward.json", ("Q1",)),
         "E2": ("run_q05", "q5_pattern_degradation.json", ("Q5", "Q24")),

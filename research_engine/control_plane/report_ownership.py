@@ -117,6 +117,10 @@ HD09_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
 
 HD10_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
     "r1_risk_layer_effectiveness.json": "R1",
+    "r2_guard_attribution.json": "R2",
+    "r3_probability_of_ruin.json": "R3",
+    "r4_drawdown_threshold.json": "R4",
+    "r5_position_sizing.json": "R5",
 }
 
 

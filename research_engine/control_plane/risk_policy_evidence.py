@@ -1619,7 +1619,9 @@ def split_chronological_windows(
     """
     records = population.records
     total = len(records)
-    calibration_target = int(math.floor(_CALIBRATION_FRACTION * total))
+    # The frozen fraction is exactly 70/100.  Integer arithmetic avoids a
+    # binary-float underflow (for example floor(0.70 * 170) becoming 118).
+    calibration_target = (70 * total) // 100
     calibration_candidates = list(records[:calibration_target])
     validation = list(records[calibration_target:])
     first_validation_entry = validation[0].entry_utc_epoch_s if validation else None

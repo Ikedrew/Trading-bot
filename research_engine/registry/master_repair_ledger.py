@@ -190,7 +190,7 @@ RW8_OPERATIONAL_PROGRESS_IDS = frozenset({"EX1", "EX2", "EX9", "EX10"})
 # and EX8 have implemented machinery but remain WAITING_DATA on their frozen
 # level/coverage gates and therefore do not enter the operational baseline.
 RW8_HETEROGENEITY_OPERATIONAL_IDS = frozenset({"EX7"})
-RW9_OPERATIONAL_PROGRESS_IDS = frozenset({"R1"})
+RW9_OPERATIONAL_PROGRESS_IDS = frozenset({"R1", "R2", "R3", "R4", "R5"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
@@ -459,6 +459,12 @@ REPAIR_WAVES = {
         ("R1", "R2", "R3", "R4", "R5"), (),
         "R1 and R2 have distinct estimands/owners; R3-R5 publish versioned assumptions and reproduce chronological scenario fixtures with no account fanout. Implementations must satisfy "
         "research_engine.registry.risk_policy_adjudication.HD10_ADJUDICATED_CONTRACT version hd10_risk_policy_estimation_and_simulation_v1 (research-only; no runtime application authority).",
+        implemented=True,
+        implementation_evidence=(
+            "RW9.1 implements the governed canonical-opportunity risk evidence and chronological split foundation.",
+            "RW9.2 and RW9.3 implement distinct HD10 R1 global-effectiveness and R2 guard-attribution runners/reports.",
+            "RW9.4 implements distinct governed R3 ruin, R4 chronological drawdown, and R5 closed-vocabulary sizing runners/reports with a frozen digest chain.",
+        ),
     ),
     "RW10": RepairWave(
         "RW10", "Learning chronology and architecture validation", ("L1", "L2", "L3", "L4", "L7"),
@@ -517,10 +523,6 @@ _assign(("D2", "D3", "D4", "D5", "X5"), "RW3", "prediction/calibration", "PREDIC
 # X6 was repaired in Repair 4B.4 and is structurally operational (no assignment).
 _assign(("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10"), "RW8", "counterfactual design", "EXIT_COUNTERFACTUAL_FOUNDATION",
         "The current observational diagnostic cannot establish the registry's alternative exit-policy claim.", human=True)
-_assign(("R2",), "RW9", "report ownership", "RISK_MODELLING_FOUNDATION",
-        "Distinct global and per-guard risk questions share a count-only runner/report and legacy identity.", human=True)
-_assign(("R3", "R4", "R5"), "RW9", "risk modelling", "RISK_MODELLING_FOUNDATION",
-        "Risk assumptions, chronological drawdown/scenario grain, and optimisation semantics are not authoritative.", human=True)
 _assign(("L1", "L2", "L4"), "RW10", "chronology", "LEARNING_CHRONOLOGY_FOUNDATION",
         "The current runner lacks authoritative temporal/change ordering for the canonical learning claim.", human=True)
 _assign(("L3",), "RW10", "runner mismatch", "LEARNING_CHRONOLOGY_FOUNDATION",
@@ -557,10 +559,10 @@ _QUESTION_ACTIONS = {
     "EXEC1": "Implemented: EXEC1 owns the governed EXECUTE-only cluster-weighted successful-realization linear-probability model using continuous pre-execution spread_atr_ratio.",
     "X6": "Implemented: X6 owns the HD08-adjudicated condition-stability analysis with strict result-context-trace joins, producer-measured absolute slippage, canonical-symbol/session/spread-band/volatility dimensions, and unique report ownership.",
     "R1": "Implemented: R1 owns the governed HD10 global risk-effectiveness runner and r1_risk_layer_effectiveness.json.",
-    "R2": "Create a separate per-guard attribution runner/report with an explicit guard exposure/treatment grain.",
-    "R3": "Version loss/distribution/dependence assumptions and calculate probability of ruin on declared independent chronological outcomes.",
-    "R4": "Define chronological drawdown paths, threshold policy, and candidate evaluation rather than ordering synthetic summaries as events.",
-    "R5": "Declare candidate sizing models, constraints, objective, validation design, and account/opportunity grain before optimisation.",
+    "R2": "Implemented: R2 owns the governed HD10 guard-exclusive attribution runner and r2_guard_attribution.json.",
+    "R3": "Implemented: R3 owns the governed HD10 ruin_model_v1 runner and r3_probability_of_ruin.json.",
+    "R4": "Implemented: R4 owns the governed HD10 chronological halt-threshold runner and r4_drawdown_threshold.json.",
+    "R5": "Implemented: R5 owns the governed HD10 closed-vocabulary sizing runner and r5_position_sizing.json.",
     "L1": "Create a unique timestamped pattern-degradation runner/report with approved windows and opportunity/horizon clustering.",
     "L2": "Use actual versioned adaptation/change events and before/after chronological populations; do not call report count learning.",
     "L3": "Create a unique architecture-validation runner/report covering weights, regime classes, and strategy mappings; retain D1 only as an input.",
