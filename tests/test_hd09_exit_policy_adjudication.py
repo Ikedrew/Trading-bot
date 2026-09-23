@@ -45,7 +45,7 @@ def test_hd09_is_closed_by_one_named_complete_authority_with_targeted_operationa
         "HD09_ADJUDICATED_CONTRACT."
     )
     assert HD09_ADJUDICATED_CONTRACT["implementation_blocked_until_decision"] is False
-    assert operational_baseline() == (51, 19)
+    assert operational_baseline() == (52, 18)
 
 
 def test_baseline_v1_delegates_timeout_to_existing_shadow_authority():
@@ -207,4 +207,4 @@ def test_registry_versions_and_no_runner_baseline_remain_frozen():
     assert len(definitions) == 70
     assert {definition.definition_version for definition in values} == {1}
     assert WAVE_A_NO_RUNNER_TARGETS == {"L6", "G1", "G2", "G3"}
-    assert operational_baseline() == (51, 19)
+    assert operational_baseline() == (52, 18)

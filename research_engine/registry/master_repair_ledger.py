@@ -186,6 +186,10 @@ RW7_OPERATIONAL_PROGRESS_IDS = frozenset({"X3", "EXEC1", "X6"})
 # RW8 governed research progress: only EX1, EX2, and EX9 are implemented.  The
 # other five HD09 questions remain structurally blocked.
 RW8_OPERATIONAL_PROGRESS_IDS = frozenset({"EX1", "EX2", "EX9"})
+# EX7 now has a valid sufficient governed HD09 interaction result.  EX5, EX6,
+# and EX8 have implemented machinery but remain WAITING_DATA on their frozen
+# level/coverage gates and therefore do not enter the operational baseline.
+RW8_HETEROGENEITY_OPERATIONAL_IDS = frozenset({"EX7"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
@@ -195,6 +199,7 @@ OPERATIONAL_IDS = (
     | RW6_OPERATIONAL_IDS
     | RW7_OPERATIONAL_PROGRESS_IDS
     | RW8_OPERATIONAL_PROGRESS_IDS
+    | RW8_HETEROGENEITY_OPERATIONAL_IDS
 )
 
 

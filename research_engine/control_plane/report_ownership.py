@@ -107,6 +107,10 @@ REPAIR_4B4_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
 HD09_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
     "ex1_exit_efficiency.json": "EX1",
     "ex2_profit_retention.json": "EX2",
+    "ex5_horizon_exit.json": "EX5",
+    "ex6_strategy_exit.json": "EX6",
+    "ex7_regime_exit.json": "EX7",
+    "ex8_pattern_exit.json": "EX8",
     "ex9_timeout_loss.json": "EX9",
 }
 

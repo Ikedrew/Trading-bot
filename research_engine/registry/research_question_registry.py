@@ -1208,7 +1208,7 @@ EX5 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
     ),
     depends_on=("EX2",),
-    runner_module="research_engine.experiments.exit_depth",
+    runner_module="research_engine.experiments.exit_policy_heterogeneity",
     runner_function="run_ex5",
     report_filename="ex5_horizon_exit.json",
 )
@@ -1226,7 +1226,7 @@ EX6 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
     ),
     depends_on=("EX2",),
-    runner_module="research_engine.experiments.exit_depth",
+    runner_module="research_engine.experiments.exit_policy_heterogeneity",
     runner_function="run_ex6",
     report_filename="ex6_strategy_exit.json",
 )
@@ -1244,7 +1244,7 @@ EX7 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
     ),
     depends_on=("EX2",),
-    runner_module="research_engine.experiments.exit_depth",
+    runner_module="research_engine.experiments.exit_policy_heterogeneity",
     runner_function="run_ex7",
     report_filename="ex7_regime_exit.json",
 )
@@ -1262,7 +1262,7 @@ EX8 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
     ),
     depends_on=("EX2",),
-    runner_module="research_engine.experiments.exit_depth",
+    runner_module="research_engine.experiments.exit_policy_heterogeneity",
     runner_function="run_ex8",
     report_filename="ex8_pattern_exit.json",
 )

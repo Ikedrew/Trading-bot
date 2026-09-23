@@ -51,6 +51,17 @@ def resolve_readiness(
                 ReadinessStatus.BLOCKED,
                 f"The CURRENT {question.id} report failed HD09 authority, inference, family, or provenance validity",
             )
+    if question.id in {"EX5", "EX6", "EX7", "EX8"}:
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, f"No valid CURRENT governed {question.id} HD09 report exists"
+        if report_status == "WAITING_DATA":
+            return ReadinessStatus.WAITING_DATA, (
+                f"The CURRENT {question.id} report has valid machinery but insufficient governed cell/level evidence"
+            )
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, (
+                f"The CURRENT {question.id} report failed HD09 dimension, inference, family, or provenance validity"
+            )
     if question.id == "X3":
         if report_validity != ReportValidity.VALID_CURRENT:
             return (

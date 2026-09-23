@@ -1,0 +1,667 @@
+{
+  "assumptions": [
+    "Results describe simulated policy outcomes on the governed historical population; they do not establish future profitability, causal market truth, production suitability, or prop readiness."
+  ],
+  "confidence": "HIGH",
+  "dataset": {
+    "sample_size": 9591,
+    "source": "exit_candidate_replay_v1+exit_dimension_evidence_v1"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "analytical_digest": "f4860d4d26fc06fad321da18ba4c1dc9cd9562789df74e6c9decc48ae0fabc64",
+    "epoch": "CURRENT",
+    "records_used": 86319,
+    "source": "MULTI_SOURCE"
+  },
+  "generated": "2026-09-23T06:32:11Z",
+  "overall": {
+    "baseline": "SHADOW_BASELINE_V1",
+    "cell_effects": [
+      {
+        "candidate_policy_id": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "dimension_level": "TRENDING",
+        "standard_error": 0.01952999391462023,
+        "weighted_effect_estimate": 0.21318199384927233
+      },
+      {
+        "candidate_policy_id": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "dimension_level": "RANGING",
+        "standard_error": 0.01053786218941694,
+        "weighted_effect_estimate": 0.16516115941585036
+      },
+      {
+        "candidate_policy_id": "TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "dimension_level": "TRENDING",
+        "standard_error": 0.017099816075933156,
+        "weighted_effect_estimate": 0.0988626129475801
+      },
+      {
+        "candidate_policy_id": "TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "dimension_level": "RANGING",
+        "standard_error": 0.009245727187439793,
+        "weighted_effect_estimate": 0.08622319475505189
+      },
+      {
+        "candidate_policy_id": "TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "dimension_level": "TRENDING",
+        "standard_error": 0.012234121675222535,
+        "weighted_effect_estimate": 0.040522308380669406
+      },
+      {
+        "candidate_policy_id": "TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "dimension_level": "RANGING",
+        "standard_error": 0.00644983563724993,
+        "weighted_effect_estimate": 0.027963583769562244
+      },
+      {
+        "candidate_policy_id": "REDUCED_TP_0_50R_V1",
+        "dimension_level": "TRENDING",
+        "standard_error": 0.018372073505528427,
+        "weighted_effect_estimate": -0.012595392690957974
+      },
+      {
+        "candidate_policy_id": "REDUCED_TP_0_50R_V1",
+        "dimension_level": "RANGING",
+        "standard_error": 0.010113338782714153,
+        "weighted_effect_estimate": -0.04309876964889332
+      },
+      {
+        "candidate_policy_id": "REDUCED_TP_1_00R_V1",
+        "dimension_level": "TRENDING",
+        "standard_error": 0.01418541371050219,
+        "weighted_effect_estimate": 0.010242311179762017
+      },
+      {
+        "candidate_policy_id": "REDUCED_TP_1_00R_V1",
+        "dimension_level": "RANGING",
+        "standard_error": 0.007563397694235288,
+        "weighted_effect_estimate": -0.02904641239600515
+      },
+      {
+        "candidate_policy_id": "REDUCED_TP_1_50R_V1",
+        "dimension_level": "TRENDING",
+        "standard_error": 0.008929139101073444,
+        "weighted_effect_estimate": -0.006067449022183483
+      },
+      {
+        "candidate_policy_id": "REDUCED_TP_1_50R_V1",
+        "dimension_level": "RANGING",
+        "standard_error": 0.005108686372809202,
+        "weighted_effect_estimate": -0.008150096731877724
+      },
+      {
+        "candidate_policy_id": "TIME_CAP_20_BARS_V1",
+        "dimension_level": "TRENDING",
+        "standard_error": 0.0,
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "candidate_policy_id": "TIME_CAP_20_BARS_V1",
+        "dimension_level": "RANGING",
+        "standard_error": 0.0,
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "candidate_policy_id": "TIME_CAP_60_BARS_V1",
+        "dimension_level": "TRENDING",
+        "standard_error": 0.0,
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "candidate_policy_id": "TIME_CAP_60_BARS_V1",
+        "dimension_level": "RANGING",
+        "standard_error": 0.0,
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "candidate_policy_id": "TIME_CAP_180_BARS_V1",
+        "dimension_level": "TRENDING",
+        "standard_error": 0.0,
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "candidate_policy_id": "TIME_CAP_180_BARS_V1",
+        "dimension_level": "RANGING",
+        "standard_error": 0.0,
+        "weighted_effect_estimate": 0.0
+      }
+    ],
+    "distinct_canonical_opportunities": 9591,
+    "experiment": "HD09 governed exit-effect heterogeneity",
+    "finding": "Valid sufficient HD09 heterogeneity evaluation; omnibus rejected.",
+    "followups": [
+      {
+        "candidate_policy_id": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "confidence_interval_95": [
+          0.004526093643693489,
+          0.09151557522315046
+        ],
+        "effect_contrast": 0.04802083443342198,
+        "first_level": "TRENDING",
+        "holm_adjusted_p_value": 0.24376439051015775,
+        "interpretation": "NOT_SUPPORTED",
+        "raw_two_sided_p_value": 0.03047054881376972,
+        "second_level": "RANGING",
+        "standard_error": 0.022191602056369126,
+        "test_identity": "TRAIL_ACT_0_25R_DIST_0_10R_V1:TRENDING-vs-RANGING"
+      },
+      {
+        "candidate_policy_id": "TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "confidence_interval_95": [
+          -0.025460949848898108,
+          0.05073978623395454
+        ],
+        "effect_contrast": 0.012639418192528215,
+        "first_level": "TRENDING",
+        "holm_adjusted_p_value": 1.0,
+        "interpretation": "NOT_SUPPORTED",
+        "raw_two_sided_p_value": 0.5155639709887404,
+        "second_level": "RANGING",
+        "standard_error": 0.019439320488517733,
+        "test_identity": "TRAIL_ACT_0_50R_DIST_0_25R_V1:TRENDING-vs-RANGING"
+      },
+      {
+        "candidate_policy_id": "TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "confidence_interval_95": [
+          -0.014547946675036623,
+          0.039665395897250946
+        ],
+        "effect_contrast": 0.012558724611107162,
+        "first_level": "TRENDING",
+        "holm_adjusted_p_value": 1.0,
+        "interpretation": "NOT_SUPPORTED",
+        "raw_two_sided_p_value": 0.363843326008389,
+        "second_level": "RANGING",
+        "standard_error": 0.013830188462623676,
+        "test_identity": "TRAIL_ACT_1_00R_DIST_0_50R_V1:TRENDING-vs-RANGING"
+      },
+      {
+        "candidate_policy_id": "REDUCED_TP_0_50R_V1",
+        "confidence_interval_95": [
+          -0.010600423350395058,
+          0.07160717726626575
+        ],
+        "effect_contrast": 0.030503376957935348,
+        "first_level": "TRENDING",
+        "holm_adjusted_p_value": 1.0,
+        "interpretation": "NOT_SUPPORTED",
+        "raw_two_sided_p_value": 0.14580744570015214,
+        "second_level": "RANGING",
+        "standard_error": 0.020971712048053915,
+        "test_identity": "REDUCED_TP_0_50R_V1:TRENDING-vs-RANGING"
+      },
+      {
+        "candidate_policy_id": "REDUCED_TP_1_00R_V1",
+        "confidence_interval_95": [
+          0.007780758865249794,
+          0.07079668828628455
+        ],
+        "effect_contrast": 0.03928872357576717,
+        "first_level": "TRENDING",
+        "holm_adjusted_p_value": 0.1307401389255662,
+        "interpretation": "NOT_SUPPORTED",
+        "raw_two_sided_p_value": 0.01452668210284069,
+        "second_level": "RANGING",
+        "standard_error": 0.016075787595613074,
+        "test_identity": "REDUCED_TP_1_00R_V1:TRENDING-vs-RANGING"
+      },
+      {
+        "candidate_policy_id": "REDUCED_TP_1_50R_V1",
+        "confidence_interval_95": [
+          -0.01808005742359293,
+          0.022245352842981413
+        ],
+        "effect_contrast": 0.002082647709694241,
+        "first_level": "TRENDING",
+        "holm_adjusted_p_value": 1.0,
+        "interpretation": "NOT_SUPPORTED",
+        "raw_two_sided_p_value": 0.8395659182920595,
+        "second_level": "RANGING",
+        "standard_error": 0.010287283487006913,
+        "test_identity": "REDUCED_TP_1_50R_V1:TRENDING-vs-RANGING"
+      },
+      {
+        "candidate_policy_id": "TIME_CAP_20_BARS_V1",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "effect_contrast": 0.0,
+        "first_level": "TRENDING",
+        "holm_adjusted_p_value": 1.0,
+        "interpretation": "NOT_SUPPORTED",
+        "raw_two_sided_p_value": 1.0,
+        "second_level": "RANGING",
+        "standard_error": 0.0,
+        "test_identity": "TIME_CAP_20_BARS_V1:TRENDING-vs-RANGING"
+      },
+      {
+        "candidate_policy_id": "TIME_CAP_60_BARS_V1",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "effect_contrast": 0.0,
+        "first_level": "TRENDING",
+        "holm_adjusted_p_value": 1.0,
+        "interpretation": "NOT_SUPPORTED",
+        "raw_two_sided_p_value": 1.0,
+        "second_level": "RANGING",
+        "standard_error": 0.0,
+        "test_identity": "TIME_CAP_60_BARS_V1:TRENDING-vs-RANGING"
+      },
+      {
+        "candidate_policy_id": "TIME_CAP_180_BARS_V1",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "effect_contrast": 0.0,
+        "first_level": "TRENDING",
+        "holm_adjusted_p_value": 1.0,
+        "interpretation": "NOT_SUPPORTED",
+        "raw_two_sided_p_value": 1.0,
+        "second_level": "RANGING",
+        "standard_error": 0.0,
+        "test_identity": "TIME_CAP_180_BARS_V1:TRENDING-vs-RANGING"
+      }
+    ],
+    "omnibus_interaction_test": {
+      "contrast_identities": [
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1:RANGING-vs-TRENDING",
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1:RANGING-vs-TRENDING",
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1:RANGING-vs-TRENDING",
+        "REDUCED_TP_0_50R_V1:RANGING-vs-TRENDING",
+        "REDUCED_TP_1_00R_V1:RANGING-vs-TRENDING",
+        "REDUCED_TP_1_50R_V1:RANGING-vs-TRENDING",
+        "TIME_CAP_20_BARS_V1:RANGING-vs-TRENDING",
+        "TIME_CAP_60_BARS_V1:RANGING-vs-TRENDING",
+        "TIME_CAP_180_BARS_V1:RANGING-vs-TRENDING"
+      ],
+      "covariance_rank": 6,
+      "degenerate_nonzero_direction": false,
+      "degrees_of_freedom": 6,
+      "method": "canonical-opportunity clustered CR0 Wald chi-square",
+      "null": "all within-candidate dimension-level effects are equal",
+      "p_value": 0.0004991239267535441,
+      "reject_at_alpha_0_05": true,
+      "statistic": 24.106936670047453
+    },
+    "population": {
+      "candidate_level_opportunity_counts": {
+        "REDUCED_TP_0_50R_V1|RANGING": 7380,
+        "REDUCED_TP_0_50R_V1|TRANSITIONAL": 0,
+        "REDUCED_TP_0_50R_V1|TRENDING": 2211,
+        "REDUCED_TP_1_00R_V1|RANGING": 7380,
+        "REDUCED_TP_1_00R_V1|TRANSITIONAL": 0,
+        "REDUCED_TP_1_00R_V1|TRENDING": 2211,
+        "REDUCED_TP_1_50R_V1|RANGING": 7380,
+        "REDUCED_TP_1_50R_V1|TRANSITIONAL": 0,
+        "REDUCED_TP_1_50R_V1|TRENDING": 2211,
+        "TIME_CAP_180_BARS_V1|RANGING": 7380,
+        "TIME_CAP_180_BARS_V1|TRANSITIONAL": 0,
+        "TIME_CAP_180_BARS_V1|TRENDING": 2211,
+        "TIME_CAP_20_BARS_V1|RANGING": 7380,
+        "TIME_CAP_20_BARS_V1|TRANSITIONAL": 0,
+        "TIME_CAP_20_BARS_V1|TRENDING": 2211,
+        "TIME_CAP_60_BARS_V1|RANGING": 7380,
+        "TIME_CAP_60_BARS_V1|TRANSITIONAL": 0,
+        "TIME_CAP_60_BARS_V1|TRENDING": 2211,
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1|RANGING": 7380,
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1|TRANSITIONAL": 0,
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1|TRENDING": 2211,
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1|RANGING": 7380,
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1|TRANSITIONAL": 0,
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1|TRENDING": 2211,
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1|RANGING": 7380,
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1|TRANSITIONAL": 0,
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1|TRENDING": 2211
+      },
+      "candidate_level_remaining_opportunities": {
+        "REDUCED_TP_0_50R_V1|RANGING": 0,
+        "REDUCED_TP_0_50R_V1|TRANSITIONAL": 30,
+        "REDUCED_TP_0_50R_V1|TRENDING": 0,
+        "REDUCED_TP_1_00R_V1|RANGING": 0,
+        "REDUCED_TP_1_00R_V1|TRANSITIONAL": 30,
+        "REDUCED_TP_1_00R_V1|TRENDING": 0,
+        "REDUCED_TP_1_50R_V1|RANGING": 0,
+        "REDUCED_TP_1_50R_V1|TRANSITIONAL": 30,
+        "REDUCED_TP_1_50R_V1|TRENDING": 0,
+        "TIME_CAP_180_BARS_V1|RANGING": 0,
+        "TIME_CAP_180_BARS_V1|TRANSITIONAL": 30,
+        "TIME_CAP_180_BARS_V1|TRENDING": 0,
+        "TIME_CAP_20_BARS_V1|RANGING": 0,
+        "TIME_CAP_20_BARS_V1|TRANSITIONAL": 30,
+        "TIME_CAP_20_BARS_V1|TRENDING": 0,
+        "TIME_CAP_60_BARS_V1|RANGING": 0,
+        "TIME_CAP_60_BARS_V1|TRANSITIONAL": 30,
+        "TIME_CAP_60_BARS_V1|TRENDING": 0,
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1|RANGING": 0,
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1|TRANSITIONAL": 30,
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1|TRENDING": 0,
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1|RANGING": 0,
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1|TRANSITIONAL": 30,
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1|TRENDING": 0,
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1|RANGING": 0,
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1|TRANSITIONAL": 30,
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1|TRENDING": 0
+      },
+      "dimension_excluded_lifecycles": {
+        "INVALID_ENTRY_DIMENSION_AUTHORITY": 10
+      },
+      "dimension_name": "market_regime",
+      "dimension_source": "shadow_runtime_v1 OPEN.live_facts.regime",
+      "insufficient_levels": [
+        "TRANSITIONAL"
+      ],
+      "level_lifecycle_counts": {
+        "RANGING": 7380,
+        "TRANSITIONAL": 0,
+        "TRENDING": 2211
+      },
+      "level_opportunity_counts": {
+        "RANGING": 7380,
+        "TRANSITIONAL": 0,
+        "TRENDING": 2211
+      },
+      "observed_levels": [
+        "TRENDING",
+        "RANGING"
+      ],
+      "sufficient_levels": [
+        "TRENDING",
+        "RANGING"
+      ]
+    },
+    "sample_size": 9591
+  },
+  "provenance": {
+    "analytical_digest": "f4860d4d26fc06fad321da18ba4c1dc9cd9562789df74e6c9decc48ae0fabc64",
+    "analytical_population_digest": "70f559c431d2f08591be0e952bee7903fb738a850654dcd11214e5b422c90dad",
+    "baseline_reproduction_population_digest": "780a6f77cbecd4682181152ac32b6ba581b67698e20ccfdcb1d5a58cb77acbcb",
+    "candidate_policy_identities": [
+      {
+        "activation_r": 0.25,
+        "distance_r": 0.1,
+        "policy_id": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "policy_type": "TRAILING"
+      },
+      {
+        "activation_r": 0.5,
+        "distance_r": 0.25,
+        "policy_id": "TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "policy_type": "TRAILING"
+      },
+      {
+        "activation_r": 1.0,
+        "distance_r": 0.5,
+        "policy_id": "TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "policy_type": "TRAILING"
+      },
+      {
+        "policy_id": "REDUCED_TP_0_50R_V1",
+        "policy_type": "REDUCED_TP",
+        "target_cap_r": 0.5
+      },
+      {
+        "policy_id": "REDUCED_TP_1_00R_V1",
+        "policy_type": "REDUCED_TP",
+        "target_cap_r": 1.0
+      },
+      {
+        "policy_id": "REDUCED_TP_1_50R_V1",
+        "policy_type": "REDUCED_TP",
+        "target_cap_r": 1.5
+      },
+      {
+        "bar_cap": 20,
+        "policy_id": "TIME_CAP_20_BARS_V1",
+        "policy_type": "TIME_CAP"
+      },
+      {
+        "bar_cap": 60,
+        "policy_id": "TIME_CAP_60_BARS_V1",
+        "policy_type": "TIME_CAP"
+      },
+      {
+        "bar_cap": 180,
+        "policy_id": "TIME_CAP_180_BARS_V1",
+        "policy_type": "TIME_CAP"
+      }
+    ],
+    "candidate_replay_population_digest": "ac9651f86ce360b7cd76da9127163896839198b404cb7241d9273545f255d650",
+    "cluster_identity": "canonical_opportunity_id",
+    "covariance": "A^-1 (sum_o s_o s_o') A^-1",
+    "dimension_evidence_digest": "1df6049d4d07dba3f094cfac669ab7d26c61813511d90954d67dccb64f975322",
+    "dimension_evidence_schema": "exit_dimension_evidence_v1",
+    "finite_sample_correction": "none (CR0); do not apply HC/CR1 or row-independent covariance",
+    "followup_family_order": [
+      "TRAIL_ACT_0_25R_DIST_0_10R_V1:TRENDING-vs-RANGING",
+      "TRAIL_ACT_0_50R_DIST_0_25R_V1:TRENDING-vs-RANGING",
+      "TRAIL_ACT_1_00R_DIST_0_50R_V1:TRENDING-vs-RANGING",
+      "REDUCED_TP_0_50R_V1:TRENDING-vs-RANGING",
+      "REDUCED_TP_1_00R_V1:TRENDING-vs-RANGING",
+      "REDUCED_TP_1_50R_V1:TRENDING-vs-RANGING",
+      "TIME_CAP_20_BARS_V1:TRENDING-vs-RANGING",
+      "TIME_CAP_60_BARS_V1:TRENDING-vs-RANGING",
+      "TIME_CAP_180_BARS_V1:TRENDING-vs-RANGING"
+    ],
+    "hd09_adjudication_version": "hd09_exit_policy_counterfactual_v1",
+    "horizon_weighting_contract": "k_o is the number of counterfactual-eligible lifecycle horizons for canonical opportunity o in the exact question analytical population; weights sum to one per opportunity within each policy.",
+    "interaction_model": "paired effect ~ candidate + dimension + candidate:dimension",
+    "omnibus": {
+      "contrast_identities": [
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1:RANGING-vs-TRENDING",
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1:RANGING-vs-TRENDING",
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1:RANGING-vs-TRENDING",
+        "REDUCED_TP_0_50R_V1:RANGING-vs-TRENDING",
+        "REDUCED_TP_1_00R_V1:RANGING-vs-TRENDING",
+        "REDUCED_TP_1_50R_V1:RANGING-vs-TRENDING",
+        "TIME_CAP_20_BARS_V1:RANGING-vs-TRENDING",
+        "TIME_CAP_60_BARS_V1:RANGING-vs-TRENDING",
+        "TIME_CAP_180_BARS_V1:RANGING-vs-TRENDING"
+      ],
+      "covariance_rank": 6,
+      "degenerate_nonzero_direction": false,
+      "degrees_of_freedom": 6,
+      "method": "canonical-opportunity clustered CR0 Wald chi-square",
+      "null": "all within-candidate dimension-level effects are equal",
+      "p_value": 0.0004991239267535441,
+      "reject_at_alpha_0_05": true,
+      "statistic": 24.106936670047453
+    },
+    "path_population_digest": "9ef7683c7bc1eb02a8e81e7cc9dcb8f93cba6c6bc3ed8fc9a80c1756b35a08cd",
+    "population": {
+      "candidate_level_opportunity_counts": {
+        "REDUCED_TP_0_50R_V1|RANGING": 7380,
+        "REDUCED_TP_0_50R_V1|TRANSITIONAL": 0,
+        "REDUCED_TP_0_50R_V1|TRENDING": 2211,
+        "REDUCED_TP_1_00R_V1|RANGING": 7380,
+        "REDUCED_TP_1_00R_V1|TRANSITIONAL": 0,
+        "REDUCED_TP_1_00R_V1|TRENDING": 2211,
+        "REDUCED_TP_1_50R_V1|RANGING": 7380,
+        "REDUCED_TP_1_50R_V1|TRANSITIONAL": 0,
+        "REDUCED_TP_1_50R_V1|TRENDING": 2211,
+        "TIME_CAP_180_BARS_V1|RANGING": 7380,
+        "TIME_CAP_180_BARS_V1|TRANSITIONAL": 0,
+        "TIME_CAP_180_BARS_V1|TRENDING": 2211,
+        "TIME_CAP_20_BARS_V1|RANGING": 7380,
+        "TIME_CAP_20_BARS_V1|TRANSITIONAL": 0,
+        "TIME_CAP_20_BARS_V1|TRENDING": 2211,
+        "TIME_CAP_60_BARS_V1|RANGING": 7380,
+        "TIME_CAP_60_BARS_V1|TRANSITIONAL": 0,
+        "TIME_CAP_60_BARS_V1|TRENDING": 2211,
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1|RANGING": 7380,
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1|TRANSITIONAL": 0,
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1|TRENDING": 2211,
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1|RANGING": 7380,
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1|TRANSITIONAL": 0,
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1|TRENDING": 2211,
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1|RANGING": 7380,
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1|TRANSITIONAL": 0,
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1|TRENDING": 2211
+      },
+      "candidate_level_remaining_opportunities": {
+        "REDUCED_TP_0_50R_V1|RANGING": 0,
+        "REDUCED_TP_0_50R_V1|TRANSITIONAL": 30,
+        "REDUCED_TP_0_50R_V1|TRENDING": 0,
+        "REDUCED_TP_1_00R_V1|RANGING": 0,
+        "REDUCED_TP_1_00R_V1|TRANSITIONAL": 30,
+        "REDUCED_TP_1_00R_V1|TRENDING": 0,
+        "REDUCED_TP_1_50R_V1|RANGING": 0,
+        "REDUCED_TP_1_50R_V1|TRANSITIONAL": 30,
+        "REDUCED_TP_1_50R_V1|TRENDING": 0,
+        "TIME_CAP_180_BARS_V1|RANGING": 0,
+        "TIME_CAP_180_BARS_V1|TRANSITIONAL": 30,
+        "TIME_CAP_180_BARS_V1|TRENDING": 0,
+        "TIME_CAP_20_BARS_V1|RANGING": 0,
+        "TIME_CAP_20_BARS_V1|TRANSITIONAL": 30,
+        "TIME_CAP_20_BARS_V1|TRENDING": 0,
+        "TIME_CAP_60_BARS_V1|RANGING": 0,
+        "TIME_CAP_60_BARS_V1|TRANSITIONAL": 30,
+        "TIME_CAP_60_BARS_V1|TRENDING": 0,
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1|RANGING": 0,
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1|TRANSITIONAL": 30,
+        "TRAIL_ACT_0_25R_DIST_0_10R_V1|TRENDING": 0,
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1|RANGING": 0,
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1|TRANSITIONAL": 30,
+        "TRAIL_ACT_0_50R_DIST_0_25R_V1|TRENDING": 0,
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1|RANGING": 0,
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1|TRANSITIONAL": 30,
+        "TRAIL_ACT_1_00R_DIST_0_50R_V1|TRENDING": 0
+      },
+      "dimension_excluded_lifecycles": {
+        "INVALID_ENTRY_DIMENSION_AUTHORITY": 10
+      },
+      "dimension_name": "market_regime",
+      "dimension_source": "shadow_runtime_v1 OPEN.live_facts.regime",
+      "insufficient_levels": [
+        "TRANSITIONAL"
+      ],
+      "level_lifecycle_counts": {
+        "RANGING": 7380,
+        "TRANSITIONAL": 0,
+        "TRENDING": 2211
+      },
+      "level_opportunity_counts": {
+        "RANGING": 7380,
+        "TRANSITIONAL": 0,
+        "TRENDING": 2211
+      },
+      "observed_levels": [
+        "TRENDING",
+        "RANGING"
+      ],
+      "sufficient_levels": [
+        "TRENDING",
+        "RANGING"
+      ]
+    },
+    "question_id": "EX7",
+    "readiness": {
+      "blockers": [],
+      "dimension_coverage": 0.9989584418289762,
+      "distinct_canonical_opportunity_count": 9591,
+      "governed_coverage": 0.9745229395046691,
+      "overall_eligible_lifecycle_count": 9591,
+      "remaining_dimension_valid_lifecycles": 0,
+      "remaining_distinct_opportunities": 0,
+      "remaining_paired_lifecycles": 0,
+      "remaining_sufficient_levels": 0,
+      "required_dimension_coverage": 0.8,
+      "required_dimension_valid_lifecycles": 7681,
+      "required_distinct_opportunities": 200,
+      "required_governed_coverage": 0.95,
+      "required_opportunities_per_candidate_level_cell": 30,
+      "required_paired_lifecycles": 200,
+      "required_sufficient_levels": 2,
+      "state": "READY"
+    },
+    "report_digest": "42cac187cfb1df046872f1d50d264c3171a9e62d47275582a55c55ba93c96ff3",
+    "scientific_contract": {
+      "candidates": "all nine CANDIDATE_POLICIES_V1",
+      "covariance": "A^-1 (sum_o s_o s_o') A^-1",
+      "dimensions": {
+        "EX5": {
+          "coverage": 0.5,
+          "levels": [
+            "SCALP",
+            "INTRADAY",
+            "EXTENDED"
+          ],
+          "name": "trade_horizon",
+          "source": "exit_bar_path_v1.trade_horizon"
+        },
+        "EX6": {
+          "coverage": 0.5,
+          "excluded_level": "NONE",
+          "historical_label_mapping_forbidden": true,
+          "levels": [
+            "LIQUIDITY_SWEEP_REVERSAL",
+            "FALSE_BREAK",
+            "TREND_CONTINUATION",
+            "BREAKOUT_EXPANSION",
+            "MEAN_REVERSION",
+            "RANGE_REACTION"
+          ],
+          "name": "strategy_family",
+          "source": "shadow_runtime_v1 OPEN.live_facts.strategy using core.v10.strategy_family.StrategyFamily"
+        },
+        "EX7": {
+          "coverage": 0.8,
+          "h4_fallback_forbidden": true,
+          "name": "market_regime",
+          "source": "shadow_runtime_v1 OPEN.live_facts.regime"
+        },
+        "EX8": {
+          "coverage": 0.5,
+          "name": "candlestick_pattern",
+          "source": "shadow_runtime_v1 OPEN.live_facts.pattern"
+        }
+      },
+      "estimand": "heterogeneity of candidate-minus-reproduced-baseline R effect",
+      "finite_sample_correction": "none (CR0); do not apply HC/CR1 or row-independent covariance",
+      "followup_gate": "global p <= 0.05",
+      "followups": "within-candidate pairwise eligible-level contrasts",
+      "global_alpha": 0.05,
+      "global_test": "cluster-robust Wald chi-square test that all candidate:dimension interactions are zero",
+      "later_path_extension": "EX6-EX8 require their named immutable OPEN.live_facts field in governed analytical evidence/provenance; no inference or fallback from other fields.",
+      "level_selection": "include every canonical level meeting the pre-outcome coverage/cell thresholds in canonical authority order; outcome means, effects, or p-values may not select levels",
+      "minimum_distinct_canonical_opportunities": 200,
+      "minimum_distinct_opportunities_per_candidate_dimension_cell": 30,
+      "minimum_levels": 2,
+      "minimum_total_paired_lifecycles": 200,
+      "model": "paired effect ~ candidate + dimension + candidate:dimension",
+      "multiplicity": "one Holm family per question across every predeclared follow-up contrast",
+      "questions": [
+        "EX5",
+        "EX6",
+        "EX7",
+        "EX8"
+      ],
+      "valid_null": "sufficient estimable non-rejection is COMPLETE",
+      "weighting_and_cluster": {
+        "account_fanout_rule": "account/broker executions do not create exit-policy observations",
+        "cluster_identity": "canonical_opportunity_id",
+        "duplicate_rule": "one row per pairing identity and candidate; duplicates fail closed",
+        "horizon_weight": "w_oh = 1 / k_o",
+        "horizon_weight_definition": "k_o is the number of counterfactual-eligible lifecycle horizons for canonical opportunity o in the exact question analytical population; weights sum to one per opportunity within each policy.",
+        "pairing_identity": [
+          "shadow_trade_id",
+          "canonical_opportunity_id",
+          "trade_horizon"
+        ],
+        "repeated_horizon_rule": "horizons from one opportunity are repeated measurements",
+        "row_grain": "one completed lifecycle x one candidate policy"
+      }
+    }
+  },
+  "question_id": "EX7",
+  "recommendation": "FINDING: governed heterogeneity evaluation",
+  "report_schema_version": "hd09_governed_exit_heterogeneity_v1",
+  "status": "COMPLETE",
+  "warnings": [
+    "Research-only simulated policy effects; no production application authority."
+  ]
+}

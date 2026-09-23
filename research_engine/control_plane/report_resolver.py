@@ -238,6 +238,15 @@ def resolve_report_validity(
         )
         if not governed_valid:
             return ReportValidity.INVALIDATED, governed_reason
+    if expected_question_id in {"EX5", "EX6", "EX7", "EX8"}:
+        from research_engine.experiments.exit_policy_heterogeneity import (
+            validate_governed_heterogeneity_report,
+        )
+        governed_valid, governed_reason = validate_governed_heterogeneity_report(
+            report_data, expected_question_id,
+        )
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
     if isinstance(fingerprint, dict):
         invalidation = is_report_invalidated(filename, fingerprint)
         if invalidation is not None:
