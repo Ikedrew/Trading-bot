@@ -262,10 +262,12 @@ HUMAN_SEMANTIC_DECISIONS = {
     ),
     "HD09": HumanSemanticDecision(
         "HD09", ("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10"),
-        "Choose registry narrowing versus genuine path-based counterfactual/policy evaluation for exit questions.",
+        "ADJUDICATED: preserve genuine path-based counterfactual intent using SHADOW_BASELINE_V1, "
+        "the closed nine-policy V1 vocabulary, opportunity-paired/clustered inference, and the "
+        "question-specific contracts in HD09_ADJUDICATED_CONTRACT.",
         ("Implement versioned candidate exit-policy simulation", "Narrow questions to observational exit diagnostics"),
         ("Preserves canonical policy intent and needs ordered path evaluation", "Retains current runners but changes scientific claims"),
-        "Preserve registry intent and implement counterfactual policy evaluation.", True,
+        "ADJUDICATED: use research_engine.registry.exit_policy_adjudication.HD09_ADJUDICATED_CONTRACT.", False,
     ),
     "HD10": HumanSemanticDecision(
         "HD10", ("R1", "R2", "R3", "R4", "R5"),
