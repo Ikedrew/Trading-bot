@@ -10,6 +10,7 @@ from research_engine.control_plane.evidence_readiness import (
     evaluate_evidence_readiness,
 )
 from research_engine.control_plane.exit_bar_path import (
+    BASELINE_AUTHORITY_FIELDS,
     SCHEMA_VERSION,
     LifecyclePathSource,
     build_exit_bar_path_v1,
@@ -51,6 +52,8 @@ def _source(
         "opportunity_market_time": entry_time,
         "opportunity_market_time_utc_epoch_s": entry_time - offset,
         "recorded_at_utc_ms": (entry_time + 60) * 1000,
+        "simulation_model_version": "simulation_v1",
+        "simulation_assumptions": {"timeout_bars": 9},
         "construction": {
             "direction": "BUY",
             "entry_price": 1.1000,
@@ -67,7 +70,11 @@ def _source(
         "exit_market_time": exit_time,
         "exit_market_time_utc_epoch_s": exit_time - offset,
         "recorded_at_utc_ms": (exit_time + 60) * 1000,
+        "simulation_model_version": "simulation_v1",
+        "exit_reason": "take_profit",
+        "exit_price": 1.1040,
         "bars_held": len(closes),
+        "outcome": {"pnl_r_multiple": 2.0, "mfe_r": 1.25},
         "trade_state_progression": [
             {"bar": bar, "r": bar / 10, "close": close}
             for bar, close in enumerate(closes, 1)
@@ -126,6 +133,22 @@ def test_eligible_lifecycle_exposes_complete_ordered_contract_without_mutation()
     assert record.entry_price == 1.1000
     assert record.baseline_stop_loss == 1.0980
     assert record.baseline_take_profit == 1.1040
+    assert BASELINE_AUTHORITY_FIELDS == (
+        "baseline_timeout_bars",
+        "baseline_simulation_model_version",
+        "observed_exit_reason",
+        "observed_exit_price",
+        "observed_bars_held",
+        "observed_pnl_r_multiple",
+        "observed_mfe_r",
+    )
+    assert record.baseline_timeout_bars == 9
+    assert record.baseline_simulation_model_version == "simulation_v1"
+    assert record.observed_exit_reason == "take_profit"
+    assert record.observed_exit_price == 1.1040
+    assert record.observed_bars_held == 2
+    assert record.observed_pnl_r_multiple == 2.0
+    assert record.observed_mfe_r == 1.25
     assert record.timeframe == "M5"
     assert [bar.timestamp_utc_ms for bar in record.ordered_m5_bars] == sorted(
         bar.timestamp_utc_ms for bar in record.ordered_m5_bars
@@ -133,6 +156,98 @@ def test_eligible_lifecycle_exposes_complete_ordered_contract_without_mutation()
     assert record.timestamp_semantics == "canonical_utc_bar_open_v1"
     assert record.timestamp_version == "shadow_post_candle_utc_normalization_v1"
     assert source == original
+
+
+@pytest.mark.parametrize(
+    ("mutator", "reason"),
+    [
+        (
+            lambda source: _replace(
+                source,
+                open_event={
+                    key: value for key, value in source.open_event.items()
+                    if key != "simulation_assumptions"
+                },
+            ),
+            "MISSING_BASELINE_TIMEOUT_AUTHORITY",
+        ),
+        (
+            lambda source: _replace(
+                source,
+                open_event={
+                    **source.open_event,
+                    "simulation_assumptions": {"timeout_bars": 10},
+                },
+            ),
+            "BASELINE_TIMEOUT_AUTHORITY_MISMATCH",
+        ),
+        (
+            lambda source: _replace(
+                source,
+                close_event={
+                    key: value for key, value in source.close_event.items()
+                    if key != "exit_price"
+                },
+            ),
+            "MISSING_OBSERVED_EXIT_PRICE",
+        ),
+        (
+            lambda source: _replace(
+                source,
+                close_event={**source.close_event, "exit_price": "not-a-number"},
+            ),
+            "INVALID_OBSERVED_EXIT_PRICE",
+        ),
+        (
+            lambda source: _replace(
+                source,
+                close_event={
+                    **source.close_event,
+                    "outcome": {
+                        **source.close_event["outcome"],
+                        "pnl_r_multiple": "not-a-number",
+                    },
+                },
+            ),
+            "INVALID_OBSERVED_PNL_R_MULTIPLE",
+        ),
+        (
+            lambda source: _replace(
+                source,
+                close_event={
+                    **source.close_event,
+                    "simulation_model_version": "simulation_v2",
+                },
+            ),
+            "BASELINE_SIMULATION_MODEL_IDENTITY_CONFLICT",
+        ),
+        (
+            lambda source: _replace(
+                source,
+                close_event={
+                    **source.close_event,
+                    "canonical_opportunity_id": "EURUSD*other*HAMMER",
+                },
+            ),
+            "LIFECYCLE_IDENTITY_MISMATCH",
+        ),
+    ],
+)
+def test_baseline_authority_is_required_and_fails_closed(mutator, reason):
+    evidence = build_exit_bar_path_v1((mutator(_source()),))
+    assert not evidence.records
+    assert evidence.summary.exclusions_by_reason == {reason: 1}
+
+
+def test_observed_values_are_never_reconstructed_from_m5_bars():
+    source = _source()
+    closed = {
+        key: value for key, value in source.close_event.items()
+        if key not in {"exit_price", "outcome"}
+    }
+    evidence = build_exit_bar_path_v1((_replace(source, close_event=closed),))
+    assert not evidence.records
+    assert evidence.exclusions[0].reason == "MISSING_OBSERVED_EXIT_PRICE"
 
 
 @pytest.mark.parametrize(
@@ -259,6 +374,55 @@ def test_reordering_is_invariant_and_analytical_changes_change_digest():
     assert source_changed.provenance["digest"] != first.provenance["digest"]
 
 
+@pytest.mark.parametrize(
+    "mutator",
+    [
+        lambda source: _replace(
+            source,
+            open_event={
+                **source.open_event,
+                "simulation_assumptions": {"timeout_bars": 10},
+            },
+        ),
+        lambda source: _replace(
+            source,
+            open_event={**source.open_event, "simulation_model_version": "simulation_v2"},
+        ),
+        lambda source: _replace(
+            source,
+            close_event={**source.close_event, "exit_reason": "stop_loss"},
+        ),
+        lambda source: _replace(
+            source,
+            close_event={**source.close_event, "exit_price": 1.1035},
+        ),
+        lambda source: _replace(
+            source,
+            close_event={**source.close_event, "bars_held": 1},
+        ),
+        lambda source: _replace(
+            source,
+            close_event={
+                **source.close_event,
+                "outcome": {**source.close_event["outcome"], "pnl_r_multiple": 1.5},
+            },
+        ),
+        lambda source: _replace(
+            source,
+            close_event={
+                **source.close_event,
+                "outcome": {**source.close_event["outcome"], "mfe_r": 1.5},
+            },
+        ),
+    ],
+)
+def test_each_baseline_authority_field_changes_population_provenance(mutator):
+    source = _source()
+    baseline = build_exit_bar_path_v1((source,))
+    changed = build_exit_bar_path_v1((mutator(source),))
+    assert changed.provenance["digest"] != baseline.provenance["digest"]
+
+
 def test_population_summary_and_generic_readiness_are_mechanical():
     valid = _source()
     missing = _replace(_source(1), candle_events=())
@@ -284,6 +448,18 @@ def test_population_summary_and_generic_readiness_are_mechanical():
         "DISTINCT_COUNT_BELOW_REQUIRED",
         "COVERAGE_BELOW_REQUIRED",
     )
+
+    ready_evidence = build_exit_bar_path_v1((_source(2), _source(3)))
+    ready = ready_evidence.readiness(EvidenceRequirement(
+        minimum_valid_count=2,
+        minimum_distinct_count=2,
+        minimum_coverage=1.0,
+    ))
+    assert ready.state == "READY"
+    assert ready.current_valid_count == 2
+    assert ready.current_distinct_count == 2
+    assert ready.current_coverage == 1.0
+    assert ready.blockers == ()
 
 
 def test_generic_readiness_supports_163_of_200_without_question_logic():

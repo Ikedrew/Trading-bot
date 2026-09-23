@@ -14,6 +14,13 @@ from dataclasses import dataclass
 import math
 from typing import Any, Iterable, Mapping
 
+from core.shadow.models import (
+    EXIT_STOP_LOSS,
+    EXIT_TAKE_PROFIT,
+    EXIT_TIMEOUT,
+    SIMULATION_MODEL_VERSION,
+    TIMEOUT_BARS,
+)
 from research_engine.control_plane.evidence_provenance import evidence_digest
 from research_engine.control_plane.evidence_readiness import (
     EvidenceReadiness,
@@ -25,12 +32,32 @@ from research_engine.control_plane.shadow_timestamp_normalization import (
     TIMESTAMP_SEMANTICS,
     normalize_post_candle_utc_lifecycle,
 )
+from research_engine.registry.exit_policy_adjudication import (
+    BASELINE_POLICY_V1,
+    BASELINE_REPRODUCTION_CONTRACT,
+)
 
 
 SCHEMA_VERSION = "exit_bar_path_v1"
 SOURCE_EVIDENCE_IDENTITY = "shadow_runtime_v1+events_v1:CANDLE:mt5_data:M5"
 TIMESTAMP_VERSION = NORMALIZATION_CONTRACT_VERSION
 _DIGEST_NOT_SUPPLIED = object()
+BASELINE_AUTHORITY_FIELDS = tuple(
+    BASELINE_REPRODUCTION_CONTRACT["exit_bar_path_v1_required_extension"]["fields"]
+)
+_EXPECTED_BASELINE_AUTHORITY_FIELDS = (
+    "baseline_timeout_bars",
+    "baseline_simulation_model_version",
+    "observed_exit_reason",
+    "observed_exit_price",
+    "observed_bars_held",
+    "observed_pnl_r_multiple",
+    "observed_mfe_r",
+)
+if BASELINE_AUTHORITY_FIELDS != _EXPECTED_BASELINE_AUTHORITY_FIELDS:
+    raise RuntimeError("HD09 exit_bar_path_v1 baseline extension contract changed")
+if BASELINE_POLICY_V1["authoritative_timeout_bars"] != TIMEOUT_BARS:
+    raise RuntimeError("HD09 timeout authority conflicts with the shadow runtime")
 
 
 @dataclass(frozen=True)
@@ -73,6 +100,13 @@ class ExitBarPathRecord:
     entry_price: float
     baseline_stop_loss: float
     baseline_take_profit: float
+    baseline_timeout_bars: int
+    baseline_simulation_model_version: str
+    observed_exit_reason: str
+    observed_exit_price: float
+    observed_bars_held: int
+    observed_pnl_r_multiple: float
+    observed_mfe_r: float
     timeframe: str
     ordered_m5_bars: tuple[ExitBar, ...]
     timestamp_semantics: str
@@ -98,6 +132,13 @@ class ExitBarPathRecord:
             "entry_price": self.entry_price,
             "baseline_stop_loss": self.baseline_stop_loss,
             "baseline_take_profit": self.baseline_take_profit,
+            "baseline_timeout_bars": self.baseline_timeout_bars,
+            "baseline_simulation_model_version": self.baseline_simulation_model_version,
+            "observed_exit_reason": self.observed_exit_reason,
+            "observed_exit_price": self.observed_exit_price,
+            "observed_bars_held": self.observed_bars_held,
+            "observed_pnl_r_multiple": self.observed_pnl_r_multiple,
+            "observed_mfe_r": self.observed_mfe_r,
             "timeframe": self.timeframe,
             "ordered_m5_bars": [bar.analytical_record() for bar in self.ordered_m5_bars],
             "timestamp_semantics": self.timestamp_semantics,
@@ -177,6 +218,14 @@ def _finite(value: Any) -> float | None:
         return None
     number = float(value)
     return number if math.isfinite(number) else None
+
+
+def _integer(value: Any) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    if not math.isfinite(float(value)) or int(value) != value:
+        return None
+    return int(value)
 
 
 def _source_records(source: LifecyclePathSource) -> list[dict[str, Any]]:
@@ -303,6 +352,135 @@ def _canonical_record(
             source_digest=source_digest,
         )
 
+    assumptions = opened.get("simulation_assumptions")
+    if not isinstance(assumptions, Mapping) or "timeout_bars" not in assumptions:
+        return None, _exclusion(
+            source, "MISSING_BASELINE_TIMEOUT_AUTHORITY",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    baseline_timeout_bars = _integer(assumptions.get("timeout_bars"))
+    if baseline_timeout_bars is None or baseline_timeout_bars <= 0:
+        return None, _exclusion(
+            source, "INVALID_BASELINE_TIMEOUT_AUTHORITY",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    canonical_timeout = TIMEOUT_BARS.get(horizon)
+    if canonical_timeout is None or baseline_timeout_bars != canonical_timeout:
+        return None, _exclusion(
+            source, "BASELINE_TIMEOUT_AUTHORITY_MISMATCH",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+
+    if "simulation_model_version" not in opened:
+        return None, _exclusion(
+            source, "MISSING_BASELINE_SIMULATION_MODEL_VERSION",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    baseline_model_version = opened.get("simulation_model_version")
+    if not isinstance(baseline_model_version, str) or not baseline_model_version:
+        return None, _exclusion(
+            source, "INVALID_BASELINE_SIMULATION_MODEL_VERSION",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    if baseline_model_version != SIMULATION_MODEL_VERSION:
+        return None, _exclusion(
+            source, "INCOMPATIBLE_BASELINE_SIMULATION_MODEL_VERSION",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    close_model_version = closed.get("simulation_model_version")
+    if close_model_version != baseline_model_version:
+        return None, _exclusion(
+            source, "BASELINE_SIMULATION_MODEL_IDENTITY_CONFLICT",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+
+    if "exit_reason" not in closed:
+        return None, _exclusion(
+            source, "MISSING_OBSERVED_EXIT_REASON",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    observed_exit_reason = closed.get("exit_reason")
+    if observed_exit_reason not in {EXIT_STOP_LOSS, EXIT_TAKE_PROFIT, EXIT_TIMEOUT}:
+        return None, _exclusion(
+            source, "INVALID_OBSERVED_EXIT_REASON",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    if "exit_price" not in closed:
+        return None, _exclusion(
+            source, "MISSING_OBSERVED_EXIT_PRICE",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    observed_exit_price = _finite(closed.get("exit_price"))
+    if observed_exit_price is None or observed_exit_price <= 0:
+        return None, _exclusion(
+            source, "INVALID_OBSERVED_EXIT_PRICE",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    if "bars_held" not in closed:
+        return None, _exclusion(
+            source, "MISSING_OBSERVED_BARS_HELD",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    observed_bars_held = _integer(closed.get("bars_held"))
+    if observed_bars_held is None or not 1 <= observed_bars_held <= baseline_timeout_bars:
+        return None, _exclusion(
+            source, "INVALID_OBSERVED_BARS_HELD",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    if observed_exit_reason == EXIT_TIMEOUT and observed_bars_held != baseline_timeout_bars:
+        return None, _exclusion(
+            source, "OBSERVED_BASELINE_AUTHORITY_INCONSISTENT",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+
+    outcome = closed.get("outcome")
+    if not isinstance(outcome, Mapping):
+        return None, _exclusion(
+            source, "MISSING_OBSERVED_OUTCOME_AUTHORITY",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    if "pnl_r_multiple" not in outcome:
+        return None, _exclusion(
+            source, "MISSING_OBSERVED_PNL_R_MULTIPLE",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    observed_pnl_r = _finite(outcome.get("pnl_r_multiple"))
+    if observed_pnl_r is None:
+        return None, _exclusion(
+            source, "INVALID_OBSERVED_PNL_R_MULTIPLE",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    if "mfe_r" not in outcome:
+        return None, _exclusion(
+            source, "MISSING_OBSERVED_MFE_R",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+    observed_mfe_r = _finite(outcome.get("mfe_r"))
+    if observed_mfe_r is None or observed_mfe_r < 0:
+        return None, _exclusion(
+            source, "INVALID_OBSERVED_MFE_R",
+            normalization_digest=normalization_digest,
+            source_digest=source_digest,
+        )
+
     entry_time = opened.get("entry_market_time_utc_epoch_s")
     exit_time = closed.get("exit_market_time_utc_epoch_s")
     if (
@@ -375,6 +553,13 @@ def _canonical_record(
         "entry_price": entry,
         "baseline_stop_loss": stop,
         "baseline_take_profit": target,
+        "baseline_timeout_bars": baseline_timeout_bars,
+        "baseline_simulation_model_version": baseline_model_version,
+        "observed_exit_reason": observed_exit_reason,
+        "observed_exit_price": observed_exit_price,
+        "observed_bars_held": observed_bars_held,
+        "observed_pnl_r_multiple": observed_pnl_r,
+        "observed_mfe_r": observed_mfe_r,
         "timeframe": "M5",
         "ordered_m5_bars": [bar.analytical_record() for bar in bars],
         "timestamp_semantics": TIMESTAMP_SEMANTICS,
@@ -398,6 +583,13 @@ def _canonical_record(
         entry_price=entry,
         baseline_stop_loss=stop,
         baseline_take_profit=target,
+        baseline_timeout_bars=baseline_timeout_bars,
+        baseline_simulation_model_version=baseline_model_version,
+        observed_exit_reason=observed_exit_reason,
+        observed_exit_price=observed_exit_price,
+        observed_bars_held=observed_bars_held,
+        observed_pnl_r_multiple=observed_pnl_r,
+        observed_mfe_r=observed_mfe_r,
         timeframe="M5",
         ordered_m5_bars=tuple(bars),
         timestamp_semantics=TIMESTAMP_SEMANTICS,

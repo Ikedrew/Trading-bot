@@ -69,7 +69,7 @@ def test_baseline_v1_delegates_timeout_to_existing_shadow_authority():
     assert "close" in BASELINE_POLICY_V1["timeout_price"]
 
 
-def test_reproduction_is_exact_fail_closed_and_declares_path_extension():
+def test_reproduction_is_exact_fail_closed_and_path_extension_is_satisfied():
     contract = BASELINE_REPRODUCTION_CONTRACT
     assert contract["required"] is True
     assert contract["no_approximation"] is True
@@ -83,7 +83,8 @@ def test_reproduction_is_exact_fail_closed_and_declares_path_extension():
     required = set(contract["required_observed_fields"])
     extension = contract["exit_bar_path_v1_required_extension"]
     current_path_fields = {item.name for item in fields(ExitBarPathRecord)}
-    assert required - current_path_fields == set(extension["fields"])
+    assert set(extension["fields"]) <= current_path_fields
+    assert not required - current_path_fields
     assert "exit_utc_epoch_s" in current_path_fields
     assert "analytical_digest" in extension["provenance_rule"]
 
