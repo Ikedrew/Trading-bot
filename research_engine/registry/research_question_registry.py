@@ -752,9 +752,9 @@ R1 = ResearchQuestion(
         ValidationRule("lineage_coverage", ">=", 0.80, "Need decision→outcome lineage"),
         ValidationRule("outcome_coverage", ">=", 0.50, "Outcomes for both allowed and blocked trades"),
     ),
-    runner_module="research_engine.experiments.legacy_canonical",
-    runner_function="run_q10",
-    report_filename="q10_guard_efficacy.json",
+    runner_module="research_engine.experiments.r1_risk_layer_effectiveness",
+    runner_function="run_r1",
+    report_filename="r1_risk_layer_effectiveness.json",
     legacy_ids=("Q10",),
 )
 

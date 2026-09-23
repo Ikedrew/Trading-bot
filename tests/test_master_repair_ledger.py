@@ -99,7 +99,7 @@ def test_primary_blocker_counts_cover_every_non_operational_question_once():
         "report ownership", "risk modelling", "runner mismatch",
     }
     assert counts["no runner"] == len(WAVE_A_NO_RUNNER_TARGETS)
-    assert counts["report ownership"] == 2  # R1 and R2 remain distinct-owner work.
+    assert counts["report ownership"] == 1  # R2 remains distinct-owner work after RW9.2.
     assert sum(counts.values()) == len(STRUCTURALLY_NON_OPERATIONAL_IDS)
 
 
@@ -151,7 +151,7 @@ def test_direct_gains_are_disjoint_and_cover_all_non_operational_ids():
         "D6", "PORT-1", "OPP-1", "P1", "E3", "S1", "S5", "S6", "S7",
         "X3", "EXEC1", "X6",
     }
-    assert partial_progress_gain == {"EX1", "EX2", "EX7", "EX9", "EX10"}
+    assert partial_progress_gain == {"EX1", "EX2", "EX7", "EX9", "EX10", "R1"}
     assert outstanding_gain == set(STRUCTURALLY_NON_OPERATIONAL_IDS)
     assert REPAIR_WAVES["RW2"].implemented is True
     assert set(REPAIR_WAVES["RW2"].direct_gain) == {"M1", "M3", "M7", "M8", "M11"}
@@ -246,10 +246,10 @@ def test_rw1_ownership_repair_preserves_historical_gain_and_later_progress():
         assert entry.structurally_operational
         assert entry.gates.report_ownership == "PASS"
 
-    for qid in ("R1", "R2"):
-        entry = MASTER_REPAIR_LEDGER[qid]
-        assert not entry.structurally_operational
-        assert entry.gates.report_ownership == "FAIL"
+    assert MASTER_REPAIR_LEDGER["R1"].structurally_operational
+    assert MASTER_REPAIR_LEDGER["R1"].gates.report_ownership == "PASS"
+    assert not MASTER_REPAIR_LEDGER["R2"].structurally_operational
+    assert MASTER_REPAIR_LEDGER["R2"].gates.report_ownership == "FAIL"
 
 
 def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
@@ -262,9 +262,9 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
     assert wave.implementation_evidence
     assert all(item.strip() for item in wave.implementation_evidence)
     assert set(wave.unlocked_not_yet_operational) == {"E3", "S1", "R1", "R2", "L1", "L3"}
-    for qid in {"R1", "R2", "L1", "L3"}:
+    for qid in {"R2", "L1", "L3"}:
         assert not MASTER_REPAIR_LEDGER[qid].structurally_operational
-    for qid in {"E3", "S1"}:
+    for qid in {"E3", "S1", "R1"}:
         assert MASTER_REPAIR_LEDGER[qid].structurally_operational
 
     rw2 = REPAIR_WAVES["RW2"]

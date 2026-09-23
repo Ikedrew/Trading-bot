@@ -60,8 +60,9 @@ def test_hd10_is_closed_by_one_named_complete_authority_with_no_operational_gain
     assert HD10_ADJUDICATED_CONTRACT["questions"] == TARGETS
 
     # Adjudication is governance only: no question becomes operational.
-    assert operational_baseline() == (53, 17)
-    for question_id in TARGETS:
+    assert operational_baseline() == (54, 16)
+    assert "R1" not in STRUCTURALLY_NON_OPERATIONAL_IDS
+    for question_id in ("R2", "R3", "R4", "R5"):
         assert question_id in STRUCTURALLY_NON_OPERATIONAL_IDS, question_id
 
     wave = REPAIR_WAVES["RW9"]
@@ -134,12 +135,12 @@ def test_r1_and_r2_have_distinct_estimands_reports_and_no_count_evidence():
     assert LEGACY_REPORT_COMPATIBILITY[LEGACY_ARTIFACT] == ("Q10",)
     assert "never" in REPORT_VALIDITY_CONTRACT["compatibility_aliases"]
 
-    # The registry still routes R1/R2 through the legacy artifact; RW9 must
-    # re-point them at the adjudicated files above.
-    for question_id in ("R1", "R2"):
-        question = REGISTRY_BY_ID[question_id]
-        assert question.report_filename == LEGACY_ARTIFACT
-        assert question.legacy_ids == ("Q10",)
+    # RW9.2 gives R1 its dedicated canonical artifact.  R2 remains on the
+    # legacy compatibility route until its separate RW9.3 implementation.
+    assert REGISTRY_BY_ID["R1"].report_filename == REPORT_OWNERSHIP["R1"]
+    assert REGISTRY_BY_ID["R1"].legacy_ids == ("Q10",)
+    assert REGISTRY_BY_ID["R2"].report_filename == LEGACY_ARTIFACT
+    assert REGISTRY_BY_ID["R2"].legacy_ids == ("Q10",)
 
 
 def test_r3_ruin_model_v1_is_frozen_and_reproducible():

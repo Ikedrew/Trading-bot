@@ -190,6 +190,7 @@ RW8_OPERATIONAL_PROGRESS_IDS = frozenset({"EX1", "EX2", "EX9", "EX10"})
 # and EX8 have implemented machinery but remain WAITING_DATA on their frozen
 # level/coverage gates and therefore do not enter the operational baseline.
 RW8_HETEROGENEITY_OPERATIONAL_IDS = frozenset({"EX7"})
+RW9_OPERATIONAL_PROGRESS_IDS = frozenset({"R1"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
@@ -200,6 +201,7 @@ OPERATIONAL_IDS = (
     | RW7_OPERATIONAL_PROGRESS_IDS
     | RW8_OPERATIONAL_PROGRESS_IDS
     | RW8_HETEROGENEITY_OPERATIONAL_IDS
+    | RW9_OPERATIONAL_PROGRESS_IDS
 )
 
 
@@ -515,7 +517,7 @@ _assign(("D2", "D3", "D4", "D5", "X5"), "RW3", "prediction/calibration", "PREDIC
 # X6 was repaired in Repair 4B.4 and is structurally operational (no assignment).
 _assign(("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10"), "RW8", "counterfactual design", "EXIT_COUNTERFACTUAL_FOUNDATION",
         "The current observational diagnostic cannot establish the registry's alternative exit-policy claim.", human=True)
-_assign(("R1", "R2"), "RW9", "report ownership", "RISK_MODELLING_FOUNDATION",
+_assign(("R2",), "RW9", "report ownership", "RISK_MODELLING_FOUNDATION",
         "Distinct global and per-guard risk questions share a count-only runner/report and legacy identity.", human=True)
 _assign(("R3", "R4", "R5"), "RW9", "risk modelling", "RISK_MODELLING_FOUNDATION",
         "Risk assumptions, chronological drawdown/scenario grain, and optimisation semantics are not authoritative.", human=True)
@@ -554,7 +556,7 @@ _QUESTION_ACTIONS = {
     "X3": "Implement the adjudicated separate measured-slippage and explicit-result_ok rejection endpoints, clustered session comparisons, endpoint-specific 30/10 sufficiency, CURRENT provenance, and bounded completion.",
     "EXEC1": "Implemented: EXEC1 owns the governed EXECUTE-only cluster-weighted successful-realization linear-probability model using continuous pre-execution spread_atr_ratio.",
     "X6": "Implemented: X6 owns the HD08-adjudicated condition-stability analysis with strict result-context-trace joins, producer-measured absolute slippage, canonical-symbol/session/spread-band/volatility dimensions, and unique report ownership.",
-    "R1": "Create a uniquely owned global risk-effectiveness runner/report using canonical decision outcomes and declared survival metrics.",
+    "R1": "Implemented: R1 owns the governed HD10 global risk-effectiveness runner and r1_risk_layer_effectiveness.json.",
     "R2": "Create a separate per-guard attribution runner/report with an explicit guard exposure/treatment grain.",
     "R3": "Version loss/distribution/dependence assumptions and calculate probability of ruin on declared independent chronological outcomes.",
     "R4": "Define chronological drawdown paths, threshold policy, and candidate evaluation rather than ordering synthetic summaries as events.",

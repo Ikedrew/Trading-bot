@@ -1837,8 +1837,10 @@ def test_r1_r2_same_risk_data_does_not_share_scientific_ownership():
     assert "DISTINCT_RUNNER_REQUIRED" in item.relationship_types
     assert "DISTINCT_REPORT_REQUIRED" in item.relationship_types
     assert "LEGACY_IDENTITY_COLLISION" in item.relationship_types
-    assert r1.runner_function == r2.runner_function == "run_q10"
-    assert r1.report_filename == r2.report_filename == "q10_guard_efficacy.json"
+    assert r1.runner_function == "run_r1"
+    assert r2.runner_function == "run_q10"
+    assert r1.report_filename == "r1_risk_layer_effectiveness.json"
+    assert r2.report_filename == "q10_guard_efficacy.json"
     assert r1.legacy_ids == r2.legacy_ids == ("Q10",)
     assert "neither overall risk benefit nor per-guard value" in item.runner_ownership_status
     assert "falsely complete both distinct claims" in item.false_completion_risk
@@ -1909,7 +1911,7 @@ def test_wave_a5_does_not_mutate_operational_ownership_mappings():
         "S1": ("", "", ()),
         "D6": ("run_portfolio_ranking", "d6_portfolio_ranking.json", ()),
         "PORT-1": ("run_port_1", "port1_portfolio_selection.json", ()),
-        "R1": ("run_q10", "q10_guard_efficacy.json", ("Q10",)),
+        "R1": ("run_r1", "r1_risk_layer_effectiveness.json", ("Q10",)),
         "R2": ("run_q10", "q10_guard_efficacy.json", ("Q10",)),
         "D1": ("run", "q1_component_reward.json", ("Q1",)),
         "L3": ("run", "q1_component_reward.json", ("Q1",)),

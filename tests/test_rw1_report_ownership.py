@@ -536,32 +536,34 @@ def test_req15_e3_s1_behaviour_is_adjudicated(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# REQ 16: R1/R2 behaviour is unchanged (their ownership was NOT adjudicated)
+# REQ 16: later RW9.2 R1 ownership does not retroactively transfer Q10
 # ---------------------------------------------------------------------------
 
-def test_req16_r1_r2_behaviour_is_unchanged(tmp_path):
+def test_req16_rw92_separates_r1_while_r2_retains_q10_history(tmp_path):
     r1 = REGISTRY_BY_ID["R1"]
     r2 = REGISTRY_BY_ID["R2"]
-    assert r1.report_filename == r2.report_filename == "q10_guard_efficacy.json"
+    assert r1.report_filename == "r1_risk_layer_effectiveness.json"
+    assert r2.report_filename == "q10_guard_efficacy.json"
     assert r1.legacy_ids == r2.legacy_ids == ("Q10",)
+    assert is_adjudicated_report(r1.report_filename) is True
     assert is_adjudicated_report("q10_guard_efficacy.json") is False
 
     reports = _empty_dir(tmp_path)
     _write(reports, "q10_guard_efficacy.json", _current_report("Q10"))
 
-    # The shared (unadjudicated) artifact is still visible to both questions.
-    for qid in ("R1", "R2"):
-        state = build_question_state(qid, reports_dir=reports, evidence_source={})
-        assert state.report_validity == ReportValidity.VALID_CURRENT, qid
-        assert state.latest_finding == "Current finding", qid
-        assert state.authoritative_report is not None, qid
-        assert resolve_report_ownership("q10_guard_efficacy.json", qid).kind == NOT_ADJUDICATED
+    r1_state = build_question_state("R1", reports_dir=reports, evidence_source={})
+    assert r1_state.authoritative_report is None
+    r2_state = build_question_state("R2", reports_dir=reports, evidence_source={})
+    assert r2_state.report_validity == ReportValidity.VALID_CURRENT
+    assert r2_state.latest_finding == "Current finding"
+    assert resolve_report_ownership("q10_guard_efficacy.json", "R2").kind == NOT_ADJUDICATED
 
-        entry = MASTER_REPAIR_LEDGER[qid]
-        assert not entry.structurally_operational, qid
-        assert entry.gates.report_ownership == "FAIL", qid
-        assert entry.primary_blocker_category == "report ownership", qid
-        assert entry.proposed_repair_wave == "RW9", qid
+    assert MASTER_REPAIR_LEDGER["R1"].structurally_operational
+    entry = MASTER_REPAIR_LEDGER["R2"]
+    assert not entry.structurally_operational
+    assert entry.gates.report_ownership == "FAIL"
+    assert entry.primary_blocker_category == "report ownership"
+    assert entry.proposed_repair_wave == "RW9"
 
     # Ambiguous shared legacy lookup remains fail-closed, exactly as before RW1.
     with pytest.raises(KeyError):
@@ -647,9 +649,9 @@ def test_req23_no_other_question_changes_structurally_operational_state():
     assert wave.implemented is True
     assert wave.implementation_evidence
     assert set(wave.unlocked_not_yet_operational) == {"E3", "S1", "R1", "R2", "L1", "L3"}
-    for qid in {"R1", "R2", "L1", "L3"}:
+    for qid in {"R2", "L1", "L3"}:
         assert not MASTER_REPAIR_LEDGER[qid].structurally_operational, qid
-    for qid in {"E3", "S1"}:
+    for qid in {"E3", "S1", "R1"}:
         assert MASTER_REPAIR_LEDGER[qid].structurally_operational, qid
 
 
@@ -724,7 +726,7 @@ def test_req25_multi_account_and_scientific_contracts_are_unchanged():
         "L1": ("research_engine.experiments.legacy_canonical", "run_q05", E2_ARTIFACT, ("Q5",)),
         "E3": ("research_engine.experiments.strategy_expectancy", "run_e3", "e3_strategy_family_expectancy.json", ()),
         "S1": ("", "", "", ()),
-        "R1": ("research_engine.experiments.legacy_canonical", "run_q10", "q10_guard_efficacy.json", ("Q10",)),
+        "R1": ("research_engine.experiments.r1_risk_layer_effectiveness", "run_r1", "r1_risk_layer_effectiveness.json", ("Q10",)),
         "R2": ("research_engine.experiments.legacy_canonical", "run_q10", "q10_guard_efficacy.json", ("Q10",)),
     }
     for qid, (module, function, filename, legacy_ids) in expected.items():
