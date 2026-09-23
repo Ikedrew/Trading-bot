@@ -102,6 +102,14 @@ REPAIR_4B4_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
     "x6_execution_stability.json": "X6",
 }
 
+# HD09 governed counterfactual reports have exactly one canonical owner and no
+# observational compatibility alias.
+HD09_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
+    "ex1_exit_efficiency.json": "EX1",
+    "ex2_profit_retention.json": "EX2",
+    "ex9_timeout_loss.json": "EX9",
+}
+
 
 def _derive_adjudicated_owners() -> dict[str, str]:
     """Derive adjudicated report ownership from the frozen Wave-A5 findings."""
@@ -131,6 +139,7 @@ def _merge_adjudicated_owners() -> dict[str, str]:
         REPAIR_4B2_ADJUDICATED_REPORT_OWNERS,
         REPAIR_4B3_ADJUDICATED_REPORT_OWNERS,
         REPAIR_4B4_ADJUDICATED_REPORT_OWNERS,
+        HD09_ADJUDICATED_REPORT_OWNERS,
     ):
         for filename, owner in repair_owners.items():
             filename_key = _filename_key(filename)

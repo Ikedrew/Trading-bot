@@ -1,0 +1,264 @@
+{
+  "assumptions": [
+    "Results describe simulated policy outcomes on the governed historical population; they do not establish future profitability, causal market truth, production suitability, or prop readiness."
+  ],
+  "confidence": "HIGH",
+  "dataset": {
+    "independent_observations": 9045,
+    "sample_size": 9045,
+    "source": "exit_candidate_replay_v1"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "analytical_digest": "2597652df5e8912d0e035413d95c528313d881ff1506d1ac3c3e1ecd50a1cedb",
+    "epoch": "CURRENT",
+    "records_excluded": 0,
+    "records_used": 27135,
+    "source": "exit_candidate_replay_v1"
+  },
+  "generated": "2026-09-23T05:06:46Z",
+  "overall": {
+    "baseline": "SHADOW_BASELINE_V1",
+    "distinct_canonical_opportunities": 9045,
+    "experiment": "HD09 governed exit-policy counterfactual",
+    "finding": "Governed HD09 evaluation complete: 3/3 required tests supported.",
+    "sample_size": 9045,
+    "tests": [
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.538250036038239,
+          0.5897315618297532
+        ],
+        "distinct_canonical_opportunity_count": 9045,
+        "eligibility": "finite baseline_window_mfe_r > 0",
+        "eligible_paired_lifecycle_count": 9045,
+        "endpoint": "candidate_retention_minus_baseline_retention",
+        "holm_adjusted_p_value": 0.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_IMPROVEMENT",
+        "policy_identity": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "raw_two_sided_p_value": 0.0,
+        "standard_error": 0.013133283620922129,
+        "test_identity": "EX2:TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "weighted_effect_estimate": 0.5639907989339961
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.20791062309445144,
+          0.23817783159251557
+        ],
+        "distinct_canonical_opportunity_count": 9045,
+        "eligibility": "finite baseline_window_mfe_r > 0",
+        "eligible_paired_lifecycle_count": 9045,
+        "endpoint": "candidate_retention_minus_baseline_retention",
+        "holm_adjusted_p_value": 3.51658449536318e-183,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_IMPROVEMENT",
+        "policy_identity": "TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "raw_two_sided_p_value": 1.75829224768159e-183,
+        "standard_error": 0.007721368539628277,
+        "test_identity": "EX2:TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "weighted_effect_estimate": 0.2230442273434835
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.04457564109499368,
+          0.059641323408994085
+        ],
+        "distinct_canonical_opportunity_count": 9045,
+        "eligibility": "finite baseline_window_mfe_r > 0",
+        "eligible_paired_lifecycle_count": 9045,
+        "endpoint": "candidate_retention_minus_baseline_retention",
+        "holm_adjusted_p_value": 7.098421918204233e-42,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_IMPROVEMENT",
+        "policy_identity": "TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "raw_two_sided_p_value": 7.098421918204233e-42,
+        "standard_error": 0.003843356927177384,
+        "test_identity": "EX2:TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "weighted_effect_estimate": 0.05210848225199388
+      }
+    ],
+    "variants": [
+      "EX2:TRAIL_ACT_0_25R_DIST_0_10R_V1",
+      "EX2:TRAIL_ACT_0_50R_DIST_0_25R_V1",
+      "EX2:TRAIL_ACT_1_00R_DIST_0_50R_V1"
+    ]
+  },
+  "provenance": {
+    "analytical_digest": "2597652df5e8912d0e035413d95c528313d881ff1506d1ac3c3e1ecd50a1cedb",
+    "analytical_population": [
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.538250036038239,
+          0.5897315618297532
+        ],
+        "distinct_canonical_opportunity_count": 9045,
+        "eligibility": "finite baseline_window_mfe_r > 0",
+        "eligible_paired_lifecycle_count": 9045,
+        "endpoint": "candidate_retention_minus_baseline_retention",
+        "holm_adjusted_p_value": 0.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_IMPROVEMENT",
+        "policy_identity": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "raw_two_sided_p_value": 0.0,
+        "standard_error": 0.013133283620922129,
+        "test_identity": "EX2:TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "weighted_effect_estimate": 0.5639907989339961
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.20791062309445144,
+          0.23817783159251557
+        ],
+        "distinct_canonical_opportunity_count": 9045,
+        "eligibility": "finite baseline_window_mfe_r > 0",
+        "eligible_paired_lifecycle_count": 9045,
+        "endpoint": "candidate_retention_minus_baseline_retention",
+        "holm_adjusted_p_value": 3.51658449536318e-183,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_IMPROVEMENT",
+        "policy_identity": "TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "raw_two_sided_p_value": 1.75829224768159e-183,
+        "standard_error": 0.007721368539628277,
+        "test_identity": "EX2:TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "weighted_effect_estimate": 0.2230442273434835
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.04457564109499368,
+          0.059641323408994085
+        ],
+        "distinct_canonical_opportunity_count": 9045,
+        "eligibility": "finite baseline_window_mfe_r > 0",
+        "eligible_paired_lifecycle_count": 9045,
+        "endpoint": "candidate_retention_minus_baseline_retention",
+        "holm_adjusted_p_value": 7.098421918204233e-42,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_IMPROVEMENT",
+        "policy_identity": "TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "raw_two_sided_p_value": 7.098421918204233e-42,
+        "standard_error": 0.003843356927177384,
+        "test_identity": "EX2:TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "weighted_effect_estimate": 0.05210848225199388
+      }
+    ],
+    "baseline_reproduction_population_digest": "780a6f77cbecd4682181152ac32b6ba581b67698e20ccfdcb1d5a58cb77acbcb",
+    "candidate_policy_identities": [
+      {
+        "activation_r": 0.25,
+        "distance_r": 0.1,
+        "policy_id": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "policy_type": "TRAILING"
+      },
+      {
+        "activation_r": 0.5,
+        "distance_r": 0.25,
+        "policy_id": "TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "policy_type": "TRAILING"
+      },
+      {
+        "activation_r": 1.0,
+        "distance_r": 0.5,
+        "policy_id": "TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "policy_type": "TRAILING"
+      },
+      {
+        "policy_id": "REDUCED_TP_0_50R_V1",
+        "policy_type": "REDUCED_TP",
+        "target_cap_r": 0.5
+      },
+      {
+        "policy_id": "REDUCED_TP_1_00R_V1",
+        "policy_type": "REDUCED_TP",
+        "target_cap_r": 1.0
+      },
+      {
+        "policy_id": "REDUCED_TP_1_50R_V1",
+        "policy_type": "REDUCED_TP",
+        "target_cap_r": 1.5
+      },
+      {
+        "bar_cap": 20,
+        "policy_id": "TIME_CAP_20_BARS_V1",
+        "policy_type": "TIME_CAP"
+      },
+      {
+        "bar_cap": 60,
+        "policy_id": "TIME_CAP_60_BARS_V1",
+        "policy_type": "TIME_CAP"
+      },
+      {
+        "bar_cap": 180,
+        "policy_id": "TIME_CAP_180_BARS_V1",
+        "policy_type": "TIME_CAP"
+      }
+    ],
+    "candidate_replay_population_digest": "ac9651f86ce360b7cd76da9127163896839198b404cb7241d9273545f255d650",
+    "cluster_identity": "canonical_opportunity_id",
+    "exclusions": {
+      "baseline_reproduction": {
+        "count": 0,
+        "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "candidate": {
+        "by_reason": {},
+        "count": 0,
+        "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "path": {
+        "MISSING_EXIT_M5_BAR": 34,
+        "MISSING_M5_PATH": 33,
+        "NON_CONTIGUOUS_M5_PATH": 17,
+        "RUNTIME_REPORTED_DATA_GAP": 167
+      }
+    },
+    "hd09_adjudication_version": "hd09_exit_policy_counterfactual_v1",
+    "holm_family_order": [
+      "EX2:TRAIL_ACT_0_25R_DIST_0_10R_V1",
+      "EX2:TRAIL_ACT_0_50R_DIST_0_25R_V1",
+      "EX2:TRAIL_ACT_1_00R_DIST_0_50R_V1"
+    ],
+    "horizon_weighting_contract": "k_o is the number of counterfactual-eligible lifecycle horizons for canonical opportunity o in the exact question analytical population; weights sum to one per opportunity within each policy.",
+    "inference_configuration": {
+      "alpha": 0.05,
+      "confidence_level": 0.95,
+      "covariance": "A^-1 (sum_o s_o s_o') A^-1",
+      "critical_value": 1.959963984540054,
+      "degenerate_se_rule": "SE=0 gives p=1 when estimate=0 and p=0 otherwise",
+      "finite_sample_correction": "none (CR0); do not apply HC/CR1 or row-independent covariance",
+      "model": "candidate cell-means fixed-effect model with no redundant intercept",
+      "reference_distribution": "asymptotic standard normal for scalar contrasts",
+      "schema_version": "hd09_clustered_cr0_normal_v1",
+      "test_sidedness": "two-sided"
+    },
+    "path_population_digest": "9ef7683c7bc1eb02a8e81e7cc9dcb8f93cba6c6bc3ed8fc9a80c1756b35a08cd",
+    "question_id": "EX2",
+    "readiness": {
+      "blockers": [],
+      "endpoint_b_distinct_opportunities": null,
+      "endpoint_b_gate_satisfied": true,
+      "governed_coverage": 0.9745229395046691,
+      "minimum_distinct_canonical_opportunities": 9045,
+      "minimum_eligible_paired_lifecycles": 9045,
+      "required_distinct_canonical_opportunities": 200,
+      "required_eligible_paired_lifecycles": 200,
+      "required_governed_coverage": 0.95,
+      "state": "READY"
+    },
+    "report_digest": "2e22026effa5d645ab7fcbaf0e441c53713af99258fcf8acb392fb0fb6d7d651"
+  },
+  "question_id": "EX2",
+  "recommendation": "FINDING: governed simulated-policy evaluation",
+  "report_schema_version": "hd09_governed_exit_research_v1",
+  "status": "COMPLETE",
+  "warnings": [
+    "Research-only simulated policy outcomes; no production application authority."
+  ]
+}

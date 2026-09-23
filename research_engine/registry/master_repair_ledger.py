@@ -183,6 +183,9 @@ RW6_OPERATIONAL_IDS = frozenset({"S7"})
 # RW7 surgical progress: Repairs 4B.2/4B.3/4B.4 make X3, EXEC1, and X6 all
 # operational, closing the execution-semantics repair area.
 RW7_OPERATIONAL_PROGRESS_IDS = frozenset({"X3", "EXEC1", "X6"})
+# RW8 governed research progress: only EX1, EX2, and EX9 are implemented.  The
+# other five HD09 questions remain structurally blocked.
+RW8_OPERATIONAL_PROGRESS_IDS = frozenset({"EX1", "EX2", "EX9"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
@@ -191,6 +194,7 @@ OPERATIONAL_IDS = (
     | RW5_OPERATIONAL_PROGRESS_IDS
     | RW6_OPERATIONAL_IDS
     | RW7_OPERATIONAL_PROGRESS_IDS
+    | RW8_OPERATIONAL_PROGRESS_IDS
 )
 
 

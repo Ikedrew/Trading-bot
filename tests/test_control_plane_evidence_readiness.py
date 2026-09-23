@@ -103,9 +103,9 @@ def test_simple_sample_question_uses_its_eligible_current_population(tmp_path):
 
 
 def test_below_threshold_waits_and_crossing_becomes_ready_without_rerun(tmp_path):
-    _write_report(tmp_path, "ex1_exit_efficiency.json", _report("EX1", "INSUFFICIENT_DATA"))
-    below = _state("EX1", tmp_path, {"shadow_trades": [_shadow(i) for i in range(199)]})
-    above = _state("EX1", tmp_path, {"shadow_trades": [_shadow(i) for i in range(200)]})
+    _write_report(tmp_path, "ex3_tp_distance.json", _report("EX3", "INSUFFICIENT_DATA"))
+    below = _state("EX3", tmp_path, {"shadow_trades": [_shadow(i) for i in range(199)]})
+    above = _state("EX3", tmp_path, {"shadow_trades": [_shadow(i) for i in range(200)]})
 
     assert below.readiness_status.value == "WAITING_DATA"
     assert "199" in below.readiness_reason
@@ -114,14 +114,14 @@ def test_below_threshold_waits_and_crossing_becomes_ready_without_rerun(tmp_path
     assert above.current_sample_size == 200
 
 
-def test_valid_current_completed_report_is_complete(tmp_path):
+def test_ungoverned_ex1_report_cannot_establish_complete(tmp_path):
     _write_report(tmp_path, "ex1_exit_efficiency.json", _report("EX1"))
 
     state = _state("EX1", tmp_path, {"shadow_trades": [_shadow(1)]})
 
-    assert state.report_validity == ReportValidity.VALID_CURRENT
-    assert state.readiness_status.value == "COMPLETE"
-    assert state.state_status == "COMPLETE"
+    assert state.report_validity == ReportValidity.INVALIDATED
+    assert state.readiness_status.value == "BLOCKED"
+    assert state.state_status == "BLOCKED"
 
 
 def test_missing_dataset_and_required_field_are_blocked(tmp_path):
@@ -210,7 +210,7 @@ def test_global_shadow_volume_cannot_satisfy_narrow_exit_population(tmp_path):
 
     assert state.evidence_metrics["total_current_population"] == 250
     assert state.current_sample_size == 0
-    assert state.readiness_status.value == "WAITING_DATA"
+    assert state.readiness_status.value == "BLOCKED"
 
 
 def test_opportunity_question_uses_runner_opportunity_population(tmp_path):

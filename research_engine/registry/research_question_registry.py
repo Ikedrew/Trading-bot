@@ -1135,7 +1135,7 @@ EX1 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need R-multiple for almost all trades"),
         ValidationRule("sample_size", ">=", 200, "Need sufficient trades for paired comparison"),
     ),
-    runner_module="research_engine.experiments.exit_management",
+    runner_module="research_engine.experiments.exit_policy_governed",
     runner_function="run_ex1",
     report_filename="ex1_exit_efficiency.json",
 
@@ -1153,7 +1153,7 @@ EX2 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes for comparison"),
         ValidationRule("sample_size", ">=", 200, "Need sufficient trades for statistical test"),
     ),
-    runner_module="research_engine.experiments.exit_management",
+    runner_module="research_engine.experiments.exit_policy_governed",
     runner_function="run_ex2",
     report_filename="ex2_profit_retention.json",
 
@@ -1279,7 +1279,7 @@ EX9 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.95, "Need exit_reason + outcome"),
         ValidationRule("sample_size", ">=", 200, "Need sufficient trades"),
     ),
-    runner_module="research_engine.experiments.exit_depth",
+    runner_module="research_engine.experiments.exit_policy_governed",
     runner_function="run_ex9",
     report_filename="ex9_timeout_loss.json",
 )

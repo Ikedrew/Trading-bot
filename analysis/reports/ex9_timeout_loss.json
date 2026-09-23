@@ -1,0 +1,828 @@
+{
+  "assumptions": [
+    "Results describe simulated policy outcomes on the governed historical population; they do not establish future profitability, causal market truth, production suitability, or prop readiness."
+  ],
+  "confidence": "HIGH",
+  "dataset": {
+    "independent_observations": 936,
+    "sample_size": 936,
+    "source": "exit_candidate_replay_v1"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "analytical_digest": "3e74631ff8a767033188b7d350e85a115d9498997a96648ff9a4bcf73e9a2783",
+    "epoch": "CURRENT",
+    "records_excluded": 0,
+    "records_used": 94833,
+    "source": "exit_candidate_replay_v1"
+  },
+  "generated": "2026-09-23T05:06:47Z",
+  "overall": {
+    "baseline": "SHADOW_BASELINE_V1",
+    "distinct_canonical_opportunities": 936,
+    "experiment": "HD09 governed exit-policy counterfactual",
+    "finding": "Governed HD09 evaluation complete: 12/18 required tests supported.",
+    "sample_size": 936,
+    "tests": [
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.27274730045503504,
+          -0.25511438061985303
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 0.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_REDUCTION",
+        "policy_identity": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "raw_two_sided_p_value": 0.0,
+        "standard_error": 0.004498276492391747,
+        "test_identity": "EX9:paired_timeout_indicator_change:TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "weighted_effect_estimate": -0.26393084053744403
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.22868509473271828,
+          -0.21210232324457576
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 0.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_REDUCTION",
+        "policy_identity": "TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "raw_two_sided_p_value": 0.0,
+        "standard_error": 0.00423037658317839,
+        "test_identity": "EX9:paired_timeout_indicator_change:TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "weighted_effect_estimate": -0.22039370898864702
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.11902189698393431,
+          -0.10637129122562719
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 4.760639627960734e-266,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_REDUCTION",
+        "policy_identity": "TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "raw_two_sided_p_value": 3.662030483046718e-267,
+        "standard_error": 0.0032272546480684046,
+        "test_identity": "EX9:paired_timeout_indicator_change:TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "weighted_effect_estimate": -0.11269659410478075
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.23934295160235325,
+          -0.22248394142962258
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 0.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_REDUCTION",
+        "policy_identity": "REDUCED_TP_0_50R_V1",
+        "raw_two_sided_p_value": 0.0,
+        "standard_error": 0.004300846930278411,
+        "test_identity": "EX9:paired_timeout_indicator_change:REDUCED_TP_0_50R_V1",
+        "weighted_effect_estimate": -0.2309134465159879
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.14448016346444112,
+          -0.1306995053200605
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 0.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_REDUCTION",
+        "policy_identity": "REDUCED_TP_1_00R_V1",
+        "raw_two_sided_p_value": 0.0,
+        "standard_error": 0.0035155386152706677,
+        "test_identity": "EX9:paired_timeout_indicator_change:REDUCED_TP_1_00R_V1",
+        "weighted_effect_estimate": -0.1375898343922508
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.05803870909810319,
+          -0.049033470883148765
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 4.042781973280605e-119,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_REDUCTION",
+        "policy_identity": "REDUCED_TP_1_50R_V1",
+        "raw_two_sided_p_value": 4.042781973280605e-120,
+        "standard_error": 0.0022972968600409485,
+        "test_identity": "EX9:paired_timeout_indicator_change:REDUCED_TP_1_50R_V1",
+        "weighted_effect_estimate": -0.05353608999062598
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 1.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "NOT_SUPPORTED",
+        "policy_identity": "TIME_CAP_20_BARS_V1",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "EX9:paired_timeout_indicator_change:TIME_CAP_20_BARS_V1",
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 1.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "NOT_SUPPORTED",
+        "policy_identity": "TIME_CAP_60_BARS_V1",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "EX9:paired_timeout_indicator_change:TIME_CAP_60_BARS_V1",
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 1.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "NOT_SUPPORTED",
+        "policy_identity": "TIME_CAP_180_BARS_V1",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "EX9:paired_timeout_indicator_change:TIME_CAP_180_BARS_V1",
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.7034573406583579,
+          0.7602178730168557
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 0.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_CONVERSION",
+        "policy_identity": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "raw_two_sided_p_value": 0.0,
+        "standard_error": 0.014479993715756418,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "weighted_effect_estimate": 0.7318376068376068
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.46583182688809016,
+          0.5298946688384055
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 8.690649296719677e-203,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_CONVERSION",
+        "policy_identity": "TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "raw_two_sided_p_value": 7.900590269745161e-204,
+        "standard_error": 0.016342862025944076,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "weighted_effect_estimate": 0.49786324786324787
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.1640159621445569,
+          0.21418916606057128
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 1.719413075869117e-48,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_CONVERSION",
+        "policy_identity": "TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "raw_two_sided_p_value": 2.149266344836396e-49,
+        "standard_error": 0.012799521907487644,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "weighted_effect_estimate": 0.1891025641025641
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.4733119950163555,
+          0.5373717656674052
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 7.091333453547205e-209,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_CONVERSION",
+        "policy_identity": "REDUCED_TP_0_50R_V1",
+        "raw_two_sided_p_value": 5.9094445446226705e-210,
+        "standard_error": 0.01634207851683626,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:REDUCED_TP_0_50R_V1",
+        "weighted_effect_estimate": 0.5053418803418803
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.16604464050667475,
+          0.2164339919719577
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 4.181506109198507e-49,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_CONVERSION",
+        "policy_identity": "REDUCED_TP_1_00R_V1",
+        "raw_two_sided_p_value": 4.646117899109452e-50,
+        "standard_error": 0.012854662601646695,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:REDUCED_TP_1_00R_V1",
+        "weighted_effect_estimate": 0.19123931623931623
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0352966237087131,
+          0.06299397458188519
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 2.461018240313315e-11,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_CONVERSION",
+        "policy_identity": "REDUCED_TP_1_50R_V1",
+        "raw_two_sided_p_value": 3.515740343304736e-12,
+        "standard_error": 0.007065780568328105,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:REDUCED_TP_1_50R_V1",
+        "weighted_effect_estimate": 0.049145299145299144
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 1.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "NOT_SUPPORTED",
+        "policy_identity": "TIME_CAP_20_BARS_V1",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:TIME_CAP_20_BARS_V1",
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 1.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "NOT_SUPPORTED",
+        "policy_identity": "TIME_CAP_60_BARS_V1",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:TIME_CAP_60_BARS_V1",
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 1.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "NOT_SUPPORTED",
+        "policy_identity": "TIME_CAP_180_BARS_V1",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:TIME_CAP_180_BARS_V1",
+        "weighted_effect_estimate": 0.0
+      }
+    ],
+    "variants": [
+      "EX9:paired_timeout_indicator_change:TRAIL_ACT_0_25R_DIST_0_10R_V1",
+      "EX9:paired_timeout_indicator_change:TRAIL_ACT_0_50R_DIST_0_25R_V1",
+      "EX9:paired_timeout_indicator_change:TRAIL_ACT_1_00R_DIST_0_50R_V1",
+      "EX9:paired_timeout_indicator_change:REDUCED_TP_0_50R_V1",
+      "EX9:paired_timeout_indicator_change:REDUCED_TP_1_00R_V1",
+      "EX9:paired_timeout_indicator_change:REDUCED_TP_1_50R_V1",
+      "EX9:paired_timeout_indicator_change:TIME_CAP_20_BARS_V1",
+      "EX9:paired_timeout_indicator_change:TIME_CAP_60_BARS_V1",
+      "EX9:paired_timeout_indicator_change:TIME_CAP_180_BARS_V1",
+      "EX9:baseline_timeout_loss_converted_positive:TRAIL_ACT_0_25R_DIST_0_10R_V1",
+      "EX9:baseline_timeout_loss_converted_positive:TRAIL_ACT_0_50R_DIST_0_25R_V1",
+      "EX9:baseline_timeout_loss_converted_positive:TRAIL_ACT_1_00R_DIST_0_50R_V1",
+      "EX9:baseline_timeout_loss_converted_positive:REDUCED_TP_0_50R_V1",
+      "EX9:baseline_timeout_loss_converted_positive:REDUCED_TP_1_00R_V1",
+      "EX9:baseline_timeout_loss_converted_positive:REDUCED_TP_1_50R_V1",
+      "EX9:baseline_timeout_loss_converted_positive:TIME_CAP_20_BARS_V1",
+      "EX9:baseline_timeout_loss_converted_positive:TIME_CAP_60_BARS_V1",
+      "EX9:baseline_timeout_loss_converted_positive:TIME_CAP_180_BARS_V1"
+    ]
+  },
+  "provenance": {
+    "analytical_digest": "3e74631ff8a767033188b7d350e85a115d9498997a96648ff9a4bcf73e9a2783",
+    "analytical_population": [
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.27274730045503504,
+          -0.25511438061985303
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 0.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_REDUCTION",
+        "policy_identity": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "raw_two_sided_p_value": 0.0,
+        "standard_error": 0.004498276492391747,
+        "test_identity": "EX9:paired_timeout_indicator_change:TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "weighted_effect_estimate": -0.26393084053744403
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.22868509473271828,
+          -0.21210232324457576
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 0.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_REDUCTION",
+        "policy_identity": "TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "raw_two_sided_p_value": 0.0,
+        "standard_error": 0.00423037658317839,
+        "test_identity": "EX9:paired_timeout_indicator_change:TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "weighted_effect_estimate": -0.22039370898864702
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.11902189698393431,
+          -0.10637129122562719
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 4.760639627960734e-266,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_REDUCTION",
+        "policy_identity": "TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "raw_two_sided_p_value": 3.662030483046718e-267,
+        "standard_error": 0.0032272546480684046,
+        "test_identity": "EX9:paired_timeout_indicator_change:TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "weighted_effect_estimate": -0.11269659410478075
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.23934295160235325,
+          -0.22248394142962258
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 0.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_REDUCTION",
+        "policy_identity": "REDUCED_TP_0_50R_V1",
+        "raw_two_sided_p_value": 0.0,
+        "standard_error": 0.004300846930278411,
+        "test_identity": "EX9:paired_timeout_indicator_change:REDUCED_TP_0_50R_V1",
+        "weighted_effect_estimate": -0.2309134465159879
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.14448016346444112,
+          -0.1306995053200605
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 0.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_REDUCTION",
+        "policy_identity": "REDUCED_TP_1_00R_V1",
+        "raw_two_sided_p_value": 0.0,
+        "standard_error": 0.0035155386152706677,
+        "test_identity": "EX9:paired_timeout_indicator_change:REDUCED_TP_1_00R_V1",
+        "weighted_effect_estimate": -0.1375898343922508
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.05803870909810319,
+          -0.049033470883148765
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 4.042781973280605e-119,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_REDUCTION",
+        "policy_identity": "REDUCED_TP_1_50R_V1",
+        "raw_two_sided_p_value": 4.042781973280605e-120,
+        "standard_error": 0.0022972968600409485,
+        "test_identity": "EX9:paired_timeout_indicator_change:REDUCED_TP_1_50R_V1",
+        "weighted_effect_estimate": -0.05353608999062598
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 1.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "NOT_SUPPORTED",
+        "policy_identity": "TIME_CAP_20_BARS_V1",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "EX9:paired_timeout_indicator_change:TIME_CAP_20_BARS_V1",
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 1.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "NOT_SUPPORTED",
+        "policy_identity": "TIME_CAP_60_BARS_V1",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "EX9:paired_timeout_indicator_change:TIME_CAP_60_BARS_V1",
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "distinct_canonical_opportunity_count": 9601,
+        "eligible_paired_lifecycle_count": 9601,
+        "endpoint": "paired_timeout_indicator_change",
+        "holm_adjusted_p_value": 1.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "NOT_SUPPORTED",
+        "policy_identity": "TIME_CAP_180_BARS_V1",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "EX9:paired_timeout_indicator_change:TIME_CAP_180_BARS_V1",
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.7034573406583579,
+          0.7602178730168557
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 0.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_CONVERSION",
+        "policy_identity": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "raw_two_sided_p_value": 0.0,
+        "standard_error": 0.014479993715756418,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "weighted_effect_estimate": 0.7318376068376068
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.46583182688809016,
+          0.5298946688384055
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 8.690649296719677e-203,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_CONVERSION",
+        "policy_identity": "TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "raw_two_sided_p_value": 7.900590269745161e-204,
+        "standard_error": 0.016342862025944076,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "weighted_effect_estimate": 0.49786324786324787
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.1640159621445569,
+          0.21418916606057128
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 1.719413075869117e-48,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_CONVERSION",
+        "policy_identity": "TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "raw_two_sided_p_value": 2.149266344836396e-49,
+        "standard_error": 0.012799521907487644,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "weighted_effect_estimate": 0.1891025641025641
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.4733119950163555,
+          0.5373717656674052
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 7.091333453547205e-209,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_CONVERSION",
+        "policy_identity": "REDUCED_TP_0_50R_V1",
+        "raw_two_sided_p_value": 5.9094445446226705e-210,
+        "standard_error": 0.01634207851683626,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:REDUCED_TP_0_50R_V1",
+        "weighted_effect_estimate": 0.5053418803418803
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.16604464050667475,
+          0.2164339919719577
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 4.181506109198507e-49,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_CONVERSION",
+        "policy_identity": "REDUCED_TP_1_00R_V1",
+        "raw_two_sided_p_value": 4.646117899109452e-50,
+        "standard_error": 0.012854662601646695,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:REDUCED_TP_1_00R_V1",
+        "weighted_effect_estimate": 0.19123931623931623
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0352966237087131,
+          0.06299397458188519
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 2.461018240313315e-11,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "SUPPORTED_CONVERSION",
+        "policy_identity": "REDUCED_TP_1_50R_V1",
+        "raw_two_sided_p_value": 3.515740343304736e-12,
+        "standard_error": 0.007065780568328105,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:REDUCED_TP_1_50R_V1",
+        "weighted_effect_estimate": 0.049145299145299144
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 1.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "NOT_SUPPORTED",
+        "policy_identity": "TIME_CAP_20_BARS_V1",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:TIME_CAP_20_BARS_V1",
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 1.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "NOT_SUPPORTED",
+        "policy_identity": "TIME_CAP_60_BARS_V1",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:TIME_CAP_60_BARS_V1",
+        "weighted_effect_estimate": 0.0
+      },
+      {
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "distinct_canonical_opportunity_count": 936,
+        "eligible_paired_lifecycle_count": 936,
+        "endpoint": "baseline_timeout_loss_converted_positive",
+        "holm_adjusted_p_value": 1.0,
+        "horizon_weighting": "w_oh = 1 / k_o",
+        "interpretation": "NOT_SUPPORTED",
+        "policy_identity": "TIME_CAP_180_BARS_V1",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "EX9:baseline_timeout_loss_converted_positive:TIME_CAP_180_BARS_V1",
+        "weighted_effect_estimate": 0.0
+      }
+    ],
+    "baseline_reproduction_population_digest": "780a6f77cbecd4682181152ac32b6ba581b67698e20ccfdcb1d5a58cb77acbcb",
+    "candidate_policy_identities": [
+      {
+        "activation_r": 0.25,
+        "distance_r": 0.1,
+        "policy_id": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "policy_type": "TRAILING"
+      },
+      {
+        "activation_r": 0.5,
+        "distance_r": 0.25,
+        "policy_id": "TRAIL_ACT_0_50R_DIST_0_25R_V1",
+        "policy_type": "TRAILING"
+      },
+      {
+        "activation_r": 1.0,
+        "distance_r": 0.5,
+        "policy_id": "TRAIL_ACT_1_00R_DIST_0_50R_V1",
+        "policy_type": "TRAILING"
+      },
+      {
+        "policy_id": "REDUCED_TP_0_50R_V1",
+        "policy_type": "REDUCED_TP",
+        "target_cap_r": 0.5
+      },
+      {
+        "policy_id": "REDUCED_TP_1_00R_V1",
+        "policy_type": "REDUCED_TP",
+        "target_cap_r": 1.0
+      },
+      {
+        "policy_id": "REDUCED_TP_1_50R_V1",
+        "policy_type": "REDUCED_TP",
+        "target_cap_r": 1.5
+      },
+      {
+        "bar_cap": 20,
+        "policy_id": "TIME_CAP_20_BARS_V1",
+        "policy_type": "TIME_CAP"
+      },
+      {
+        "bar_cap": 60,
+        "policy_id": "TIME_CAP_60_BARS_V1",
+        "policy_type": "TIME_CAP"
+      },
+      {
+        "bar_cap": 180,
+        "policy_id": "TIME_CAP_180_BARS_V1",
+        "policy_type": "TIME_CAP"
+      }
+    ],
+    "candidate_replay_population_digest": "ac9651f86ce360b7cd76da9127163896839198b404cb7241d9273545f255d650",
+    "cluster_identity": "canonical_opportunity_id",
+    "exclusions": {
+      "baseline_reproduction": {
+        "count": 0,
+        "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "candidate": {
+        "by_reason": {},
+        "count": 0,
+        "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "path": {
+        "MISSING_EXIT_M5_BAR": 34,
+        "MISSING_M5_PATH": 33,
+        "NON_CONTIGUOUS_M5_PATH": 17,
+        "RUNTIME_REPORTED_DATA_GAP": 167
+      }
+    },
+    "hd09_adjudication_version": "hd09_exit_policy_counterfactual_v1",
+    "holm_family_order": [
+      "EX9:paired_timeout_indicator_change:TRAIL_ACT_0_25R_DIST_0_10R_V1",
+      "EX9:paired_timeout_indicator_change:TRAIL_ACT_0_50R_DIST_0_25R_V1",
+      "EX9:paired_timeout_indicator_change:TRAIL_ACT_1_00R_DIST_0_50R_V1",
+      "EX9:paired_timeout_indicator_change:REDUCED_TP_0_50R_V1",
+      "EX9:paired_timeout_indicator_change:REDUCED_TP_1_00R_V1",
+      "EX9:paired_timeout_indicator_change:REDUCED_TP_1_50R_V1",
+      "EX9:paired_timeout_indicator_change:TIME_CAP_20_BARS_V1",
+      "EX9:paired_timeout_indicator_change:TIME_CAP_60_BARS_V1",
+      "EX9:paired_timeout_indicator_change:TIME_CAP_180_BARS_V1",
+      "EX9:baseline_timeout_loss_converted_positive:TRAIL_ACT_0_25R_DIST_0_10R_V1",
+      "EX9:baseline_timeout_loss_converted_positive:TRAIL_ACT_0_50R_DIST_0_25R_V1",
+      "EX9:baseline_timeout_loss_converted_positive:TRAIL_ACT_1_00R_DIST_0_50R_V1",
+      "EX9:baseline_timeout_loss_converted_positive:REDUCED_TP_0_50R_V1",
+      "EX9:baseline_timeout_loss_converted_positive:REDUCED_TP_1_00R_V1",
+      "EX9:baseline_timeout_loss_converted_positive:REDUCED_TP_1_50R_V1",
+      "EX9:baseline_timeout_loss_converted_positive:TIME_CAP_20_BARS_V1",
+      "EX9:baseline_timeout_loss_converted_positive:TIME_CAP_60_BARS_V1",
+      "EX9:baseline_timeout_loss_converted_positive:TIME_CAP_180_BARS_V1"
+    ],
+    "horizon_weighting_contract": "k_o is the number of counterfactual-eligible lifecycle horizons for canonical opportunity o in the exact question analytical population; weights sum to one per opportunity within each policy.",
+    "inference_configuration": {
+      "alpha": 0.05,
+      "confidence_level": 0.95,
+      "covariance": "A^-1 (sum_o s_o s_o') A^-1",
+      "critical_value": 1.959963984540054,
+      "degenerate_se_rule": "SE=0 gives p=1 when estimate=0 and p=0 otherwise",
+      "finite_sample_correction": "none (CR0); do not apply HC/CR1 or row-independent covariance",
+      "model": "candidate cell-means fixed-effect model with no redundant intercept",
+      "reference_distribution": "asymptotic standard normal for scalar contrasts",
+      "schema_version": "hd09_clustered_cr0_normal_v1",
+      "test_sidedness": "two-sided"
+    },
+    "path_population_digest": "9ef7683c7bc1eb02a8e81e7cc9dcb8f93cba6c6bc3ed8fc9a80c1756b35a08cd",
+    "question_id": "EX9",
+    "readiness": {
+      "blockers": [],
+      "endpoint_b_distinct_opportunities": 936,
+      "endpoint_b_gate_satisfied": true,
+      "governed_coverage": 0.9745229395046691,
+      "minimum_distinct_canonical_opportunities": 9601,
+      "minimum_eligible_paired_lifecycles": 9601,
+      "required_distinct_canonical_opportunities": 200,
+      "required_eligible_paired_lifecycles": 200,
+      "required_governed_coverage": 0.95,
+      "state": "READY"
+    },
+    "report_digest": "53e98f69f8589cd5330dfeb6a88fa866b4f2982ef84d862261213281cb221c11"
+  },
+  "question_id": "EX9",
+  "recommendation": "FINDING: governed simulated-policy evaluation",
+  "report_schema_version": "hd09_governed_exit_research_v1",
+  "status": "COMPLETE",
+  "warnings": [
+    "Research-only simulated policy outcomes; no production application authority."
+  ]
+}

@@ -35,6 +35,22 @@ def resolve_readiness(
 
     if report_validity == ReportValidity.VALID_CURRENT and report_status == "COMPLETE":
         return ReadinessStatus.COMPLETE, "A VALID_CURRENT completed report exists"
+    if question.id in {"EX1", "EX2", "EX9"}:
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return (
+                ReadinessStatus.BLOCKED,
+                f"No valid CURRENT governed {question.id} HD09 report exists",
+            )
+        if report_status == "WAITING_DATA":
+            return (
+                ReadinessStatus.WAITING_DATA,
+                f"The CURRENT {question.id} report has valid machinery but insufficient governed evidence",
+            )
+        if report_status == "BLOCKED":
+            return (
+                ReadinessStatus.BLOCKED,
+                f"The CURRENT {question.id} report failed HD09 authority, inference, family, or provenance validity",
+            )
     if question.id == "X3":
         if report_validity != ReportValidity.VALID_CURRENT:
             return (

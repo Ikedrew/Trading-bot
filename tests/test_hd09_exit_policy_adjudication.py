@@ -36,7 +36,7 @@ from research_engine.registry.wave_a_no_runner_definitions import WAVE_A_NO_RUNN
 TARGETS = ("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10")
 
 
-def test_hd09_is_closed_by_one_named_complete_authority_without_operational_gain():
+def test_hd09_is_closed_by_one_named_complete_authority_with_targeted_operational_gain():
     decision = HUMAN_SEMANTIC_DECISIONS["HD09"]
     assert decision.affected_question_ids == TARGETS
     assert decision.implementation_blocked_until_decision is False
@@ -45,7 +45,7 @@ def test_hd09_is_closed_by_one_named_complete_authority_without_operational_gain
         "HD09_ADJUDICATED_CONTRACT."
     )
     assert HD09_ADJUDICATED_CONTRACT["implementation_blocked_until_decision"] is False
-    assert operational_baseline() == (48, 22)
+    assert operational_baseline() == (51, 19)
 
 
 def test_baseline_v1_delegates_timeout_to_existing_shadow_authority():
@@ -207,4 +207,4 @@ def test_registry_versions_and_no_runner_baseline_remain_frozen():
     assert len(definitions) == 70
     assert {definition.definition_version for definition in values} == {1}
     assert WAVE_A_NO_RUNNER_TARGETS == {"L6", "G1", "G2", "G3"}
-    assert operational_baseline() == (48, 22)
+    assert operational_baseline() == (51, 19)

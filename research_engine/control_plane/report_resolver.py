@@ -229,6 +229,15 @@ def resolve_report_validity(
             f"Report identity {actual!r} does not match canonical question "
             f"{expected_question_id!r} or its declared legacy IDs",
         )
+    if expected_question_id in {"EX1", "EX2", "EX9"}:
+        from research_engine.experiments.exit_policy_governed import (
+            validate_governed_exit_report,
+        )
+        governed_valid, governed_reason = validate_governed_exit_report(
+            report_data, expected_question_id,
+        )
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
     if isinstance(fingerprint, dict):
         invalidation = is_report_invalidated(filename, fingerprint)
         if invalidation is not None:
