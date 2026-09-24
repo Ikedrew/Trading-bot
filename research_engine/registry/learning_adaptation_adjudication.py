@@ -44,6 +44,120 @@ L3_JOIN = "OPEN-to-CLOSE on canonical_opportunity_id one_to_one reject"
 L4_MEANING = "Market-behaviour stability threatening strategy assumptions."
 L4_METRIC = "mix shift plus conditional-R shift across entry-time windows"
 L4_MIN = {"per_window": 100, "per_cell_window": 30}
+L4_REGIME_CELLS = ("TRENDING", "RANGING", "TRANSITIONAL")
+L4_JOIN_AUTHORITY = (
+    "CURRENT market_context_v1.regime produced by MarketContextBuilder, joined "
+    "as-of to CURRENT completed PRIMARY_HORIZON_SIMULATION shadow evidence; "
+    "shadow_runtime_v1 governed OPEN entry time is the temporal authority and "
+    "simulated_outcome.pnl_r_multiple is the opportunity outcome"
+)
+L4_JOIN = (
+    "For each canonical opportunity, require equal market-context and OPEN "
+    "symbols, then select the unique latest market_context_v1 record whose "
+    "bar_time is <= the governed normalized shadow OPEN entry time. This is a "
+    "many-opportunities-to-one-context as-of join. Semantically identical "
+    "duplicates at the selected time collapse to one context record; exact-time "
+    "ties with conflicting context are BLOCKED. Future context, correlation-ID "
+    "fallback, current-runtime reconstruction, and inferred context are forbidden. "
+    "No preceding context excludes that opportunity with a diagnostic"
+)
+L4_GRAIN = (
+    "One distinct identity.canonical_opportunity_id is one research observation; "
+    "only its completed primary-horizon shadow outcome enters. Duplicate or "
+    "conflicting primary outcomes are BLOCKED, and account fanout never enlarges N"
+)
+L4_WINDOWS = (
+    "After authority, join, field, and canonical-grain exclusions, order eligible "
+    "opportunities by (governed normalized OPEN entry_time UTC epoch seconds, "
+    "canonical_opportunity_id). Freeze exactly two non-overlapping outcome-independent "
+    "windows: for even N, EARLY is the first N/2 and LATE is the last N/2; for odd "
+    "N, exclude the single observation at zero-based index floor(N/2), record it "
+    "diagnostically, and assign the observations before it to EARLY and after it "
+    "to LATE. Filesystem/report time and outcome values never define ordering or "
+    "boundaries"
+)
+L4_MIX_ESTIMAND = (
+    "Total-variation distance TV = 0.5 * sum over TRENDING, RANGING, TRANSITIONAL "
+    "of abs(p_late(regime) - p_early(regime)), where each p is the window share "
+    "of eligible canonical opportunities; this is the sole mix-shift estimand"
+)
+L4_MIX_MATERIALITY = {"tv_gte": 0.10}
+L4_MIX_INFERENCE = (
+    "Pearson chi-square test of homogeneity on the frozen 2x3 EARLY/LATE by "
+    "canonical-Regime count table, df=2, two-sided upper-tail p-value; average or "
+    "random tie handling is unnecessary for counts; exactly one raw p-value enters "
+    "the L4 Holm family"
+)
+L4_R_ESTIMAND = (
+    "For each canonical Regime independently, delta_R(regime) = opportunity-weighted "
+    "late mean simulated_outcome.pnl_r_multiple minus opportunity-weighted early "
+    "mean simulated_outcome.pnl_r_multiple, with every canonical opportunity weight 1"
+)
+L4_R_CONTRASTS = (
+    "TRENDING_late_minus_early_mean_R",
+    "RANGING_late_minus_early_mean_R",
+    "TRANSITIONAL_late_minus_early_mean_R",
+)
+L4_R_MATERIALITY = {"adverse_delta_r_lte": -0.25}
+L4_R_INFERENCE = (
+    "For each frozen Regime use a deterministic two-sided independent-window Welch "
+    "mean-difference t test with unequal variances, Satterthwaite degrees of freedom, "
+    "and a 95% confidence interval for late-minus-early mean R. Canonical-opportunity "
+    "collapse occurs before inference, so no account-row clustering remains; existing "
+    "opportunity-clustered uncertainty is required only if legitimate repeated rows "
+    "survive a future authority contract. Each Regime contributes exactly one raw "
+    "two-sided p-value and there is no omnibus interaction endpoint"
+)
+L4_HOLM_ORDER = (
+    "regime_mix_shift",
+    "TRENDING_R_shift",
+    "RANGING_R_shift",
+    "TRANSITIONAL_R_shift",
+)
+L4_MULTIPLICITY = (
+    "Exactly four raw p-values in the frozen order (regime_mix_shift, "
+    "TRENDING_R_shift, RANGING_R_shift, TRANSITIONAL_R_shift) form one Holm "
+    "step-down family at alpha 0.05. Sort by (raw p-value, frozen-order index); "
+    "compare ordered p_(i) to 0.05/(4-i+1) until the first non-rejection, and "
+    "compute monotone adjusted p_(i) as min(1, max over j<=i of "
+    "((4-j+1)*p_(j))); map results back to frozen endpoint order"
+)
+L4_SUFFICIENCY = (
+    "All four endpoints must be estimable; each EARLY and LATE window requires at "
+    "least 100 eligible distinct canonical opportunities and each of TRENDING, "
+    "RANGING, TRANSITIONAL requires at least 30 observations in each window. Mix "
+    "expected counts and every Welch standard error/degrees-of-freedom must be finite "
+    "and defined. Missing or non-finite fields are excluded with diagnostics and are "
+    "never zero-filled, imputed, or reconstructed"
+)
+L4_RESULT_RULE = (
+    "MATERIAL_INSTABILITY iff at least one endpoint is Holm-significant and crosses "
+    "its threat threshold: regime_mix_shift has TV >= 0.10, or a canonical-Regime "
+    "R contrast has delta_R <= -0.25R. Otherwise sufficient and estimable evidence "
+    "is STABLE. Thus significant but immaterial change, material change without "
+    "reliable support, positive R improvement, and a sufficient null are STABLE; "
+    "both STABLE and MATERIAL_INSTABILITY are legitimate completed findings"
+)
+L4_BLOCKED = (
+    "BLOCKED on missing/invalid CURRENT authority, invalid or conflicting OPEN/CLOSE "
+    "lifecycle identity, duplicate/conflicting primary outcome, invalid governed "
+    "entry timestamp or normalization provenance, future-context use, conflicting "
+    "latest-context ties, ambiguous/mixed-epoch lineage, correlation-ID fallback, "
+    "current-runtime reconstruction, invalid windows, incomplete/reordered Holm "
+    "family, legacy Q17 substitution, or self-declared status"
+)
+L4_WAITING = (
+    "WAITING_DATA when authority, lineage, timestamps, windows, and machinery are "
+    "valid but exclusions leave fewer than 100 eligible opportunities in either "
+    "window, fewer than 30 in any required Regime/window cell, or any of the four "
+    "endpoints is inestimable; a sufficient null is not WAITING_DATA"
+)
+L4_COMPLETION = (
+    "L4 may COMPLETE only with sufficient and estimable evidence, all four endpoints "
+    "evaluated in the one frozen Holm family, final result STABLE or "
+    "MATERIAL_INSTABILITY, and an owned VALID_CURRENT L4 report. Legacy "
+    "q17_drawdown_precursors.json and self-declared status never complete L4"
+)
 L6_MEANING = "Per-cycle pre/post improvement; PROPOSED input only."
 L6_GATE = "E5 suitability required"
 L6_MIN = {"per_arm": 100, "per_cell_arm": 30}

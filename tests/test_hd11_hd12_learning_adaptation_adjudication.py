@@ -243,4 +243,68 @@ def test_k_l3_three_test_holm_and_completion_frozen():
  assert _R["L3"].report_filename == "q1_component_reward.json"
  assert _W["RW10"].implemented is False
  assert _base() == (59, 11)
+def test_l_l4_join_windows_and_grain_frozen():
+ assert "market_context_v1.regime" in A.L4_JOIN_AUTHORITY
+ assert "PRIMARY_HORIZON_SIMULATION" in A.L4_JOIN_AUTHORITY
+ assert "governed OPEN entry time" in A.L4_JOIN_AUTHORITY
+ assert "equal market-context and OPEN symbols" in A.L4_JOIN
+ assert "bar_time is <=" in A.L4_JOIN
+ assert "unique latest" in A.L4_JOIN
+ assert "many-opportunities-to-one-context" in A.L4_JOIN
+ assert "ties with conflicting context are BLOCKED" in A.L4_JOIN
+ assert "correlation-ID fallback" in A.L4_JOIN
+ assert "No preceding context excludes" in A.L4_JOIN
+ assert "One distinct identity.canonical_opportunity_id" in A.L4_GRAIN
+ assert "account fanout never enlarges N" in A.L4_GRAIN
+ assert "duplicate or conflicting primary outcomes" in A.L4_GRAIN.lower()
+ assert "(governed normalized OPEN entry_time UTC epoch seconds, canonical_opportunity_id)" in A.L4_WINDOWS
+ assert "for even N" in A.L4_WINDOWS
+ assert "for odd N" in A.L4_WINDOWS
+ assert "zero-based index floor(N/2)" in A.L4_WINDOWS
+ assert "outcome values never define" in A.L4_WINDOWS
+def test_m_l4_endpoints_tolerances_and_holm_frozen():
+ assert A.L4_REGIME_CELLS == ("TRENDING", "RANGING", "TRANSITIONAL")
+ assert "TV = 0.5 * sum" in A.L4_MIX_ESTIMAND
+ assert A.L4_MIX_MATERIALITY == {"tv_gte": 0.10}
+ assert "Pearson chi-square test of homogeneity" in A.L4_MIX_INFERENCE
+ assert "2x3" in A.L4_MIX_INFERENCE and "df=2" in A.L4_MIX_INFERENCE
+ assert "exactly one raw p-value" in A.L4_MIX_INFERENCE
+ assert "delta_R(regime)" in A.L4_R_ESTIMAND
+ assert "late mean" in A.L4_R_ESTIMAND and "early mean" in A.L4_R_ESTIMAND
+ assert A.L4_R_CONTRASTS == ("TRENDING_late_minus_early_mean_R", "RANGING_late_minus_early_mean_R", "TRANSITIONAL_late_minus_early_mean_R")
+ assert A.L4_R_MATERIALITY == {"adverse_delta_r_lte": -0.25}
+ assert "two-sided independent-window Welch" in A.L4_R_INFERENCE
+ assert "Satterthwaite" in A.L4_R_INFERENCE and "95% confidence interval" in A.L4_R_INFERENCE
+ assert "no omnibus interaction endpoint" in A.L4_R_INFERENCE
+ assert A.L4_HOLM_ORDER == ("regime_mix_shift", "TRENDING_R_shift", "RANGING_R_shift", "TRANSITIONAL_R_shift")
+ assert "Exactly four raw p-values" in A.L4_MULTIPLICITY
+ assert "one Holm step-down family at alpha 0.05" in A.L4_MULTIPLICITY
+ assert "raw p-value, frozen-order index" in A.L4_MULTIPLICITY
+ assert "monotone adjusted" in A.L4_MULTIPLICITY
+def test_n_l4_status_completion_and_nonoperation_frozen():
+ assert A.L4_MIN == {"per_window": 100, "per_cell_window": 30}
+ assert "All four endpoints must be estimable" in A.L4_SUFFICIENCY
+ assert "at least 100" in A.L4_SUFFICIENCY
+ assert "at least 30" in A.L4_SUFFICIENCY
+ assert "never zero-filled" in A.L4_SUFFICIENCY
+ assert "MATERIAL_INSTABILITY iff" in A.L4_RESULT_RULE
+ assert "TV >= 0.10" in A.L4_RESULT_RULE
+ assert "delta_R <= -0.25R" in A.L4_RESULT_RULE
+ assert "positive R improvement" in A.L4_RESULT_RULE
+ assert "sufficient null" in A.L4_RESULT_RULE
+ assert "are legitimate completed findings" in A.L4_RESULT_RULE
+ assert "BLOCKED" in A.L4_BLOCKED
+ assert "legacy Q17 substitution" in A.L4_BLOCKED
+ assert "WAITING_DATA" in A.L4_WAITING
+ assert "a sufficient null is not WAITING_DATA" in A.L4_WAITING
+ assert "owned VALID_CURRENT L4 report" in A.L4_COMPLETION
+ assert "q17_drawdown_precursors.json" in A.L4_COMPLETION
+ assert "self-declared status never complete" in A.L4_COMPLETION
+ assert "L4" in _N
+ import importlib.util as _ilu
+ assert _ilu.find_spec(A.FUTURE_L4["module"]) is None
+ assert _R["L4"].runner_module == "research_engine.experiments.legacy_canonical"
+ assert _R["L4"].runner_function == "run_q17"
+ assert _R["L4"].report_filename == "q17_drawdown_precursors.json"
+ assert _base() == (59, 11)
 
