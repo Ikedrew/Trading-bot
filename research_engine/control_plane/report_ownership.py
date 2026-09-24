@@ -123,9 +123,10 @@ HD10_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
     "r5_position_sizing.json": "R5",
 }
 
-# HD11 L1 implementation owns a temporal report distinct from E2's pooled Q5.
+# HD11 L1/L4 implementations own reports distinct from their legacy diagnostics.
 HD11_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
     "l1_pattern_degradation.json": "L1",
+    "l4_market_behaviour_stability.json": "L4",
 }
 
 

@@ -191,7 +191,7 @@ RW8_OPERATIONAL_PROGRESS_IDS = frozenset({"EX1", "EX2", "EX9", "EX10"})
 # level/coverage gates and therefore do not enter the operational baseline.
 RW8_HETEROGENEITY_OPERATIONAL_IDS = frozenset({"EX7"})
 RW9_OPERATIONAL_PROGRESS_IDS = frozenset({"R1", "R2", "R3", "R4", "R5"})
-RW10_OPERATIONAL_PROGRESS_IDS = frozenset({"L1"})
+RW10_OPERATIONAL_PROGRESS_IDS = frozenset({"L1", "L4"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
@@ -477,7 +477,9 @@ REPAIR_WAVES = {
         implementation_evidence=(
             "L1 is implemented by research_engine.experiments.pattern_degradation.run_l1 and uniquely owns l1_pattern_degradation.json; E2 retains legacy_canonical.run_q05 and q5_pattern_degradation.json unchanged.",
             "L1 uses CURRENT completed PRIMARY_HORIZON_SIMULATION evidence, one canonical opportunity per observation, authoritative entry-time ordering, deterministic non-overlapping early/late windows, and the frozen 200/30/two-pattern gates.",
-            "Focused L1 tests prove fanout collapse, chronology, Holm-controlled per-pattern late-minus-early inference, sufficient-null completion, WAITING_DATA, fail-closed conflicts, owned VALID_CURRENT completion, E2 separation, and the derived 59/70 baseline.",
+            "L4 is implemented by research_engine.experiments.market_behaviour_stability.run_l4 and uniquely owns l4_market_behaviour_stability.json; legacy run_q17 and q17_drawdown_precursors.json remain unchanged and cannot complete L4.",
+            "L4 enforces the frozen same-symbol latest-preceding market-context join, canonical-opportunity grain, deterministic halves, four endpoints, one Holm family, and STABLE/MATERIAL_INSTABILITY completion semantics.",
+            "Focused L1/L4 tests prove their contracts, owned VALID_CURRENT completion, legacy separation, and the derived 60/70 baseline.",
         ),
     ),
     "RW11": RepairWave(
@@ -571,9 +573,9 @@ _QUESTION_ACTIONS = {
     "R4": "Implemented: R4 owns the governed HD10 chronological halt-threshold runner and r4_drawdown_threshold.json.",
     "R5": "Implemented: R5 owns the governed HD10 closed-vocabulary sizing runner and r5_position_sizing.json.",
     "L1": "Implemented: L1 owns the HD11 CURRENT primary-horizon chronological pattern-degradation runner and unique l1 report.",
+    "L4": "Implemented: L4 owns the HD11 CURRENT market-behaviour stability runner and unique l4 report.",
     "L2": "Use actual versioned adaptation/change events and before/after chronological populations; do not call report count learning.",
     "L3": "Create a unique architecture-validation runner/report covering weights, regime classes, and strategy mappings; retain D1 only as an input.",
-    "L4": "Join chronological market/strategy outcomes at canonical opportunity grain and separate drift from adaptation/causal improvement.",
     "L7": "Assign control/candidate arms from authoritative version/change identity, not first-half/second-half chronology.",
     "L6": "Implement the frozen immutable-snapshot per-conclusion confidence design and unique report.",
     "G1": "Implement the frozen all-question evidence-suitability evaluator and unique report without dashboard evidence.",

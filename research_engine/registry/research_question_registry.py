@@ -559,17 +559,17 @@ L4 = ResearchQuestion(
     category=QuestionCategory.SYSTEM_LEARNING,
     title="Market behaviour drift",
     description="Does market behaviour change over time in ways that invalidate strategy assumptions?",
-    required_fields=("h4_regime", "pattern", "r_multiple", "entry_time"),
+    required_fields=("regime", "r_multiple", "entry_time"),
     data_sources=(DataSource.SHADOW_TRADES, DataSource.MARKET_CONTEXT),
     priority=QuestionPriority.P3,
     validation_rules=(
         ValidationRule("h4_regime_coverage", ">=", 0.80, "Regime history required"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
     ),
-    legacy_ids=("Q17",),
-    runner_module="research_engine.experiments.legacy_canonical",
-    runner_function="run_q17",
-    report_filename="q17_drawdown_precursors.json",
+    legacy_ids=(),
+    runner_module="research_engine.experiments.market_behaviour_stability",
+    runner_function="run_l4",
+    report_filename="l4_market_behaviour_stability.json",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════

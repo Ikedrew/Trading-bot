@@ -41,10 +41,10 @@ def test_d_crosscut():
  assert "never defaulted to zero" in A.CROSS_MISSING
  assert A.CROSS_NULL.startswith("Sufficient") and "production" in A.CROSS_PROD
  assert A.SELF_STATUS_FORBIDDEN is True
-def test_e_l1_implemented_only():
- assert _base() == (59, 11)
+def test_e_l1_and_l4_implemented_only():
+ assert _base() == (60, 10)
  assert "L1" not in _N
- assert set(A.TARGETS) - {"L1"} <= set(_N)
+ assert set(A.TARGETS) - {"L1", "L4"} <= set(_N)
  assert "L6" not in _disc() and _R["L6"].runner_module == ""
  assert _R["L1"].report_filename == "l1_pattern_degradation.json"
  assert _R["L1"].runner_function == "run_l1"
@@ -242,7 +242,7 @@ def test_k_l3_three_test_holm_and_completion_frozen():
  assert _R["L3"].runner_module == "research_engine.experiments.component_reward"
  assert _R["L3"].report_filename == "q1_component_reward.json"
  assert _W["RW10"].implemented is False
- assert _base() == (59, 11)
+ assert _base() == (60, 10)
 def test_l_l4_join_windows_and_grain_frozen():
  assert "market_context_v1.regime" in A.L4_JOIN_AUTHORITY
  assert "PRIMARY_HORIZON_SIMULATION" in A.L4_JOIN_AUTHORITY
@@ -281,7 +281,7 @@ def test_m_l4_endpoints_tolerances_and_holm_frozen():
  assert "one Holm step-down family at alpha 0.05" in A.L4_MULTIPLICITY
  assert "raw p-value, frozen-order index" in A.L4_MULTIPLICITY
  assert "monotone adjusted" in A.L4_MULTIPLICITY
-def test_n_l4_status_completion_and_nonoperation_frozen():
+def test_n_l4_status_completion_and_operation_frozen():
  assert A.L4_MIN == {"per_window": 100, "per_cell_window": 30}
  assert "All four endpoints must be estimable" in A.L4_SUFFICIENCY
  assert "at least 100" in A.L4_SUFFICIENCY
@@ -300,11 +300,11 @@ def test_n_l4_status_completion_and_nonoperation_frozen():
  assert "owned VALID_CURRENT L4 report" in A.L4_COMPLETION
  assert "q17_drawdown_precursors.json" in A.L4_COMPLETION
  assert "self-declared status never complete" in A.L4_COMPLETION
- assert "L4" in _N
+ assert "L4" not in _N
  import importlib.util as _ilu
- assert _ilu.find_spec(A.FUTURE_L4["module"]) is None
- assert _R["L4"].runner_module == "research_engine.experiments.legacy_canonical"
- assert _R["L4"].runner_function == "run_q17"
- assert _R["L4"].report_filename == "q17_drawdown_precursors.json"
- assert _base() == (59, 11)
+ assert _ilu.find_spec(A.FUTURE_L4["module"]) is not None
+ assert _R["L4"].runner_module == A.FUTURE_L4["module"]
+ assert _R["L4"].runner_function == "run_l4"
+ assert _R["L4"].report_filename == "l4_market_behaviour_stability.json"
+ assert _base() == (60, 10)
 

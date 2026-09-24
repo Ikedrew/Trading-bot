@@ -288,6 +288,11 @@ def resolve_report_validity(
         governed_valid, governed_reason = validate_l1_report(report_data)
         if not governed_valid:
             return ReportValidity.INVALIDATED, governed_reason
+    if expected_question_id == "L4":
+        from research_engine.experiments.market_behaviour_stability import validate_l4_report
+        governed_valid, governed_reason = validate_l4_report(report_data)
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
     if isinstance(fingerprint, dict):
         invalidation = is_report_invalidated(filename, fingerprint)
         if invalidation is not None:

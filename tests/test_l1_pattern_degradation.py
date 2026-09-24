@@ -340,10 +340,10 @@ def test_waiting_and_blocked_reports_integrate_with_readiness(tmp_path):
     assert build_question_state("L1", reports_dir=tmp_path, evidence_source={}).state_status == "BLOCKED"
 
 
-def test_ledger_delta_is_exactly_l1_and_baseline_is_59_of_70():
-    assert operational_baseline() == (59, 11)
+def test_ledger_baseline_includes_independent_l1_and_l4_implementations():
+    assert operational_baseline() == (60, 10)
     assert "L1" in STRUCTURALLY_OPERATIONAL_IDS
     assert STRUCTURALLY_NON_OPERATIONAL_IDS == {
-        "EX5", "EX6", "EX8", "G1", "G2", "G3", "L2", "L3", "L4", "L6", "L7",
+        "EX5", "EX6", "EX8", "G1", "G2", "G3", "L2", "L3", "L6", "L7",
     }
-    assert not ({"L2", "L3", "L4", "L6", "L7"} & STRUCTURALLY_OPERATIONAL_IDS)
+    assert not ({"L2", "L3", "L6", "L7"} & STRUCTURALLY_OPERATIONAL_IDS)

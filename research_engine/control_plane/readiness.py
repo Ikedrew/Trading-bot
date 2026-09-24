@@ -118,6 +118,17 @@ def resolve_readiness(
             return ReadinessStatus.BLOCKED, (
                 "The CURRENT L1 report failed chronology, identity, epoch, conflict, inference, or provenance validity"
             )
+    if question.id == "L4":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No owned VALID_CURRENT governed L4 HD11 report exists"
+        if report_status == "WAITING_DATA":
+            return ReadinessStatus.WAITING_DATA, (
+                "The CURRENT L4 report has not met the 100/window, 30/regime/window, or four-endpoint estimability gates"
+            )
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, (
+                "The CURRENT L4 report failed authority, join, chronology, conflict, inference, or provenance validity"
+            )
     if question.id in {"M1", "M3", "M7", "M8", "M11", "D2"} and report_validity == ReportValidity.VALID_CURRENT:
         if report_status == "WAITING_DATA":
             return ReadinessStatus.WAITING_DATA, "The CURRENT RW2 report has not met chronological/sample/cell sufficiency"

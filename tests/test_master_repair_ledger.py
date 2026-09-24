@@ -150,7 +150,7 @@ def test_direct_gains_are_disjoint_and_cover_all_non_operational_ids():
         "D6", "PORT-1", "OPP-1", "P1", "E3", "S1", "S5", "S6", "S7",
         "X3", "EXEC1", "X6", "R1", "R2", "R3", "R4", "R5",
     }
-    assert partial_progress_gain == {"EX1", "EX2", "EX7", "EX9", "EX10", "L1"}
+    assert partial_progress_gain == {"EX1", "EX2", "EX7", "EX9", "EX10", "L1", "L4"}
     assert outstanding_gain == set(STRUCTURALLY_NON_OPERATIONAL_IDS)
     assert REPAIR_WAVES["RW2"].implemented is True
     assert set(REPAIR_WAVES["RW2"].direct_gain) == {"M1", "M3", "M7", "M8", "M11"}
