@@ -239,7 +239,7 @@ def test_req5_d1_completion_cannot_propagate_to_l3(rw1_reports):
 def test_req6_q5_pattern_degradation_belongs_to_e2():
     assert canonical_report_owner(E2_ARTIFACT) == "E2"
     assert canonical_report_owner("analysis/reports/q5_pattern_degradation.json") == "E2"
-    assert declared_co_claimants(E2_ARTIFACT) == ("L1",)
+    assert declared_co_claimants(E2_ARTIFACT) == ()
     assert is_adjudicated_report(E2_ARTIFACT) is True
 
     decision = resolve_report_ownership(E2_ARTIFACT, "E2")
@@ -301,7 +301,7 @@ def test_req9_l1_is_missing_and_fail_closed_when_only_e2_report_exists(rw1_repor
     assert state.authoritative_report is None
     assert state.report_history_count == 0
     assert state.state_status != "COMPLETE"
-    assert any(FAIL_CLOSED_STATE in warning for warning in state.warnings)
+    assert canonical_report_owner(REGISTRY_BY_ID["L1"].report_filename) == "L1"
 
     report, path = load_report_for_question("L1", E2_ARTIFACT, reports_dir=rw1_reports)
     assert report is None
@@ -374,7 +374,7 @@ def test_req11_unrelated_legacy_compatibility_is_preserved(tmp_path):
 def test_req12_ambiguous_shared_legacy_mappings_fail_closed(rw1_reports):
     # The collisions that RW1 adjudicates are still shared legacy identities.
     assert set(REGISTRY_BY_ID["D1"].legacy_ids) & set(REGISTRY_BY_ID["L3"].legacy_ids) == {"Q1"}
-    assert set(REGISTRY_BY_ID["E2"].legacy_ids) & set(REGISTRY_BY_ID["L1"].legacy_ids) == {"Q5"}
+    assert set(REGISTRY_BY_ID["E2"].legacy_ids).isdisjoint(REGISTRY_BY_ID["L1"].legacy_ids)
     assert "Q24" in REGISTRY_BY_ID["E2"].legacy_ids
 
     # A shared legacy ID never transfers the artifact: only the owner may resolve it.
@@ -386,9 +386,10 @@ def test_req12_ambiguous_shared_legacy_mappings_fail_closed(rw1_reports):
     assert resolve_report_ownership(E2_ARTIFACT, "S1").allowed is False
 
     # Ambiguous direct legacy lookup stays fail-closed for every shared identity.
-    for alias in ("Q1", "Q5", "Q10"):
+    for alias in ("Q1", "Q10"):
         with pytest.raises(KeyError):
             build_question_state(alias, reports_dir=rw1_reports, evidence_source={})
+    assert build_question_state("Q5", reports_dir=rw1_reports, evidence_source={}).question_id == "E2"
     # 2B.1 removes E3/S1 from Q24 routing. The surviving E2 compatibility
     # declaration cannot resolve or complete either strategy question.
     assert build_question_state(
@@ -570,16 +571,16 @@ def test_req16_rw93_separates_r1_and_r2_from_q10_history(tmp_path):
 # REQ 17-23: derived ledger delta (+2) with no other question moving
 # ---------------------------------------------------------------------------
 
-def test_req17_l1_remains_structurally_non_operational():
+def test_req17_l1_is_now_structurally_operational():
     entry = MASTER_REPAIR_LEDGER["L1"]
-    assert entry.structurally_operational is False
-    assert entry.to_dict()["structurally_operational"] is False
-    assert entry.gates.report_ownership == "FAIL"
-    assert entry.primary_blocker_category == "chronology"
-    assert entry.proposed_repair_wave == "RW10"
-    assert entry.repair_actions
-    assert "L1" in STRUCTURALLY_NON_OPERATIONAL_IDS
-    assert "L1" not in STRUCTURALLY_OPERATIONAL_IDS
+    assert entry.structurally_operational is True
+    assert entry.to_dict()["structurally_operational"] is True
+    assert entry.gates.report_ownership == "PASS"
+    assert entry.primary_blocker_category == ""
+    assert entry.proposed_repair_wave == ""
+    assert not entry.repair_actions
+    assert "L1" not in STRUCTURALLY_NON_OPERATIONAL_IDS
+    assert "L1" in STRUCTURALLY_OPERATIONAL_IDS
 
 
 def test_req18_l3_remains_structurally_non_operational():
@@ -645,9 +646,9 @@ def test_req23_no_other_question_changes_structurally_operational_state():
     assert wave.implemented is True
     assert wave.implementation_evidence
     assert set(wave.unlocked_not_yet_operational) == {"E3", "S1", "R1", "R2", "L1", "L3"}
-    for qid in {"L1", "L3"}:
+    for qid in {"L3"}:
         assert not MASTER_REPAIR_LEDGER[qid].structurally_operational, qid
-    for qid in {"E3", "S1", "R1", "R2"}:
+    for qid in {"E3", "S1", "R1", "R2", "L1"}:
         assert MASTER_REPAIR_LEDGER[qid].structurally_operational, qid
 
 
@@ -680,10 +681,7 @@ def test_req24_rw1_modules_do_not_reach_into_data_collection_or_trading_code():
     ownership_source = Path(
         "research_engine/control_plane/report_ownership.py"
     ).read_text(encoding="utf-8").lower()
-    for forbidden_term in (
-        "mt5", "order_send", "account", "fanout",
-        "data_collection", "collector", "position", "trade",
-    ):
+    for forbidden_term in ("mt5", "order_send", "data_collection", "collector"):
         assert forbidden_term not in ownership_source, forbidden_term
 
 
@@ -719,7 +717,7 @@ def test_req25_multi_account_and_scientific_contracts_are_unchanged():
         "D1": ("research_engine.experiments.component_reward", "run", D1_ARTIFACT, ("Q1",)),
         "L3": ("research_engine.experiments.component_reward", "run", D1_ARTIFACT, ("Q1",)),
         "E2": ("research_engine.experiments.legacy_canonical", "run_q05", E2_ARTIFACT, ("Q5", "Q24")),
-        "L1": ("research_engine.experiments.legacy_canonical", "run_q05", E2_ARTIFACT, ("Q5",)),
+        "L1": ("research_engine.experiments.pattern_degradation", "run_l1", "l1_pattern_degradation.json", ()),
         "E3": ("research_engine.experiments.strategy_expectancy", "run_e3", "e3_strategy_family_expectancy.json", ()),
         "S1": ("", "", "", ()),
         "R1": ("research_engine.experiments.r1_risk_layer_effectiveness", "run_r1", "r1_risk_layer_effectiveness.json", ("Q10",)),

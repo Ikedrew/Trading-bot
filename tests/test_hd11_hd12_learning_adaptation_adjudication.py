@@ -41,10 +41,12 @@ def test_d_crosscut():
  assert "never defaulted to zero" in A.CROSS_MISSING
  assert A.CROSS_NULL.startswith("Sufficient") and "production" in A.CROSS_PROD
  assert A.SELF_STATUS_FORBIDDEN is True
-def test_e_still_58():
- assert _base() == (58, 12)
- assert set(A.TARGETS) <= set(_N)
+def test_e_l1_implemented_only():
+ assert _base() == (59, 11)
+ assert "L1" not in _N
+ assert set(A.TARGETS) - {"L1"} <= set(_N)
  assert "L6" not in _disc() and _R["L6"].runner_module == ""
- assert _R["L1"].report_filename == "q5_pattern_degradation.json"
+ assert _R["L1"].report_filename == "l1_pattern_degradation.json"
+ assert _R["L1"].runner_function == "run_l1"
  assert _R["L3"].report_filename == "q1_component_reward.json"
 

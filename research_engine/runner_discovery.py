@@ -69,7 +69,7 @@ def discover_runners() -> dict[str, Callable[[], dict[str, Any]]]:
         # Check for duplicate runner (same module+function registered twice)
         runner_key = f"{question.runner_module}.{question.runner_function}"
         if runner_key in seen_runners:
-            # Allow duplicates for shared runners (e.g. run_q05 shared by E2 and L1)
+            # Compatibility aliases may still intentionally share a runner.
             pass
         seen_runners.add(runner_key)
 

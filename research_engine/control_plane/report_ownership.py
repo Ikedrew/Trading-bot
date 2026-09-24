@@ -123,6 +123,11 @@ HD10_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
     "r5_position_sizing.json": "R5",
 }
 
+# HD11 L1 implementation owns a temporal report distinct from E2's pooled Q5.
+HD11_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
+    "l1_pattern_degradation.json": "L1",
+}
+
 
 def _derive_adjudicated_owners() -> dict[str, str]:
     """Derive adjudicated report ownership from the frozen Wave-A5 findings."""
@@ -154,6 +159,7 @@ def _merge_adjudicated_owners() -> dict[str, str]:
         REPAIR_4B4_ADJUDICATED_REPORT_OWNERS,
         HD09_ADJUDICATED_REPORT_OWNERS,
         HD10_ADJUDICATED_REPORT_OWNERS,
+        HD11_ADJUDICATED_REPORT_OWNERS,
     ):
         for filename, owner in repair_owners.items():
             filename_key = _filename_key(filename)

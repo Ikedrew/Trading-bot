@@ -150,7 +150,7 @@ def test_direct_gains_are_disjoint_and_cover_all_non_operational_ids():
         "D6", "PORT-1", "OPP-1", "P1", "E3", "S1", "S5", "S6", "S7",
         "X3", "EXEC1", "X6", "R1", "R2", "R3", "R4", "R5",
     }
-    assert partial_progress_gain == {"EX1", "EX2", "EX7", "EX9", "EX10"}
+    assert partial_progress_gain == {"EX1", "EX2", "EX7", "EX9", "EX10", "L1"}
     assert outstanding_gain == set(STRUCTURALLY_NON_OPERATIONAL_IDS)
     assert REPAIR_WAVES["RW2"].implemented is True
     assert set(REPAIR_WAVES["RW2"].direct_gain) == {"M1", "M3", "M7", "M8", "M11"}
@@ -232,13 +232,16 @@ def test_rw1_ownership_repair_preserves_historical_gain_and_later_progress():
         assert entry.repair_actions == ()
         assert entry.to_dict()["structurally_operational"] is True
 
-    expected_blockers = {"L1": "chronology", "L3": "runner mismatch"}
+    expected_blockers = {"L3": "runner mismatch"}
     for qid, category in expected_blockers.items():
         entry = MASTER_REPAIR_LEDGER[qid]
         assert not entry.structurally_operational
         assert entry.gates.report_ownership == "FAIL"
         assert entry.primary_blocker_category == category
         assert entry.proposed_repair_wave == "RW10"
+
+    assert MASTER_REPAIR_LEDGER["L1"].structurally_operational
+    assert MASTER_REPAIR_LEDGER["L1"].gates.report_ownership == "PASS"
 
     for qid in ("E3", "S1"):
         entry = MASTER_REPAIR_LEDGER[qid]
@@ -261,8 +264,9 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
     assert wave.implementation_evidence
     assert all(item.strip() for item in wave.implementation_evidence)
     assert set(wave.unlocked_not_yet_operational) == {"E3", "S1", "R1", "R2", "L1", "L3"}
-    for qid in {"L1", "L3"}:
+    for qid in {"L3"}:
         assert not MASTER_REPAIR_LEDGER[qid].structurally_operational
+    assert MASTER_REPAIR_LEDGER["L1"].structurally_operational
     for qid in {"E3", "S1", "R1", "R2"}:
         assert MASTER_REPAIR_LEDGER[qid].structurally_operational
 
@@ -299,12 +303,15 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
     assert set(rw7.direct_gain) <= set(STRUCTURALLY_OPERATIONAL_IDS)
     assert rw7.implementation_evidence
 
-    # RW8 and RW10-RW12 remain outstanding; RW9 is independently complete.
+    # RW8 and RW10-RW12 remain outstanding; RW10 records banked L1 progress.
     for wave_id, other in REPAIR_WAVES.items():
         if wave_id in {"RW1", "RW2", "RW3", "RW4", "RW5", "RW6", "RW7", "RW9"}:
             continue
         assert not other.implemented
-        assert other.implementation_evidence == ()
+        if wave_id == "RW10":
+            assert other.implementation_evidence
+        else:
+            assert other.implementation_evidence == ()
 
 
 def test_evidence_gap_accounting_preserves_v1_freeze_and_g3_requirement():

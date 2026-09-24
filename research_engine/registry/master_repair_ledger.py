@@ -191,6 +191,7 @@ RW8_OPERATIONAL_PROGRESS_IDS = frozenset({"EX1", "EX2", "EX9", "EX10"})
 # level/coverage gates and therefore do not enter the operational baseline.
 RW8_HETEROGENEITY_OPERATIONAL_IDS = frozenset({"EX7"})
 RW9_OPERATIONAL_PROGRESS_IDS = frozenset({"R1", "R2", "R3", "R4", "R5"})
+RW10_OPERATIONAL_PROGRESS_IDS = frozenset({"L1"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
@@ -202,6 +203,7 @@ OPERATIONAL_IDS = (
     | RW8_OPERATIONAL_PROGRESS_IDS
     | RW8_HETEROGENEITY_OPERATIONAL_IDS
     | RW9_OPERATIONAL_PROGRESS_IDS
+    | RW10_OPERATIONAL_PROGRESS_IDS
 )
 
 
@@ -351,8 +353,8 @@ REPAIR_WAVES = {
             "canonical question.",
             "Artifact metadata can no longer contradict canonical ownership silently; a conflicting "
             "question_id fails closed as AMBIGUOUS_REPORT_MAPPING/INVALIDATED.",
-            "L1 and L3 remain structurally non-operational and must not resolve D1/E2 artifacts until "
-            "their dedicated RW10 repairs create genuinely distinct runners and reports.",
+            "At RW1 completion L1 and L3 remained structurally non-operational and could not resolve "
+            "D1/E2 artifacts; subsequent dedicated repairs must create distinct runners and reports.",
             "tests/test_rw1_report_ownership.py proves all 25 ownership, fail-closed, ledger-delta, and "
             "scope-containment requirements.",
         ),
@@ -472,6 +474,11 @@ REPAIR_WAVES = {
         ("chronology/version boundary layer", "learning runners", "L1/L3 report separation", "A/B arm authority"), False,
         ("L1", "L2", "L3", "L4", "L7"), (),
         "Timestamped/versioned fixtures prove temporal order and arm assignment; drift, adaptation, and causal improvement remain separately labelled and uniquely reported. Implementations must satisfy research_engine.registry.learning_adaptation_adjudication.HD11 version hd11_learning_chronology_architecture_v1 (governance only; no runtime authority).",
+        implementation_evidence=(
+            "L1 is implemented by research_engine.experiments.pattern_degradation.run_l1 and uniquely owns l1_pattern_degradation.json; E2 retains legacy_canonical.run_q05 and q5_pattern_degradation.json unchanged.",
+            "L1 uses CURRENT completed PRIMARY_HORIZON_SIMULATION evidence, one canonical opportunity per observation, authoritative entry-time ordering, deterministic non-overlapping early/late windows, and the frozen 200/30/two-pattern gates.",
+            "Focused L1 tests prove fanout collapse, chronology, Holm-controlled per-pattern late-minus-early inference, sufficient-null completion, WAITING_DATA, fail-closed conflicts, owned VALID_CURRENT completion, E2 separation, and the derived 59/70 baseline.",
+        ),
     ),
     "RW11": RepairWave(
         "RW11", "Research-governance foundations", ("L6", "G1", "G2"),
@@ -563,7 +570,7 @@ _QUESTION_ACTIONS = {
     "R3": "Implemented: R3 owns the governed HD10 ruin_model_v1 runner and r3_probability_of_ruin.json.",
     "R4": "Implemented: R4 owns the governed HD10 chronological halt-threshold runner and r4_drawdown_threshold.json.",
     "R5": "Implemented: R5 owns the governed HD10 closed-vocabulary sizing runner and r5_position_sizing.json.",
-    "L1": "Create a unique timestamped pattern-degradation runner/report with approved windows and opportunity/horizon clustering.",
+    "L1": "Implemented: L1 owns the HD11 CURRENT primary-horizon chronological pattern-degradation runner and unique l1 report.",
     "L2": "Use actual versioned adaptation/change events and before/after chronological populations; do not call report count learning.",
     "L3": "Create a unique architecture-validation runner/report covering weights, regime classes, and strategy mappings; retain D1 only as an input.",
     "L4": "Join chronological market/strategy outcomes at canonical opportunity grain and separate drift from adaptation/causal improvement.",

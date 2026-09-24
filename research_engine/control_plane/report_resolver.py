@@ -283,6 +283,11 @@ def resolve_report_validity(
         governed_valid, governed_reason = validate_r5_report(report_data)
         if not governed_valid:
             return ReportValidity.INVALIDATED, governed_reason
+    if expected_question_id == "L1":
+        from research_engine.experiments.pattern_degradation import validate_l1_report
+        governed_valid, governed_reason = validate_l1_report(report_data)
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
     if isinstance(fingerprint, dict):
         invalidation = is_report_invalidated(filename, fingerprint)
         if invalidation is not None:

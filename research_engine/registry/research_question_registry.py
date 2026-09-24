@@ -513,11 +513,12 @@ L1 = ResearchQuestion(
     validation_rules=(
         ValidationRule("pattern_coverage", ">=", 0.50, "Pattern required"),
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 200, "HD11 overall canonical-opportunity minimum"),
     ),
-    runner_module="research_engine.experiments.legacy_canonical",
-    runner_function="run_q05",
-    report_filename="q5_pattern_degradation.json",
-    legacy_ids=("Q5",),
+    runner_module="research_engine.experiments.pattern_degradation",
+    runner_function="run_l1",
+    report_filename="l1_pattern_degradation.json",
+    legacy_ids=(),
 )
 
 L2 = ResearchQuestion(

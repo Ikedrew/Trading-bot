@@ -153,7 +153,7 @@ def test_semantic_mismatch_detected():
     from research_engine.registry import REGISTRY_BY_ID
     from research_engine.registry.definition_validator import validate_runner_registry_threshold_alignment
     # D2, D3, D4 and D5 were repaired in RW3 and are no longer semantic mismatches.
-    mismatch_ids = {"L1", "L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8"}
+    mismatch_ids = {"L2", "L3", "L4", "EX5", "EX6", "EX7", "EX8"}
     for mid in mismatch_ids:
         q = REGISTRY_BY_ID[mid]
         report = validate_runner_registry_threshold_alignment(q, mid)
@@ -556,22 +556,19 @@ def test_wave_a2_application_changes_only_resolved_targets(monkeypatch):
             assert after[qid] is before[qid], qid
 
 
-def test_e2_and_l1_shared_artifact_does_not_collapse_semantics():
+def test_e2_and_l1_repair_now_separates_artifacts_and_semantics():
     definitions = build_definitions_from_registry(REGISTRY)
     reports = validate_all_definitions(definitions)
     e2 = definitions["E2"]
     l1 = definitions["L1"]
 
-    assert e2.runner_module == l1.runner_module
-    assert e2.runner_function == l1.runner_function
-    assert e2.report_filename == l1.report_filename
+    assert e2.runner_module != l1.runner_module
+    assert e2.runner_function != l1.runner_function
+    assert e2.report_filename != l1.report_filename
     assert e2.question_wording != l1.question_wording
     assert e2.hypothesis.strip()
-    assert not l1.hypothesis.strip()
-    assert any(
-        result.category == "AMBIGUOUS_REPORT_MAPPING"
-        for result in reports["E2"].results
-    )
+    assert l1.runner_function == "run_l1"
+    assert not any(result.category == "AMBIGUOUS_REPORT_MAPPING" for result in reports["E2"].results)
 
 
 def test_wave_a2_does_not_change_d2_or_x5(monkeypatch):
@@ -1536,13 +1533,13 @@ def test_wave_a42_preserves_a41_prior_waves_protected_and_later_targets(monkeypa
 # WAVE A4.3 - L1 / L2 / L3 / L4 semantic-alignment tests
 # ---------------------------------------------------------------------------
 
-def test_wave_a43_before_to_after_health_remains_fail_closed(monkeypatch):
+def test_wave_a43_unrepaired_health_remains_fail_closed(monkeypatch):
     before = _build_pre_a4_definitions(monkeypatch)
     after = build_definitions_from_registry(REGISTRY)
     before_reports = validate_all_definitions(before)
     after_reports = validate_all_definitions(after)
 
-    for qid in WAVE_A4_3_TARGETS:
+    for qid in WAVE_A4_3_TARGETS - {"L1"}:
         assert get_question_health(before_reports[qid]) == "SEMANTIC_MISMATCH", qid
         assert get_question_health(after_reports[qid]) == "SEMANTIC_MISMATCH", qid
         assert qid in WAVE_A4_UNRESOLVED
@@ -1552,8 +1549,13 @@ def test_wave_a43_before_to_after_health_remains_fail_closed(monkeypatch):
         assert not after[qid].population_definition.strip(), qid
         assert not after[qid].metric_definition.strip(), qid
 
+    assert get_question_health(after_reports["L1"]) in {"VALID", "VALID_WITH_WARNINGS"}
+    assert after["L1"].hypothesis.strip()
+    assert after["L1"].population_definition.strip()
+    assert after["L1"].metric_definition.strip()
 
-def test_l1_is_pooled_pattern_performance_not_temporal_learning():
+
+def test_wave_a4_recorded_the_l1_defect_now_repaired():
     from research_engine.registry import REGISTRY_BY_ID
 
     l1 = REGISTRY_BY_ID["L1"]
@@ -1568,11 +1570,12 @@ def test_l1_is_pooled_pattern_performance_not_temporal_learning():
     assert "repeated horizon simulations" in reason
     assert "pooled descriptive pattern performance" in reason
     assert "not temporal drift, learning, adaptation, or causal improvement" in reason
-    assert l1.runner_module == e2.runner_module
-    assert l1.runner_function == e2.runner_function == "run_q05"
-    assert l1.report_filename == e2.report_filename == "q5_pattern_degradation.json"
+    assert l1.runner_module == "research_engine.experiments.pattern_degradation"
+    assert l1.runner_function == "run_l1" and e2.runner_function == "run_q05"
+    assert l1.report_filename == "l1_pattern_degradation.json"
+    assert e2.report_filename == "q5_pattern_degradation.json"
     assert l1.description != e2.description
-    assert "Q5" in l1.legacy_ids and "Q5" in e2.legacy_ids
+    assert not l1.legacy_ids and "Q5" in e2.legacy_ids
     assert "same artifact as authority for either claim" in reason
 
 
@@ -1873,9 +1876,10 @@ def test_e2_l1_keep_e2_pooled_ownership_and_require_l1_temporal_separation():
     e2, l1 = REGISTRY_BY_ID["E2"], REGISTRY_BY_ID["L1"]
     assert item.scientifically_equivalent is False
     assert item.highest_safe_sharing_level == "helper"
-    assert e2.runner_function == l1.runner_function == "run_q05"
-    assert e2.report_filename == l1.report_filename == "q5_pattern_degradation.json"
-    assert "Q5" in e2.legacy_ids and "Q5" in l1.legacy_ids
+    assert e2.runner_function == "run_q05" and l1.runner_function == "run_l1"
+    assert e2.report_filename == "q5_pattern_degradation.json"
+    assert l1.report_filename == "l1_pattern_degradation.json"
+    assert "Q5" in e2.legacy_ids and not l1.legacy_ids
     assert dict(item.canonical_owners) == {
         "legacy_canonical.run_q05": "E2",
         "q5_pattern_degradation.json": "E2",
@@ -1918,7 +1922,7 @@ def test_wave_a5_does_not_mutate_operational_ownership_mappings():
         "D1": ("run", "q1_component_reward.json", ("Q1",)),
         "L3": ("run", "q1_component_reward.json", ("Q1",)),
         "E2": ("run_q05", "q5_pattern_degradation.json", ("Q5", "Q24")),
-        "L1": ("run_q05", "q5_pattern_degradation.json", ("Q5",)),
+        "L1": ("run_l1", "l1_pattern_degradation.json", ()),
     }
     for qid, mapping in expected.items():
         question = REGISTRY_BY_ID[qid]
