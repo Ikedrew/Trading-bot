@@ -293,17 +293,17 @@ HUMAN_SEMANTIC_DECISIONS = {
     ),
     "HD11": HumanSemanticDecision(
         "HD11", ("L1", "L2", "L3", "L4", "L7"),
-        "Approve temporal windows, adaptation events, architecture-validity criteria, and A/B arm assignment.",
+        "ADJUDICATED: preserve genuine learning/adaptation intent using versioned chronological windows, intervention boundaries, architecture-validity criteria and schema_version A/B arms in HD11.",
         ("Versioned chronological/adaptation contracts", "Narrow to existing pooled/count diagnostics"),
         ("Preserves learning claims", "Removes temporal/adaptation meaning"),
-        "Preserve learning intent with explicit chronology and arm/version boundaries.", True,
+        "ADJUDICATED: use research_engine.registry.learning_adaptation_adjudication.HD11.", False,
     ),
     "HD12": HumanSemanticDecision(
         "HD12", ("L6",),
-        "Approve confidence components, weighting, tiers, and warning treatment.",
+        "ADJUDICATED: validate each versioned learning cycle with frozen pre/post windows, per-cycle and per-cell sufficiency, E5 suitability gate and opportunity-clustered improvement test in HD12.",
         ("Transparent component vector plus ordinal tiers", "Component vector only"),
         ("Supports summaries but adds approved thresholds", "Avoids arbitrary scalar while remaining operational"),
-        "Always emit components; add tiers only after approval.", True,
+        "ADJUDICATED: use research_engine.registry.learning_adaptation_adjudication.HD12.", False,
     ),
     "HD13": HumanSemanticDecision(
         "HD13", ("G1",),
@@ -471,7 +471,7 @@ REPAIR_WAVES = {
         "Pooled/count diagnostics lack event chronology, change boundaries, valid before/after arms, or distinct report ownership.", ("RW1", "RW2", "RW5"), ("HD11",),
         ("chronology/version boundary layer", "learning runners", "L1/L3 report separation", "A/B arm authority"), False,
         ("L1", "L2", "L3", "L4", "L7"), (),
-        "Timestamped/versioned fixtures prove temporal order and arm assignment; drift, adaptation, and causal improvement remain separately labelled and uniquely reported.",
+        "Timestamped/versioned fixtures prove temporal order and arm assignment; drift, adaptation, and causal improvement remain separately labelled and uniquely reported. Implementations must satisfy research_engine.registry.learning_adaptation_adjudication.HD11 version hd11_learning_chronology_architecture_v1 (governance only; no runtime authority).",
     ),
     "RW11": RepairWave(
         "RW11", "Research-governance foundations", ("L6", "G1", "G2"),
@@ -480,7 +480,7 @@ REPAIR_WAVES = {
         ("HD12", "HD13", "HD14"),
         ("immutable control-plane snapshot", "L6/G1/G2 runners", "strict lineage denominator", "unique governance reports"), False,
         ("L6", "G1", "G2"), ("G3",),
-        "L6 scores every eligible conclusion, G1 assesses all 70 requirements, and G2 exhaustively classifies an opportunity-level lineage denominator without dashboard authority.",
+        "L6 scores every eligible conclusion, G1 assesses all 70 requirements, and G2 exhaustively classifies an opportunity-level lineage denominator without dashboard authority. L6 implementation must satisfy research_engine.registry.learning_adaptation_adjudication.HD12 version hd12_learning_cycle_confidence_v1 (governance only; PROPOSED design is not completion).",
     ),
     "RW12": RepairWave(
         "RW12", "Global research-validity assessment", ("G3",),
