@@ -243,10 +243,10 @@ HUMAN_SEMANTIC_DECISIONS = {
     ),
     "HD05": HumanSemanticDecision(
         "HD05", ("P1",),
-        "Approve the promotion estimand and required EV/win-rate/drawdown/frequency/risk evaluation design.",
+        "ADJUDICATED: freeze deployed baseline-transition impact under promotion_impact_adjudication.py, with governed activation chronology, baseline-stamped PRE/POST populations, R-normalized expectancy, explicit trade-offs, and fail-closed authority.",
         ("Full predeclared candidate-policy evaluation", "Narrow to current fixed in-sample scenarios"),
         ("Answers the registry and needs broader metrics", "Cheaper but no longer answers promotion impact"),
-        "Implement the full predeclared evaluation.", True,
+        "ADJUDICATED: evaluate actual verified deployed transitions; candidate experiments and approval alone cannot substitute.", False,
     ),
     "HD06": HumanSemanticDecision(
         "HD06", ("S5", "S6"),

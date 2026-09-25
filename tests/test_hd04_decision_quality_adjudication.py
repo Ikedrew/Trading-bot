@@ -147,13 +147,14 @@ def test_unique_future_runner_and_report_ownership_is_preserved():
     assert "may complete another question" in A.QUESTION_SEPARATION
 
 
-def test_hd04_adjudicated_hd05_untouched_and_baseline_unchanged():
+def test_hd04_remains_adjudicated_after_hd05_and_baseline_unchanged():
     hd04 = HUMAN_SEMANTIC_DECISIONS["HD04"]
     hd05 = HUMAN_SEMANTIC_DECISIONS["HD05"]
     assert "ADJUDICATED" in hd04.exact_decision
     assert not hd04.implementation_blocked_until_decision
     assert hd05.affected_question_ids == ("P1",)
-    assert hd05.implementation_blocked_until_decision
+    assert "ADJUDICATED" in hd05.exact_decision
+    assert not hd05.implementation_blocked_until_decision
     assert operational_baseline() == (63, 7)
     assert STRUCTURALLY_NON_OPERATIONAL_IDS == frozenset({
         "EX5", "EX6", "EX8", "L2", "L3", "L6", "L7",
