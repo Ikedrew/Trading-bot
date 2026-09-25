@@ -262,6 +262,13 @@ class FindingTrigger:
             "baseline_epoch": self.baseline_epoch,
         }
 
+    def to_curiosity_signal(self, **kwargs: Any):
+        """Narrow optional seam into Stage 3 curiosity; existing behavior is unchanged."""
+        from research_engine.lifecycle.curiosity_signal import (
+            signal_from_finding_trigger,
+        )
+        return signal_from_finding_trigger(self, **kwargs)
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "FindingTrigger":
         return cls(

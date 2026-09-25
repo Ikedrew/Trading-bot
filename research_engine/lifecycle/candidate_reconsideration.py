@@ -65,6 +65,12 @@ class CandidateReconsiderationDecision:
     limitations: tuple[str, ...]
     def to_dict(self):
         return {"reconsideration_id": self.reconsideration_id, "status": self.status.value, "candidate_id": self.candidate_id, "historical_baseline_id": self.historical_baseline_id, "historical_baseline_config_hash": self.historical_baseline_config_hash, "target_baseline_id": self.target_baseline_id, "target_baseline_config_hash": self.target_baseline_config_hash, "impact_id": self.impact_id, "continuity_id": self.continuity_id, "candidate_treatment_id": self.candidate_treatment_id, "historical_candidate_status": self.historical_candidate_status, "historical_evaluation_outcome": self.historical_evaluation_outcome, "reason_codes": list(self.reason_codes), "fresh_evidence_required": self.fresh_evidence_required, "limitations": list(self.limitations)}
+    def to_curiosity_signal(self, **kwargs):
+        """Narrow optional seam into Stage 3 curiosity; never retries or activates."""
+        from research_engine.lifecycle.curiosity_signal import (
+            signal_from_candidate_reconsideration,
+        )
+        return signal_from_candidate_reconsideration(self, **kwargs)
 _RECON_ID_FIELDS = ("candidate_id", "historical_baseline_id", "historical_baseline_config_hash", "target_baseline_id", "target_baseline_config_hash", "impact_id", "continuity_id", "candidate_treatment_id", "historical_candidate_status", "historical_evaluation_outcome", "historical_human_decision", "classification", "continuity_state", "status", "reason_codes", "fresh_evidence_required", "transition_candidate_id")
 def _canonical(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
