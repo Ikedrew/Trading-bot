@@ -162,7 +162,7 @@ class RepairWave:
 # tests/test_rw1_report_ownership.py; every entry below still derives its own
 # structurally_operational value from its own gates.
 RW2_OPERATIONAL_IDS = frozenset({"M1", "M3", "M7", "M8", "M11"})
-# RW3 is COMPLETE: D2 (paired chronological calibration), D3 (paired
+# RW3 is structurally COMPLETE and HD04 is scientifically adjudicated: D2 (paired chronological calibration), D3 (paired
 # chronological predicted-EV gate validation), D4 (paired chronological
 # pre-decision score-threshold validation), D5 (paired chronological
 # rejected-opportunity counterfactual validation), and X5 (paired chronological
@@ -236,10 +236,10 @@ HUMAN_SEMANTIC_DECISIONS = {
     ),
     "HD04": HumanSemanticDecision(
         "HD04", ("D2", "D3", "D4", "D5", "X5"),
-        "Approve canonical pre-decision score, p_success, EV, rejection-treatment, and evaluation semantics.",
+        "ADJUDICATED: freeze the versioned decision-time probability, EV, score, action/rejection, chronology, primary-horizon outcome, and question-specific inference contracts in decision_quality_adjudication.py.",
         ("Versioned predictive/calibration contract with out-of-sample evaluation", "Narrow each claim to its current descriptive diagnostic"),
         ("Preserves registry intent and blocks leakage", "Requires canonical wording changes and yields weaker claims"),
-        "Version the predictive authorities and preserve registry intent.", True,
+        "ADJUDICATED: preserve canonical intent with strict persisted decision-time authority and fail-closed CURRENT evaluation.", False,
     ),
     "HD05": HumanSemanticDecision(
         "HD05", ("P1",),
