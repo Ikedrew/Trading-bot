@@ -101,8 +101,9 @@ class NoRunnerDesign:
 
 # Repairs 2B.2/2B.3/2B.4 implemented S5/S6/S7 and Repair 4B.4 implemented X6.
 # Their frozen design records below remain the authoritative HD06/HD08
-# scientific contracts; L6/G1/G2/G3 remain unimplemented.
-WAVE_A_NO_RUNNER_TARGETS = frozenset({"L6", "G1", "G2", "G3"})
+# Historical designs remain below; after RW11's HD13/HD14 implementation only
+# L6 and G3 remain active NO_RUNNER targets.
+WAVE_A_NO_RUNNER_TARGETS = frozenset({"L6", "G3"})
 
 # Human-adjudicated HD07 scientific contract.  This is definition/governance
 # authority only: it does not declare a runner, active report, or operational

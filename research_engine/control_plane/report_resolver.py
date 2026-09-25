@@ -293,6 +293,16 @@ def resolve_report_validity(
         governed_valid, governed_reason = validate_l4_report(report_data)
         if not governed_valid:
             return ReportValidity.INVALIDATED, governed_reason
+    if expected_question_id == "G1":
+        from research_engine.experiments.dataset_suitability import validate_g1_report
+        governed_valid, governed_reason = validate_g1_report(report_data)
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
+    if expected_question_id == "G2":
+        from research_engine.experiments.lineage_coverage import validate_g2_report
+        governed_valid, governed_reason = validate_g2_report(report_data)
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
     if isinstance(fingerprint, dict):
         invalidation = is_report_invalidated(filename, fingerprint)
         if invalidation is not None:

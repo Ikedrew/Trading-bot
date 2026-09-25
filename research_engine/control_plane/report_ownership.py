@@ -129,6 +129,11 @@ HD11_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
     "l4_market_behaviour_stability.json": "L4",
 }
 
+HD13_HD14_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
+    "g1_dataset_suitability.json": "G1",
+    "g2_lineage_coverage.json": "G2",
+}
+
 
 def _derive_adjudicated_owners() -> dict[str, str]:
     """Derive adjudicated report ownership from the frozen Wave-A5 findings."""
@@ -161,6 +166,7 @@ def _merge_adjudicated_owners() -> dict[str, str]:
         HD09_ADJUDICATED_REPORT_OWNERS,
         HD10_ADJUDICATED_REPORT_OWNERS,
         HD11_ADJUDICATED_REPORT_OWNERS,
+        HD13_HD14_ADJUDICATED_REPORT_OWNERS,
     ):
         for filename, owner in repair_owners.items():
             filename_key = _filename_key(filename)

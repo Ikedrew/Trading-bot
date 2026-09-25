@@ -35,6 +35,16 @@ def resolve_readiness(
 
     if report_validity == ReportValidity.VALID_CURRENT and report_status == "COMPLETE":
         return ReadinessStatus.COMPLETE, "A VALID_CURRENT completed report exists"
+    if question.id == "G1":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No owned VALID_CURRENT exhaustive HD13 G1 report exists"
+        return ReadinessStatus.BLOCKED, "The CURRENT G1 report contains UNKNOWN or is not scientifically complete"
+    if question.id == "G2":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No owned VALID_CURRENT exhaustive HD14 G2 report exists"
+        if report_status == "INSUFFICIENT_DATA":
+            return ReadinessStatus.WAITING_DATA, "The CURRENT G2 denominator is below 100 eligible canonical opportunities"
+        return ReadinessStatus.BLOCKED, "The CURRENT G2 report has unresolved denominator accounting"
     if question.id in {"EX1", "EX2", "EX9"}:
         if report_validity != ReportValidity.VALID_CURRENT:
             return (

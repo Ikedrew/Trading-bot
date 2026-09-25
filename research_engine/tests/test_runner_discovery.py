@@ -57,7 +57,9 @@ class TestDiscoverRunners:
         runners = discover_runners()
         # E4 now has runner metadata (Wave 8)
         assert "E4" in runners, "E4 should now have a runner (Wave 8)"
-        assert "G1" not in runners
+        assert "G1" in runners
+        assert "G2" in runners
+        assert "G3" not in runners
         # M2-M8, M11 now have runner metadata (Wave 7)
         for qid in ("M2", "M3", "M4", "M6", "M7", "M8", "M11"):
             assert qid in runners, f"Missing runner for {qid} (Wave 7)"

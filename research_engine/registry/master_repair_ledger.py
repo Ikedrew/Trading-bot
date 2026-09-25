@@ -192,6 +192,7 @@ RW8_OPERATIONAL_PROGRESS_IDS = frozenset({"EX1", "EX2", "EX9", "EX10"})
 RW8_HETEROGENEITY_OPERATIONAL_IDS = frozenset({"EX7"})
 RW9_OPERATIONAL_PROGRESS_IDS = frozenset({"R1", "R2", "R3", "R4", "R5"})
 RW10_OPERATIONAL_PROGRESS_IDS = frozenset({"L1", "L4"})
+RW11_DATA_GOVERNANCE_OPERATIONAL_IDS = frozenset({"G1", "G2"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
@@ -204,6 +205,7 @@ OPERATIONAL_IDS = (
     | RW8_HETEROGENEITY_OPERATIONAL_IDS
     | RW9_OPERATIONAL_PROGRESS_IDS
     | RW10_OPERATIONAL_PROGRESS_IDS
+    | RW11_DATA_GOVERNANCE_OPERATIONAL_IDS
 )
 
 
@@ -490,6 +492,11 @@ REPAIR_WAVES = {
         ("immutable control-plane snapshot", "L6/G1/G2 runners", "strict lineage denominator", "unique governance reports"), False,
         ("L6", "G1", "G2"), ("G3",),
         "L6 scores every eligible conclusion, G1 assesses all 70 requirements, and G2 exhaustively classifies an opportunity-level lineage denominator without dashboard authority. L6 implementation must satisfy research_engine.registry.learning_adaptation_adjudication.HD12 version hd12_learning_cycle_confidence_v1 (governance only; PROPOSED design is not completion).",
+        implementation_evidence=(
+            "G1 is implemented by research_engine.experiments.dataset_suitability.run_g1 and uniquely owns g1_dataset_suitability.json under frozen HD13.",
+            "G2 is implemented by research_engine.experiments.lineage_coverage.run_g2 and uniquely owns g2_lineage_coverage.json under frozen HD14.",
+            "Both bind separate results to the shared immutable CURRENT snapshot manifest; L6 and G3 remain non-operational.",
+        ),
     ),
     "RW12": RepairWave(
         "RW12", "Global research-validity assessment", ("G3",),
@@ -540,8 +547,6 @@ _assign(("L7",), "RW10", "counterfactual design", "LEARNING_CHRONOLOGY_FOUNDATIO
         "Chronological halves are not authoritative control/candidate A/B arms.", human=True)
 _assign(("L6",), "RW11", "no runner", "NO_RUNNER_GOVERNANCE_FOUNDATION",
         "The frozen proposed governance contract has no runner, report, readiness, or completion implementation.", human=True)
-_assign(("G1", "G2"), "RW11", "no runner", "NO_RUNNER_GOVERNANCE_FOUNDATION",
-        "HD13/HD14 science is frozen, but the proposed governance contracts have no runner, report, readiness, or completion implementation.", human=False)
 _assign(("G3",), "RW12", "no runner", "NO_RUNNER_GLOBAL_VALIDITY",
         "The proposed global assessment has no runner and requires future G1/G2/L6 research reports.", ("G1", "G2", "L6"), True, NEW_RESEARCH_EVIDENCE)
 

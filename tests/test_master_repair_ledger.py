@@ -150,7 +150,7 @@ def test_direct_gains_are_disjoint_and_cover_all_non_operational_ids():
         "D6", "PORT-1", "OPP-1", "P1", "E3", "S1", "S5", "S6", "S7",
         "X3", "EXEC1", "X6", "R1", "R2", "R3", "R4", "R5",
     }
-    assert partial_progress_gain == {"EX1", "EX2", "EX7", "EX9", "EX10", "L1", "L4"}
+    assert partial_progress_gain == {"EX1", "EX2", "EX7", "EX9", "EX10", "L1", "L4", "G1", "G2"}
     assert outstanding_gain == set(STRUCTURALLY_NON_OPERATIONAL_IDS)
     assert REPAIR_WAVES["RW2"].implemented is True
     assert set(REPAIR_WAVES["RW2"].direct_gain) == {"M1", "M3", "M7", "M8", "M11"}
@@ -182,8 +182,8 @@ def test_unlocked_ids_are_not_claimed_as_early_direct_gain():
 
 def test_all_no_runner_ids_still_require_real_implementation():
     # S5/S6/S7 were implemented by Repairs 2B.2/2B.3/2B.4; designs remain history.
-    # X6 was implemented by Repair 4B.4 and is no longer a no-runner target.
-    assert WAVE_A_NO_RUNNER_TARGETS == {"L6", "G1", "G2", "G3"}
+    # X6 and HD13/HD14 G1/G2 are implemented; only L6/G3 remain targets.
+    assert WAVE_A_NO_RUNNER_TARGETS == {"L6", "G3"}
     for qid in WAVE_A_NO_RUNNER_TARGETS:
         entry = MASTER_REPAIR_LEDGER[qid]
         question = REGISTRY_BY_ID[qid]
@@ -303,12 +303,12 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
     assert set(rw7.direct_gain) <= set(STRUCTURALLY_OPERATIONAL_IDS)
     assert rw7.implementation_evidence
 
-    # RW8 and RW10-RW12 remain outstanding; RW10 records banked L1 progress.
+    # RW8 and RW10-RW12 remain outstanding; RW10/RW11 record banked progress.
     for wave_id, other in REPAIR_WAVES.items():
         if wave_id in {"RW1", "RW2", "RW3", "RW4", "RW5", "RW6", "RW7", "RW9"}:
             continue
         assert not other.implemented
-        if wave_id == "RW10":
+        if wave_id in {"RW10", "RW11"}:
             assert other.implementation_evidence
         else:
             assert other.implementation_evidence == ()
@@ -334,7 +334,7 @@ def test_evidence_gap_accounting_preserves_v1_freeze_and_g3_requirement():
 def test_human_decisions_are_explicit_and_reference_real_targets():
     registry_ids = set(MASTER_REPAIR_LEDGER)
     assert set(HUMAN_SEMANTIC_DECISIONS) == {f"HD{i:02d}" for i in range(1, 16)}
-    adjudicated = {"HD01", "HD02", "HD03", "HD06", "HD07", "HD08", "HD09", "HD10", "HD11", "HD12"}
+    adjudicated = {"HD01", "HD02", "HD03", "HD06", "HD07", "HD08", "HD09", "HD10", "HD11", "HD12", "HD13", "HD14"}
     for decision_id, decision in HUMAN_SEMANTIC_DECISIONS.items():
         assert set(decision.affected_question_ids) <= registry_ids
         assert decision.exact_decision
@@ -342,7 +342,7 @@ def test_human_decisions_are_explicit_and_reference_real_targets():
         assert len(decision.available_options) == len(decision.consequences)
         assert decision.recommended_default
         assert decision.implementation_blocked_until_decision is (decision_id not in adjudicated)
-    for decision_id in {"HD01", "HD06", "HD07", "HD08", "HD09", "HD10", "HD11", "HD12"}:
+    for decision_id in {"HD01", "HD06", "HD07", "HD08", "HD09", "HD10", "HD11", "HD12", "HD13", "HD14"}:
         assert HUMAN_SEMANTIC_DECISIONS[decision_id].recommended_default.startswith("ADJUDICATED:")
     for wave in REPAIR_WAVES.values():
         assert all(decision_id in HUMAN_SEMANTIC_DECISIONS for decision_id in wave.human_decision_ids)

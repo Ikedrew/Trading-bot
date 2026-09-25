@@ -828,19 +828,26 @@ G1 = ResearchQuestion(
     validation_rules=(
         ValidationRule("outcome_coverage", ">=", 0.50, "At least half of records must have outcomes"),
     ),
+    runner_module="research_engine.experiments.dataset_suitability",
+    runner_function="run_g1",
+    report_filename="g1_dataset_suitability.json",
 )
 
 G2 = ResearchQuestion(
     id="G2",
     category=QuestionCategory.DATA_GOVERNANCE,
     title="Lineage coverage",
-    description="What percentage of trades have valid decision-to-outcome lineage (entity_id join)?",
+    description="What percentage of canonical opportunities have valid decision-to-outcome lineage on (entity_id, canonical_opportunity_id)?",
     required_fields=("entity_id", "r_multiple"),
     data_sources=(DataSource.SHADOW_TRADES, DataSource.DECISION_TRACE),
     priority=QuestionPriority.P0,
     validation_rules=(
         ValidationRule("lineage_coverage", ">=", 0.50, "At least 50% lineage for this meta-question"),
+        ValidationRule("sample_size", ">=", 100, "At least 100 exhaustive eligible canonical opportunities"),
     ),
+    runner_module="research_engine.experiments.lineage_coverage",
+    runner_function="run_g2",
+    report_filename="g2_lineage_coverage.json",
 )
 
 G3 = ResearchQuestion(

@@ -79,28 +79,28 @@ def test_shared_snapshot_contract_and_separate_report_ownership():
     assert WAVE_A_NO_RUNNER_DESIGNS["G2"].report_identity == "g2_lineage_coverage.json"
 
 
-def test_ledger_records_hd13_hd14_adjudicated_without_g3_or_operational_change():
+def test_ledger_records_hd13_hd14_operational_without_g3_change():
     assert not HUMAN_SEMANTIC_DECISIONS["HD13"].implementation_blocked_until_decision
     assert not HUMAN_SEMANTIC_DECISIONS["HD14"].implementation_blocked_until_decision
     assert "ADJUDICATED" in HUMAN_SEMANTIC_DECISIONS["HD13"].exact_decision
     assert "ADJUDICATED" in HUMAN_SEMANTIC_DECISIONS["HD14"].exact_decision
     assert "HD15" in HUMAN_SEMANTIC_DECISIONS
-    assert operational_baseline() == (60, 10)
-    assert len(STRUCTURALLY_OPERATIONAL_IDS) == 60
-    assert len(STRUCTURALLY_NON_OPERATIONAL_IDS) == 10
+    assert operational_baseline() == (62, 8)
+    assert len(STRUCTURALLY_OPERATIONAL_IDS) == 62
+    assert len(STRUCTURALLY_NON_OPERATIONAL_IDS) == 8
     assert len(MASTER_REPAIR_LEDGER) == 70
-    assert {"G1", "G2"} <= set(STRUCTURALLY_NON_OPERATIONAL_IDS)
+    assert {"G1", "G2"} <= set(STRUCTURALLY_OPERATIONAL_IDS)
     assert MASTER_REPAIR_LEDGER["G1"].human_semantic_decision_required is False
     assert MASTER_REPAIR_LEDGER["G2"].human_semantic_decision_required is False
     assert MASTER_REPAIR_LEDGER["G3"].human_semantic_decision_required is True
 
 
-def test_g1_g2_future_identities_remain_unimplemented():
+def test_g1_g2_frozen_identities_are_implemented_exactly():
     for module in (
         "research_engine.experiments.dataset_suitability",
         "research_engine.experiments.lineage_coverage",
     ):
-        assert importlib.util.find_spec(module) is None
+        assert importlib.util.find_spec(module) is not None
     assert WAVE_A_NO_RUNNER_DESIGNS["G1"].runner_specification.proposed_module == (
         "research_engine.experiments.dataset_suitability"
     )
