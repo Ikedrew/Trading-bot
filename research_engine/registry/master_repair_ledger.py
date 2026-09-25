@@ -309,17 +309,17 @@ HUMAN_SEMANTIC_DECISIONS = {
     ),
     "HD13": HumanSemanticDecision(
         "HD13", ("G1",),
-        "Approve global dataset-suitability aggregation scope.",
-        ("Assess all 70 without one automatic approval", "Gate only P0 while reporting all 70"),
-        ("Complete canonical coverage", "Prioritises critical questions but needs a separate overall meaning"),
-        "Assess all 70 and keep per-question statuses visible.", True,
+        "ADJUDICATED: assess all 70 canonical questions and the exact six-category requirement inventory using the frozen HD13 contract; preserve scientific blockage and explicit UNKNOWN separately from legitimate WAITING_DATA sample gaps.",
+        ("ALL-70 global suitability assessment", "Gate only P0 while reporting all 70"),
+        ("Complete canonical coverage with exhaustive requirement accounting", "Prioritises critical questions but lacks one global meaning"),
+        "ADJUDICATED: use research_engine.registry.data_governance_adjudication.HD13_VERSION; all-70 evaluation is nonrecursive and can COMPLETE with a valid UNSUITABLE result.", False,
     ),
     "HD14": HumanSemanticDecision(
         "HD14", ("G2",),
-        "Approve the eligible lineage denominator, identity key, and inferential threshold.",
-        ("One opportunity; entity_id plus canonical root", "Another explicitly versioned strict identity"),
-        ("Prevents horizon/account inflation", "Must prove equal determinism and reject ambiguity"),
-        "Use the proposed opportunity denominator and composite identity.", True,
+        "ADJUDICATED: use the exhaustive decision/outcome canonical-opportunity union, exact composite identity (entity_id, canonical_opportunity_id), four-way lineage taxonomy, readiness minimum D>=100, and point-estimate coverage threshold 50% from the frozen HD14 contract.",
+        ("Exhaustive union plus composite identity", "Another explicitly versioned strict identity"),
+        ("Prevents denominator drops, fallback joins, and account/horizon fanout", "Must prove equal determinism and reject ambiguity"),
+        "ADJUDICATED: use research_engine.registry.data_governance_adjudication.HD14_VERSION.", False,
     ),
     "HD15": HumanSemanticDecision(
         "HD15", ("G3",),
@@ -538,8 +538,10 @@ _assign(("L3",), "RW10", "runner mismatch", "LEARNING_CHRONOLOGY_FOUNDATION",
         "D1 component attribution cannot validate weights, regimes, and strategy mappings.", human=True)
 _assign(("L7",), "RW10", "counterfactual design", "LEARNING_CHRONOLOGY_FOUNDATION",
         "Chronological halves are not authoritative control/candidate A/B arms.", human=True)
-_assign(("L6", "G1", "G2"), "RW11", "no runner", "NO_RUNNER_GOVERNANCE_FOUNDATION",
+_assign(("L6",), "RW11", "no runner", "NO_RUNNER_GOVERNANCE_FOUNDATION",
         "The frozen proposed governance contract has no runner, report, readiness, or completion implementation.", human=True)
+_assign(("G1", "G2"), "RW11", "no runner", "NO_RUNNER_GOVERNANCE_FOUNDATION",
+        "HD13/HD14 science is frozen, but the proposed governance contracts have no runner, report, readiness, or completion implementation.", human=False)
 _assign(("G3",), "RW12", "no runner", "NO_RUNNER_GLOBAL_VALIDITY",
         "The proposed global assessment has no runner and requires future G1/G2/L6 research reports.", ("G1", "G2", "L6"), True, NEW_RESEARCH_EVIDENCE)
 

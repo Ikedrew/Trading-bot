@@ -644,10 +644,10 @@ WAVE_A_NO_RUNNER_DESIGNS: dict[str, NoRunnerDesign] = {
     "G1": NoRunnerDesign(
         canonical_question_id="G1",
         canonical_intent="Assess whether current evidence is suitable for every intended canonical research question by source, field coverage, joinability, and sample sufficiency.",
-        hypothesis="At least one canonical question has CURRENT evidence satisfying all declared data-suitability requirements.",
-        null_hypothesis="No canonical question has CURRENT evidence satisfying all declared data-suitability requirements.",
+        hypothesis="All 70 canonical questions have CURRENT evidence satisfying every applicable declared requirement.",
+        null_hypothesis="One or more of the 70 canonical questions has at least one BLOCKED, UNKNOWN, UNSUITABLE, or WAITING_DATA requirement result.",
         research_classification="descriptive data-governance audit",
-        population_definition="The frozen 70-question baseline and each question's declared evidence/readiness requirements evaluated against validity-approved CURRENT evidence metrics.",
+        population_definition="Exactly the frozen 70-question canonical baseline, once each, including G1/G2, with each question assessed at its effective declared requirement inventory against one validity-approved immutable CURRENT evidence snapshot.",
         unit_of_analysis="One canonical question suitability assessment; the global summary is not a statistical independent sample.",
         metric_definition="Per-question source availability, required-field coverage, epoch eligibility, deterministic join coverage, distinct-grain sample/cell sufficiency, and suitability status.",
         evidence_authority=(
@@ -688,18 +688,18 @@ WAVE_A_NO_RUNNER_DESIGNS: dict[str, NoRunnerDesign] = {
             "Represent unimplemented questions as assessed gaps, not silently omit them.",
         ),
         human_semantic_decisions=(
-            "HUMAN_SEMANTIC_DECISION_REQUIRED: approve whether global suitability requires every P0 only or all 70; proposed contract reports all 70 and does not collapse failures into a single approval.",
+            "ADJUDICATED HD13: assess exactly all 70 using science contract, source authority, field coverage, joinability, sample sufficiency, and CURRENT provenance; all-70 SUITABLE is required for overall SUITABLE, while valid WAITING_DATA/UNSUITABLE/BLOCKED may complete.",
         ),
     ),
     "G2": NoRunnerDesign(
         canonical_question_id="G2",
         canonical_intent="Measure the percentage of eligible trade opportunities with valid one-to-one decision-to-outcome lineage through entity identity.",
-        hypothesis="The true valid-lineage proportion meets or exceeds the registry threshold of 50%.",
-        null_hypothesis="The true valid-lineage proportion is below 50%.",
+        hypothesis="The observed point-estimate valid-lineage proportion is at least the frozen registry threshold of 50%.",
+        null_hypothesis="The observed point-estimate valid-lineage proportion is below 50%.",
         research_classification="descriptive lineage-quality audit",
-        population_definition="Validity-approved CURRENT canonical opportunities represented in completed shadow outcomes and eligible decision traces.",
+        population_definition="The exhaustive union of validity-approved CURRENT canonical decision-side and shadow-side opportunities, including unique decision-only and shadow-only identities, evaluated in one immutable same-epoch snapshot.",
         unit_of_analysis="One canonical opportunity; account executions and repeated shadow horizons never enlarge the denominator.",
-        metric_definition="Valid one-to-one lineage opportunities divided by all eligible distinct canonical opportunities, with exact confidence interval and missing/ambiguous/conflicting reason counts.",
+        metric_definition="Valid one-to-one lineage opportunities divided by every eligible distinct canonical opportunity, with exhaustive valid/missing/ambiguous/conflicting reason counts; no confidence-interval method is required for this descriptive estimand or threshold decision.",
         evidence_authority=(
             ProposedEvidence("shadow_runtime_v1/research_shadow_trades", ("entity_id", "canonical_opportunity_id", "shadow_trade_id", "evaluated_horizon", "simulated_outcome.pnl_r_multiple"), "Completed outcome-side lineage evidence.", ALREADY_AVAILABLE),
             ProposedEvidence("decision_trace_v1", ("entity_id", "canonical_opportunity_id", "correlation_id", "symbol", "timestamp_utc"), "Decision-side lineage evidence.", ALREADY_AVAILABLE),
@@ -708,9 +708,9 @@ WAVE_A_NO_RUNNER_DESIGNS: dict[str, NoRunnerDesign] = {
             ProposedJoin("distinct shadow opportunity roots", "decision_trace_v1", ("entity_id", "canonical_opportunity_id"), "one_to_one opportunity to decision", "reject duplicates, partial keys, and root/symbol conflicts", "validate decision-to-outcome lineage without permissive fallback keys"),
         ),
         epoch_requirement="Both sides validity-approved CURRENT in the same compatible epoch; reject legacy fallback and mixed epochs.",
-        minimum_sample="Proposed: >=100 eligible distinct canonical opportunities for an inferential coverage claim.",
+        minimum_sample="Frozen: >=100 eligible distinct canonical opportunities after exhaustive classification for inferential completion.",
         cell_sufficiency="Global denominator is mandatory; proposed diagnostic symbol/session cells require >=30 distinct opportunities and never determine global completion.",
-        completion_criterion="Every eligible opportunity is exactly classified valid, missing, ambiguous, or conflicting; denominator, numerator, exclusions, interval, and 50% threshold result are emitted.",
+        completion_criterion="Every eligible opportunity is exactly classified valid, missing, ambiguous, or conflicting; denominator, numerator, all exclusions, and the 50% point-estimate threshold result are emitted. D<100 or unresolved malformed/orphan accounting cannot complete.",
         dependencies=("canonical shadow lifecycle identity", "canonical decision-trace identity"),
         runner_specification=RunnerSpecification(
             proposed_module="research_engine.experiments.lineage_coverage",
@@ -738,8 +738,7 @@ WAVE_A_NO_RUNNER_DESIGNS: dict[str, NoRunnerDesign] = {
             "Add readiness and completion rules for exhaustive denominator classification.",
         ),
         human_semantic_decisions=(
-            "HUMAN_SEMANTIC_DECISION_REQUIRED: approve the eligible denominator and whether entity_id alone or the proposed entity_id-plus-root identity is canonical; ambiguity must remain fail-closed.",
-            "HUMAN_SEMANTIC_DECISION_REQUIRED: approve the provisional >=100 opportunity threshold; the registry's 50% remains the coverage decision threshold.",
+            "ADJUDICATED HD14: use the exhaustive eligible decision/shadow union, composite (entity_id, canonical_opportunity_id) identity, D>=100, and the 50% point-estimate threshold; missing/ambiguous/conflicting cases cannot masquerade as valid lineage.",
         ),
     ),
     "G3": NoRunnerDesign(
