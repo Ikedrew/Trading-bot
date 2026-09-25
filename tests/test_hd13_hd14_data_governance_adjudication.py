@@ -85,9 +85,9 @@ def test_ledger_records_hd13_hd14_operational_without_g3_change():
     assert "ADJUDICATED" in HUMAN_SEMANTIC_DECISIONS["HD13"].exact_decision
     assert "ADJUDICATED" in HUMAN_SEMANTIC_DECISIONS["HD14"].exact_decision
     assert "HD15" in HUMAN_SEMANTIC_DECISIONS
-    assert operational_baseline() == (62, 8)
-    assert len(STRUCTURALLY_OPERATIONAL_IDS) == 62
-    assert len(STRUCTURALLY_NON_OPERATIONAL_IDS) == 8
+    assert operational_baseline() == (63, 7)
+    assert len(STRUCTURALLY_OPERATIONAL_IDS) == 63
+    assert len(STRUCTURALLY_NON_OPERATIONAL_IDS) == 7
     assert len(MASTER_REPAIR_LEDGER) == 70
     assert {"G1", "G2"} <= set(STRUCTURALLY_OPERATIONAL_IDS)
     assert MASTER_REPAIR_LEDGER["G1"].human_semantic_decision_required is False

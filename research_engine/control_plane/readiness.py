@@ -14,6 +14,7 @@ def resolve_readiness(
     report_validity: ReportValidity,
     report_status: str,
     dependency_states: Mapping[str, str],
+    report_finding: str = "",
 ) -> tuple[ReadinessStatus, str]:
     """Apply readiness precedence without executing the experiment."""
     if runner_status == RunnerStatus.NO_RUNNER:
@@ -45,6 +46,16 @@ def resolve_readiness(
         if report_status == "INSUFFICIENT_DATA":
             return ReadinessStatus.WAITING_DATA, "The CURRENT G2 denominator is below 100 eligible canonical opportunities"
         return ReadinessStatus.BLOCKED, "The CURRENT G2 report has unresolved denominator accounting"
+    if question.id == "G3":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No owned VALID_CURRENT exhaustive HD15 G3 report exists"
+        if report_finding == "EVALUATION_UNKNOWN":
+            return ReadinessStatus.UNKNOWN, "The CURRENT G3 evaluation contains UNKNOWN canonical authority"
+        if report_status != "COMPLETE":
+            return ReadinessStatus.BLOCKED, (
+                "The CURRENT G3 report is EVALUATION_BLOCKED and cannot complete"
+            )
+        return ReadinessStatus.BLOCKED, "The CURRENT G3 report failed deterministic HD15 completion validation"
     if question.id in {"EX1", "EX2", "EX9"}:
         if report_validity != ReportValidity.VALID_CURRENT:
             return (

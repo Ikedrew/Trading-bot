@@ -855,6 +855,9 @@ G3 = ResearchQuestion(
     category=QuestionCategory.DATA_GOVERNANCE,
     title="Research validity assessment",
     description="Can research conclusions be trusted given current validation status, coverage percentages, and sample sizes?",
+    # Retained for HD13/G1 inventory compatibility only.  The effective HD15
+    # definition and G3 runner consume canonical control-plane state, never raw
+    # shadow fields.
     required_fields=("r_multiple", "pattern"),
     data_sources=(DataSource.SHADOW_TRADES,),
     priority=QuestionPriority.P0,
@@ -862,6 +865,9 @@ G3 = ResearchQuestion(
         ValidationRule("outcome_coverage", ">=", 0.80, "Strong outcome coverage needed for validity assessment"),
         ValidationRule("pattern_coverage", ">=", 0.50, "Pattern coverage needed"),
     ),
+    runner_module="research_engine.experiments.research_validity",
+    runner_function="run_g3",
+    report_filename="g3_research_validity.json",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════

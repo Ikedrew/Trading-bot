@@ -193,6 +193,7 @@ RW8_HETEROGENEITY_OPERATIONAL_IDS = frozenset({"EX7"})
 RW9_OPERATIONAL_PROGRESS_IDS = frozenset({"R1", "R2", "R3", "R4", "R5"})
 RW10_OPERATIONAL_PROGRESS_IDS = frozenset({"L1", "L4"})
 RW11_DATA_GOVERNANCE_OPERATIONAL_IDS = frozenset({"G1", "G2"})
+RW12_RESEARCH_VALIDITY_OPERATIONAL_IDS = frozenset({"G3"})
 OPERATIONAL_IDS = (
     frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
     | RW2_OPERATIONAL_IDS
@@ -206,6 +207,7 @@ OPERATIONAL_IDS = (
     | RW9_OPERATIONAL_PROGRESS_IDS
     | RW10_OPERATIONAL_PROGRESS_IDS
     | RW11_DATA_GOVERNANCE_OPERATIONAL_IDS
+    | RW12_RESEARCH_VALIDITY_OPERATIONAL_IDS
 )
 
 
@@ -500,10 +502,17 @@ REPAIR_WAVES = {
     ),
     "RW12": RepairWave(
         "RW12", "Global research-validity assessment", ("G3",),
-        "G3 has a frozen HD15 rule but still has no runner, owned report, readiness integration, or CURRENT assessment.", ("RW11",), ("HD15",),
-        ("G3 immutable snapshot aggregator", "global validity report", "human-governance boundary"), True,
+        "G3 requires a nonrecursive implementation of the frozen categorical HD15 rule.", ("RW11",), ("HD15",),
+        ("G3 immutable snapshot aggregator", "global validity report", "human-governance boundary"), False,
         ("G3",), (),
         "A same-epoch snapshot covers all 69 non-self states plus represented G1/G2/L6 dependency states, rejects self-reference, distinguishes valid negative completion from evaluation failure, and cannot authorize production.",
+        implemented=True,
+        implementation_evidence=(
+            "research_engine.experiments.research_validity.run_g3 freezes exactly 69 canonical non-self QuestionState records and G1/G2/L6 dependency records into one digest-validated CURRENT snapshot.",
+            "G3 uniquely owns g3_research_validity.json; the report resolver invokes validate_g3_report before granting VALID_CURRENT and readiness completes only an owned validated COMPLETE report.",
+            "The categorical aggregation preserves WAITING_DATA, BLOCKED, NON_OPERATIONAL, REPORT_NOT_VALID_CURRENT, and UNKNOWN; missing L6 is MISSING_REQUIRED_DEPENDENCY and permits only a valid negative completion.",
+            "Focused G3 tests prove nonrecursion, tamper rejection, ownership isolation, valid-negative completion, runner discovery, and the derived 63/70 baseline.",
+        ),
     ),
 }
 

@@ -327,6 +327,9 @@ def build_definitions_from_registry(registry):
     from research_engine.registry.rw11_data_governance_definitions import (
         apply_data_governance_definitions,
     )
+    from research_engine.registry.rw12_research_validity_definitions import (
+        apply_g3_definition,
+    )
 
     definitions = apply_wave_a1_definitions(definitions)
     definitions = apply_wave_a2_definitions(definitions)
@@ -346,7 +349,8 @@ def build_definitions_from_registry(registry):
     definitions = apply_p1_definition(definitions)
     definitions = apply_l1_definition(definitions)
     definitions = apply_l4_definition(definitions)
-    return apply_data_governance_definitions(definitions)
+    definitions = apply_data_governance_definitions(definitions)
+    return apply_g3_definition(definitions)
 
 
 def validate_runner_registry_threshold_alignment(question, question_id):

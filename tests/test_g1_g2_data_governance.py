@@ -144,9 +144,10 @@ def test_g2_readiness_threshold_negative_completion_and_no_interval():
     assert exact["overall"]["threshold_result"] == "LINEAGE_THRESHOLD_MET"
 
 
-def test_g1_g2_unique_integration_g3_untouched_and_count_62():
+def test_g1_g2_unique_integration_is_unchanged_after_g3_and_count_63():
     assert canonical_report_owner("g1_dataset_suitability.json") == "G1"
     assert canonical_report_owner("g2_lineage_coverage.json") == "G2"
-    assert operational_baseline() == (62, 8)
-    assert STRUCTURALLY_NON_OPERATIONAL_IDS == {"EX5", "EX6", "EX8", "G3", "L2", "L3", "L6", "L7"}
-    assert not REGISTRY_BY_ID["G3"].runner_module and not REGISTRY_BY_ID["G3"].report_filename
+    assert operational_baseline() == (63, 7)
+    assert STRUCTURALLY_NON_OPERATIONAL_IDS == {"EX5", "EX6", "EX8", "L2", "L3", "L6", "L7"}
+    assert REGISTRY_BY_ID["G3"].runner_module == "research_engine.experiments.research_validity"
+    assert REGISTRY_BY_ID["G3"].report_filename == "g3_research_validity.json"

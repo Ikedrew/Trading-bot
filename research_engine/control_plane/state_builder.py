@@ -248,6 +248,7 @@ def _build_state(
         validity,
         report_status,
         dependency_states,
+        _extract_finding(report or {}),
     )
     state_status = readiness_status.value
 

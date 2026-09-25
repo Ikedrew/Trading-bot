@@ -1,4 +1,4 @@
-"""Focused governance tests for HD15/G3; no runner is implemented here."""
+"""Focused governance tests proving operational G3 still follows frozen HD15."""
 from __future__ import annotations
 
 import importlib.util
@@ -120,7 +120,7 @@ def test_hd15_snapshot_manifest_digest_and_nonrecursion_are_frozen():
         assert forbidden in nonrecursive
 
 
-def test_hd15_future_identity_is_unique_but_g3_remains_no_runner():
+def test_hd15_frozen_identity_is_uniquely_implemented():
     assert A.FUTURE_IMPLEMENTATION == {
         "module": "research_engine.experiments.research_validity",
         "function": "run_g3",
@@ -132,20 +132,20 @@ def test_hd15_future_identity_is_unique_but_g3_remains_no_runner():
     assert proposed.runner_specification.proposed_function == A.FUTURE_IMPLEMENTATION["function"]
     assert proposed.report_identity == A.FUTURE_IMPLEMENTATION["report"]
     assert sum(d.report_identity == "g3_research_validity.json" for d in WAVE_A_NO_RUNNER_DESIGNS.values()) == 1
-    assert importlib.util.find_spec(A.FUTURE_IMPLEMENTATION["module"]) is None
-    assert not REGISTRY_BY_ID["G3"].runner_module
-    assert not REGISTRY_BY_ID["G3"].report_filename
-    assert WAVE_A_NO_RUNNER_TARGETS == {"L6", "G3"}
+    assert importlib.util.find_spec(A.FUTURE_IMPLEMENTATION["module"]) is not None
+    assert REGISTRY_BY_ID["G3"].runner_module == A.FUTURE_IMPLEMENTATION["module"]
+    assert REGISTRY_BY_ID["G3"].report_filename == A.FUTURE_IMPLEMENTATION["report"]
+    assert WAVE_A_NO_RUNNER_TARGETS == {"L6"}
 
 
-def test_hd15_ledger_is_adjudicated_without_structural_baseline_change():
+def test_hd15_ledger_is_adjudicated_and_g3_is_structurally_operational():
     decision = HUMAN_SEMANTIC_DECISIONS["HD15"]
     assert decision.exact_decision.startswith("ADJUDICATED:")
     assert not decision.implementation_blocked_until_decision
     assert not MASTER_REPAIR_LEDGER["G3"].human_semantic_decision_required
     assert MASTER_REPAIR_LEDGER["G3"].gates.scientific_definition == "PASS"
     assert MASTER_REPAIR_LEDGER["G3"].gates.completion_contract == "PASS"
-    assert MASTER_REPAIR_LEDGER["G3"].gates.runner == "FAIL"
-    assert MASTER_REPAIR_LEDGER["G3"].gates.report_ownership == "FAIL"
-    assert "G3" in STRUCTURALLY_NON_OPERATIONAL_IDS
-    assert operational_baseline() == (62, 8)
+    assert MASTER_REPAIR_LEDGER["G3"].gates.runner == "PASS"
+    assert MASTER_REPAIR_LEDGER["G3"].gates.report_ownership == "PASS"
+    assert "G3" not in STRUCTURALLY_NON_OPERATIONAL_IDS
+    assert operational_baseline() == (63, 7)

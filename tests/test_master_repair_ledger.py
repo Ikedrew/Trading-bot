@@ -148,7 +148,7 @@ def test_direct_gains_are_disjoint_and_cover_all_non_operational_ids():
     assert implemented_direct_gain == {
         "D1", "E2", "M1", "M3", "M7", "M8", "M11", "D2", "D3", "D4", "D5", "X5",
         "D6", "PORT-1", "OPP-1", "P1", "E3", "S1", "S5", "S6", "S7",
-        "X3", "EXEC1", "X6", "R1", "R2", "R3", "R4", "R5",
+        "X3", "EXEC1", "X6", "R1", "R2", "R3", "R4", "R5", "G3",
     }
     assert partial_progress_gain == {"EX1", "EX2", "EX7", "EX9", "EX10", "L1", "L4", "G1", "G2"}
     assert outstanding_gain == set(STRUCTURALLY_NON_OPERATIONAL_IDS)
@@ -182,8 +182,8 @@ def test_unlocked_ids_are_not_claimed_as_early_direct_gain():
 
 def test_all_no_runner_ids_still_require_real_implementation():
     # S5/S6/S7 were implemented by Repairs 2B.2/2B.3/2B.4; designs remain history.
-    # X6 and HD13/HD14 G1/G2 are implemented; only L6/G3 remain targets.
-    assert WAVE_A_NO_RUNNER_TARGETS == {"L6", "G3"}
+    # X6, HD13/HD14 G1/G2, and HD15 G3 are implemented; only L6 remains.
+    assert WAVE_A_NO_RUNNER_TARGETS == {"L6"}
     for qid in WAVE_A_NO_RUNNER_TARGETS:
         entry = MASTER_REPAIR_LEDGER[qid]
         question = REGISTRY_BY_ID[qid]
@@ -256,7 +256,7 @@ def test_rw1_ownership_repair_preserves_historical_gain_and_later_progress():
 
 def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
     implemented = [wave_id for wave_id, wave in REPAIR_WAVES.items() if wave.implemented]
-    assert implemented == ["RW1", "RW2", "RW3", "RW4", "RW5", "RW6", "RW7", "RW9"]
+    assert implemented == ["RW1", "RW2", "RW3", "RW4", "RW5", "RW6", "RW7", "RW9", "RW12"]
 
     wave = REPAIR_WAVES["RW1"]
     assert wave.direct_gain == ("D1", "E2")
@@ -303,9 +303,9 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
     assert set(rw7.direct_gain) <= set(STRUCTURALLY_OPERATIONAL_IDS)
     assert rw7.implementation_evidence
 
-    # RW8 and RW10-RW12 remain outstanding; RW10/RW11 record banked progress.
+    # RW8, RW10, and RW11 remain outstanding; RW12/G3 is complete.
     for wave_id, other in REPAIR_WAVES.items():
-        if wave_id in {"RW1", "RW2", "RW3", "RW4", "RW5", "RW6", "RW7", "RW9"}:
+        if wave_id in {"RW1", "RW2", "RW3", "RW4", "RW5", "RW6", "RW7", "RW9", "RW12"}:
             continue
         assert not other.implemented
         if wave_id in {"RW10", "RW11"}:
@@ -317,14 +317,14 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
 def test_evidence_gap_accounting_preserves_v1_freeze_and_g3_requirement():
     counts = evidence_gap_counts()
     assert counts["ALREADY_AVAILABLE"] == len(STRUCTURALLY_OPERATIONAL_IDS)
-    assert counts["NEW_RESEARCH_EVIDENCE"] == 1
+    assert counts["NEW_RESEARCH_EVIDENCE"] == 0
     assert counts["EXISTING_V1_CONTRACT_VIOLATION"] == 0
     assert counts["DERIVABLE"] == len(MASTER_REPAIR_LEDGER) - sum(
         value for key, value in counts.items() if key != "DERIVABLE"
     )
-    assert MASTER_REPAIR_LEDGER["G3"].evidence_gap_classification == "NEW_RESEARCH_EVIDENCE"
-    assert MASTER_REPAIR_LEDGER["G3"].gates.evidence_authority == "FUTURE_EVIDENCE_REQUIRED"
-    assert REPAIR_WAVES["RW12"].new_research_evidence_required
+    assert MASTER_REPAIR_LEDGER["G3"].evidence_gap_classification == "ALREADY_AVAILABLE"
+    assert MASTER_REPAIR_LEDGER["G3"].gates.evidence_authority == "PASS"
+    assert not REPAIR_WAVES["RW12"].new_research_evidence_required
     assert not any(
         entry.evidence_gap_classification == "EXISTING_V1_CONTRACT_VIOLATION"
         for entry in MASTER_REPAIR_LEDGER.values()
