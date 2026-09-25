@@ -92,7 +92,7 @@ def test_ledger_records_hd13_hd14_operational_without_g3_change():
     assert {"G1", "G2"} <= set(STRUCTURALLY_OPERATIONAL_IDS)
     assert MASTER_REPAIR_LEDGER["G1"].human_semantic_decision_required is False
     assert MASTER_REPAIR_LEDGER["G2"].human_semantic_decision_required is False
-    assert MASTER_REPAIR_LEDGER["G3"].human_semantic_decision_required is True
+    assert MASTER_REPAIR_LEDGER["G3"].human_semantic_decision_required is False
 
 
 def test_g1_g2_frozen_identities_are_implemented_exactly():

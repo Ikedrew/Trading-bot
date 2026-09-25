@@ -334,7 +334,7 @@ def test_evidence_gap_accounting_preserves_v1_freeze_and_g3_requirement():
 def test_human_decisions_are_explicit_and_reference_real_targets():
     registry_ids = set(MASTER_REPAIR_LEDGER)
     assert set(HUMAN_SEMANTIC_DECISIONS) == {f"HD{i:02d}" for i in range(1, 16)}
-    adjudicated = {"HD01", "HD02", "HD03", "HD06", "HD07", "HD08", "HD09", "HD10", "HD11", "HD12", "HD13", "HD14"}
+    adjudicated = {"HD01", "HD02", "HD03", "HD06", "HD07", "HD08", "HD09", "HD10", "HD11", "HD12", "HD13", "HD14", "HD15"}
     for decision_id, decision in HUMAN_SEMANTIC_DECISIONS.items():
         assert set(decision.affected_question_ids) <= registry_ids
         assert decision.exact_decision
@@ -342,7 +342,7 @@ def test_human_decisions_are_explicit_and_reference_real_targets():
         assert len(decision.available_options) == len(decision.consequences)
         assert decision.recommended_default
         assert decision.implementation_blocked_until_decision is (decision_id not in adjudicated)
-    for decision_id in {"HD01", "HD06", "HD07", "HD08", "HD09", "HD10", "HD11", "HD12", "HD13", "HD14"}:
+    for decision_id in {"HD01", "HD06", "HD07", "HD08", "HD09", "HD10", "HD11", "HD12", "HD13", "HD14", "HD15"}:
         assert HUMAN_SEMANTIC_DECISIONS[decision_id].recommended_default.startswith("ADJUDICATED:")
     for wave in REPAIR_WAVES.values():
         assert all(decision_id in HUMAN_SEMANTIC_DECISIONS for decision_id in wave.human_decision_ids)

@@ -325,10 +325,10 @@ HUMAN_SEMANTIC_DECISIONS = {
     ),
     "HD15": HumanSemanticDecision(
         "HD15", ("G3",),
-        "Approve the global trust rule and weighting.",
-        ("Component profile plus approved advisory scalar", "Component profile without scalar"),
-        ("Compact status but requires governance thresholds", "Fully transparent and avoids invented weighting"),
-        "Implement the component profile first; keep any scalar advisory.", True,
+        "ADJUDICATED: assess exactly 69 non-G3 questions under the frozen categorical, fail-closed HD15 rule; unavailable L6 is an explicit missing required dependency that prevents positive trust but permits a valid completed negative assessment.",
+        ("Categorical fail-closed global result", "Weighted or scalar trust score"),
+        ("Deterministic transparent governance with no invented weights", "Rejected because no frozen scientific authority defines weights"),
+        "ADJUDICATED: use research_engine.registry.research_validity_adjudication.HD15_VERSION and option B for unavailable L6.", False,
     ),
 }
 
@@ -500,10 +500,10 @@ REPAIR_WAVES = {
     ),
     "RW12": RepairWave(
         "RW12", "Global research-validity assessment", ("G3",),
-        "G3 requires future validity-approved G1/G2/L6 research outputs and a nonrecursive global rule.", ("RW11",), ("HD15",),
+        "G3 has a frozen HD15 rule but still has no runner, owned report, readiness integration, or CURRENT assessment.", ("RW11",), ("HD15",),
         ("G3 immutable snapshot aggregator", "global validity report", "human-governance boundary"), True,
         ("G3",), (),
-        "A same-epoch snapshot covers all 69 non-self states plus valid G1/G2/L6 reports, rejects self-reference, and cannot authorize production.",
+        "A same-epoch snapshot covers all 69 non-self states plus represented G1/G2/L6 dependency states, rejects self-reference, distinguishes valid negative completion from evaluation failure, and cannot authorize production.",
     ),
 }
 
@@ -548,7 +548,7 @@ _assign(("L7",), "RW10", "counterfactual design", "LEARNING_CHRONOLOGY_FOUNDATIO
 _assign(("L6",), "RW11", "no runner", "NO_RUNNER_GOVERNANCE_FOUNDATION",
         "The frozen proposed governance contract has no runner, report, readiness, or completion implementation.", human=True)
 _assign(("G3",), "RW12", "no runner", "NO_RUNNER_GLOBAL_VALIDITY",
-        "The proposed global assessment has no runner and requires future G1/G2/L6 research reports.", ("G1", "G2", "L6"), True, NEW_RESEARCH_EVIDENCE)
+        "The HD15-adjudicated global assessment has no runner, owned report, readiness integration, or CURRENT result.", ("G1", "G2", "L6"), False, NEW_RESEARCH_EVIDENCE)
 
 
 _QUESTION_ACTIONS = {
@@ -587,7 +587,7 @@ _QUESTION_ACTIONS = {
     "L6": "Implement the frozen immutable-snapshot per-conclusion confidence design and unique report.",
     "G1": "Implement the frozen all-question evidence-suitability evaluator and unique report without dashboard evidence.",
     "G2": "Implement the frozen strict opportunity-denominator lineage audit with no fallback joins or horizon/account inflation.",
-    "G3": "After G1/G2/L6 exist, implement the frozen nonrecursive same-epoch global validity assessment and human governance boundary.",
+    "G3": "Implement the frozen HD15 nonrecursive same-epoch categorical assessment; represent unavailable L6 explicitly and never fabricate it.",
 }
 for _qid in ("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10"):
     _QUESTION_ACTIONS[_qid] = (
@@ -637,6 +637,30 @@ def _blocked_gates(qid: str, category: str) -> GateStatus:
         and qid not in {"D1", "E2", "E3", "S1", "R1", "R2", "L1", "L3"}
     )
     definition_pass = qid in {"D1", "E2"}
+    if qid == "G3":
+        # HD15 closes every scientific/governance design choice while preserving
+        # the real implementation gap.  FUTURE_EVIDENCE_REQUIRED plus absent
+        # runner/report/readiness keeps G3 structurally non-operational.
+        return GateStatus(
+            canonical_identity=PASS,
+            scientific_definition=PASS,
+            unit_of_analysis=PASS,
+            evidence_authority=FUTURE_EVIDENCE_REQUIRED,
+            join_contract=PASS,
+            epoch_contract=PASS,
+            multi_account_contract=PASS,
+            repeated_measure_contract=PASS,
+            leakage_contract=PASS,
+            metric_contract=PASS,
+            sufficiency_contract=PASS,
+            runner=FAIL,
+            report_ownership=FAIL,
+            validity_contract=PASS,
+            completion_contract=PASS,
+            readiness_control=FAIL,
+            continuous_loop_eligibility=FAIL,
+            governance_contract=PASS,
+        )
     identity = HUMAN_DECISION_REQUIRED if qid in {"E3", "S1"} else PASS
     if qid in {"X3", "EXEC1", "X6"}:
         scientific = PASS
@@ -677,7 +701,7 @@ def _verification(qid: str, wave: str) -> str:
     if wave == "RW11":
         return f"{qid} emits its unique canonical governance report from one immutable CURRENT snapshot and truthfully distinguishes READY, WAITING_DATA, BLOCKED, and COMPLETE."
     if wave == "RW12":
-        return "G3 consumes validity-approved same-epoch G1/G2/L6 outputs, covers all 69 non-self states, rejects recursion, and has no production-approval path."
+        return "G3 consumes same-epoch canonical G1/G2/L6 dependency records, covers all 69 non-self states, permits valid negative completion for represented unavailable L6, rejects recursion, and has no production-approval path."
     return (
         f"The {qid} runner emits a unique report carrying canonical ID {qid}, uses the declared independent grain and strict CURRENT joins, "
         "meets matching sample/cell rules, and cannot report COMPLETE when its canonical scientific criterion is unmet."
