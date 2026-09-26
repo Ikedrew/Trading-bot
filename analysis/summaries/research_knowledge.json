@@ -1,0 +1,9 @@
+{
+  "confirmed_facts": [
+    "PORT-1: [INSUFFICIENT_EVIDENCE] paired cycles 0; validation competitive_rate N/A; mean regret N/A.",
+    "PORT-1: [INSUFFICIENT_EVIDENCE] paired cycles 11; validation competitive_rate 1.00; mean regret +0.000R.",
+    "D6: INSUFFICIENT_EVIDENCE"
+  ],
+  "rejected_hypotheses": [],
+  "last_updated": "2026-09-26T02:10:03Z"
+}

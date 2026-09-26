@@ -1,0 +1,143 @@
+{
+  "question_id": "D6",
+  "status": "INSUFFICIENT_DATA",
+  "overall": {
+    "canonical_question": "D6",
+    "hypothesis": "Candidate rank ordering (rank_position) predicts subsequent realised/shadow R; better-ranked candidates outperform, and it persists on later unseen cycles.",
+    "research_classification": "observational_rank_ordering_vs_outcome",
+    "causal_claim": "NONE \u2014 observational; shadow outcomes are counterfactual/simulated, not proof production ranking causes the outcome",
+    "distinct_from_port1": "PORT-1 asks selected-vs-best per cycle; D6 asks whether rank ORDERING predicts outcomes across positions. Separate runners and reports; neither completes the other.",
+    "unit_of_analysis": "one canonical_opportunity_id (candidate); account fanout and repeated horizons collapse",
+    "evidence_authority": "portfolio_rankings (rank_position) joined via decision_ledger to CURRENT shadow simulated_outcome.pnl_r_multiple",
+    "evidence_epoch": "CURRENT",
+    "portfolio_rankings_read": 11,
+    "distinct_opportunities": 40,
+    "paired_opportunities": 40,
+    "missing_outcome_count": 0,
+    "rank_signal": {
+      "definition": "Spearman between better-rank (-rank_position) and realised R; positive => better rank predicts higher R",
+      "overall": 0.7963239265802144,
+      "discovery": 0.8084101502049296,
+      "later_unseen_validation": 0.7828813612588127,
+      "signal_threshold": 0.1
+    },
+    "outcome_distribution": {
+      "mean_r": 0.63,
+      "median_r": 0.3,
+      "win_rate": 1.0
+    },
+    "per_rank_outcome": {
+      "1": {
+        "n": 11,
+        "mean_r": 1.5,
+        "median_r": 1.5,
+        "win_rate": 1.0,
+        "sufficient": false
+      },
+      "2": {
+        "n": 11,
+        "mean_r": 0.3,
+        "median_r": 0.3,
+        "win_rate": 1.0,
+        "sufficient": false
+      },
+      "3": {
+        "n": 9,
+        "mean_r": 0.3,
+        "median_r": 0.3,
+        "win_rate": 1.0,
+        "sufficient": false
+      },
+      "4": {
+        "n": 6,
+        "mean_r": 0.3,
+        "median_r": 0.3,
+        "win_rate": 1.0,
+        "sufficient": false
+      },
+      "5": {
+        "n": 3,
+        "mean_r": 0.3,
+        "median_r": 0.3,
+        "win_rate": 1.0,
+        "sufficient": false
+      }
+    },
+    "discovery": {
+      "n": 21
+    },
+    "later_unseen_validation": {
+      "n": 19
+    },
+    "finding_classification": "INSUFFICIENT_EVIDENCE",
+    "completion_reason": "paired/discovery/validation=40/21/19; need 100/60/40",
+    "limitations": [
+      "Shadow outcomes are counterfactual/simulated, not broker truth.",
+      "COMPLETE means the chronological rank-ordering evaluation ran validly, not that the ranker is good.",
+      "One canonical opportunity is one observation; account fanout and repeated horizons never inflate n.",
+      "Missing outcomes are excluded, never imputed; conflicting rank/outcome fails closed.",
+      "Rank buckets with n<15 are reported but not used for a directional claim.",
+      "Research only; production ranking/selection is never modified. Distinct from PORT-1."
+    ],
+    "diagnostics": {
+      "total_candidate_rows": 40,
+      "distinct_opportunities": 40,
+      "paired_opportunities": 40,
+      "missing_outcomes_excluded": 0,
+      "excluded_missing_lineage": 0,
+      "conflicting_opportunities": []
+    },
+    "sufficiency": {
+      "minimum_total": 100,
+      "minimum_discovery": 60,
+      "minimum_validation": 40,
+      "minimum_bucket": 15
+    },
+    "quarantine_boundary": {
+      "defect": "forming_bar_decision_defect",
+      "first_affected": "2026-09-01T00:22:27Z",
+      "fix_committed": "2026-09-07T15:28:07Z"
+    }
+  },
+  "confidence": "INSUFFICIENT_DATA",
+  "dataset": {
+    "source": "portfolio_rankings+shadow_trades",
+    "sample_size": 40,
+    "independent_observations": 40,
+    "quarantine_boundary": {
+      "defect": "forming_bar_decision_defect",
+      "first_affected": "2026-09-01T00:22:27Z",
+      "fix_committed": "2026-09-07T15:28:07Z"
+    }
+  },
+  "fingerprint": {
+    "dataset_id": "portfolio_rankings_2026-09-26",
+    "records_used": 40,
+    "records_excluded": 0,
+    "source": "portfolio_rankings",
+    "epoch": "CURRENT",
+    "architecture_version": "new_pipeline_v1.2",
+    "validation_score": "INSUFFICIENT_DATA",
+    "generated": "2026-09-26"
+  },
+  "recommendation": "INSUFFICIENT_DATA: paired/discovery/validation=40/21/19; need 100/60/40",
+  "assumptions": [
+    "Primary evidence = portfolio_rankings V1 (rank_position); outcomes joined via decision_ledger to CURRENT shadow R.",
+    "One canonical_opportunity_id is one independent observation; account fanout and repeated horizons collapse first.",
+    "Rank ordering is pre-outcome; membership is never derived from realised outcome.",
+    "Missing outcomes are excluded, never imputed; conflicting rank/outcome fails closed.",
+    "Deterministic chronological discovery/validation; the rank relationship must persist on later unseen cycles.",
+    "D6 (rank-ordering) is distinct from PORT-1 (selected-vs-best); neither report completes the other."
+  ],
+  "warnings": [],
+  "epoch": "CURRENT",
+  "generated": "2026-09-26T02:10:03Z",
+  "provenance": {
+    "experiment_module": "research_engine.experiments.portfolio_ranking",
+    "registry_id": "D6",
+    "function": "run_portfolio_ranking",
+    "report_filename": "d6_portfolio_ranking.json",
+    "partition": "deterministic chronological 60/40 by cycle time",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"
+  }
+}
