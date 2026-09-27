@@ -276,6 +276,8 @@ class S3ResearchDataSource:
         # Run-level cache keyed by (dataset, symbol, start, end, schema-set).
         self._cache: dict[tuple, list[dict[str, Any]]] = {}
         self._malformed: dict[str, MalformedReport] = {}
+        self._listed_objects: dict[str, dict[str, Any]] = {}
+        self._dataset_objects: dict[str, tuple[dict[str, Any], ...]] = {}
 
     # ─── client ───────────────────────────────────────────────────────────────
 
@@ -394,6 +396,12 @@ class S3ResearchDataSource:
             for obj in resp.get("Contents", []) or []:
                 key = obj.get("Key", "")
                 if key.endswith(".jsonl"):
+                    self._listed_objects[key] = {
+                        "identifier": key,
+                        "etag": str(obj.get("ETag", "")).strip('"'),
+                        "size": int(obj.get("Size", 0) or 0),
+                        "last_modified": str(obj.get("LastModified", "") or ""),
+                    }
                     yield key
             if resp.get("IsTruncated"):
                 token = resp.get("NextContinuationToken")
@@ -514,6 +522,10 @@ class S3ResearchDataSource:
 
         order_keys = _ORDER_KEYS.get(dataset, _DEFAULT_ORDER_KEYS)
         records.sort(key=lambda r: _order_value(r, order_keys))
+        self._dataset_objects[dataset] = tuple(
+            dict(self._listed_objects.get(key, {"identifier": key}))
+            for key in sorted(seen_keys)
+        )
 
         rep = self._malformed.get(dataset)
         if rep and rep.malformed_lines:
@@ -533,9 +545,15 @@ class S3ResearchDataSource:
         """Return the malformed-record accounting for a dataset, if any."""
         return self._malformed.get(dataset)
 
+    def object_metadata(self, dataset: str) -> tuple[dict[str, Any], ...]:
+        """Objects consumed by the current cached dataset read, in key order."""
+        return self._dataset_objects.get(dataset, ())
+
     def clear_cache(self) -> None:
         """Drop the run-level cache (e.g. between independent research runs)."""
         self._cache.clear()
+        self._dataset_objects.clear()
+        self._listed_objects.clear()
 
 
 # ─── Run-scoped default source ────────────────────────────────────────────────

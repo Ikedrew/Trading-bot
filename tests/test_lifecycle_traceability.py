@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from research_engine.v10.universes.models import Universe, Population
+from research_engine.v10.universes.models import ACTIVE_UNIVERSES, Universe, Population
 from research_engine.v10.universes.base import UniverseBuilder
 from research_engine.v10.cross_universe.tracer import (
     CrossUniverseTracer,
@@ -82,6 +82,9 @@ def make_complete_builders():
         ]),
         Universe.OUTCOME: MockBuilder(Universe.OUTCOME, [
             {"entity_id": "e1", "r_multiple": 2.0, "net_realised_pnl": 100.0},
+        ]),
+        Universe.SHADOW_OUTCOME: MockBuilder(Universe.SHADOW_OUTCOME, [
+            {"entity_id": "e1", "shadow_trade_id": "nshadow_e1", "r_multiple": 1.5},
         ]),
     }
 
@@ -162,7 +165,7 @@ class TestLifecycleStatus:
         tracer = CrossUniverseTracer(builders)
         trace = tracer.trace("e1")
         assert trace.trace_status == "COMPLETE"
-        assert trace.present_count == 6
+        assert trace.present_count == len(ACTIVE_UNIVERSES)
 
     def test_partial(self):
         builders = make_partial_builders()
@@ -266,8 +269,10 @@ class TestVersionTraceability:
         builders = make_complete_builders()
         tracer = CrossUniverseTracer(builders)
         trace = tracer.trace("e1")
-        assert len(trace.universe_versions) == 6
-        for u in Universe:
+        assert len(trace.universe_versions) == len(ACTIVE_UNIVERSES)
+        assert set(trace.universes) == {u.value.lower() for u in ACTIVE_UNIVERSES}
+        assert Universe.SHADOW_REALITY.value.lower() not in trace.universes
+        for u in ACTIVE_UNIVERSES:
             assert u.value in trace.universe_versions
 
     def test_version_changes_with_data(self):
@@ -305,7 +310,7 @@ class TestPersistence:
             assert loaded is not None
             assert loaded.entity_id == "e1"
             assert loaded.trace_status == "COMPLETE"
-            assert loaded.present_count == 6
+            assert loaded.present_count == len(ACTIVE_UNIVERSES)
             assert loaded.universes["decision"].presence == UniversePresence.PRESENT
             assert loaded.universes["decision"].record["action"] == "EXECUTE"
 

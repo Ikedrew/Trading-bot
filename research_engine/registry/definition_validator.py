@@ -22,9 +22,7 @@ from research_engine.registry.research_question_models import (
 # remain in this baseline.
 KNOWN_UNRESOLVED_AUTH: dict[str, list[str]] = {}
 
-SEMANTIC_MISMATCH_QIDS = {
-    "L2", "L3", "EX5", "EX6", "EX7", "EX8",
-}
+SEMANTIC_MISMATCH_QIDS = {"L2", "L3", "L7"}
 
 
 @dataclass(frozen=True)
@@ -330,6 +328,9 @@ def build_definitions_from_registry(registry):
     from research_engine.registry.rw12_research_validity_definitions import (
         apply_g3_definition,
     )
+    from research_engine.registry.wave4_assurance_definitions import (
+        apply_wave4_assurance_definitions,
+    )
 
     definitions = apply_wave_a1_definitions(definitions)
     definitions = apply_wave_a2_definitions(definitions)
@@ -350,7 +351,8 @@ def build_definitions_from_registry(registry):
     definitions = apply_l1_definition(definitions)
     definitions = apply_l4_definition(definitions)
     definitions = apply_data_governance_definitions(definitions)
-    return apply_g3_definition(definitions)
+    definitions = apply_g3_definition(definitions)
+    return apply_wave4_assurance_definitions(definitions)
 
 
 def validate_runner_registry_threshold_alignment(question, question_id):

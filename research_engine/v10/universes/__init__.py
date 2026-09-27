@@ -12,6 +12,7 @@ This package contains:
     - strategy_universe.py: Strategy Universe builder (from v10_strategy + strategy_observations)
     - risk_universe.py: Risk Universe builder (from v10_risk in decision traces)
     - outcome_universe.py: Outcome Universe builder (realised results from completed executions)
+    - assurance.py: read-only Stage IV contracts and topology self-knowledge
 """
 
 from research_engine.v10.universes.base import UniverseBuilder, UniverseMetadata

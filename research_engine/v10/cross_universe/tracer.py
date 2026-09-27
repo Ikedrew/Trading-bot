@@ -1,7 +1,7 @@
 """
 Cross-Universe Tracer.
 
-Retrieves the corresponding observations across all six universes
+Retrieves the corresponding observations across all active universes
 for a given entity_id (analytical episode).
 
 Does NOT perform analysis. Only retrieves and structures evidence.
@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from research_engine.v10.universes.base import UniverseBuilder
-from research_engine.v10.universes.models import Universe
+from research_engine.v10.universes.models import ACTIVE_UNIVERSES, Universe
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -106,7 +106,7 @@ class LifecycleTrace:
 
 class CrossUniverseTracer:
     """
-    Retrieves lifecycle observations across all six universes by entity_id.
+    Retrieves lifecycle observations across the canonical active universe set.
 
     Usage:
         tracer = CrossUniverseTracer(builders)
@@ -151,7 +151,9 @@ class CrossUniverseTracer:
         present = 0
         missing = 0
 
-        for universe in Universe:
+        # Universe membership is owned by ACTIVE_UNIVERSES. Iterating the enum
+        # would incorrectly reactivate retained history such as SHADOW_REALITY.
+        for universe in ACTIVE_UNIVERSES:
             u_key = universe.value.lower()
             index = self._indexes.get(universe)
 
