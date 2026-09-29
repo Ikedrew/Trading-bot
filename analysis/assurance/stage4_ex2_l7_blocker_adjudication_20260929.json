@@ -1,0 +1,334 @@
+{
+  "adjudication_evidence": {
+    "EX2": {
+      "ambiguous": 0,
+      "audit_completed_lifecycles": 9852,
+      "audit_event_date_range": [
+        "date=2026-09-03",
+        "date=2026-09-22"
+      ],
+      "audit_runtime_date_range": [
+        "date=2026-09-07",
+        "date=2026-09-22"
+      ],
+      "authoritative_sources_searched": [
+        "wave4_20260927/reconstruction.json governed lifecycle roster",
+        "wave4_20260927/evidence/shadow_runtime.jsonl",
+        "_exit_path_audit/shadow_runtime_v1",
+        "_exit_path_audit/events_v1 events_v1:CANDLE:mt5_data:M5"
+      ],
+      "checkpoint_completed_lifecycles": 14077,
+      "classification": "HISTORICAL_OBSERVATION_GAP",
+      "exact_authoritative_match": 5916,
+      "exact_match_before_implementation_repair": 5916,
+      "governed_population": 8760,
+      "historically_unobserved": 2844,
+      "implementation_repair_exclusions": {
+        "MISSING_M5_PATH": 2844
+      },
+      "implementation_resolvable_missing": 0,
+      "join_chain": [
+        "shadow_trade_id",
+        "canonical_opportunity_id",
+        "trade_horizon",
+        "OPEN/CLOSE entry/exit market time",
+        "canonical symbol",
+        "ordered events_v1 M5 OHLC bars after entry through exit"
+      ],
+      "reconstructed_progression_field_shapes": {
+        "bar,close,r": 2844
+      },
+      "unexplained": 0,
+      "unmatched_exit_dates": {
+        "2026-09-22": 186,
+        "2026-09-23": 1321,
+        "2026-09-24": 779,
+        "2026-09-25": 558
+      },
+      "unmatched_with_checkpoint_open_close": 2844,
+      "unmatched_without_checkpoint_open_close": 0,
+      "weak_opportunity_horizon_overlap": 0,
+      "weak_shadow_id_overlap": 0
+    },
+    "L7": {
+      "ambiguous": 0,
+      "authoritative_sources_searched": [
+        "wave4_20260927/evidence/decision_trace.jsonl",
+        "wave4_20260927/evidence/execution_attempts.jsonl",
+        "wave4_20260927/evidence/execution_context.jsonl",
+        "wave4_20260927/evidence/execution_results.jsonl",
+        "wave4_20260927/evidence/horizon_candidates.jsonl",
+        "wave4_20260927/evidence/management_actions.jsonl",
+        "wave4_20260927/evidence/market_context.jsonl",
+        "wave4_20260927/evidence/portfolio_rankings.jsonl",
+        "wave4_20260927/evidence/protection_audit.jsonl",
+        "wave4_20260927/evidence/risk_deviation.jsonl",
+        "wave4_20260927/evidence/shadow_runtime.jsonl",
+        "wave4_20260927/evidence/shadow_trades.jsonl",
+        "wave4_20260927/evidence/strategy_candidates.jsonl",
+        "wave4_20260927/evidence/trade_truth.jsonl",
+        "wave4_20260927/reconstruction.json",
+        "frozen report/history identities (non-producer, non-authoritative for assignment)"
+      ],
+      "classification": "HISTORICAL_OBSERVATION_GAP",
+      "control_candidate_tokens_elsewhere": [],
+      "control_candidate_tokens_in_governed_rows": {},
+      "governed_population": 14046,
+      "governed_schema_versions": {
+        "shadow_trades_v1": 14046
+      },
+      "join_chain": [
+        "producer-issued assignment",
+        "shadow_trade_id",
+        "canonical_opportunity_id",
+        "trade_horizon"
+      ],
+      "other_authoritative_assignment": 0,
+      "producer_authoritative_CANDIDATE": 0,
+      "producer_authoritative_CONTROL": 0,
+      "unexplained": 0,
+      "unlabeled_historically": 14046
+    }
+  },
+  "baseline_certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+  "effective_state": {
+    "1": 62,
+    "2": 8
+  },
+  "evidence_fingerprint": "4db003c3ab767c72c55803bf01976f913a747c572c3efe62333e861f0b2084cc",
+  "global_certification_mutated": false,
+  "governed_roster": {
+    "EX2_governed_predicate_rows": 8760,
+    "L7_CURRENT_rows": 14046,
+    "legacy_rows_excluded_before_both_questions": 31
+  },
+  "implementation_gap_phase_accounting": {
+    "converted_to_historical_observation_gaps": 2,
+    "genuine_implementation_defects_remaining": 0,
+    "original_implementation_gaps": 8,
+    "repaired_through_governed_reentry": 6,
+    "unexplained_evidence_identities": 0,
+    "unresolved_implementation_work_items": []
+  },
+  "live_or_s3_reads": false,
+  "new_observation_requirements": 2,
+  "new_scientific_research_run": false,
+  "observation_requirements_deployed": false,
+  "q71_started": false,
+  "rows": [
+    {
+      "accounting_conserved": true,
+      "ambiguous": 0,
+      "assurance_status": "VERIFIED",
+      "authoritative_matched_population": 5916,
+      "blocker_classification": "HISTORICAL_OBSERVATION_GAP",
+      "certification_fingerprint_after": "300a1dffc6419d7bcc444e663be6d56b3e88678461da84adc59787167ec0fed2",
+      "certification_version_after": 2,
+      "certification_version_before": 1,
+      "evidence_sources_searched": [
+        "wave4_20260927/reconstruction.json governed lifecycle roster",
+        "wave4_20260927/evidence/shadow_runtime.jsonl",
+        "_exit_path_audit/shadow_runtime_v1",
+        "_exit_path_audit/events_v1 events_v1:CANDLE:mt5_data:M5"
+      ],
+      "finding_version_after": 2,
+      "finding_version_before": 1,
+      "future_collection_required": "YES",
+      "gap_work_item_transition": "GWI-EX2-IMPL:OPEN/REPAIR_PENDING -> RESOLVED (implementation defect exhausted) -> GWI-EX2-IMPL observation gap OPEN",
+      "governed_population": 8760,
+      "historical_backfill_possible": "NO",
+      "historical_observation_gap": "YES",
+      "historically_missing_population": 2844,
+      "identity_join_chain": [
+        "shadow_trade_id",
+        "canonical_opportunity_id",
+        "trade_horizon",
+        "OPEN/CLOSE entry/exit market time",
+        "canonical symbol",
+        "ordered events_v1 M5 OHLC bars after entry through exit"
+      ],
+      "implementation_defect_remains": "NO",
+      "observation_requirement": {
+        "adjudication_evidence_fingerprint": "4db003c3ab767c72c55803bf01976f913a747c572c3efe62333e861f0b2084cc",
+        "allowed_values_type": {
+          "completeness": "no missing bar between entry and exit inclusive of exit bar",
+          "ordering": "strictly ascending ts",
+          "per_bar_required_keys": [
+            "ts",
+            "open",
+            "high",
+            "low",
+            "close"
+          ],
+          "type": "ordered_sequence_of_ohlc_bars"
+        },
+        "evidence_contract_consumer": [
+          "research_engine.experiments.exit_policy_governed.run_ex2",
+          "research_engine.control_plane.exit_bar_path.build_exit_bar_path_v1"
+        ],
+        "expected_reentry_trigger_class": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+        "future_collection_only": true,
+        "gap_work_item_id": "GWI-EX2-IMPL",
+        "historical_backfill_possible": false,
+        "minimum_completeness_rule": "100% of governed EX2 lifecycles must have a complete ordered M5 OHLC path; any lifecycle missing a single required bar keeps the question INSUFFICIENT_DATA. The forbidden 9045-row widened reconstruction population may never substitute for this.",
+        "missing_observable": [
+          "events_v1:CANDLE:mt5_data:M5 ordered open/high/low/close between lifecycle entry_market_time and exit_market_time inclusive"
+        ],
+        "question_id": "EX2",
+        "required_canonical_identity": [
+          "shadow_trade_id",
+          "canonical_opportunity_id",
+          "trade_horizon"
+        ],
+        "required_capture_timestamp_event": "bar timestamp in producer market time, recorded at the causal bar close event plus the CURRENT epoch attestation",
+        "required_dataset_domain": "shadow_trades",
+        "required_fields": [
+          "events_v1.type=CANDLE",
+          "events_v1.source=mt5_data",
+          "events_v1.schema_version",
+          "events_v1.timeframe=M5",
+          "events_v1.symbol",
+          "events_v1.payload.ts",
+          "events_v1.payload.open",
+          "events_v1.payload.high",
+          "events_v1.payload.low",
+          "events_v1.payload.close",
+          "shadow_runtime OPEN.entry_market_time",
+          "shadow_runtime CLOSE.exit_market_time"
+        ],
+        "required_grain": "one record per (shadow_trade_id, canonical_opportunity_id, trade_horizon, M5 bar timestamp)",
+        "required_lineage": [
+          "producer:shadow_trades",
+          "events_v1 producer instance",
+          "M5 aggregation lineage from the base timeframe feed"
+        ],
+        "required_producer": "producer:shadow_trades",
+        "semantic_definition": "For one canonical shadow lifecycle, the complete, gap-free, strictly ascending sequence of M5 OHLC bars whose bar timestamps cover the interval (entry_market_time, exit_market_time] for the lifecycle symbol. bar, close and r alone do NOT satisfy this contract: open, high and low per bar are mandatory and the sequence must be ordered and complete.",
+        "source_implementation_work_item_id": "GWI-EX2-IMPL",
+        "source_reentry_id": "RE-IMPL-20260929-EX2",
+        "status": "OPEN"
+      },
+      "observation_requirement_id": "OG-EX2-4db003c3ab76",
+      "question_id": "EX2",
+      "reentry_id": "RE-IMPL-20260929-EX2",
+      "reentry_trigger_expected": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "remaining_blocker": "2,844 governed lifecycles have no authoritative ordered M5 OHLC exit path; {bar, close, r} cannot satisfy the EX2 contract and the 9,045 widened reconstruction path is permanently forbidden.",
+      "scientific_result_version_after": 2,
+      "scientific_result_version_before": 1,
+      "scientific_state_after": "HISTORICALLY_UNANSWERABLE",
+      "scientific_state_before": "IMPLEMENTATION_BLOCKED",
+      "unexplained": 0,
+      "v1_content_fingerprint_preserved": true
+    },
+    {
+      "accounting_conserved": true,
+      "ambiguous": 0,
+      "assurance_status": "VERIFIED",
+      "authoritative_matched_population": 0,
+      "blocker_classification": "HISTORICAL_OBSERVATION_GAP",
+      "certification_fingerprint_after": "8ee4a6e8cf5941ad97ab658b3e8578fa7f56ec25123175d4980f8b36b2cf40bf",
+      "certification_version_after": 2,
+      "certification_version_before": 1,
+      "evidence_sources_searched": [
+        "wave4_20260927/evidence/decision_trace.jsonl",
+        "wave4_20260927/evidence/execution_attempts.jsonl",
+        "wave4_20260927/evidence/execution_context.jsonl",
+        "wave4_20260927/evidence/execution_results.jsonl",
+        "wave4_20260927/evidence/horizon_candidates.jsonl",
+        "wave4_20260927/evidence/management_actions.jsonl",
+        "wave4_20260927/evidence/market_context.jsonl",
+        "wave4_20260927/evidence/portfolio_rankings.jsonl",
+        "wave4_20260927/evidence/protection_audit.jsonl",
+        "wave4_20260927/evidence/risk_deviation.jsonl",
+        "wave4_20260927/evidence/shadow_runtime.jsonl",
+        "wave4_20260927/evidence/shadow_trades.jsonl",
+        "wave4_20260927/evidence/strategy_candidates.jsonl",
+        "wave4_20260927/evidence/trade_truth.jsonl",
+        "wave4_20260927/reconstruction.json",
+        "frozen report/history identities (non-producer, non-authoritative for assignment)"
+      ],
+      "finding_version_after": 2,
+      "finding_version_before": 1,
+      "future_collection_required": "YES",
+      "gap_work_item_transition": "GWI-L7-IMPL:OPEN/REPAIR_PENDING -> RESOLVED (implementation defect exhausted) -> GWI-L7-IMPL observation gap OPEN",
+      "governed_population": 14046,
+      "historical_backfill_possible": "NO",
+      "historical_observation_gap": "YES",
+      "historically_missing_population": 14046,
+      "identity_join_chain": [
+        "producer-issued assignment",
+        "shadow_trade_id",
+        "canonical_opportunity_id",
+        "trade_horizon"
+      ],
+      "implementation_defect_remains": "NO",
+      "observation_requirement": {
+        "adjudication_evidence_fingerprint": "4db003c3ab767c72c55803bf01976f913a747c572c3efe62333e861f0b2084cc",
+        "allowed_values_type": {
+          "allowed_values": [
+            "CONTROL",
+            "CANDIDATE"
+          ],
+          "field": "experiment_arm",
+          "field_version": "arm_schema_version",
+          "proxy_or_inferred_labels": "FORBIDDEN",
+          "type": "closed_enum",
+          "unknown_value_behavior": "FAIL_CLOSED"
+        },
+        "evidence_contract_consumer": [
+          "research_engine.experiments.adaptation_evidence.run_l7",
+          "research_engine.control_plane.stage4_impl_ownership_labels.assign_l7_labels"
+        ],
+        "expected_reentry_trigger_class": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+        "future_collection_only": true,
+        "gap_work_item_id": "GWI-L7-IMPL",
+        "historical_backfill_possible": false,
+        "minimum_completeness_rule": "100% of the governed L7 population must carry a producer-assigned arm before the label contract can bind; any unlabeled, unknown or inferred arm leaves L7 INSUFFICIENT_DATA.",
+        "missing_observable": [
+          "producer-authoritative experiment arm assignment exactly CONTROL or CANDIDATE, issued before outcome knowledge can contaminate it"
+        ],
+        "question_id": "L7",
+        "required_canonical_identity": [
+          "shadow_trade_id",
+          "canonical_opportunity_id",
+          "trade_horizon"
+        ],
+        "required_capture_timestamp_event": "arm_assigned_at must be written at assignment time, strictly before any outcome field for that entity is populated",
+        "required_dataset_domain": "shadow_trades",
+        "required_fields": [
+          "shadow_trades.experiment_arm",
+          "shadow_trades.arm_assigned_at",
+          "shadow_trades.arm_schema_version",
+          "shadow_trades.strategy",
+          "shadow_trades.r_multiple"
+        ],
+        "required_grain": "one assignment per (shadow_trade_id, canonical_opportunity_id, trade_horizon) for the canonical entity under test",
+        "required_lineage": [
+          "producer:shadow_trades",
+          "assignment decision record (issuer, request id, policy version)",
+          "immutability: the arm may never be rewritten or back-filled"
+        ],
+        "required_producer": "producer:shadow_trades",
+        "semantic_definition": "A single producer-issued, versioned field carrying exactly one of the two governed arms for the canonical entity under test. shadow_trades_v1 is a dataset schema identity and is NOT CONTROL and NOT CANDIDATE. No chronology, discovery/validation split, treatment inference, selection state, promotion state or outcome behaviour may be used to derive the arm.",
+        "source_implementation_work_item_id": "GWI-L7-IMPL",
+        "source_reentry_id": "RE-IMPL-20260929-L7",
+        "status": "OPEN"
+      },
+      "observation_requirement_id": "OG-L7-4db003c3ab76",
+      "question_id": "L7",
+      "reentry_id": "RE-IMPL-20260929-L7",
+      "reentry_trigger_expected": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "remaining_blocker": "All 14,046 governed rows are historically unlabeled; no producer-authoritative CONTROL/CANDIDATE assignment exists and the L7 runner fails closed rather than inferring one.",
+      "scientific_result_version_after": 2,
+      "scientific_result_version_before": 1,
+      "scientific_state_after": "HISTORICALLY_UNANSWERABLE",
+      "scientific_state_before": "IMPLEMENTATION_BLOCKED",
+      "unexplained": 0,
+      "v1_content_fingerprint_preserved": true
+    }
+  ],
+  "schema": "stage4_ex2_l7_blocker_adjudication_v1",
+  "stage": "STAGE4_EX2_L7_BLOCKER_ADJUDICATION",
+  "stamp": "20260929",
+  "v1_findings_mutated": false
+}

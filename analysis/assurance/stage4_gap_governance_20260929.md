@@ -1,0 +1,43 @@
+# Stage 4 gap governance (20260929)
+
+store: `026b905a714917af56ab7b3e082946d8754683fdd3962639a4f09c2889b720ca`
+items: 37
+rels: 37
+
+- GWI-E5-DATA status=OPEN
+- GWI-M3-DATA status=OPEN
+- GWI-M4-DATA status=OPEN
+- GWI-M5-DATA status=OPEN
+- GWI-M6-DATA status=OPEN
+- GWI-M7-DATA status=OPEN
+- GWI-M8-DATA status=OPEN
+- GWI-M9-DATA status=OPEN
+- GWI-M10-DATA status=OPEN
+- GWI-M11-DATA status=OPEN
+- GWI-D2-DATA status=OPEN
+- GWI-D3-DATA status=OPEN
+- GWI-D4-DATA status=OPEN
+- GWI-D5-DATA status=OPEN
+- GWI-S4-DATA status=OPEN
+- GWI-R3-DATA status=OPEN
+- GWI-R4-DATA status=OPEN
+- GWI-R5-DATA status=OPEN
+- GWI-L1-DATA status=OPEN
+- GWI-L2-DATA status=OPEN
+- GWI-L4-DATA status=OPEN
+- GWI-L5-DATA status=OPEN
+- GWI-P1-DATA status=OPEN
+- GWI-EX10-DATA status=OPEN
+- GWI-HORIZON-1-DATA status=OPEN
+- GWI-STRAT-1-DATA status=OPEN
+- GWI-X5-DATA status=OPEN
+- GWI-PORT-1-DATA status=OPEN
+- GWI-OPP-1-DATA status=OPEN
+- GWI-R1-IMPL status=RESOLVED
+- GWI-R2-IMPL status=RESOLVED
+- GWI-L3-IMPL status=RESOLVED
+- GWI-L6-IMPL status=RESOLVED
+- GWI-L7-IMPL status=OPEN
+- GWI-G2-IMPL status=RESOLVED
+- GWI-G3-IMPL status=RESOLVED
+- GWI-EX2-IMPL status=OPEN

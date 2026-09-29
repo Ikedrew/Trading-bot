@@ -54,3 +54,7 @@ logs/*
 
 # Generated temporary heartbeat/state files
 *.tmp
+
+# Large Stage 4 generated assurance artifacts
+analysis/assurance/checkpoints/
+analysis/assurance/wave4_production_qualification_20260927.json

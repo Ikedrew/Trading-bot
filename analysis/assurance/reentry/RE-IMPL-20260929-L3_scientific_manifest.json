@@ -1,0 +1,72 @@
+{
+  "analysis_time": "2026-09-28T00:00:00Z",
+  "as_of_utc": "2026-09-27T00:00:00Z",
+  "fingerprint": "24d6d1761b5d1abe5d18b4774d2bf0113aafa1345d151d6a928efa8799c09c66",
+  "live_or_s3_reads": false,
+  "new_scientific_research_run": false,
+  "question_count": 1,
+  "questions": [
+    {
+      "assurance_status": "NOT_REQUALIFIED",
+      "candidate_historical_population": 36641,
+      "canonical_question": "Are the scoring weight assumptions, regime classifications, and strategy mappings still correct?",
+      "current_report_before": "UNKNOWN",
+      "current_report_path": "analysis\\reports\\reentry\\RE-IMPL-20260929-L3\\l3_architecture_assumption_validity.json",
+      "current_report_status": "COMPLETE",
+      "current_result_valid_before": false,
+      "excluded_historical_population": 36546,
+      "historical_exhaustion_state": "EXHAUSTED",
+      "initial_classification": "HISTORICAL_RUN_REQUIRED",
+      "missing_report_resolved": false,
+      "next_action": "NONE",
+      "question_id": "L3",
+      "reason": "CURRENT artifact with status COMPLETE",
+      "result_fingerprint": "c9f697735d955de0697475831c5ee9532006dc6b696280198199acbfa650aafe",
+      "runner_analytical_population": 95,
+      "runner_executed": true,
+      "runner_failed": false,
+      "runner_function": "run_l3",
+      "runner_inputs": [
+        "records",
+        "identities",
+        "persist"
+      ],
+      "runner_module": "research_engine.experiments.architecture_assumption_validity",
+      "runner_status": "AVAILABLE",
+      "scientific_state": "NO_EFFECT",
+      "stale_or_legacy_replaced": false,
+      "unexplained_historical_population": 0,
+      "usable_historical_population": 95
+    }
+  ],
+  "requested_scope": [
+    "L3"
+  ],
+  "schema": 1,
+  "scientific_state_counts": {
+    "COMPLETE": 0,
+    "HISTORICALLY_UNANSWERABLE": 0,
+    "IMPLEMENTATION_BLOCKED": 0,
+    "INSUFFICIENT_DATA": 0,
+    "NEGATIVE_RESULT": 0,
+    "NO_EFFECT": 1,
+    "WAITING_DATA": 0
+  },
+  "scope": [
+    "L3"
+  ],
+  "scope_size": 1,
+  "stage": "STAGE4_HISTORICAL_SCOPED_RESEARCH_PASS",
+  "summary": {
+    "historical_runners_executed": 1,
+    "historical_runners_found": 1,
+    "runner_failures": 0,
+    "unrelated_questions_executed": 0
+  },
+  "upstream_fingerprints": {
+    "evidence_snapshot": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "reconstruction": "e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43",
+    "wave2": "a93dbbf8e9b269e98937dc1f23b29f17107be0f6405c116d3894439ba5f45697",
+    "wave3": "bca9c1c4b0dc7b6610da1075119bf01a02f9515551b3e8bd1288efeb23d40034"
+  }
+}

@@ -492,6 +492,7 @@ def analyse(evidence: RiskPolicyEvidence) -> dict[str, Any]:
         "rw91_evidence_provenance_digest": evidence.provenance.get("digest"),
         "analytical_population_digest": evidence.provenance.get("eligible_population_digest"),
         "exclusion_digest": evidence.provenance.get("exclusion_digest"),
+        "runner_analytical_population": evidence.summary.total_candidate_observations,
         "pre_decision_adjustment_set": [],
         "adjustment_set_rule": (
             "empty predeclared set; RW9.1 exposes no HD10-adjudicated adjustment covariates, "
@@ -530,6 +531,7 @@ def analyse(evidence: RiskPolicyEvidence) -> dict[str, Any]:
         "confidence": "HIGH" if status == "COMPLETE" else "INSUFFICIENT_DATA",
         "dataset": {
             "source": "RW9.1 governed risk-policy evidence",
+            "analysed_row_count": evidence.summary.total_candidate_observations,
             "sample_size": evidence.summary.eligible_observations,
             "independent_observations": evidence.summary.distinct_canonical_opportunities,
             "allowed_opportunities": evidence.summary.allowed_count,
@@ -572,8 +574,26 @@ def load_governed_r1_evidence() -> RiskPolicyEvidence:
     )
 
 
-def run_r1(*, persist: bool = True) -> dict[str, Any]:
-    report = analyse(load_governed_r1_evidence())
+def run_r1(*, decision_records=None, outcome_records=None,
+           governed_records=None, persist: bool = True) -> dict[str, Any]:
+    if governed_records is None:
+        if decision_records is not None or outcome_records is not None:
+            raise R1AnalysisError("R1_GOVERNED_POPULATION_REQUIRED")
+        evidence = load_governed_r1_evidence()
+    else:
+        from research_engine.control_plane.stage4_impl_population2 import (
+            enforce_exact_population, filter_sources_to_governed_population,
+        )
+        governed = enforce_exact_population("R1", governed_records)
+        decisions, outcomes = filter_sources_to_governed_population(
+            "R1", governed, decision_records or (), outcome_records or ())
+        evidence = build_risk_policy_evidence(
+            decisions, outcomes, baseline_authority=deepcopy(BASELINE_RISK_POLICY_V1))
+        if evidence.summary.total_candidate_observations != len(governed):
+            raise R1AnalysisError(
+                "R1_RUNNER_INPUT_POPULATION_MISMATCH:"
+                f"{evidence.summary.total_candidate_observations}!={len(governed)}")
+    report = analyse(evidence)
     if persist:
         _REPORTS_DIR.mkdir(parents=True, exist_ok=True)
         (_REPORTS_DIR / REPORT_FILENAME).write_text(
@@ -594,7 +614,7 @@ def validate_r1_report(report: Mapping[str, Any]) -> tuple[bool, str]:
         return False, "R1 report provenance missing"
     if provenance.get("hd10_adjudication_version") != HD10_ADJUDICATION_VERSION:
         return False, "R1 HD10 authority mismatch"
-    if provenance.get("r1_contract") != R1_CONTRACT:
+    if json.loads(json.dumps(provenance.get("r1_contract"))) != json.loads(json.dumps(R1_CONTRACT)):
         return False, "R1 frozen estimand contract mismatch"
     if (
         provenance.get("baseline_policy_id") != BASELINE_RISK_POLICY_V1["policy_id"]

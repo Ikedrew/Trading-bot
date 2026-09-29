@@ -1,0 +1,747 @@
+{
+  "applied_to_stage4_observability": {
+    "classification": {
+      "breaking_axes": [],
+      "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+      "dataset_version_change_required": false,
+      "producer_version_change_required": true,
+      "reason": "Dataset meaning, grain and canonical identity unchanged; change is additive (new_fields=4, changed_fields=0). Classified ADDITIVE_SCHEMA_EVOLUTION.",
+      "schema_generation_change_required": true,
+      "unasserted_axes": []
+    },
+    "collection_start": "2026-09-29",
+    "current_producer_version": "shadow_runtime_producer_v2",
+    "current_schema_generation": 2,
+    "dataset": "shadow_runtime",
+    "dataset_version": "shadow_runtime_v1",
+    "dataset_version_change_justification": "The dataset still means the same lifecycle/event stream at the same grain with the same canonical identity and primary-key semantics. Adding governed blocks is additive, so NO dataset version bump is required.",
+    "dataset_version_changed": false,
+    "fields_added": [
+      "decision_snapshot",
+      "market_time_attestation",
+      "experiment_arm",
+      "lifecycle_m5_path"
+    ],
+    "previous_producer_version": "shadow_runtime_producer_v1",
+    "previous_schema_generation": 1
+  },
+  "base_authority": {
+    "module": "core.production_data_contract",
+    "registry": "PRODUCTION_SCHEMA_REGISTRY",
+    "role": "Canonical dataset identity, schema version and generation. This policy EXTENDS it with generation boundaries, producer versions and evidence epochs; it never duplicates it."
+  },
+  "mutation_ledger": {
+    "backfills_performed": 0,
+    "historical_mutations": 0,
+    "q71_started": false,
+    "research_reentry_events": 0,
+    "s3_writes": 0
+  },
+  "policy": {
+    "compatibility_classes": [
+      "ADDITIVE_SCHEMA_EVOLUTION",
+      "BREAKING_DATASET_EVOLUTION"
+    ],
+    "dataset_version_change": "Only on material incompatibility: canonical grain, canonical entity identity, primary-key semantics, fundamental event meaning, incompatible field semantics, record lifecycle semantics, or irretrievable backward compatibility.",
+    "evidence_epoch": "Opened when a new (schema generation, producer version) pair begins producing scientifically usable evidence. Re-entry binds to the correct epoch.",
+    "fail_closed": true,
+    "historical_immutability": "No injecting fields into old records, no claiming generation-1 rows satisfy generation-2 requirements, no inferring unavailable historical values.",
+    "linkage": "Every schema-generation change records requirement IDs, question IDs, reason, fields added/changed, producer, collection start and backfill status. No orphans.",
+    "material_axes": [
+      "canonical_grain",
+      "canonical_entity_identity",
+      "primary_key_semantics",
+      "fundamental_event_meaning",
+      "field_semantics",
+      "record_lifecycle_semantics",
+      "backward_compatibility_without_ambiguity"
+    ],
+    "producer_version_change": "On any material change in emitted fields, capture/assignment/path-binding logic, or serialization.",
+    "schema_generation_change": "When the dataset is fundamentally the same but its governed record schema evolves. Generation-1 records are never rewritten."
+  },
+  "policy_id": "stage4_data_versioning_policy_v1",
+  "stamp": "20260929",
+  "version_registry": {
+    "evidence_epochs": [
+      {
+        "canonical_identities": [
+          "canonical_opportunity_id",
+          "observation_id"
+        ],
+        "collection_start": "2026-09-29",
+        "dataset": "decision_trace",
+        "dataset_version": "decision_trace_v1",
+        "epoch_id": "STAGE4-EPOCH-DECISION-TRACE-G1",
+        "evidence_contract_versions": {
+          "OR-08": "v1",
+          "OR-09": "v1"
+        },
+        "observation_requirements": [
+          "OR-08",
+          "OR-09"
+        ],
+        "predecessor_epoch_id": null,
+        "producer_fingerprint": "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20",
+        "producer_version": "decision_trace_producer_v1",
+        "questions": [
+          "D3",
+          "X5"
+        ],
+        "research_reentry_events": 0,
+        "schema_fingerprint": "12a809d3094373ba4b7251a8c64c3a4af45f360c44d46cfc4d58286f429f547c",
+        "schema_generation": 1,
+        "status": "RETIRED"
+      },
+      {
+        "canonical_identities": [
+          "canonical_opportunity_id",
+          "observation_id"
+        ],
+        "collection_start": "2026-09-29",
+        "dataset": "decision_trace",
+        "dataset_version": "decision_trace_v1",
+        "epoch_id": "STAGE4-EPOCH-DECISION-TRACE-G2",
+        "evidence_contract_versions": {
+          "OR-08": "v2",
+          "OR-09": "v2"
+        },
+        "observation_requirements": [
+          "OR-08",
+          "OR-09"
+        ],
+        "predecessor_epoch_id": "STAGE4-EPOCH-DECISION-TRACE-G1",
+        "producer_fingerprint": "e47a78881a241abbed25061f94a8fcf64004c7174ac1233657242c583cfb45d4",
+        "producer_version": "decision_trace_producer_v2",
+        "questions": [
+          "D3",
+          "X5"
+        ],
+        "research_reentry_events": 0,
+        "schema_fingerprint": "26343847225635377d0ac2b701f9d3e6f579a9a992d320e369f34ef032c8b6dc",
+        "schema_generation": 2,
+        "status": "COLLECTING"
+      },
+      {
+        "canonical_identities": [
+          "canonical_opportunity_id",
+          "opportunity_id",
+          "observation_id"
+        ],
+        "collection_start": "2026-09-29",
+        "dataset": "opportunities",
+        "dataset_version": "opportunities_v1",
+        "epoch_id": "STAGE4-EPOCH-OPPORTUNITIES-G1",
+        "evidence_contract_versions": {
+          "OR-13": "v1"
+        },
+        "observation_requirements": [
+          "OR-13"
+        ],
+        "predecessor_epoch_id": null,
+        "producer_fingerprint": "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214",
+        "producer_version": "opportunities_producer_v1",
+        "questions": [
+          "OPP-1"
+        ],
+        "research_reentry_events": 0,
+        "schema_fingerprint": "d50aa073bcb0b8a68c6eead9a06cfb08c247a55fff46cc4b74de3e057f030c4b",
+        "schema_generation": 1,
+        "status": "RETIRED"
+      },
+      {
+        "canonical_identities": [
+          "shadow_trade_id",
+          "canonical_opportunity_id",
+          "trade_horizon"
+        ],
+        "collection_start": "2026-09-29",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "epoch_id": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+        "evidence_contract_versions": {
+          "OR-01": "v1",
+          "OR-02": "v1",
+          "OR-03": "v1",
+          "OR-04": "v1",
+          "OR-05": "v1",
+          "OR-06": "v1",
+          "OR-07": "v1",
+          "OR-14": "v1",
+          "OR-15": "v1"
+        },
+        "observation_requirements": [
+          "OR-01",
+          "OR-02",
+          "OR-03",
+          "OR-04",
+          "OR-05",
+          "OR-06",
+          "OR-07",
+          "OR-14",
+          "OR-15"
+        ],
+        "predecessor_epoch_id": null,
+        "producer_fingerprint": "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d",
+        "producer_version": "shadow_runtime_producer_v1",
+        "questions": [
+          "D2",
+          "D4",
+          "D5",
+          "E5",
+          "EX10",
+          "EX2",
+          "HORIZON-1",
+          "L1",
+          "L2",
+          "L4",
+          "L5",
+          "L7",
+          "M10",
+          "M11",
+          "M3",
+          "M4",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "P1",
+          "PORT-1",
+          "R3",
+          "R4",
+          "R5",
+          "S4",
+          "STRAT-1",
+          "X5"
+        ],
+        "research_reentry_events": 0,
+        "schema_fingerprint": "5141e22f832362b2c4a07eb746f70c682405d59f78dbc2309801cbda87a4d284",
+        "schema_generation": 1,
+        "status": "RETIRED"
+      },
+      {
+        "canonical_identities": [
+          "shadow_trade_id",
+          "canonical_opportunity_id",
+          "trade_horizon"
+        ],
+        "collection_start": "2026-09-29",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "epoch_id": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "evidence_contract_versions": {
+          "OR-01": "v2",
+          "OR-02": "v2",
+          "OR-03": "v2",
+          "OR-04": "v2",
+          "OR-05": "v2",
+          "OR-06": "v2",
+          "OR-07": "v2",
+          "OR-14": "v2",
+          "OR-15": "v2"
+        },
+        "observation_requirements": [
+          "OR-01",
+          "OR-02",
+          "OR-03",
+          "OR-04",
+          "OR-05",
+          "OR-06",
+          "OR-07",
+          "OR-14",
+          "OR-15"
+        ],
+        "predecessor_epoch_id": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "questions": [
+          "D2",
+          "D4",
+          "D5",
+          "E5",
+          "EX10",
+          "EX2",
+          "HORIZON-1",
+          "L1",
+          "L2",
+          "L4",
+          "L5",
+          "L7",
+          "M10",
+          "M11",
+          "M3",
+          "M4",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "P1",
+          "PORT-1",
+          "R3",
+          "R4",
+          "R5",
+          "S4",
+          "STRAT-1",
+          "X5"
+        ],
+        "research_reentry_events": 0,
+        "schema_fingerprint": "e6b182aaca8d67ff4e9193eb2b0ea739b7e937c2b40a62f521cac287bff46de1",
+        "schema_generation": 2,
+        "status": "COLLECTING"
+      }
+    ],
+    "policy_id": "stage4_data_versioning_policy_v1",
+    "producer_versions": [
+      {
+        "change_kind": "BASELINE",
+        "dataset": "decision_trace",
+        "emitted_fields": [
+          "schema_version",
+          "engine_version",
+          "action",
+          "terminal_stage",
+          "terminal_reason",
+          "canonical_opportunity_id",
+          "observation_id",
+          "decision_id",
+          "correlation_id",
+          "score_neutral",
+          "score_strategy",
+          "components",
+          "v10_market_state",
+          "v10_opportunity",
+          "v10_strategy",
+          "v10_horizon",
+          "v10_entry",
+          "v10_risk",
+          "v10_execution",
+          "p_success",
+          "ev",
+          "ev_positive",
+          "rr_effective",
+          "confirmation_score",
+          "timestamp_utc"
+        ],
+        "modules": [
+          "core/decision_trace.py"
+        ],
+        "output_semantics_unchanged": true,
+        "predecessor_producer_version": null,
+        "producer_fingerprint": "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20",
+        "producer_version": "decision_trace_producer_v1",
+        "schema_generation": 1
+      },
+      {
+        "change_kind": "NEW_FIELD_EMISSION_PRODUCER_OMISSION_FIX",
+        "dataset": "decision_trace",
+        "emitted_fields": [
+          "predicted_success"
+        ],
+        "modules": [
+          "core/decision_trace.py",
+          "core/pipeline/predicted_success.py"
+        ],
+        "output_semantics_unchanged": false,
+        "predecessor_producer_version": "decision_trace_producer_v1",
+        "producer_fingerprint": "e47a78881a241abbed25061f94a8fcf64004c7174ac1233657242c583cfb45d4",
+        "producer_version": "decision_trace_producer_v2",
+        "schema_generation": 2
+      },
+      {
+        "change_kind": "BASELINE",
+        "dataset": "opportunities",
+        "emitted_fields": [
+          "opportunity_id",
+          "state",
+          "overall_score",
+          "opportunity_state",
+          "quality"
+        ],
+        "modules": [
+          "core/opportunity/persistence.py",
+          "core/persistence/opportunity_writer.py"
+        ],
+        "output_semantics_unchanged": true,
+        "predecessor_producer_version": null,
+        "producer_fingerprint": "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214",
+        "producer_version": "opportunities_producer_v1",
+        "schema_generation": 1
+      },
+      {
+        "change_kind": "BASELINE",
+        "dataset": "shadow_runtime",
+        "emitted_fields": [
+          "event_type",
+          "schema_version",
+          "construction_model_version",
+          "simulation_model_version",
+          "canonical_opportunity_id",
+          "observation_id",
+          "shadow_trade_id",
+          "symbol",
+          "horizon",
+          "broker_offset_seconds",
+          "market_timestamp_semantics",
+          "market_timestamp_normalization_version",
+          "event_market_time",
+          "live_facts",
+          "construction",
+          "simulation_assumptions",
+          "lifecycle_initial",
+          "opportunity_market_time",
+          "entry_market_time",
+          "exit_market_time",
+          "trade_state_progression",
+          "data_gaps",
+          "outcome",
+          "final_lifecycle"
+        ],
+        "modules": [
+          "core/shadow/runtime.py + core/shadow/persistence.py"
+        ],
+        "output_semantics_unchanged": true,
+        "predecessor_producer_version": null,
+        "producer_fingerprint": "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d",
+        "producer_version": "shadow_runtime_producer_v1",
+        "schema_generation": 1
+      },
+      {
+        "change_kind": "NEW_FIELD_EMISSION_AND_CAPTURE_LOGIC",
+        "dataset": "shadow_runtime",
+        "emitted_fields": [
+          "decision_snapshot",
+          "market_time_attestation",
+          "experiment_arm",
+          "lifecycle_m5_path"
+        ],
+        "modules": [
+          "core/shadow/runtime.py",
+          "core/shadow/persistence.py",
+          "core/shadow/observability.py"
+        ],
+        "output_semantics_unchanged": false,
+        "predecessor_producer_version": "shadow_runtime_producer_v1",
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "schema_generation": 2
+      }
+    ],
+    "schema_generations": [
+      {
+        "added_fields": [],
+        "backfill_status": "HISTORICAL_BASELINE_IMMUTABLE",
+        "changed_fields": [],
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "decision_trace",
+        "dataset_version": "decision_trace_v1",
+        "governed_fields": [
+          "schema_version",
+          "engine_version",
+          "action",
+          "terminal_stage",
+          "terminal_reason",
+          "canonical_opportunity_id",
+          "observation_id",
+          "decision_id",
+          "correlation_id",
+          "score_neutral",
+          "score_strategy",
+          "components",
+          "v10_market_state",
+          "v10_opportunity",
+          "v10_strategy",
+          "v10_horizon",
+          "v10_entry",
+          "v10_risk",
+          "v10_execution",
+          "p_success",
+          "ev",
+          "ev_positive",
+          "rr_effective",
+          "confirmation_score",
+          "timestamp_utc"
+        ],
+        "historical_immutability_enforced": true,
+        "observation_requirements": [
+          "OR-08",
+          "OR-09"
+        ],
+        "predecessor_generation": null,
+        "questions": [
+          "D3",
+          "X5"
+        ],
+        "reason": "Historical baseline: p_success key present but never populated on the V10 path (0 usable values across 25360 rows).",
+        "responsible_producer": "core/decision_trace.py",
+        "schema_fingerprint": "9ef472b656ba6024f6be39043fa7be71a3ea20e3b9d3651d4995e4005a7c22de",
+        "schema_generation": 1
+      },
+      {
+        "added_fields": [
+          "predicted_success"
+        ],
+        "backfill_status": "FUTURE_COLLECTION_ONLY_NO_HISTORICAL_INFERENCE",
+        "changed_fields": [],
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "decision_trace",
+        "dataset_version": "decision_trace_v1",
+        "governed_fields": [
+          "action",
+          "canonical_opportunity_id",
+          "components",
+          "confirmation_score",
+          "correlation_id",
+          "decision_id",
+          "engine_version",
+          "ev",
+          "ev_positive",
+          "observation_id",
+          "p_success",
+          "predicted_success",
+          "rr_effective",
+          "schema_version",
+          "score_neutral",
+          "score_strategy",
+          "terminal_reason",
+          "terminal_stage",
+          "timestamp_utc",
+          "v10_entry",
+          "v10_execution",
+          "v10_horizon",
+          "v10_market_state",
+          "v10_opportunity",
+          "v10_risk",
+          "v10_strategy"
+        ],
+        "historical_immutability_enforced": true,
+        "observation_requirements": [
+          "OR-08",
+          "OR-09"
+        ],
+        "predecessor_generation": 1,
+        "questions": [
+          "D3",
+          "X5"
+        ],
+        "reason": "p_success producer fix: the V10 branch now calls the AUTHORITATIVE ProbabilityEstimator through a pre-outcome adapter and emits predicted_success with model/version lineage and an explicit missing state. Additive: no existing field is reinterpreted.",
+        "responsible_producer": "core/decision_trace.py + core/pipeline/predicted_success.py",
+        "schema_fingerprint": "9d36eda49f9441f3c1a40a08dd85298546c059bb43309258777fc37b0281ab18",
+        "schema_generation": 2
+      },
+      {
+        "added_fields": [],
+        "backfill_status": "HISTORICAL_BASELINE_IMMUTABLE",
+        "changed_fields": [],
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "opportunities",
+        "dataset_version": "opportunities_v1",
+        "governed_fields": [
+          "canonical_opportunity_id",
+          "symbol",
+          "cycle_id",
+          "bar_time",
+          "opportunity_id",
+          "state",
+          "overall_score",
+          "h4_regime",
+          "bias_phase",
+          "opportunity_state",
+          "quality",
+          "observation_id",
+          "schema_version"
+        ],
+        "historical_immutability_enforced": true,
+        "observation_requirements": [
+          "OR-13"
+        ],
+        "predecessor_generation": null,
+        "questions": [
+          "OPP-1"
+        ],
+        "reason": "Historical baseline: two producer record shapes coexist under one dataset version with DISJOINT closed vocabularies.",
+        "responsible_producer": "core/opportunity/persistence.py + core/persistence/opportunity_writer.py",
+        "schema_fingerprint": "7982df6f464fe23409a4875a9d56c9892a4114a133015383ac5296c445d17121",
+        "schema_generation": 1
+      },
+      {
+        "added_fields": [],
+        "backfill_status": "HISTORICAL_BASELINE_IMMUTABLE",
+        "changed_fields": [],
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "governed_fields": [
+          "event_type",
+          "schema_version",
+          "construction_model_version",
+          "simulation_model_version",
+          "canonical_opportunity_id",
+          "observation_id",
+          "shadow_trade_id",
+          "symbol",
+          "horizon",
+          "broker_offset_seconds",
+          "market_timestamp_semantics",
+          "market_timestamp_normalization_version",
+          "event_market_time",
+          "live_facts",
+          "construction",
+          "simulation_assumptions",
+          "lifecycle_initial",
+          "opportunity_market_time",
+          "entry_market_time",
+          "exit_market_time",
+          "trade_state_progression",
+          "data_gaps",
+          "outcome",
+          "final_lifecycle"
+        ],
+        "historical_immutability_enforced": true,
+        "observation_requirements": [
+          "OR-01",
+          "OR-02",
+          "OR-03",
+          "OR-04",
+          "OR-05",
+          "OR-06",
+          "OR-07",
+          "OR-14",
+          "OR-15"
+        ],
+        "predecessor_generation": null,
+        "questions": [
+          "D2",
+          "D4",
+          "D5",
+          "E5",
+          "EX10",
+          "EX2",
+          "HORIZON-1",
+          "L1",
+          "L2",
+          "L4",
+          "L5",
+          "L7",
+          "M10",
+          "M11",
+          "M3",
+          "M4",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "P1",
+          "PORT-1",
+          "R3",
+          "R4",
+          "R5",
+          "S4",
+          "STRAT-1",
+          "X5"
+        ],
+        "reason": "Historical baseline: lifecycle event stream before Stage 4.",
+        "responsible_producer": "core/shadow/runtime.py + core/shadow/persistence.py",
+        "schema_fingerprint": "3fe0caab0c98934ed8b4d913ea44c4336697074f6d7d73ddc2431a16d9214cfe",
+        "schema_generation": 1
+      },
+      {
+        "added_fields": [
+          "decision_snapshot",
+          "market_time_attestation",
+          "experiment_arm",
+          "lifecycle_m5_path"
+        ],
+        "backfill_status": "FUTURE_COLLECTION_ONLY_GENERATION_1_NOT_REWRITTEN",
+        "changed_fields": [],
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "governed_fields": [
+          "broker_offset_seconds",
+          "canonical_opportunity_id",
+          "construction",
+          "construction_model_version",
+          "data_gaps",
+          "decision_snapshot",
+          "entry_market_time",
+          "event_market_time",
+          "event_type",
+          "exit_market_time",
+          "experiment_arm",
+          "final_lifecycle",
+          "horizon",
+          "lifecycle_initial",
+          "lifecycle_m5_path",
+          "live_facts",
+          "market_time_attestation",
+          "market_timestamp_normalization_version",
+          "market_timestamp_semantics",
+          "observation_id",
+          "opportunity_market_time",
+          "outcome",
+          "schema_version",
+          "shadow_trade_id",
+          "simulation_assumptions",
+          "simulation_model_version",
+          "symbol",
+          "trade_state_progression"
+        ],
+        "historical_immutability_enforced": true,
+        "observation_requirements": [
+          "OR-01",
+          "OR-02",
+          "OR-03",
+          "OR-04",
+          "OR-05",
+          "OR-06",
+          "OR-07",
+          "OR-14",
+          "OR-15"
+        ],
+        "predecessor_generation": 1,
+        "questions": [
+          "D2",
+          "D4",
+          "D5",
+          "E5",
+          "EX10",
+          "EX2",
+          "HORIZON-1",
+          "L1",
+          "L2",
+          "L4",
+          "L5",
+          "L7",
+          "M10",
+          "M11",
+          "M3",
+          "M4",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "P1",
+          "PORT-1",
+          "R3",
+          "R4",
+          "R5",
+          "S4",
+          "STRAT-1",
+          "X5"
+        ],
+        "reason": "ROOT-02/03/04/05 observability blocks: lifecycle decision snapshot, market-time attestation, pre-outcome experiment arm and the lifecycle-bound M5 OHLC path. Dataset meaning, grain and canonical identity are unchanged: ADDITIVE_SCHEMA_EVOLUTION.",
+        "responsible_producer": "core/shadow/runtime.py + core/shadow/persistence.py",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2
+      }
+    ]
+  }
+}

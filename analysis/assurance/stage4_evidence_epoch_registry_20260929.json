@@ -1,0 +1,235 @@
+{
+  "collection_start": "2026-09-29",
+  "evidence_epochs": [
+    {
+      "canonical_identities": [
+        "canonical_opportunity_id",
+        "observation_id"
+      ],
+      "collection_start": "2026-09-29",
+      "dataset": "decision_trace",
+      "dataset_version": "decision_trace_v1",
+      "epoch_id": "STAGE4-EPOCH-DECISION-TRACE-G1",
+      "evidence_contract_versions": {
+        "OR-08": "v1",
+        "OR-09": "v1"
+      },
+      "observation_requirements": [
+        "OR-08",
+        "OR-09"
+      ],
+      "predecessor_epoch_id": null,
+      "producer_fingerprint": "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20",
+      "producer_version": "decision_trace_producer_v1",
+      "questions": [
+        "D3",
+        "X5"
+      ],
+      "research_reentry_events": 0,
+      "schema_fingerprint": "12a809d3094373ba4b7251a8c64c3a4af45f360c44d46cfc4d58286f429f547c",
+      "schema_generation": 1,
+      "status": "RETIRED"
+    },
+    {
+      "canonical_identities": [
+        "canonical_opportunity_id",
+        "observation_id"
+      ],
+      "collection_start": "2026-09-29",
+      "dataset": "decision_trace",
+      "dataset_version": "decision_trace_v1",
+      "epoch_id": "STAGE4-EPOCH-DECISION-TRACE-G2",
+      "evidence_contract_versions": {
+        "OR-08": "v2",
+        "OR-09": "v2"
+      },
+      "observation_requirements": [
+        "OR-08",
+        "OR-09"
+      ],
+      "predecessor_epoch_id": "STAGE4-EPOCH-DECISION-TRACE-G1",
+      "producer_fingerprint": "e47a78881a241abbed25061f94a8fcf64004c7174ac1233657242c583cfb45d4",
+      "producer_version": "decision_trace_producer_v2",
+      "questions": [
+        "D3",
+        "X5"
+      ],
+      "research_reentry_events": 0,
+      "schema_fingerprint": "26343847225635377d0ac2b701f9d3e6f579a9a992d320e369f34ef032c8b6dc",
+      "schema_generation": 2,
+      "status": "COLLECTING"
+    },
+    {
+      "canonical_identities": [
+        "canonical_opportunity_id",
+        "opportunity_id",
+        "observation_id"
+      ],
+      "collection_start": "2026-09-29",
+      "dataset": "opportunities",
+      "dataset_version": "opportunities_v1",
+      "epoch_id": "STAGE4-EPOCH-OPPORTUNITIES-G1",
+      "evidence_contract_versions": {
+        "OR-13": "v1"
+      },
+      "observation_requirements": [
+        "OR-13"
+      ],
+      "predecessor_epoch_id": null,
+      "producer_fingerprint": "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214",
+      "producer_version": "opportunities_producer_v1",
+      "questions": [
+        "OPP-1"
+      ],
+      "research_reentry_events": 0,
+      "schema_fingerprint": "d50aa073bcb0b8a68c6eead9a06cfb08c247a55fff46cc4b74de3e057f030c4b",
+      "schema_generation": 1,
+      "status": "RETIRED"
+    },
+    {
+      "canonical_identities": [
+        "shadow_trade_id",
+        "canonical_opportunity_id",
+        "trade_horizon"
+      ],
+      "collection_start": "2026-09-29",
+      "dataset": "shadow_runtime",
+      "dataset_version": "shadow_runtime_v1",
+      "epoch_id": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+      "evidence_contract_versions": {
+        "OR-01": "v1",
+        "OR-02": "v1",
+        "OR-03": "v1",
+        "OR-04": "v1",
+        "OR-05": "v1",
+        "OR-06": "v1",
+        "OR-07": "v1",
+        "OR-14": "v1",
+        "OR-15": "v1"
+      },
+      "observation_requirements": [
+        "OR-01",
+        "OR-02",
+        "OR-03",
+        "OR-04",
+        "OR-05",
+        "OR-06",
+        "OR-07",
+        "OR-14",
+        "OR-15"
+      ],
+      "predecessor_epoch_id": null,
+      "producer_fingerprint": "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d",
+      "producer_version": "shadow_runtime_producer_v1",
+      "questions": [
+        "D2",
+        "D4",
+        "D5",
+        "E5",
+        "EX10",
+        "EX2",
+        "HORIZON-1",
+        "L1",
+        "L2",
+        "L4",
+        "L5",
+        "L7",
+        "M10",
+        "M11",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "P1",
+        "PORT-1",
+        "R3",
+        "R4",
+        "R5",
+        "S4",
+        "STRAT-1",
+        "X5"
+      ],
+      "research_reentry_events": 0,
+      "schema_fingerprint": "5141e22f832362b2c4a07eb746f70c682405d59f78dbc2309801cbda87a4d284",
+      "schema_generation": 1,
+      "status": "RETIRED"
+    },
+    {
+      "canonical_identities": [
+        "shadow_trade_id",
+        "canonical_opportunity_id",
+        "trade_horizon"
+      ],
+      "collection_start": "2026-09-29",
+      "dataset": "shadow_runtime",
+      "dataset_version": "shadow_runtime_v1",
+      "epoch_id": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+      "evidence_contract_versions": {
+        "OR-01": "v2",
+        "OR-02": "v2",
+        "OR-03": "v2",
+        "OR-04": "v2",
+        "OR-05": "v2",
+        "OR-06": "v2",
+        "OR-07": "v2",
+        "OR-14": "v2",
+        "OR-15": "v2"
+      },
+      "observation_requirements": [
+        "OR-01",
+        "OR-02",
+        "OR-03",
+        "OR-04",
+        "OR-05",
+        "OR-06",
+        "OR-07",
+        "OR-14",
+        "OR-15"
+      ],
+      "predecessor_epoch_id": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+      "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+      "producer_version": "shadow_runtime_producer_v2",
+      "questions": [
+        "D2",
+        "D4",
+        "D5",
+        "E5",
+        "EX10",
+        "EX2",
+        "HORIZON-1",
+        "L1",
+        "L2",
+        "L4",
+        "L5",
+        "L7",
+        "M10",
+        "M11",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "P1",
+        "PORT-1",
+        "R3",
+        "R4",
+        "R5",
+        "S4",
+        "STRAT-1",
+        "X5"
+      ],
+      "research_reentry_events": 0,
+      "schema_fingerprint": "e6b182aaca8d67ff4e9193eb2b0ea739b7e937c2b40a62f521cac287bff46de1",
+      "schema_generation": 2,
+      "status": "COLLECTING"
+    }
+  ],
+  "policy_id": "stage4_data_versioning_policy_v1",
+  "research_reentry_events": 0,
+  "stamp": "20260929"
+}

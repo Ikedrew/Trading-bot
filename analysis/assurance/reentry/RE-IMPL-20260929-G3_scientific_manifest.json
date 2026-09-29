@@ -1,0 +1,77 @@
+{
+  "analysis_time": "2026-09-28T00:00:00Z",
+  "as_of_utc": "2026-09-27T00:00:00Z",
+  "fingerprint": "3c0e44e4d423b886fdad74b86d1f62cda6c5d781a6574afd7b04267c125e1998",
+  "live_or_s3_reads": false,
+  "new_scientific_research_run": false,
+  "question_count": 1,
+  "questions": [
+    {
+      "assurance_status": "NOT_REQUALIFIED",
+      "candidate_historical_population": 14077,
+      "canonical_question": "Can research conclusions be trusted given current validation status, coverage percentages, and sample sizes?",
+      "current_report_before": "VALID_CURRENT",
+      "current_report_path": "analysis\\reports\\reentry\\RE-IMPL-20260929-G3\\g3_research_validity.json",
+      "current_report_status": "INSUFFICIENT_DATA",
+      "current_result_valid_before": true,
+      "excluded_historical_population": 12225,
+      "historical_exhaustion_state": "EXHAUSTED",
+      "initial_classification": "HISTORICAL_RUN_REQUIRED",
+      "missing_report_resolved": false,
+      "next_action": "COLLECT_QUANTIFIED_FUTURE_EVIDENCE",
+      "question_id": "G3",
+      "reason": "CURRENT artifact with status INSUFFICIENT_DATA",
+      "result_fingerprint": "e1b56a43f8f2bcdeb7b89ef8fb439d55c3c56f2a2a487ff009cc912744b7fe7d",
+      "runner_analytical_population": 1852,
+      "runner_executed": true,
+      "runner_failed": false,
+      "runner_function": "run_g3",
+      "runner_inputs": [
+        "question_states",
+        "g1_report",
+        "g2_report",
+        "l6_report",
+        "snapshot",
+        "as_of_utc",
+        "records",
+        "dependency_finding"
+      ],
+      "runner_module": "research_engine.experiments.research_validity",
+      "runner_status": "AVAILABLE",
+      "scientific_state": "INSUFFICIENT_DATA",
+      "stale_or_legacy_replaced": false,
+      "unexplained_historical_population": 0,
+      "usable_historical_population": 1852
+    }
+  ],
+  "requested_scope": [
+    "G3"
+  ],
+  "schema": 1,
+  "scientific_state_counts": {
+    "COMPLETE": 0,
+    "HISTORICALLY_UNANSWERABLE": 0,
+    "IMPLEMENTATION_BLOCKED": 0,
+    "INSUFFICIENT_DATA": 1,
+    "NEGATIVE_RESULT": 0,
+    "NO_EFFECT": 0,
+    "WAITING_DATA": 0
+  },
+  "scope": [
+    "G3"
+  ],
+  "scope_size": 1,
+  "stage": "STAGE4_HISTORICAL_SCOPED_RESEARCH_PASS",
+  "summary": {
+    "historical_runners_executed": 1,
+    "historical_runners_found": 1,
+    "runner_failures": 0,
+    "unrelated_questions_executed": 0
+  },
+  "upstream_fingerprints": {
+    "evidence_snapshot": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "reconstruction": "e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43",
+    "wave2": "a93dbbf8e9b269e98937dc1f23b29f17107be0f6405c116d3894439ba5f45697",
+    "wave3": "bca9c1c4b0dc7b6610da1075119bf01a02f9515551b3e8bd1288efeb23d40034"
+  }
+}

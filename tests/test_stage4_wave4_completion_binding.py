@@ -211,6 +211,84 @@ def test_bound_valid_evidence_is_not_false_unavailable_from_invocation_gap():
     assert all(item.question_fingerprint and item.contract_fingerprint for item in contracts)
 
 
+def test_production_input_does_not_self_attest_unknown_population_resolution_or_lineage():
+    from types import SimpleNamespace
+    from research_engine.v10.universes import production_qualification as module
+
+    contract = next(item for item in build_question_evidence_contracts() if item.question_id == "X2")
+    answer = next(item for item in bind_canonical_answers() if item.question_id == "X2")
+    state = SimpleNamespace(
+        question_id="X2", current_sample_size=10, excluded_evidence_count=2,
+        evidence_epoch="CURRENT", evidence_metrics={},
+        evidence_sources=[{
+            "source": "execution_results_v1", "available": True,
+            "total_records": 12, "current_records": 10,
+            "transitional_excluded": 1, "legacy_excluded": 1,
+        }],
+        requirements=[
+            {"type": "dataset_presence", "name": "execution_results_v1", "satisfied": True},
+            {"type": "coverage", "name": "coverage", "satisfied": None},
+        ],
+        state_status="READY",
+    )
+    supplied = module._question_inputs((state,), (answer,), (contract,))["X2"]
+    assert supplied.collection_functional is True
+    assert supplied.population_complete is False
+    assert supplied.observed_resolution == ""
+    assert supplied.available_lineage == ()
+    assert supplied.record_accounting["historical_exhaustive"] is True
+
+
+def test_opp1_denominator_is_persisted_from_governed_canonical_population():
+    from types import SimpleNamespace
+    from research_engine.v10.universes import production_qualification as module
+
+    contract = next(item for item in build_question_evidence_contracts() if item.question_id == "OPP-1")
+    answer = next(item for item in bind_canonical_answers() if item.question_id == "OPP-1")
+    state = SimpleNamespace(
+        question_id="OPP-1", current_sample_size=1, excluded_evidence_count=3,
+        evidence_epoch="CURRENT",
+        evidence_metrics={
+            "accounting_candidate_records": 3,
+            "accounting_exclusion_reason_counts": {
+                "AMBIGUOUS_OR_UNMATCHED_IDENTITY": 1,
+                "REQUIRED_RELATIONSHIP_ABSENT": 1,
+            },
+            "candidate_inclusion_rule": "fixture governed membership",
+            "candidate_identity_rule": "canonical_opportunity_id",
+            "candidate_epoch_rule": "CURRENT",
+            "candidate_source_datasets": ("horizon_candidates", "shadow_trades"),
+            "candidate_source_overlap_rule": "join; source rows are not additive",
+            "candidate_duplicate_rule": "collapse before denominator membership",
+            "candidate_join_rule": "canonical_opportunity_id; conflicts fail closed",
+        },
+        evidence_sources=[
+            {"source": "horizon_candidates", "available": True, "total_records": 4,
+             "current_records": 4, "transitional_excluded": 0, "legacy_excluded": 0},
+            {"source": "shadow_trades", "available": True, "total_records": 2,
+             "current_records": 1, "transitional_excluded": 0, "legacy_excluded": 1},
+        ],
+        requirements=[
+            {"type": "dataset_presence", "name": "horizon_candidates", "satisfied": True},
+            {"type": "dataset_presence", "name": "shadow_trades", "satisfied": True},
+            {"type": "required_field", "name": "selection_status", "satisfied": True},
+            {"type": "required_field", "name": "simulated_outcome.pnl_r_multiple", "satisfied": True},
+        ],
+        state_status="WAITING_DATA",
+    )
+    supplied = module._question_inputs((state,), (answer,), (contract,))["OPP-1"]
+    result = QualificationEngine(
+        inputs={"OPP-1": supplied},
+    ).qualify_question("OPP-1")
+    accounting = result.evidence_accounting
+    assert accounting["candidate_denominator_authority"] == "OPP1_GOVERNED_CANONICAL_OPPORTUNITY_POPULATION"
+    assert accounting["candidate_records"] == 3
+    assert accounting["used_records"] == 1
+    assert accounting["excluded_records"] == 2
+    assert accounting["unexplained_records"] == 0
+    assert accounting["historical_exhaustion_status"] == "EXHAUSTED"
+
+
 def _checkpoint_run(tmp_path, source=None, markers=None, as_of="2026-09-27T00:00:00Z"):
     return qualify_production_checkpointed(
         as_of_utc=as_of,

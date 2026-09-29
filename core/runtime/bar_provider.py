@@ -136,6 +136,9 @@ class BarProvider:
                     bar_low=candles[closed_i].low,
                     bar_close=candles[closed_i].close,
                     bar_index=closed_i,
+                    # ROOT-04: the authoritative open of this same closed
+                    # bar, so the lifecycle M5 path is complete OHLC.
+                    bar_open=getattr(candles[closed_i], "open", None),
                 )
             else:
                 from core.shadow_trades import get_shadow_engine

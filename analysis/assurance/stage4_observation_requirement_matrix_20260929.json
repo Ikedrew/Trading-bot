@@ -1,0 +1,1109 @@
+{
+  "baseline_certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+  "counts": {
+    "DATASETS_INSPECTED": 11,
+    "DECLARED_BUT_UNPERSISTED_DATASETS": 2,
+    "GAP_COUNT_RAW": 31,
+    "PERSISTED_S3_DATASETS_INSPECTED": 9,
+    "PRODUCERS_INSPECTED": 14,
+    "UNIQUE_OBSERVATION_REQUIREMENTS": 15
+  },
+  "gap_to_observation_requirement": {
+    "EX2 (OG-EX2-4db003c3ab76)": {
+      "disposition": "NEW_DATASET_REQUIRED",
+      "requirement": "OR-14"
+    },
+    "L7 (OG-L7-4db003c3ab76)": {
+      "disposition": "NEW_DATASET_REQUIRED",
+      "requirement": "OR-15"
+    },
+    "STAGE4-DATA-D2": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-D3": {
+      "disposition": "PRODUCER_CHANGE_REQUIRED",
+      "requirement": "OR-08"
+    },
+    "STAGE4-DATA-D4": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-D5": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-E5": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-EX10": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-06"
+    },
+    "STAGE4-DATA-HORIZON-1": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-L1": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-L2": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-06"
+    },
+    "STAGE4-DATA-L4": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-L5": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-M10": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-M11": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-M3": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-M4": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-M5": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-M6": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-M7": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-M8": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-M9": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-OPP-1": {
+      "disposition": "PARTIAL_DATASET_CHANGE_REQUIRED",
+      "requirement": "OR-13"
+    },
+    "STAGE4-DATA-P1": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-PORT-1": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-R3": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-06"
+    },
+    "STAGE4-DATA-R4": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-06"
+    },
+    "STAGE4-DATA-R5": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-06"
+    },
+    "STAGE4-DATA-S4": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-STRAT-1": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    },
+    "STAGE4-DATA-X5": {
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "requirement": "OR-01"
+    }
+  },
+  "governed_gaps": [
+    "STAGE4-DATA-E5",
+    "STAGE4-DATA-M3",
+    "STAGE4-DATA-M4",
+    "STAGE4-DATA-M5",
+    "STAGE4-DATA-M6",
+    "STAGE4-DATA-M7",
+    "STAGE4-DATA-M8",
+    "STAGE4-DATA-M9",
+    "STAGE4-DATA-M10",
+    "STAGE4-DATA-M11",
+    "STAGE4-DATA-D2",
+    "STAGE4-DATA-D3",
+    "STAGE4-DATA-D4",
+    "STAGE4-DATA-D5",
+    "STAGE4-DATA-S4",
+    "STAGE4-DATA-R3",
+    "STAGE4-DATA-R4",
+    "STAGE4-DATA-R5",
+    "STAGE4-DATA-L1",
+    "STAGE4-DATA-L2",
+    "STAGE4-DATA-L4",
+    "STAGE4-DATA-L5",
+    "STAGE4-DATA-P1",
+    "STAGE4-DATA-EX10",
+    "STAGE4-DATA-HORIZON-1",
+    "STAGE4-DATA-STRAT-1",
+    "STAGE4-DATA-X5",
+    "STAGE4-DATA-PORT-1",
+    "STAGE4-DATA-OPP-1",
+    "EX2 (OG-EX2-4db003c3ab76)",
+    "L7 (OG-L7-4db003c3ab76)"
+  ],
+  "observation_requirements": [
+    {
+      "authoritative_dataset": "shadow_runtime",
+      "authoritative_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "authoritative_schema": "shadow_runtime_v1",
+      "backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+      "classifications": [
+        "FIELD_EXISTS_WRONG_IDENTITY"
+      ],
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "gaps": [
+        "STAGE4-DATA-E5",
+        "STAGE4-DATA-D2",
+        "STAGE4-DATA-D4",
+        "STAGE4-DATA-D5",
+        "STAGE4-DATA-M3",
+        "STAGE4-DATA-M4",
+        "STAGE4-DATA-M5",
+        "STAGE4-DATA-M6",
+        "STAGE4-DATA-M7",
+        "STAGE4-DATA-M8",
+        "STAGE4-DATA-M9",
+        "STAGE4-DATA-M10",
+        "STAGE4-DATA-M11",
+        "STAGE4-DATA-S4",
+        "STAGE4-DATA-X5",
+        "STAGE4-DATA-P1",
+        "STAGE4-DATA-L1",
+        "STAGE4-DATA-L4",
+        "STAGE4-DATA-L5",
+        "STAGE4-DATA-STRAT-1",
+        "STAGE4-DATA-PORT-1",
+        "STAGE4-DATA-HORIZON-1"
+      ],
+      "id": "OR-01",
+      "observed_coverage": "20421/66258 (all 20421 CLOSE lifecycles)",
+      "observed_field": "outcome.pnl_r_multiple",
+      "primary_classification": "FIELD_EXISTS_WRONG_IDENTITY",
+      "questions": [
+        "E5",
+        "D2",
+        "D4",
+        "D5",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "S4",
+        "X5",
+        "P1",
+        "L1",
+        "L4",
+        "L5",
+        "STRAT-1",
+        "PORT-1",
+        "HORIZON-1"
+      ],
+      "rationale": "The register names dataset `shadow_trades`, which has ZERO persisted S3 objects. The equivalent observable IS emitted by shadow_runtime_v1 as `outcome.pnl_r_multiple` on 100% of completed lifecycles. The register's dataset identity does not resolve to a persisted producer.",
+      "reentry_trigger_class": "DATA_THRESHOLD_REACHED",
+      "required_grain": "one row per (shadow_trade_id, canonical_opportunity_id, trade_horizon)",
+      "required_identity": [
+        "shadow_trade_id",
+        "canonical_opportunity_id",
+        "trade_horizon"
+      ],
+      "required_lineage": [
+        "producer:shadow_trades",
+        "canonical_opportunity_id/entity_id lineage"
+      ],
+      "required_observable": "shadow_trades.simulated_outcome.pnl_r_multiple",
+      "required_timestamp": "causal close event time + CURRENT epoch attestation",
+      "required_type": "float",
+      "semantic": "Realised simulated R-multiple of the canonical shadow lifecycle, written at causal close time.",
+      "threshold": "THRESHOLD_GOVERNANCE_REQUIRED",
+      "title": "Simulated outcome R-multiple at lifecycle grain",
+      "version_consequence": [
+        "CONTRACT_ONLY_CHANGE"
+      ]
+    },
+    {
+      "authoritative_dataset": "shadow_runtime",
+      "authoritative_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "authoritative_schema": "shadow_runtime_v1",
+      "backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+      "classifications": [
+        "FIELD_EXISTS_WRONG_GRAIN",
+        "FIELD_EXISTS_NO_LINEAGE"
+      ],
+      "disposition": "SCHEMA_CHANGE_REQUIRED",
+      "gaps": [
+        "STAGE4-DATA-M3",
+        "STAGE4-DATA-M4",
+        "STAGE4-DATA-M5",
+        "STAGE4-DATA-M6",
+        "STAGE4-DATA-M7",
+        "STAGE4-DATA-M8",
+        "STAGE4-DATA-M9",
+        "STAGE4-DATA-M10",
+        "STAGE4-DATA-L1",
+        "STAGE4-DATA-L4"
+      ],
+      "id": "OR-02",
+      "observed_coverage": "shadow_runtime 20460/66258 present but 20460 NULLISH -> 0 usable; market_context_v1 1754/1754 non-null; decision_trace_v1 25360/25516 non-null; strategy_observation_v1 25575/25575 non-null",
+      "observed_field": "live_facts.market_phase (shadow_runtime); phase (market_context_v1); v10_market_state.h4.market_phase (decision_trace_v1); market_phase (strategy_observation_v1)",
+      "primary_classification": "FIELD_EXISTS_WRONG_GRAIN",
+      "questions": [
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "L1",
+        "L4"
+      ],
+      "rationale": "market_phase IS persisted at 100% in market_context_v1, decision_trace_v1 and strategy_observation_v1, but at market/observation grain. Inside the lifecycle record the field is emitted yet 100% NULL, so no lifecycle-bound phase survives. This is a grain-binding failure, not an absence of the observable.",
+      "reentry_trigger_class": "SCHEMA_COLLECTION_RECOVERED",
+      "required_grain": "one value per (shadow_trade_id, canonical_opportunity_id, trade_horizon)",
+      "required_identity": [
+        "shadow_trade_id",
+        "canonical_opportunity_id",
+        "trade_horizon"
+      ],
+      "required_lineage": [
+        "producer:shadow_trades"
+      ],
+      "required_observable": "shadow_trades.decision_snapshot.market_phase",
+      "required_timestamp": "causal decision time (pre-entry) + CURRENT epoch",
+      "required_type": "str",
+      "semantic": "Market phase as evaluated at the causal decision instant for THAT lifecycle.",
+      "threshold": "THRESHOLD_GOVERNANCE_REQUIRED",
+      "title": "Market phase bound to the lifecycle decision snapshot",
+      "version_consequence": [
+        "SCHEMA_VERSION_REQUIRED",
+        "PRODUCER_VERSION_REQUIRED"
+      ]
+    },
+    {
+      "authoritative_dataset": "shadow_runtime",
+      "authoritative_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "authoritative_schema": "shadow_runtime_v1",
+      "backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+      "classifications": [
+        "FIELD_EXISTS_PARTIAL_COVERAGE"
+      ],
+      "disposition": "PRODUCER_CHANGE_REQUIRED",
+      "gaps": [
+        "STAGE4-DATA-M3",
+        "STAGE4-DATA-M7",
+        "STAGE4-DATA-M11"
+      ],
+      "id": "OR-03",
+      "observed_coverage": "shadow_runtime 20460/66258 present, 4003 nullish -> 16457 usable; market_context_v1 h4.regime 1754/1754; decision_trace_v1 25360/25516",
+      "observed_field": "live_facts.h4_regime; h4.regime (market_context_v1); v10_market_state.regime (decision_trace_v1)",
+      "primary_classification": "FIELD_EXISTS_PARTIAL_COVERAGE",
+      "questions": [
+        "M3",
+        "M7",
+        "M11"
+      ],
+      "rationale": "The field exists at lifecycle grain but is NULL in 4003 of 20460 OPEN lifecycles; the 80.4% residual is not 100% as the contract requires.",
+      "reentry_trigger_class": "DATA_THRESHOLD_REACHED",
+      "required_grain": "one value per lifecycle",
+      "required_identity": [
+        "shadow_trade_id",
+        "canonical_opportunity_id",
+        "trade_horizon"
+      ],
+      "required_lineage": [
+        "producer:shadow_trades"
+      ],
+      "required_observable": "shadow_trades.decision_snapshot.h4_regime",
+      "required_timestamp": "causal decision time + CURRENT epoch",
+      "required_type": "str",
+      "semantic": "H4 regime classification evaluated at the causal decision instant for that lifecycle.",
+      "threshold": "THRESHOLD_GOVERNANCE_REQUIRED",
+      "title": "H4 regime bound to the lifecycle decision snapshot",
+      "version_consequence": [
+        "PRODUCER_VERSION_REQUIRED"
+      ]
+    },
+    {
+      "authoritative_dataset": "shadow_runtime",
+      "authoritative_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "authoritative_schema": "shadow_runtime_v1",
+      "backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+      "classifications": [
+        "FIELD_EXISTS_PARTIAL_COVERAGE"
+      ],
+      "disposition": "PRODUCER_CHANGE_REQUIRED",
+      "gaps": [
+        "STAGE4-DATA-M9",
+        "STAGE4-DATA-M10",
+        "STAGE4-DATA-M11",
+        "STAGE4-DATA-S4",
+        "STAGE4-DATA-P1"
+      ],
+      "id": "OR-04",
+      "observed_coverage": "shadow_runtime 20460/66258 present, 18047 nullish -> 2413 usable (11.8%)",
+      "observed_field": "live_facts.pattern; detected_pattern (strategy_observation_v1)",
+      "primary_classification": "FIELD_EXISTS_PARTIAL_COVERAGE",
+      "questions": [
+        "M9",
+        "M10",
+        "M11",
+        "S4",
+        "P1"
+      ],
+      "rationale": "Pattern exists at lifecycle grain but 88.2% of OPEN lifecycles carry NULL.",
+      "reentry_trigger_class": "DATA_THRESHOLD_REACHED",
+      "required_grain": "one value per lifecycle",
+      "required_identity": [
+        "shadow_trade_id",
+        "canonical_opportunity_id"
+      ],
+      "required_lineage": [
+        "producer:shadow_trades"
+      ],
+      "required_observable": "shadow_trades.decision_snapshot.pattern",
+      "required_timestamp": "causal decision time + CURRENT epoch",
+      "required_type": "str",
+      "semantic": "Pattern label evaluated at the causal decision instant for that lifecycle.",
+      "threshold": "THRESHOLD_GOVERNANCE_REQUIRED",
+      "title": "Detected pattern bound to the lifecycle decision snapshot",
+      "version_consequence": [
+        "PRODUCER_VERSION_REQUIRED"
+      ]
+    },
+    {
+      "authoritative_dataset": "shadow_runtime",
+      "authoritative_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "authoritative_schema": "shadow_runtime_v1",
+      "backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+      "classifications": [
+        "FIELD_EXISTS_PARTIAL_COVERAGE"
+      ],
+      "disposition": "PRODUCER_CHANGE_REQUIRED",
+      "gaps": [
+        "STAGE4-DATA-M4",
+        "STAGE4-DATA-L1",
+        "STAGE4-DATA-L5"
+      ],
+      "id": "OR-05",
+      "observed_coverage": "shadow_runtime 20460/66258 present, 3841 nullish -> 16619 usable (81.2%)",
+      "observed_field": "live_facts.strategy; strategy_family (strategy_observation_v1)",
+      "primary_classification": "FIELD_EXISTS_PARTIAL_COVERAGE",
+      "questions": [
+        "M4",
+        "L1",
+        "L5"
+      ],
+      "rationale": "Field exists at the right grain but is NULL in 18.8% of OPEN lifecycles.",
+      "reentry_trigger_class": "DATA_THRESHOLD_REACHED",
+      "required_grain": "one value per lifecycle",
+      "required_identity": [
+        "shadow_trade_id",
+        "canonical_opportunity_id"
+      ],
+      "required_lineage": [
+        "producer:shadow_trades"
+      ],
+      "required_observable": "shadow_trades.decision_snapshot.strategy",
+      "required_timestamp": "causal decision time + CURRENT epoch",
+      "required_type": "str",
+      "semantic": "Strategy identifier selected at the causal decision instant for that lifecycle.",
+      "threshold": "THRESHOLD_GOVERNANCE_REQUIRED",
+      "title": "Strategy selection bound to the lifecycle decision snapshot",
+      "version_consequence": [
+        "PRODUCER_VERSION_REQUIRED"
+      ]
+    },
+    {
+      "authoritative_dataset": "shadow_runtime",
+      "authoritative_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "authoritative_schema": "shadow_runtime_v1",
+      "backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+      "classifications": [
+        "FIELD_EXISTS_WRONG_GRAIN"
+      ],
+      "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+      "gaps": [
+        "STAGE4-DATA-S4",
+        "STAGE4-DATA-L1",
+        "STAGE4-DATA-L4",
+        "STAGE4-DATA-L5",
+        "STAGE4-DATA-R3",
+        "STAGE4-DATA-R4",
+        "STAGE4-DATA-R5",
+        "STAGE4-DATA-HORIZON-1",
+        "STAGE4-DATA-L2",
+        "STAGE4-DATA-EX10"
+      ],
+      "id": "OR-06",
+      "observed_coverage": "identity.canonical_opportunity_id 0/66258; identity.shadow_type 20460/66258; top-level canonical_opportunity_id 66258/66258; top-level symbol 66258/66258",
+      "observed_field": "identity.{shadow_type,trade_horizon,evaluated_horizon,entity_id,cycle_id}",
+      "primary_classification": "FIELD_EXISTS_WRONG_GRAIN",
+      "questions": [
+        "S4",
+        "L1",
+        "L4",
+        "L5",
+        "R3",
+        "R4",
+        "R5",
+        "HORIZON-1",
+        "L2",
+        "EX10"
+      ],
+      "rationale": "canonical_opportunity_id and symbol ARE persisted at 100% but at TOP level, not inside the `identity` block the contract names; the nested variants are 0/66258. The governed join reads top-level first and tolerates both, so the observable is materially satisfied.",
+      "reentry_trigger_class": "DATA_THRESHOLD_REACHED",
+      "required_grain": "one per lifecycle",
+      "required_identity": [
+        "shadow_trade_id",
+        "canonical_opportunity_id",
+        "trade_horizon"
+      ],
+      "required_lineage": [
+        "canonical_opportunity_id/entity lineage"
+      ],
+      "required_observable": "shadow_trades.identity.canonical_opportunity_id | identity.shadow_type | identity.evaluated_horizon | identity.symbol",
+      "required_timestamp": "recorded_at_utc",
+      "required_type": "str",
+      "semantic": "Canonical identity triple carried INSIDE the identity block of the lifecycle record.",
+      "threshold": "THRESHOLD_GOVERNANCE_REQUIRED",
+      "title": "Nested identity block with canonical_opportunity_id",
+      "version_consequence": [
+        "CONTRACT_ONLY_CHANGE"
+      ]
+    },
+    {
+      "authoritative_dataset": "shadow_runtime",
+      "authoritative_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "authoritative_schema": "shadow_runtime_v1",
+      "backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+      "classifications": [
+        "FIELD_EXISTS_PARTIAL_COVERAGE"
+      ],
+      "disposition": "SCHEMA_CHANGE_REQUIRED",
+      "gaps": [
+        "STAGE4-DATA-L1",
+        "STAGE4-DATA-L4",
+        "STAGE4-DATA-R4",
+        "STAGE4-DATA-R5",
+        "STAGE4-DATA-L2",
+        "STAGE4-DATA-EX10",
+        "STAGE4-DATA-L5"
+      ],
+      "id": "OR-07",
+      "observed_coverage": "entry_market_time 20460/66258; market_timestamp_semantics 7473/66258 (11.3%); market_timestamp_normalization_version 7473/66258",
+      "observed_field": "entry_market_time, entry_market_time_utc_epoch_s, market_timestamp_semantics, market_timestamp_normalization_version",
+      "primary_classification": "FIELD_EXISTS_PARTIAL_COVERAGE",
+      "questions": [
+        "L1",
+        "L4",
+        "R4",
+        "R5",
+        "L2",
+        "EX10",
+        "L5"
+      ],
+      "rationale": "The epoch fields exist on every OPEN lifecycle, but the two attestation fields the contract requires are present on only 7473 of 66258 rows (11.3%). shadow_timestamp_normalization.reject() fails closed without them, so 88.7% of OPEN rows cannot be timestamp-authoritatively interpreted.",
+      "reentry_trigger_class": "SCHEMA_COLLECTION_RECOVERED",
+      "required_grain": "one per lifecycle OPEN",
+      "required_identity": [
+        "shadow_trade_id",
+        "canonical_opportunity_id"
+      ],
+      "required_lineage": [
+        "shadow_timestamp_normalization.normalize_post_candle_utc_lifecycle"
+      ],
+      "required_observable": "OPEN.entry_market_time | OPEN.entry_market_time_utc_epoch_s | OPEN.market_timestamp_semantics | OPEN.market_timestamp_normalization_version",
+      "required_timestamp": "entry_market_time + semantics attestation",
+      "required_type": "int epoch_s + str semantics",
+      "semantic": "Entry instant in canonical UTC with its declared timestamp semantics and normalization version.",
+      "threshold": "THRESHOLD_GOVERNANCE_REQUIRED",
+      "title": "Lifecycle entry market time in canonical UTC",
+      "version_consequence": [
+        "SCHEMA_VERSION_REQUIRED",
+        "PRODUCER_VERSION_REQUIRED"
+      ]
+    },
+    {
+      "authoritative_dataset": "decision_trace",
+      "authoritative_producer": "decision_diagnostics producer (supporting/decision_trace)",
+      "authoritative_schema": "decision_trace_v1",
+      "backfill": "FUTURE_COLLECTION_ONLY",
+      "classifications": [
+        "FIELD_EXISTS_PARTIAL_COVERAGE"
+      ],
+      "disposition": "PRODUCER_CHANGE_REQUIRED",
+      "gaps": [
+        "STAGE4-DATA-D3",
+        "STAGE4-DATA-X5"
+      ],
+      "id": "OR-08",
+      "observed_coverage": "25360/25516 present but 25360 NULLISH -> 0 usable",
+      "observed_field": "p_success",
+      "primary_classification": "FIELD_EXISTS_PARTIAL_COVERAGE",
+      "questions": [
+        "D3",
+        "X5"
+      ],
+      "rationale": "The key is emitted on 99.4% of rows but is NULL on every one of them. Zero usable values.",
+      "reentry_trigger_class": "DATA_THRESHOLD_REACHED",
+      "required_grain": "one per decision_trace row",
+      "required_identity": [
+        "canonical_opportunity_id"
+      ],
+      "required_lineage": [
+        "producer:decision_trace"
+      ],
+      "required_observable": "decision_trace.p_success",
+      "required_timestamp": "timestamp_utc",
+      "required_type": "float",
+      "semantic": "Producer-issued predicted success probability attached to the decision.",
+      "threshold": "THRESHOLD_GOVERNANCE_REQUIRED",
+      "title": "Predicted success probability p_success",
+      "version_consequence": [
+        "PRODUCER_VERSION_REQUIRED"
+      ]
+    },
+    {
+      "authoritative_dataset": "decision_trace",
+      "authoritative_producer": "decision_diagnostics producer (supporting/decision_trace)",
+      "authoritative_schema": "decision_trace_v1",
+      "backfill": "NOT_APPLICABLE",
+      "classifications": [
+        "SATISFIED_CURRENTLY"
+      ],
+      "disposition": "SATISFIED_ALREADY",
+      "gaps": [
+        "STAGE4-DATA-D3",
+        "STAGE4-DATA-X5"
+      ],
+      "id": "OR-09",
+      "observed_coverage": "25360/25516 (99.4%), no nullish",
+      "observed_field": "v10_entry{direction,entry_price,expected_rr,method,reward_distance,risk_distance,status,stop_price,target_price}",
+      "primary_classification": "SATISFIED_CURRENTLY",
+      "questions": [
+        "D3",
+        "X5"
+      ],
+      "rationale": "v10_entry is emitted, non-null, on 25360 of 25516 decision_trace rows. The observable already satisfies its contract.",
+      "reentry_trigger_class": "DEPENDENCY_RESOLVED",
+      "required_grain": "one per decision_trace row",
+      "required_identity": [
+        "canonical_opportunity_id"
+      ],
+      "required_lineage": [
+        "producer:decision_trace"
+      ],
+      "required_observable": "decision_trace.v10_entry",
+      "required_timestamp": "timestamp_utc",
+      "required_type": "dict",
+      "semantic": "Producer-issued entry plan (direction, entry/stop/target, risk distance) at decision time.",
+      "threshold": "THRESHOLD_GOVERNANCE_REQUIRED",
+      "title": "v10 entry plan",
+      "version_consequence": [
+        "NO_SCHEMA_CHANGE"
+      ]
+    },
+    {
+      "authoritative_dataset": "horizon_candidates",
+      "authoritative_producer": "core/horizon producer",
+      "authoritative_schema": "horizon_candidates_v1",
+      "backfill": "NOT_APPLICABLE",
+      "classifications": [
+        "SATISFIED_CURRENTLY"
+      ],
+      "disposition": "SATISFIED_ALREADY",
+      "gaps": [
+        "STAGE4-DATA-HORIZON-1"
+      ],
+      "id": "OR-10",
+      "observed_coverage": "76710/76710 (100%), no nullish",
+      "observed_field": "canonical_opportunity_id, horizon, selection_status, confidence, eligible",
+      "primary_classification": "SATISFIED_CURRENTLY",
+      "questions": [
+        "HORIZON-1"
+      ],
+      "rationale": "All three required fields are present and non-null on 100% of 76710 rows across 20 date partitions. HORIZON-1's registered observable is fully satisfied as persisted.",
+      "reentry_trigger_class": "DEPENDENCY_RESOLVED",
+      "required_grain": "one per (canonical_opportunity_id, horizon)",
+      "required_identity": [
+        "canonical_opportunity_id",
+        "horizon"
+      ],
+      "required_lineage": [
+        "canonical_opportunity_id"
+      ],
+      "required_observable": "horizon_candidates.canonical_opportunity_id | horizon | selection_status",
+      "required_timestamp": "bar_time / evaluated_at_utc",
+      "required_type": "str",
+      "semantic": "Per-opportunity horizon candidate with its producer-issued selection status.",
+      "threshold": "THRESHOLD_GOVERNANCE_REQUIRED",
+      "title": "Horizon candidate selection state",
+      "version_consequence": [
+        "NO_SCHEMA_CHANGE"
+      ]
+    },
+    {
+      "authoritative_dataset": "strategy_candidates",
+      "authoritative_producer": "core/strategies producer",
+      "authoritative_schema": "strategy_candidates_v1",
+      "backfill": "NOT_APPLICABLE",
+      "classifications": [
+        "SATISFIED_CURRENTLY"
+      ],
+      "disposition": "SATISFIED_ALREADY",
+      "gaps": [
+        "STAGE4-DATA-STRAT-1"
+      ],
+      "id": "OR-11",
+      "observed_coverage": "3386/3386 (100%), no nullish",
+      "observed_field": "canonical_opportunity_id, confidence, rank, selected, symbol, bar_time",
+      "primary_classification": "SATISFIED_CURRENTLY",
+      "questions": [
+        "STRAT-1"
+      ],
+      "rationale": "All four required fields are present and non-null on 100% of 3386 rows. STRAT-1's registered observable is fully satisfied; its residual R-multiple half is governed by OR-01.",
+      "reentry_trigger_class": "DEPENDENCY_RESOLVED",
+      "required_grain": "one per (canonical_opportunity_id, strategy)",
+      "required_identity": [
+        "canonical_opportunity_id"
+      ],
+      "required_lineage": [
+        "canonical_opportunity_id"
+      ],
+      "required_observable": "strategy_candidates.confidence | rank | selected | canonical_opportunity_id",
+      "required_timestamp": "bar_time",
+      "required_type": "float/int/bool",
+      "semantic": "Producer-issued strategy candidate with confidence, rank and selection flag.",
+      "threshold": "THRESHOLD_GOVERNANCE_REQUIRED",
+      "title": "Strategy candidate confidence, rank and selection",
+      "version_consequence": [
+        "NO_SCHEMA_CHANGE"
+      ]
+    },
+    {
+      "authoritative_dataset": "portfolio_rankings",
+      "authoritative_producer": "core/portfolio_ranking producer",
+      "authoritative_schema": "portfolio_ranking_v1",
+      "backfill": "NOT_APPLICABLE",
+      "classifications": [
+        "SATISFIED_CURRENTLY"
+      ],
+      "disposition": "SATISFIED_ALREADY",
+      "gaps": [
+        "STAGE4-DATA-PORT-1"
+      ],
+      "id": "OR-12",
+      "observed_coverage": "570/570 ranking rows carry a candidates list; every sampled candidate element carries selection_status and rank_position",
+      "observed_field": "candidates[].selection_status, candidates[].rank_position, candidates[].rank_score, candidates[].opportunity_id, candidates[].symbol, candidates[].eligible",
+      "primary_classification": "SATISFIED_CURRENTLY",
+      "questions": [
+        "PORT-1"
+      ],
+      "rationale": "Both fields are persisted as elements of the `candidates` list on all 570 portfolio_ranking_v1 rows. The register's dotted path assumed a top-level object; the real grain is a list element, which is the semantically correct per-candidate grain.",
+      "reentry_trigger_class": "DEPENDENCY_RESOLVED",
+      "required_grain": "one per ranking candidate inside a cycle ranking",
+      "required_identity": [
+        "cycle_id",
+        "candidates[].opportunity_id",
+        "candidates[].symbol"
+      ],
+      "required_lineage": [
+        "runtime_session_id",
+        "cycle_id",
+        "ranking_id"
+      ],
+      "required_observable": "portfolio_rankings.candidates.selection_status | candidates.rank_position",
+      "required_timestamp": "ranked_at_utc",
+      "required_type": "str/int",
+      "semantic": "Per-candidate selection status and rank position inside the portfolio ranking decision.",
+      "threshold": "THRESHOLD_GOVERNANCE_REQUIRED",
+      "title": "Portfolio candidate selection status and rank position",
+      "version_consequence": [
+        "CONTRACT_ONLY_CHANGE"
+      ]
+    },
+    {
+      "authoritative_dataset": "opportunities",
+      "authoritative_producer": "core/opportunity/persistence.py",
+      "authoritative_schema": "opportunities_v1",
+      "backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+      "classifications": [
+        "FIELD_EXISTS_PARTIAL_COVERAGE"
+      ],
+      "disposition": "PARTIAL_DATASET_CHANGE_REQUIRED",
+      "gaps": [
+        "STAGE4-DATA-OPP-1"
+      ],
+      "id": "OR-13",
+      "observed_coverage": "canonical_opportunity_id 100850/100850 (100%); opportunity_id/state/overall_score 50521/100850 (50.1%)",
+      "observed_field": "opportunity_id, state, overall_score, canonical_opportunity_id, h4_regime, bias_phase",
+      "primary_classification": "FIELD_EXISTS_PARTIAL_COVERAGE",
+      "questions": [
+        "OPP-1"
+      ],
+      "rationale": "canonical_opportunity_id is universal, but the state-bearing opportunity record is only 50.1% of rows; the remainder are detection-stage rows with no lifecycle state.",
+      "reentry_trigger_class": "DATA_THRESHOLD_REACHED",
+      "required_grain": "one per opportunity",
+      "required_identity": [
+        "opportunity_id",
+        "canonical_opportunity_id"
+      ],
+      "required_lineage": [
+        "canonical_opportunity_id",
+        "observation_id"
+      ],
+      "required_observable": "opportunities.opportunity_id | state | overall_score",
+      "required_timestamp": "bar_time / detected_at_utc",
+      "required_type": "str/float",
+      "semantic": "Opportunity lifecycle identity, current state and producer overall score.",
+      "threshold": "THRESHOLD_GOVERNANCE_REQUIRED",
+      "title": "Opportunity identity, state and overall score",
+      "version_consequence": [
+        "PRODUCER_VERSION_REQUIRED"
+      ]
+    },
+    {
+      "authoritative_dataset": "shadow_runtime (lifecycle side) + events (M5 bar side)",
+      "authoritative_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "authoritative_schema": "shadow_runtime_v1 + events_v1",
+      "backfill": "FUTURE_COLLECTION_ONLY",
+      "classifications": [
+        "FIELD_EXISTS_NO_LINEAGE",
+        "FIELD_EXISTS_WRONG_SEMANTICS"
+      ],
+      "disposition": "NEW_DATASET_REQUIRED",
+      "gaps": [
+        "EX2 (OG-EX2-4db003c3ab76)"
+      ],
+      "id": "OR-14",
+      "observed_coverage": "M5 OHLC complete on 12389/12389 sampled CANDLE M5 rows across 23 date partitions and 10 symbols; 0/15359 events rows carry any lifecycle identity field; trade_state_progression on 20421 rows with shape [{bar,close,r}]",
+      "observed_field": "events_v1 payload {ts,o,h,l,c} for type=CANDLE, source=mt5_data, timeframe=M5; shadow_runtime trade_state_progression [{bar,close,r}]",
+      "primary_classification": "FIELD_EXISTS_NO_LINEAGE",
+      "questions": [
+        "EX2"
+      ],
+      "rationale": "Authoritative M5 OHLC bars DO exist in events_v1 at 100% OHLC completeness. The defect is NOT absence of market data; it is absence of lifecycle binding. Zero CANDLE rows carry shadow_trade_id, canonical_opportunity_id or trade_horizon, so bars can only be attached post hoc by a (symbol, ts) range join. Secondary: the contract names long payload keys open/high/low/close while the producer emits short keys o/h/l/c, and payload timestamp_semantics appears on only 76/15359 rows.",
+      "reentry_trigger_class": "NEW_EVIDENCE_EPOCH",
+      "required_grain": "one record per (shadow_trade_id, canonical_opportunity_id, trade_horizon, M5 bar ts)",
+      "required_identity": [
+        "shadow_trade_id",
+        "canonical_opportunity_id",
+        "trade_horizon"
+      ],
+      "required_lineage": [
+        "producer:shadow_trades",
+        "events_v1 producer instance",
+        "M5 aggregation lineage"
+      ],
+      "required_observable": "events_v1:CANDLE:mt5_data:M5 ordered open/high/low/close between entry_market_time and exit_market_time inclusive",
+      "required_timestamp": "bar ts in producer market time at causal bar close + CURRENT epoch",
+      "required_type": "ordered_sequence_of_ohlc_bars (ts,open,high,low,close)",
+      "semantic": "For one canonical shadow lifecycle, the complete, gap-free, strictly ascending sequence of M5 OHLC bars covering (entry_market_time, exit_market_time] for the lifecycle symbol. bar/close/r alone are permanently forbidden as substitutes.",
+      "threshold": "EXACT: 100% of 8760 governed lifecycles must have a complete ordered M5 OHLC path; the 9045-row widened reconstruction is permanently forbidden",
+      "title": "Ordered M5 OHLC exit path bound to the lifecycle (EX2)",
+      "version_consequence": [
+        "NEW_DATASET_REQUIRED",
+        "SCHEMA_VERSION_REQUIRED",
+        "PRODUCER_VERSION_REQUIRED"
+      ]
+    },
+    {
+      "authoritative_dataset": "shadow_runtime",
+      "authoritative_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "authoritative_schema": "shadow_runtime_v1",
+      "backfill": "FUTURE_COLLECTION_ONLY",
+      "classifications": [
+        "FIELD_MISSING",
+        "FIELD_EXISTS_UNGOVERNED"
+      ],
+      "disposition": "NEW_DATASET_REQUIRED",
+      "gaps": [
+        "L7 (OG-L7-4db003c3ab76)"
+      ],
+      "id": "OR-15",
+      "observed_coverage": "0/66258 for experiment_arm, arm_assigned_at and arm_schema_version; no occurrence of 'experiment_arm' anywhere in core/shadow/*.py",
+      "observed_field": "experiment_arm / arm_assigned_at / arm_schema_version -- all 0/66258",
+      "primary_classification": "FIELD_MISSING",
+      "questions": [
+        "L7"
+      ],
+      "rationale": "The arm does not exist anywhere in the persisted universe or the producer. Separately the Stage 4 V2 successor contract overloads `schema_version` as the assignment field (stage4_registry_successor EVIDENCE_CONTRACT_EXTENSIONS['L7'].assignment_field='schema_version'), a live SEMANTIC COLLISION: shadow_runtime_v1 emits schema_version='shadow_runtime_v1' on 66258/66258 rows, so the L7 fail-closed check can never be satisfied by a real record and would misread any version-shaped token as an arm.",
+      "reentry_trigger_class": "NEW_EVIDENCE_EPOCH",
+      "required_grain": "one assignment per (shadow_trade_id, canonical_opportunity_id, trade_horizon)",
+      "required_identity": [
+        "shadow_trade_id",
+        "canonical_opportunity_id",
+        "trade_horizon"
+      ],
+      "required_lineage": [
+        "producer:shadow_trades",
+        "assignment decision record (issuer, request id, policy version)",
+        "immutability: the arm may never be rewritten or back-filled"
+      ],
+      "required_observable": "shadow_trades.experiment_arm | arm_assigned_at | arm_schema_version, issued before any outcome field is populated",
+      "required_timestamp": "arm_assigned_at written at assignment time, strictly before any outcome field for that entity is populated",
+      "required_type": "closed_enum{CONTROL,CANDIDATE} + arm_schema_version str",
+      "semantic": "A single producer-issued, versioned field carrying exactly one of the two governed arms for the canonical entity under test. shadow_trades_v1 is a dataset schema identity and is NOT CONTROL and NOT CANDIDATE. No chronology, discovery/validation split, treatment inference, selection state, promotion state or outcome behaviour may derive the arm.",
+      "threshold": "L7_MIN = {control: 100, candidate: 100, cell: 30} per research_engine/registry/learning_adaptation_adjudication.L7_MIN; completeness requires 100% of the governed population to be producer-assigned",
+      "title": "Producer-authoritative experiment arm CONTROL/CANDIDATE (L7)",
+      "version_consequence": [
+        "NEW_DATASET_REQUIRED",
+        "SCHEMA_VERSION_REQUIRED",
+        "PRODUCER_VERSION_REQUIRED",
+        "CONTRACT_ONLY_CHANGE"
+      ]
+    }
+  ],
+  "reverse_mapping": {
+    "decision_trace": {
+      "new_dataset": "NO",
+      "producer_bump": "YES",
+      "questions_unlocked": [
+        "D3",
+        "X5"
+      ],
+      "requirements": [
+        "OR-08",
+        "OR-09"
+      ],
+      "schema_bump": "NO"
+    },
+    "events": {
+      "new_dataset": "NO (if exit_bar_path_m5_v2 is owned separately)",
+      "producer_bump": "YES",
+      "questions_unlocked": [
+        "EX2"
+      ],
+      "requirements": [
+        "OR-14"
+      ],
+      "schema_bump": "YES -> events_v2"
+    },
+    "opportunities": {
+      "new_dataset": "NO",
+      "producer_bump": "YES",
+      "questions_unlocked": [
+        "OPP-1"
+      ],
+      "requirements": [
+        "OR-13"
+      ],
+      "schema_bump": "NO"
+    },
+    "shadow_runtime": {
+      "new_dataset": "YES (exit_bar_path_m5_v2)",
+      "producer_bump": "YES",
+      "questions_unlocked": [
+        "EX2",
+        "L7",
+        "E5",
+        "D2",
+        "D4",
+        "D5",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "S4",
+        "X5",
+        "P1",
+        "L1",
+        "L2",
+        "L4",
+        "L5",
+        "R3",
+        "R4",
+        "R5",
+        "EX10",
+        "HORIZON-1",
+        "STRAT-1",
+        "PORT-1"
+      ],
+      "requirements": [
+        "OR-01",
+        "OR-02",
+        "OR-03",
+        "OR-04",
+        "OR-05",
+        "OR-06",
+        "OR-07",
+        "OR-14",
+        "OR-15"
+      ],
+      "schema_bump": "YES -> shadow_runtime_v2"
+    },
+    "shadow_trades": {
+      "new_dataset": "NO -- re-point the register to shadow_runtime_v1",
+      "producer_bump": "NO",
+      "questions_unlocked": [],
+      "requirements": [
+        "OR-01",
+        "OR-02",
+        "OR-03",
+        "OR-04",
+        "OR-05",
+        "OR-06",
+        "OR-07",
+        "OR-15"
+      ],
+      "schema_bump": "N/A"
+    }
+  },
+  "schema": "stage4_observation_requirement_matrix_v1",
+  "shared_root_causes": [
+    {
+      "effect": "removes 27 of 31 false dataset-level blockers without emitting a single new field",
+      "evidence": "list_objects_v2 KeyCount=0 for supporting/shadow_trades/; 66258 rows persisted at supporting/shadow_runtime/schema_version=shadow_runtime_v1/",
+      "gaps_affected": 27,
+      "questions": [
+        "E5",
+        "D2",
+        "D3",
+        "D4",
+        "D5",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "S4",
+        "X5",
+        "P1",
+        "L1",
+        "L2",
+        "L4",
+        "L5",
+        "R3",
+        "R4",
+        "R5",
+        "EX10",
+        "HORIZON-1",
+        "STRAT-1",
+        "PORT-1",
+        "L7"
+      ],
+      "requirements": [
+        "OR-01",
+        "OR-02",
+        "OR-03",
+        "OR-04",
+        "OR-05",
+        "OR-06",
+        "OR-07",
+        "OR-15"
+      ],
+      "root_cause": "re-point the dataset-schema gap register from the phantom `shadow_trades` to the real persisted producer `shadow_runtime_v1`"
+    },
+    {
+      "effect": "one producer fix satisfies the market-state half of 14 registered gaps",
+      "evidence": "market_phase 100% NULL in shadow_runtime while 100% non-null in market_context_v1, decision_trace_v1 and strategy_observation_v1",
+      "gaps_affected": 14,
+      "questions": [
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "S4",
+        "P1",
+        "L1",
+        "L5"
+      ],
+      "requirements": [
+        "OR-02",
+        "OR-03",
+        "OR-04",
+        "OR-05"
+      ],
+      "root_cause": "populate the lifecycle-bound decision snapshot (market_phase, h4_regime, pattern, strategy)"
+    },
+    {
+      "effect": "unblocks canonical-UTC interpretation for every timestamp-dependent question",
+      "evidence": "present on 7473/66258 shadow_runtime rows (11.3%); shadow_timestamp_normalization.reject() fails closed without them",
+      "gaps_affected": 7,
+      "questions": [
+        "L1",
+        "L2",
+        "L4",
+        "L5",
+        "R4",
+        "R5",
+        "EX10"
+      ],
+      "requirements": [
+        "OR-07"
+      ],
+      "root_cause": "emit market_timestamp_semantics + market_timestamp_normalization_version on 100% of OPEN rows"
+    },
+    {
+      "effect": "the only true future-only data gap; NOT a market-data absence",
+      "evidence": "12389/12389 M5 rows OHLC-complete in events_v1, but 0/15359 carry any lifecycle identity",
+      "gaps_affected": 1,
+      "questions": [
+        "EX2"
+      ],
+      "requirements": [
+        "OR-14"
+      ],
+      "root_cause": "bind authoritative M5 OHLC bars to the shadow lifecycle at capture time"
+    },
+    {
+      "effect": "the only true future-only labelling gap; cannot be inferred, only issued",
+      "evidence": "experiment_arm/arm_assigned_at/arm_schema_version = 0/66258 and absent from core/shadow/*.py",
+      "gaps_affected": 1,
+      "questions": [
+        "L7"
+      ],
+      "requirements": [
+        "OR-15"
+      ],
+      "root_cause": "issue a producer-authoritative experiment arm before outcome population"
+    }
+  ],
+  "stamp": "20260929"
+}

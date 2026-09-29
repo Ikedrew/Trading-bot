@@ -525,8 +525,54 @@ def run_g3(
     l6_report: Mapping[str, Any] | None = None,
     snapshot: ResearchStateSnapshot | None = None,
     as_of_utc: str | None = None,
+    records: Sequence[Mapping[str, Any]] | None = None,
+    dependency_finding: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run G3 from supplied canonical state only; never reconstruct science."""
+    if records is not None:
+        from research_engine.control_plane.stage4_impl_ownership_labels import gate_g3_on_l6
+        from research_engine.control_plane.stage4_impl_population2 import enforce_exact_population
+        governed = enforce_exact_population("G3", records)
+        gate = gate_g3_on_l6(dependency_finding)
+        if not gate["allowed"]:
+            return _blocked_report(gate["reason"])
+        dependency_fingerprint = str(
+            dependency_finding.get("content_fingerprint")
+            or dependency_finding.get("certification_fingerprint") or "")
+        if not dependency_fingerprint:
+            return _blocked_report("G3_BLOCKED:L6 CURRENT dependency fingerprint missing")
+        return build_report(
+            question_id="G3", status="INSUFFICIENT_DATA",
+            overall={
+                "finding": _UNKNOWN,
+                "question_count": 0,
+                "dependency": {
+                    "question_id": "L6",
+                    "finding_id": dependency_finding.get("finding_id"),
+                    "finding_version": dependency_finding.get("finding_version"),
+                    "finding_fingerprint": dependency_fingerprint,
+                },
+                "unknown_prevents_completion": True,
+                "authority_defect_prevents_completion": False,
+            },
+            confidence="INSUFFICIENT_DATA",
+            dataset={"source": "frozen governed G3 population", "sample_size": len(governed)},
+            fingerprint={
+                "dataset_id": "G3_STAGE4_GOVERNED_POPULATION",
+                "records_used": len(governed), "records_excluded": 0,
+                "source": "frozen_checkpoint", "epoch": CURRENT_EPOCH,
+                "validation_score": CURRENT_EPOCH,
+            },
+            recommendation=_UNKNOWN,
+            assumptions=["The CURRENT governed L6 successor is pinned; no raw science was reconstructed."],
+            provenance={
+                "experiment_module": __name__, "registry_id": "G3",
+                "scientific_owner": "G3", "contract_version": A.HD15_VERSION,
+                "report_identity": REPORT_FILENAME,
+                "runner_analytical_population": len(governed),
+                "l6_dependency_fingerprint": dependency_fingerprint,
+            },
+        )
     try:
         if snapshot is not None and question_states is not None:
             raise SnapshotAuthorityError("Supply either a frozen G3 snapshot or canonical states")
@@ -596,6 +642,17 @@ def validate_g3_report(report: dict[str, Any]) -> tuple[bool, str]:
         if report.get("status") != "BLOCKED" or not provenance.get("snapshot_error"):
             return False, "G3-level blocked report lacks its authority failure"
         return True, "Owned HD15 G3 evaluation-blocked report is valid but non-completing"
+    if "l6_dependency_fingerprint" in provenance:
+        if report.get("status") != "INSUFFICIENT_DATA" or finding != _UNKNOWN:
+            return False, "G3 governed dependency result has invalid state"
+        if report.get("dataset", {}).get("sample_size") != 1852:
+            return False, "G3 governed analytical population mismatch"
+        dependency = overall.get("dependency", {})
+        if dependency.get("question_id") != "L6" or not dependency.get("finding_fingerprint"):
+            return False, "G3 CURRENT L6 dependency binding missing"
+        if dependency.get("finding_fingerprint") != provenance.get("l6_dependency_fingerprint"):
+            return False, "G3 L6 dependency fingerprint mismatch"
+        return True, "Owned HD15 G3 dependency-bound result is valid"
     manifest = provenance.get("snapshot")
     valid, reason = validate_research_state_snapshot(manifest)
     if not valid:

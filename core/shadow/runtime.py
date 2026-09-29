@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from typing import Any
+from typing import Any, Mapping
 
 from core.shadow.assumptions import (
     DEFAULT_CHECKPOINT_INTERVAL,
@@ -47,7 +47,37 @@ from core.shadow.persistence import (
     get_broker_offset_seconds,
     load_events,
 )
+from core.shadow.observability import (
+    assign_experiment_arm,
+    build_decision_snapshot,
+    build_lifecycle_m5_path,
+    build_market_time_attestation,
+    m5_bar_entry,
+)
+from core.observability_contract import (
+    DATASET_SHADOW_RUNTIME,
+    ObservabilityContractError,
+    assert_emission_contract,
+    assert_producer_contract,
+    build_record_lineage,
+)
 from core.trade_truth import compute_mae_r, compute_mfe_r, compute_r_multiple
+
+
+def shadow_arm_enabled() -> bool:
+    """Whether ROOT-05 arm assignment is active (config-gated, default ON).
+
+    Assignment is on by default because an UNASSIGNED arm is a governance
+    failure, not a neutral state: L7 fails closed without it.  Operators may
+    disable it explicitly, in which case every arm is recorded as
+    UNASSIGNED with a reason rather than silently omitted.
+    """
+    try:
+        from core import config as _cfg
+
+        return bool(getattr(_cfg, "SHADOW_EXPERIMENT_ARM_ENABLED", True))
+    except Exception:
+        return True
 
 logger = logging.getLogger(__name__)
 
@@ -86,9 +116,18 @@ class ShadowRuntime:
     """
 
     def __init__(self, writer: ShadowEventWriter | None = None) -> None:
+        # Stage 4: the emitting code must agree with the governed contract
+        # BEFORE any record is produced.  Fails closed at construction, so a
+        # producer edited without a governed contract change can never reach
+        # the serialization boundary at all.
+        self._contract = assert_producer_contract(DATASET_SHADOW_RUNTIME)
         self._writer = writer or ShadowEventWriter()
         self._active: dict[str, dict[str, Any]] = {}  # trade_id → sim state
         self._planned_roots: set[str] = set()
+        # Stage 4: recovered lifecycles whose persisted metadata identity could
+        # not be proven to be the current governed identity.  They are never
+        # resumed and never emit; the reason is retained for reporting.
+        self._quarantined: dict[str, str] = {}
         self.recover()
 
     # ─────────────────────────────────────────────────────────────────────
@@ -106,6 +145,7 @@ class ShadowRuntime:
         observation_id: str = "",
         shadow_trade_id: str = "",
         horizon: str = "",
+        pinned: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         ev: dict[str, Any] = {
             "event_type": event_type,
@@ -123,9 +163,58 @@ class ShadowRuntime:
         }
         ev.update(utc_market_block("event_market_time", market_time_utc))
         ev.update(_wall_stamp())
+        # Stage 4: the governed lineage envelope is attached HERE, from the
+        # canonical contract authority (never from producer-local constants),
+        # so the stamp and the enforcement in _write() can never be derived
+        # from two different truths.
+        ev["record_lineage"] = self._lifecycle_lineage(event_type, pinned)
         return ev
 
+    @staticmethod
+    def _lifecycle_lineage(
+            event_type: str,
+            pinned: Mapping[str, Any] | None) -> dict[str, Any]:
+        """The governed lineage for one event, pinned to its lifecycle.
+
+        Metadata is resolved per record from the governed contract.  When a
+        lifecycle carries a pinned envelope (its own already-persisted OPEN),
+        that envelope is reused verbatim, so a generation-2 lifecycle can never
+        resume emitting generation-1 metadata and a generation-1 lifecycle is
+        never silently rewritten as generation 2.  A pinned identity that no
+        longer equals the governed identity fails closed.
+        """
+        governed = build_record_lineage(
+            DATASET_SHADOW_RUNTIME, event_type=event_type)
+        if not pinned:
+            return governed
+        for key in ("dataset", "dataset_version", "producer_version",
+                    "evidence_epoch", "collection_start"):
+            if str(pinned.get(key, "")) != str(governed.get(key, "")):
+                raise ObservabilityContractError(
+                    f"LIFECYCLE_LINEAGE_INCOMPATIBLE:{key}:"
+                    f"pinned={pinned.get(key)!r}"
+                    f"!=governed={governed.get(key)!r}")
+        if int(pinned.get("schema_generation", 0) or 0) != \
+                int(governed["schema_generation"]):
+            raise ObservabilityContractError(
+                "LIFECYCLE_LINEAGE_INCOMPATIBLE:schema_generation:"
+                f"pinned={pinned.get('schema_generation')!r}"
+                f"!=governed={governed['schema_generation']!r}")
+        # Reuse the persisted envelope, retagged with this event type.
+        return dict(pinned, event_type=str(event_type or ""))
+
     def _write(self, event: dict[str, Any]) -> None:
+        """
+        THE serialization/persistence boundary for every ``shadow_runtime``
+        record (PLAN, OPEN, PROGRESS and CLOSE all pass through here).
+
+        The canonical Stage 4 guard runs on the FULL outgoing record BEFORE it
+        is serialized or persisted, so "new producer code + wrong/old schema
+        metadata" is not representable.  On failure this raises and NOTHING is
+        written: the guard is never downgraded to a warning, generation-2
+        fields are never stripped, and the metadata is never rewritten.
+        """
+        assert_emission_contract(event, dataset=DATASET_SHADOW_RUNTIME)
         self._writer.append(
             event=event,
             symbol=event.get("symbol", "UNKNOWN"),
@@ -392,6 +481,39 @@ class ShadowRuntime:
             )
             ev.update(utc_market_block("opportunity_market_time", bar_time_utc))
             ev.update(utc_market_block("entry_market_time", bar_time_utc))
+
+            # ─── ROOT CHANGES 02/03/05 — lifecycle-bound evidence ────────
+            # Recorded ONCE, here at OPEN, and then frozen: the decision
+            # instant is the only moment at which these facts are known
+            # without look-ahead.  Each block is additive; the legacy
+            # live_facts/construction blocks above are left untouched so
+            # existing consumers keep byte-identical inputs.
+            ev["decision_snapshot"] = build_decision_snapshot(
+                ctx,
+                shadow_trade_id=trade_id,
+                canonical_opportunity_id=root,
+                trade_horizon=hz,
+                decision_market_time_utc=bar_time_utc,
+            )
+            ev["market_time_attestation"] = build_market_time_attestation(
+                {
+                    "event_market_time": ev.get("event_market_time"),
+                    "opportunity_market_time": ev.get(
+                        "opportunity_market_time"),
+                    "entry_market_time": ev.get("entry_market_time"),
+                },
+                broker_offset_seconds=off,
+            )
+            ev["experiment_arm"] = assign_experiment_arm(
+                canonical_opportunity_id=root,
+                trade_horizon=hz,
+                # The arm is bound to the exact lifecycle and stamped with the
+                # decision instant, so L7 can prove the assignment preceded any
+                # outcome knowledge rather than merely asserting it.
+                shadow_trade_id=trade_id,
+                decision_market_time_utc=bar_time_utc,
+                enabled=shadow_arm_enabled(),
+            )
             self._write(ev)
 
             self._active[trade_id] = {
@@ -408,6 +530,9 @@ class ShadowRuntime:
                 "take_profit": t.take_profit,
                 "pip": pip,
                 "horizon": hz,
+                # The lifecycle's governed metadata identity, pinned at OPEN
+                # and reused verbatim by every later event of this lifecycle.
+                "record_lineage": ev["record_lineage"],
             }
 
     # ─────────────────────────────────────────────────────────────────────
@@ -423,11 +548,17 @@ class ShadowRuntime:
         bar_low: float,
         bar_close: float,
         bar_index: int = 0,
+        bar_open: float | None = None,
     ) -> None:
         """
         Evaluate every ACTIVE simulation for `symbol` against one authoritative
         closed M5 bar. At-most-once per (shadow_trade_id, bar_time) via the
         durable watermark. Never fabricates missed bars (DATA_GAP instead).
+
+        ``bar_open`` is optional so existing callers keep working, but the
+        ROOT-04 lifecycle path is only OHLC-complete when the feed supplies
+        it.  A missing open is recorded as an explicit degradation, never
+        silently filled.
         """
         for trade_id, sim in list(self._active.items()):
             if sim["definition"]["symbol"] != symbol:
@@ -472,6 +603,21 @@ class ShadowRuntime:
             lc.state_log.append({"bar": lc.bars_elapsed, "r": running_r, "close": bar_close})
             lc.last_evaluated_bar_time = int(bar_time)
 
+            # ─── ROOT-04: bind this M5 bar to THIS lifecycle ──────────────
+            # The bar the runtime actually evaluated is recorded with its
+            # full OHLC, so the EX2 exit path is producer-authored rather
+            # than reconstructed later from a (symbol, ts) range join.
+            lc.m5_path.append(
+                m5_bar_entry(
+                    bar_time_utc=int(bar_time),
+                    bar_open=bar_open,
+                    bar_high=bar_high,
+                    bar_low=bar_low,
+                    bar_close=bar_close,
+                    bar_index=int(bar_index),
+                )
+            )
+
             # ─── Exit evaluation — exact fill, SL_FIRST, then timeout ─────
             exit_price: float | None = None
             exit_reason = ""
@@ -511,6 +657,7 @@ class ShadowRuntime:
             observation_id=sim.get("observation_id", ""),
             shadow_trade_id=sim["trade_id"],
             horizon=sim["horizon"],
+            pinned=sim.get("record_lineage"),
         )
         ev.update({"lifecycle": sim["lifecycle"].to_dict()})
         self._write(ev)
@@ -560,6 +707,7 @@ class ShadowRuntime:
             observation_id=sim.get("observation_id", ""),
             shadow_trade_id=sim["trade_id"],
             horizon=sim["horizon"],
+            pinned=sim.get("record_lineage"),
         )
         ev.update(utc_market_block("exit_market_time", exit_market_time))
         ev.update(
@@ -579,6 +727,25 @@ class ShadowRuntime:
                 },
                 "trade_state_progression": list(lc.state_log),
                 "data_gaps": list(lc.data_gaps),
+                # ─── ROOT-04: the lifecycle-bound ordered M5 OHLC path ────
+                "lifecycle_m5_path": build_lifecycle_m5_path(
+                    lc.m5_path,
+                    shadow_trade_id=sim["trade_id"],
+                    canonical_opportunity_id=sim["canonical_opportunity_id"],
+                    trade_horizon=sim["horizon"],
+                    entry_market_time_utc=int(
+                        sim["definition"].get("entry_market_time_utc_epoch_s", 0)
+                    ),
+                    exit_market_time_utc=int(exit_market_time),
+                    symbol=str(sim["definition"].get("symbol", "")),
+                ),
+                "market_time_attestation": build_market_time_attestation(
+                    {
+                        "event_market_time": ev.get("event_market_time"),
+                        "exit_market_time": exit_market_time,
+                    },
+                    broker_offset_seconds=off,
+                ),
                 "final_lifecycle": {
                     "max_favourable_price": lc.max_favourable_price,
                     "max_adverse_price": lc.max_adverse_price,
@@ -601,6 +768,7 @@ class ShadowRuntime:
         Never reads legacy shadow datasets, live positions, or broker tickets.
         """
         self._active.clear()
+        self._quarantined.clear()
         closed: set[str] = set()
         for ev in load_events(self._writer.base_dir):
             et = ev.get("event_type")
@@ -618,11 +786,39 @@ class ShadowRuntime:
                 assumptions = ev.get("simulation_assumptions", {})
                 cons = ev.get("construction", {})
                 identity = ev.get("identity", {})
+                # Stage 4 recovery: the lifecycle's governed metadata identity
+                # is PINNED from its own persisted OPEN, never re-derived from
+                # the current contract.  A lifecycle whose persisted identity
+                # cannot be proven to BE the current governed identity is
+                # QUARANTINED: it is not resumed and nothing is ever emitted
+                # for it.  That is the fail-closed outcome -- an older
+                # generation is never silently rewritten as generation 2, and a
+                # generation-2 lifecycle never resumes generation-1 metadata.
+                # Historical generation-1 records stay READABLE (recovery still
+                # replays the whole stream); they simply cannot produce new
+                # records, which is exactly the "new code + old metadata" ban.
+                pinned = ev.get("record_lineage")
+                if not isinstance(pinned, dict):
+                    self._quarantined[tid] = (
+                        "RECOVERED_LIFECYCLE_UNPINNED:shadow_runtime:"
+                        "no record_lineage on the persisted OPEN")
+                    logger.error(
+                        "[SHADOW_RUNTIME_RECOVERY_QUARANTINE] %s",
+                        self._quarantined[tid])
+                    continue
+                try:
+                    self._lifecycle_lineage("OPEN", pinned)
+                except ObservabilityContractError as exc:
+                    self._quarantined[tid] = str(exc)
+                    logger.error(
+                        "[SHADOW_RUNTIME_RECOVERY_QUARANTINE] %s", exc)
+                    continue
                 self._active[tid] = {
                     "trade_id": tid,
                     "canonical_opportunity_id": ev.get("canonical_opportunity_id", ""),
                     "observation_id": ev.get("observation_id", ""),
                     "definition": ev,
+                    "record_lineage": pinned,
                     "lifecycle": init,
                     "timeout_bars": int(assumptions.get("timeout_bars", 60)),
                     "checkpoint_interval": int(
@@ -679,6 +875,11 @@ class ShadowRuntime:
 
     def active_ids(self) -> list[str]:
         return list(self._active.keys())
+
+    def quarantined_ids(self) -> dict[str, str]:
+        """Recovered lifecycles refused resumption, with their fail-closed
+        reason.  Reporting/introspection only; these emit nothing."""
+        return dict(self._quarantined)
 
 
 _runtime: ShadowRuntime | None = None

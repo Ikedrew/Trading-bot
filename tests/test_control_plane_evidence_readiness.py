@@ -243,7 +243,37 @@ def test_opportunity_question_uses_runner_opportunity_population(tmp_path):
     assert state.current_sample_size == 10
     assert state.evidence_metrics["opportunities_total"] == 10
     assert state.evidence_metrics["assessed_opportunities"] == 10
+    assert state.evidence_metrics["accounting_candidate_records"] == 10
+    assert state.evidence_metrics["accounting_exclusion_reason_counts"] == {
+        "AMBIGUOUS_OR_UNMATCHED_IDENTITY": 0,
+        "REQUIRED_RELATIONSHIP_ABSENT": 0,
+    }
+    assert state.evidence_metrics["candidate_identity_rule"] == "canonical_opportunity_id"
+    assert state.evidence_metrics["candidate_source_overlap_rule"] == "join; source rows are not additive"
     assert state.readiness_status.value == "READY"
+
+
+def test_opportunity_denominator_classifies_conflicts_and_missing_outcomes(tmp_path):
+    horizons = [
+        {"canonical_opportunity_id": "paired", "selection_status": "SELECTED"},
+        {"canonical_opportunity_id": "missing", "selection_status": "REJECTED"},
+        {"canonical_opportunity_id": "conflict", "selection_status": "SELECTED"},
+        {"canonical_opportunity_id": "conflict", "selection_status": "REJECTED"},
+    ]
+    shadows = [_shadow(1)]
+    shadows[0]["identity"]["canonical_opportunity_id"] = "paired"
+    evidence = resolve_question_evidence(
+        get_question("OPP-1"),
+        EvidenceSnapshot({"horizon_candidates": horizons, "shadow_trades": shadows}),
+    )
+    reasons = evidence.metrics["accounting_exclusion_reason_counts"]
+    assert evidence.metrics["accounting_candidate_records"] == 3
+    assert evidence.usable_count == 1
+    assert reasons == {
+        "AMBIGUOUS_OR_UNMATCHED_IDENTITY": 1,
+        "REQUIRED_RELATIONSHIP_ABSENT": 1,
+    }
+    assert 3 == evidence.usable_count + sum(reasons.values())
 
 
 def test_unknown_requirement_type_does_not_pass():

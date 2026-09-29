@@ -32,11 +32,7 @@ _CANONICAL_V1_SOURCES = frozenset({
     "execution_results", "protection_audit", "execution_attempts",
     "risk_deviation",
 })
-_RUNNER_SUPPLEMENTAL_SOURCES = {
-    # run_opp_1 loads these directly even though its registry data_sources tuple
-    # currently omits them.  They are inputs, not additional requirements.
-    "OPP-1": ("opportunities", "assessments"),
-}
+_RUNNER_SUPPLEMENTAL_SOURCES: dict[str, tuple[str, ...]] = {}
 _JOIN_FIELDS = (
     "canonical_opportunity_id", "entity_id", "correlation_id", "trade_id",
     "cycle_id", "position_ticket",
@@ -571,57 +567,73 @@ def _strat_pairs(candidate_records: list[dict[str, Any]], shadow_records: list[d
 
 
 def _opportunity_population(by_source: Mapping[str, DatasetSlice]) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
-    """Mirror OPP-1's classified, outcome-bearing opportunity population."""
-    status_by_opportunity: dict[str, set[str]] = defaultdict(set)
-    for raw in by_source["horizon_candidates"].current_records:
-        row = _normalise(raw, "horizon_candidates")
-        opportunity_id = str(_value(row, "canonical_opportunity_id") or "")
-        status = str(_value(row, "selection_status") or "").upper()
-        if opportunity_id and status:
-            status_by_opportunity[opportunity_id].add(status)
+    """Build OPP-1's governed canonical-opportunity denominator.
 
-    outcomes: dict[str, Any] = {}
-    for raw in by_source["shadow_trades"].current_records:
-        row = _normalise(raw, "shadow_trades")
-        opportunity_id = str(_value(row, "canonical_opportunity_id") or "")
-        outcome = _value(row, "r_multiple")
-        if opportunity_id and _known(outcome):
-            outcomes.setdefault(opportunity_id, outcome)
+    The authoritative population is defined by pre-outcome membership in
+    ``horizon_candidates`` joined to ``shadow_trades`` on
+    ``canonical_opportunity_id``.  The legacy ``opportunities`` and
+    ``assessments`` inputs are not denominator authorities.
+    """
+    from research_engine.experiments.opportunity_selection import (
+        build_opp1_observations,
+        classify_opportunity_membership,
+    )
 
-    assessments: dict[str, dict[str, Any]] = {}
-    for raw in by_source["assessments"].current_records:
-        row = _normalise(raw, "assessments")
-        opportunity_id = str(_value(row, "opportunity_id") or "")
-        if opportunity_id:
-            assessments.setdefault(opportunity_id, row)
+    horizons = by_source["horizon_candidates"].current_records
+    shadows = by_source["shadow_trades"].current_records
+    membership, membership_conflicts = classify_opportunity_membership(horizons)
+    observations, diagnostics = build_opp1_observations(horizons, shadows)
+    conflicts = set(diagnostics.get("conflicting_opportunities", ()))
+    missing_outcomes = int(diagnostics.get("missing_outcomes_excluded", 0) or 0)
+    candidate_count = len(membership) + len(membership_conflicts)
 
-    accepted = {"SELECTED", "PROMOTED", "EXECUTED", "REJECTED", "INELIGIBLE", "NOT_APPLICABLE"}
-    rows: list[dict[str, Any]] = []
-    classified = 0
-    for raw in by_source["opportunities"].current_records:
-        row = _normalise(raw, "opportunities")
-        local_id = str(_value(row, "opportunity_id") or "")
-        canonical_id = str(_value(row, "canonical_opportunity_id") or local_id)
-        if not canonical_id or not status_by_opportunity.get(canonical_id, set()).intersection(accepted):
-            continue
-        classified += 1
-        if canonical_id not in outcomes:
-            continue
-        combined = dict(row)
-        if local_id in assessments:
-            for key, value in assessments[local_id].items():
-                if _present(value):
-                    combined.setdefault(key, value)
-        combined["r_multiple"] = outcomes[canonical_id]
-        rows.append(combined)
-    total = len(by_source["opportunities"].current_records)
-    metrics = {
-        "opportunities_total": total,
-        "classified_opportunities": classified,
-        "opportunities_with_outcomes": len(rows),
-        "assessments_total": len(by_source["assessments"].current_records),
+    accepted = {
+        "SELECTED", "PROMOTED", "EXECUTED",
+        "REJECTED", "INELIGIBLE", "NOT_APPLICABLE",
     }
-    return rows, total - len(rows), metrics
+    classified_source_rows = sum(
+        1 for row in horizons
+        if _present(_value(row, "canonical_opportunity_id"))
+        and str(_value(row, "selection_status") or "").upper() in accepted
+    )
+    duplicate_rows = max(0, classified_source_rows - candidate_count)
+    outside_scope = max(0, len(horizons) - classified_source_rows)
+
+    rows = [
+        {
+            **row,
+            "opportunity_id": row["canonical_opportunity_id"],
+            "selection_status": row["group"],
+            "simulated_outcome.pnl_r_multiple": row["outcome_r"],
+        }
+        for row in observations
+    ]
+    exclusion_reasons = {
+        "AMBIGUOUS_OR_UNMATCHED_IDENTITY": len(conflicts),
+        "REQUIRED_RELATIONSHIP_ABSENT": missing_outcomes,
+    }
+    metrics = {
+        **diagnostics,
+        "opportunities_total": candidate_count,
+        "opportunities_with_outcomes": len(rows),
+        "assessed_opportunities": len(rows),
+        "candidate_inclusion_rule": (
+            "one CURRENT canonical_opportunity_id with deterministic promoted/rejected "
+            "horizon membership"
+        ),
+        "candidate_identity_rule": "canonical_opportunity_id",
+        "candidate_epoch_rule": "CURRENT",
+        "candidate_source_datasets": ("horizon_candidates", "shadow_trades"),
+        "candidate_reconstructed_evidence_participates": True,
+        "candidate_source_overlap_rule": "join; source rows are not additive",
+        "candidate_duplicate_rule": "collapse before denominator membership",
+        "candidate_join_rule": "canonical_opportunity_id; conflicts fail closed",
+        "duplicate_horizon_rows_collapsed": duplicate_rows,
+        "horizon_rows_outside_required_scope": outside_scope,
+        "accounting_candidate_records": candidate_count,
+        "accounting_exclusion_reason_counts": exclusion_reasons,
+    }
+    return rows, sum(exclusion_reasons.values()), metrics
 
 
 def _execution_population(
@@ -1065,8 +1077,13 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
     metrics["covered_days"] = _covered_days(rows)
     metrics["covered_sessions"] = len({str(_value(row, "session_state")) for row in rows if _present(_value(row, "session_state"))})
 
+    required_fields = (
+        ("selection_status", "simulated_outcome.pnl_r_multiple")
+        if question.id == "OPP-1"
+        else question.required_fields
+    )
     missing_fields: list[str] = []
-    for field_name in question.required_fields:
+    for field_name in required_fields:
         count = sum(1 for row in rows if _known(_value(row, field_name)))
         satisfied = count > 0 if rows else False
         reason = f"Required field {field_name!r} present in {count}/{base_count} CURRENT analytical rows"
@@ -1083,20 +1100,29 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
             missing_fields.append(field_name)
 
     from research_engine.data_quality.execution_sizing import eligible_for_fields
-    sizing_safe = [row for row in rows if eligible_for_fields(row, question.required_fields)]
+    sizing_safe = (
+        list(rows)
+        if question.id == "OPP-1"
+        else [row for row in rows if eligible_for_fields(row, required_fields)]
+    )
     metrics["excluded_sizing_quality"] = len(rows) - len(sizing_safe)
-    usable = [
+    field_eligible = [
         row for row in sizing_safe
-        if all(_known(_value(row, field_name)) for field_name in question.required_fields)
+        if all(_known(_value(row, field_name)) for field_name in required_fields)
     ]
+    metrics["excluded_missing_required_fields"] = len(sizing_safe) - len(field_eligible)
+    usable = field_eligible
+    predicate_excluded = 0
     if question.id == "EX2":
+        before_predicate = len(usable)
         usable = [row for row in usable if float(_value(row, "mfe_r")) >= 0.5]
+        predicate_excluded = before_predicate - len(usable)
     usable_count = len(usable)
     metrics["total_eligible"] = usable_count
-    metrics["excluded_missing_required_fields"] = base_count - usable_count
+    metrics["excluded_population_predicate"] = predicate_excluded
 
     categorical = [
-        field_name for field_name in question.required_fields
+        field_name for field_name in required_fields
         if field_name in {"strategy", "pattern", "trade_horizon", "h4_regime", "market_phase", "session_state", "action_type"}
     ]
     if len(categorical) >= 2 and usable:
@@ -1148,3 +1174,70 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
         metrics=dict(sorted(metrics.items())),
         requirements=requirements,
     )
+
+
+def resolve_question_population(
+    question: Any,
+    snapshot: EvidenceSnapshot,
+) -> list[dict[str, Any]]:
+    """Return the exact governed usable CURRENT population for a runner.
+
+    This is the record-bearing counterpart to ``resolve_question_evidence``.
+    It deliberately repeats the resolver's final eligibility predicates so a
+    research runner can consume the same population whose counts Gate 1
+    certified, instead of independently reloading or redefining it.
+    """
+    source_names = [source.value for source in question.data_sources]
+    source_names.extend(_RUNNER_SUPPLEMENTAL_SOURCES.get(question.id, ()))
+    slices = [snapshot.get(source) for source in dict.fromkeys(source_names)]
+    if any(not dataset.available for dataset in slices):
+        return []
+    if question.id in {"M8", "M11", "D2"}:
+        authority_source = "market_context" if question.id == "M8" else "decision_trace"
+        adjusted: list[DatasetSlice] = []
+        for dataset in slices:
+            if dataset.source != authority_source:
+                adjusted.append(dataset)
+                continue
+            current_rows: list[dict[str, Any]] = []
+            transitional = legacy = 0
+            for row in dataset.records:
+                explicit = _recursive_value(row, ("data_epoch", "epoch"))
+                value = str(explicit or "").upper()
+                if value == "TRANSITIONAL":
+                    transitional += 1
+                elif value in {"CURRENT", "CURRENT_ONLY"} or (
+                    not explicit and row.get("schema_version") == current_schema(authority_source)
+                ):
+                    current_rows.append(row)
+                else:
+                    legacy += 1
+            adjusted.append(DatasetSlice(
+                source=dataset.source,
+                available=True,
+                records=dataset.records,
+                current_records=current_rows,
+                transitional_count=transitional,
+                legacy_count=legacy,
+                error=dataset.error,
+            ))
+        slices = adjusted
+    rows, _, _ = _population(question, slices)
+    required_fields = (
+        ("selection_status", "simulated_outcome.pnl_r_multiple")
+        if question.id == "OPP-1"
+        else question.required_fields
+    )
+    from research_engine.data_quality.execution_sizing import eligible_for_fields
+    sizing_safe = (
+        list(rows)
+        if question.id == "OPP-1"
+        else [row for row in rows if eligible_for_fields(row, required_fields)]
+    )
+    usable = [
+        row for row in sizing_safe
+        if all(_known(_value(row, field_name)) for field_name in required_fields)
+    ]
+    if question.id == "EX2":
+        usable = [row for row in usable if float(_value(row, "mfe_r")) >= 0.5]
+    return usable

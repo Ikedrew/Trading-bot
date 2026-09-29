@@ -301,6 +301,11 @@ class DecisionTrace:
     ev: float | None = None
     ev_positive: bool | None = None
     p_success: float | None = None
+    # OR-08: authoritative pre-outcome predicted-success block.  Carries the
+    # model/version lineage and an explicit missing-state when the producer
+    # could not predict.  Distinct from ``p_success`` (the bare value) so a
+    # consumer can always see WHY a value is absent.
+    predicted_success: dict[str, Any] = field(default_factory=dict)
     rr_effective: float | None = None
     confirmation_score: float | None = None
     policy_reasoning: str = ""
@@ -421,6 +426,9 @@ class DecisionTrace:
             "ev": round(self.ev, 6) if self.ev is not None else None,
             "ev_positive": self.ev_positive,
             "p_success": round(self.p_success, 4) if self.p_success is not None else None,
+            # OR-08 lineage + explicit missing-state.  Absent on legacy rows
+            # that predate the producer; never synthesised for them.
+            "predicted_success": self.predicted_success or None,
             "rr_effective": round(self.rr_effective, 3) if self.rr_effective is not None else None,
             "confirmation_score": round(self.confirmation_score, 4) if self.confirmation_score is not None else None,
             "policy_reasoning": self.policy_reasoning,
@@ -847,6 +855,57 @@ def _build_trace(
             pass
     # ─── END V10 PIPELINE EXTRACTION ─────────────────────────────────
 
+    # ─── PREDICTED SUCCESS (OR-08 authoritative producer) ──────────────
+    # The legacy path already carries a producer-issued p_success.  The V10
+    # pipeline never ran the probability estimator, so on the V10 branch the
+    # key was emitted NULL on every persisted row.  The governed fix is to
+    # call the AUTHORITATIVE estimator through the pre-outcome adapter.
+    #
+    # PRE-OUTCOME GUARANTEE: this runs while building the DECISION record,
+    # before any outcome field exists for this entity, and reads only
+    # decision-instant context.  It never derives a value from a realised
+    # outcome and never back-fills a historical row.
+    _predicted_success: dict[str, Any] | None = None
+    if v10_pipeline_result is not None:
+        try:
+            from core.pipeline.predicted_success import (
+                predict_success_probability,
+            )
+
+            _opp = _v10_opportunity or {}
+            _ms = _v10_market_state or {}
+            _quality = _opp.get("overall_quality")
+            _regime = ""
+            _regime_block = _ms.get("regime")
+            if isinstance(_regime_block, dict):
+                _regime = _regime_block.get("regime") or ""
+            if not _regime:
+                _regime = _ms.get("activation_regime") or ""
+
+            _predicted_success = predict_success_probability(
+                opportunity_quality=_quality,
+                market_regime=_regime,
+                confirmation_score=confirmation_score,
+            )
+        except Exception:
+            # A prediction failure must never break decision-trace emission.
+            # It is recorded as unavailable, never dropped and never defaulted.
+            _predicted_success = {
+                "state": "UNAVAILABLE",
+                "p_success": None,
+                "unavailable_reason": "PREDICTED_SUCCESS_PRODUCER_RAISED",
+            }
+
+        # Publish onto the existing governed field ONLY when the authoritative
+        # producer actually produced a value.  A missing value stays missing and
+        # is never replaced by 0.0, 0.5 or any other placeholder.
+        if isinstance(_predicted_success, dict):
+            _ps_value = _predicted_success.get("p_success")
+            if _ps_value is not None:
+                p_success = float(_ps_value)
+
+    # ─── END PREDICTED SUCCESS ────────────────────────────────────────
+
     # ─── DECISION_AUDIT FIELD EXTRACTION (consolidation) ──────────────
     # These fields come from the SAME engine_result / pipeline result that
     # the decision_audit dataset previously read. Extracted here so the
@@ -951,6 +1010,8 @@ def _build_trace(
         ev=ev,
         ev_positive=ev_positive,
         p_success=p_success,
+        # OR-08 authoritative pre-outcome block + lineage (empty on legacy rows).
+        predicted_success=_predicted_success or {},
         rr_effective=rr_effective,
         confirmation_score=confirmation_score,
         policy_reasoning=policy_reasoning,

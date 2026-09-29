@@ -504,6 +504,7 @@ def _records(path: Path) -> Iterable[dict[str, Any]]:
 def load_governed_foundations(
     shadow_dir: str | Path = _DEFAULT_SHADOW_DIR,
     event_dir: str | Path = _DEFAULT_EVENT_DIR,
+    governed_records: Sequence[Mapping[str, Any]] | None = None,
 ) -> tuple[GovernedExitBarPathEvidence, GovernedBaselineReproductionPopulation, CandidateReplayPopulation]:
     """Rebuild the three governed foundations from immutable source evidence."""
     from research_engine.data_access.shadow_runtime_ingestion import reconstruct_completed_shadow_trades
@@ -522,6 +523,25 @@ def load_governed_foundations(
         elif record.get("event_type") == "CLOSE":
             close_by_key.setdefault(key, record)
     completed = reconstruct_completed_shadow_trades(shadow_records)
+    if governed_records is not None:
+        from research_engine.control_plane.stage4_impl_population2 import enforce_exact_population
+        governed = enforce_exact_population("EX2", governed_records)
+        roster = set()
+        for row in governed:
+            identity = row.get("identity") if isinstance(row.get("identity"), Mapping) else {}
+            roster.add((
+                str(row.get("shadow_trade_id") or identity.get("shadow_trade_id") or ""),
+                str(row.get("canonical_opportunity_id") or identity.get("canonical_opportunity_id") or ""),
+                str(row.get("trade_horizon") or row.get("horizon") or identity.get("trade_horizon") or ""),
+            ))
+        completed = [item for item in completed if (
+            str((item.get("identity") or {}).get("shadow_trade_id", "")),
+            str((item.get("identity") or {}).get("canonical_opportunity_id", "")),
+            str((item.get("identity") or {}).get("trade_horizon", "")),
+        ) in roster]
+        if len(completed) != len(governed):
+            raise GovernedAnalysisError(
+                f"EX2_RUNNER_POPULATION_MISMATCH:{len(completed)}!={len(governed)}")
     candles_by_symbol: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for record in _records(Path(event_dir)):
         if (
@@ -580,9 +600,49 @@ def run_ex1() -> dict[str, Any]:
     return analyse_ex1(candidate, reproduction, path)
 
 
-def run_ex2() -> dict[str, Any]:
-    path, reproduction, candidate = load_governed_foundations()
-    return analyse_ex2(candidate, reproduction, path)
+def run_ex2(*, governed_records=None) -> dict[str, Any]:
+    if governed_records is None:
+        raise GovernedAnalysisError("EX2_GOVERNED_POPULATION_REQUIRED")
+    from research_engine.control_plane.stage4_impl_population2 import enforce_exact_population
+    governed = enforce_exact_population("EX2", governed_records)
+    from research_engine.control_plane.stage4_ex2_l7_blocker_adjudication import adjudicate_ex2
+    audit = adjudicate_ex2()
+    if audit["historically_unobserved"]:
+        provenance = {
+            "question_id": "EX2",
+            "runner_analytical_population": len(governed),
+            "observation_gap_adjudication": audit,
+            "readiness": {
+                "state": "HISTORICALLY_UNANSWERABLE",
+                "required_governed_coverage": 1.0,
+                "current_governed_coverage": audit["exact_authoritative_match"] / len(governed),
+                "remaining_path_observations": audit["historically_unobserved"],
+            },
+        }
+        provenance["analytical_digest"] = evidence_digest((provenance,))
+        report = {
+            "question_id": "EX2", "report_schema_version": REPORT_SCHEMA_VERSION,
+            "status": "BLOCKED", "epoch": "CURRENT",
+            "scientific_state": "HISTORICALLY_UNANSWERABLE",
+            "overall": {
+                "finding": "Contract-required ordered M5 OHLC exit paths were not historically retained for every governed lifecycle",
+                "sample_size": len(governed),
+                "observation_gap": "ordered events_v1 M5 OHLC path from entry through exit",
+            },
+            "dataset": {"source": "frozen governed EX2 lifecycle roster", "sample_size": len(governed)},
+            "fingerprint": {"analytical_digest": provenance["analytical_digest"], "epoch": "CURRENT"},
+            "provenance": provenance,
+            "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        material = dict(report)
+        material.pop("generated", None)
+        report["provenance"]["report_digest"] = evidence_digest((material,))
+        return report
+    path, reproduction, candidate = load_governed_foundations(
+        governed_records=governed)
+    report = analyse_ex2(candidate, reproduction, path)
+    report.setdefault("provenance", {})["runner_analytical_population"] = len(governed_records)
+    return report
 
 
 def run_ex9() -> dict[str, Any]:
@@ -599,6 +659,18 @@ def validate_governed_exit_report(report: Mapping[str, Any], question_id: str) -
     provenance = report.get("provenance")
     if not isinstance(provenance, Mapping):
         return False, "governed exit report provenance missing"
+    audit = provenance.get("observation_gap_adjudication")
+    if question_id == "EX2" and audit is not None:
+        if report.get("status") != "BLOCKED" or report.get("scientific_state") != "HISTORICALLY_UNANSWERABLE":
+            return False, "EX2 observation-gap state invalid"
+        if not isinstance(audit, Mapping) or audit.get("classification") != "HISTORICAL_OBSERVATION_GAP":
+            return False, "EX2 observation-gap adjudication invalid"
+        keys = ("exact_authoritative_match", "historically_unobserved", "ambiguous", "unexplained")
+        if int(audit.get("governed_population", -1)) != sum(int(audit.get(key, -1)) for key in keys):
+            return False, "EX2 observation-gap accounting does not conserve"
+        if audit.get("implementation_resolvable_missing") != 0:
+            return False, "EX2 still contains an implementation-resolvable population"
+        return True, "valid governed EX2 historical observation-gap report"
     required_family = (
         tuple(f"EX1:{item}" for item in CANDIDATE_POLICY_IDS) if question_id == "EX1" else
         tuple(f"EX2:{item}" for item in TRAILING_POLICY_IDS) if question_id == "EX2" else

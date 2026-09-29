@@ -22,6 +22,11 @@ from research_engine.control_plane.report_resolver import (
 from research_engine.control_plane.state_builder import build_all_question_states
 from research_engine.data_access.s3_source import S3ResearchDataSource, get_default_source
 from research_engine.registry.research_question_registry import REGISTRY
+from research_engine.v10.universes.assurance_provenance import (
+    BlockerRecord,
+    DatasetSubstitution,
+    FieldResolution,
+)
 from research_engine.v10.universes.evidence_integrity import (
     INTEGRITY_SCHEMA_VERSION,
     EvidenceBatch,
@@ -84,6 +89,7 @@ class CanonicalAnswerBinding:
     sample_size: int | None
     fingerprint: Mapping[str, Any]
     provenance: Mapping[str, Any]
+    scientific_state: str = ""
 
 
 @dataclass(frozen=True)
@@ -142,6 +148,20 @@ def _sample(report: Mapping[str, Any] | None) -> int | None:
 
 def bind_canonical_answers(reports_dir: str | Path = "analysis/reports") -> tuple[CanonicalAnswerBinding, ...]:
     """Bind owned reports without treating stale/legacy artifacts as current."""
+    manifest_states: dict[str, str] = {}
+    manifest_path = Path(reports_dir).parent / "assurance" / "historical_research_pass_20260928.json"
+    if manifest_path.is_file():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest_states = {
+                str(item.get("question_id")): str(item.get("scientific_state") or "")
+                for item in manifest.get("questions", ())
+                if isinstance(item, Mapping)
+            }
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            # Report binding remains fail-closed; a malformed optional pass
+            # manifest cannot grant authority to a result.
+            manifest_states = {}
     bindings = []
     for question in REGISTRY:
         report, path = load_report_for_question(
@@ -166,6 +186,10 @@ def bind_canonical_answers(reports_dir: str | Path = "analysis/reports") -> tupl
             sample_size=_sample(report),
             fingerprint=dict(report.get("fingerprint") or {}) if isinstance(report, Mapping) else {},
             provenance=dict(report.get("provenance") or {}) if isinstance(report, Mapping) else {},
+            scientific_state=manifest_states.get(
+                question.id,
+                str(report.get("scientific_state") or "") if isinstance(report, Mapping) else "",
+            ),
         ))
     return tuple(bindings)
 
@@ -254,16 +278,135 @@ def _question_inputs(states, answers, contracts) -> dict[str, QuestionEvidenceIn
             if item.get("type") in {"coverage", "population_count"}
         ]
         sample_requirements = [item for item in requirements if item.get("type") == "sample_size"]
-        collection_functional = bool(source_requirements) and all(item.get("satisfied") is True for item in source_requirements)
+        source_rows = tuple(
+            item for item in state.evidence_sources if isinstance(item, Mapping)
+        )
+        source_accounting = []
+        for item in source_rows:
+            total = int(item.get("total_records", 0) or 0)
+            current = int(item.get("current_records", 0) or 0)
+            transitional = int(item.get("transitional_excluded", 0) or 0)
+            legacy = int(item.get("legacy_excluded", 0) or 0)
+            exclusion_reason_counts = {
+                "WRONG_EVIDENCE_EPOCH_TRANSITIONAL": transitional,
+                "WRONG_EVIDENCE_EPOCH_LEGACY": legacy,
+            }
+            source_accounting.append({
+                "source": str(item.get("source", "")),
+                "available": item.get("available") is True,
+                "total_records": total,
+                "current_records": current,
+                "transitional_records": transitional,
+                "legacy_records": legacy,
+                "accounted_records": current + transitional + legacy,
+                "balanced": total == current + transitional + legacy,
+                "exclusion_reason_counts": {
+                    reason: count
+                    for reason, count in exclusion_reason_counts.items()
+                    if count
+                },
+            })
+        historical_exhaustive = bool(source_accounting) and all(
+            item["available"] and item["balanced"] for item in source_accounting
+        )
+        metrics = dict(state.evidence_metrics or {})
+        population_reasons = dict(
+            metrics.get("accounting_exclusion_reason_counts") or {}
+        )
+        if not population_reasons:
+            for reason, metric in (
+                ("AMBIGUOUS_OR_UNMATCHED_IDENTITY", "ambiguous_or_unmatched_excluded"),
+                ("FAILED_SIZEING_QUALITY_PREDICATE", "excluded_sizing_quality"),
+                ("MISSING_REQUIRED_FIELD", "excluded_missing_required_fields"),
+                ("EXCLUDED_BY_EXPLICIT_POPULATION_PREDICATE", "excluded_population_predicate"),
+            ):
+                count = int(metrics.get(metric, 0) or 0)
+                if count:
+                    population_reasons[reason] = count
+        population_used = int(state.current_sample_size or 0)
+        population_candidate_value = metrics.get("accounting_candidate_records")
+        if population_candidate_value is None and state.current_sample_size is not None:
+            population_candidate_value = (
+                int(metrics.get("total_current_population", population_used) or 0)
+                + int(metrics.get("ambiguous_or_unmatched_excluded", 0) or 0)
+            )
+        population_candidate = (
+            int(population_candidate_value)
+            if population_candidate_value is not None
+            else None
+        )
+        population_excluded = sum(int(value) for value in population_reasons.values())
+        population_unexplained = (
+            population_candidate - population_used - population_excluded
+            if population_candidate is not None
+            else None
+        )
+        denominator_resolved = (
+            population_candidate is not None
+            and population_unexplained == 0
+        )
+        record_accounting = {
+            "sources": source_accounting,
+            "source_record_count": sum(item["total_records"] for item in source_accounting),
+            "current_record_count": sum(item["current_records"] for item in source_accounting),
+            "historical_record_count": sum(
+                item["transitional_records"] + item["legacy_records"]
+                for item in source_accounting
+            ),
+            "eligible_record_count": state.current_sample_size or 0,
+            "analytical_excluded_record_count": state.excluded_evidence_count,
+            "historical_exhaustive": historical_exhaustive and denominator_resolved,
+            "resolved": historical_exhaustive and denominator_resolved,
+            "population_stage": {
+                "candidate_records": population_candidate,
+                "used_records": population_used,
+                "excluded_records": population_excluded,
+                "unexplained_records": population_unexplained,
+                "exclusion_reason_counts": dict(sorted(population_reasons.items())),
+            },
+            "candidate_denominator_authority": (
+                "OPP1_GOVERNED_CANONICAL_OPPORTUNITY_POPULATION"
+                if state.question_id == "OPP-1"
+                else "CONTROL_PLANE_EVIDENCE_RESOLVER"
+            ),
+            "candidate_denominator_details": {
+                key: metrics[key]
+                for key in (
+                    "candidate_inclusion_rule", "candidate_identity_rule",
+                    "candidate_epoch_rule", "candidate_source_datasets",
+                    "candidate_reconstructed_evidence_participates",
+                    "candidate_source_overlap_rule", "candidate_duplicate_rule",
+                    "candidate_join_rule", "duplicate_horizon_rows_collapsed",
+                    "horizon_rows_outside_required_scope",
+                )
+                if key in metrics
+            },
+        }
+        collection_functional = (
+            bool(source_requirements)
+            and all(item.get("satisfied") is True for item in source_requirements)
+            and historical_exhaustive
+        )
         population_complete = (
             collection_functional
-            and all(item.get("satisfied") is not False for item in (*field_requirements, *join_requirements, *population_requirements))
+            and all(item.get("satisfied") is True for item in (*field_requirements, *join_requirements, *population_requirements))
             and (state.current_sample_size or 0) > 0
         )
         observed_fields = tuple(sorted(
             item.get("name") for item in field_requirements if item.get("satisfied") is True
         ))
-        joins_pass = not join_requirements or all(item.get("satisfied") is True for item in join_requirements)
+        joins_pass = bool(join_requirements) and all(
+            item.get("satisfied") is True for item in join_requirements
+        )
+        observed_resolution = str(state.evidence_metrics.get("observed_resolution") or "")
+        available_lineage = tuple(sorted(
+            field for field in contract.required_lineage
+            if field in observed_fields
+            or any(
+                item.get("name") == field and item.get("satisfied") is True
+                for item in join_requirements
+            )
+        ))
         statistical = StatisticalState.UNKNOWN
         if sample_requirements:
             statistical = (
@@ -295,14 +438,14 @@ def _question_inputs(states, answers, contracts) -> dict[str, QuestionEvidenceIn
         values[state.question_id] = QuestionEvidenceInput(
             question_id=state.question_id,
             contract_fingerprint=contract.contract_fingerprint,
-            existing_state=state.state_status,
+            existing_state=answer.scientific_state or state.state_status,
             existing_result=existing_result,
             actual_population=state.current_sample_size or 0,
             population_complete=population_complete,
             collection_functional=collection_functional,
-            observed_resolution=contract.resolution if population_complete else "",
+            observed_resolution=observed_resolution,
             observed_fields=observed_fields,
-            available_lineage=contract.required_lineage if joins_pass and population_complete else (),
+            available_lineage=available_lineage if joins_pass or available_lineage else (),
             evidence_scope={
                 "sources": state.evidence_sources,
                 "metrics": state.evidence_metrics,
@@ -318,6 +461,7 @@ def _question_inputs(states, answers, contracts) -> dict[str, QuestionEvidenceIn
             negative_result=any(token in answer.finding.upper() for token in ("NO_RELIABLE", "NEGATIVE", "ABSENT", "NULL")),
             negative_observable=population_complete,
             evidence_references=tuple(filter(None, (answer.report_path,))),
+            record_accounting=record_accounting,
         )
     return values
 
@@ -633,11 +777,24 @@ def _qualification_from_dict(value: Mapping[str, Any]) -> QuestionQualificationR
         "integrity_state", "reconciliation_state", "historical_limitations",
         "reconstruction_involvement", "reason_codes", "evidence_references", "blocker_ids",
     }
+    provenance_fields = {
+        "blockers": BlockerRecord,
+        "field_resolutions": FieldResolution,
+        "dataset_substitutions": DatasetSubstitution,
+    }
     for item in value.get("qualifications", ()):
         converted = dict(item)
         converted["sufficiency"] = SufficiencyAssessment(**converted["sufficiency"])
         for name in tuple_fields:
             converted[name] = tuple(converted.get(name, ()))
+        for name, record_type in provenance_fields.items():
+            converted[name] = tuple(
+                record_type.from_dict(entry) for entry in converted.get(name, ()) or ()
+            )
+        converted["blocker_provenance"] = {
+            str(code): tuple(references)
+            for code, references in converted.get("blocker_provenance", {}).items()
+        }
         qualifications.append(QuestionQualification(**converted))
     contradictions = tuple(AssuranceContradiction(**item) for item in value.get("contradictions", ()))
     return QuestionQualificationReport(
@@ -645,6 +802,13 @@ def _qualification_from_dict(value: Mapping[str, Any]) -> QuestionQualificationR
         counts=dict(value.get("counts", {})), blocker_counts=dict(value.get("blocker_counts", {})),
         contract_set_fingerprint=str(value.get("contract_set_fingerprint", "")),
         report_fingerprint=str(value.get("report_fingerprint", "")),
+        blocker_ledger=tuple(
+            BlockerRecord.from_dict(entry) for entry in value.get("blocker_ledger", ()) or ()
+        ),
+        unique_blocker_count=int(value.get("unique_blocker_count", 0) or 0),
+        question_blocker_reference_count=int(value.get("question_blocker_reference_count", 0) or 0),
+        evidence_reference_count=int(value.get("evidence_reference_count", 0) or 0),
+        q71_gate=dict(value.get("q71_gate", {})),
         schema=int(value.get("schema", 0)),
     )
 
@@ -872,13 +1036,7 @@ def qualify_production_checkpointed(
             raise CheckpointValidationError("canonical answer binding changed")
         if wave4_checkpoint.get("report_fingerprint") != qualification.report_fingerprint:
             raise CheckpointValidationError("Wave 4 report fingerprint mismatch")
-        semantic = {
-            "contract_set_fingerprint": qualification.contract_set_fingerprint,
-            "qualifications": [item.to_dict() for item in qualification.qualifications],
-            "counts": dict(sorted(qualification.counts.items())),
-            "blocker_counts": dict(sorted(qualification.blocker_counts.items())),
-            "contradictions": [asdict(item) for item in qualification.contradictions],
-        }
+        semantic = qualification.semantic_material()
         if qualification.report_fingerprint != _fingerprint(semantic):
             raise CheckpointValidationError("Wave 4 semantic fingerprint mismatch")
         if len(qualification.qualifications) != len(REGISTRY):

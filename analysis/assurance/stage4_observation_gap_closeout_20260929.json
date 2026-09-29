@@ -1,0 +1,2137 @@
+{
+  "baseline_audit": {
+    "governed_gaps": 31,
+    "matrix": "analysis\\assurance\\stage4_observation_requirement_matrix_20260929.json",
+    "matrix_fingerprint": "9f384eadf1b73f9deb93e0e63241b269af6e78fbd97157ea5d5951053ee9650c",
+    "observation_requirements": 15
+  },
+  "conservation": {
+    "accounted_gaps": 31,
+    "accounted_observation_requirements": 15,
+    "ownerless_gap_ids": [],
+    "ownerless_gaps": 0,
+    "total_governed_gaps": 31,
+    "total_observation_requirements": 15,
+    "unaccounted_gap_ids": [],
+    "unaccounted_gaps": 0,
+    "unaccounted_observation_requirements": [],
+    "unexplained_gap_ids": [],
+    "unexplained_gaps": 0,
+    "unknown_gap_ids": []
+  },
+  "ex2": {
+    "contract_complete": true,
+    "dataset": "shadow_runtime",
+    "dataset_version": "shadow_runtime_v1",
+    "future_only": true,
+    "historical_backfill_possible": false,
+    "historical_backfill_refusal": "Governed lifecycles were never bound to an OHLC path at capture time. Reconstruction (including the 9,045-row widened path) is permanently forbidden.",
+    "observation_requirement_id": "OR-14",
+    "path_version": "lifecycle_m5_path_v2",
+    "required_bar_fields": [
+      "bar_time_utc",
+      "bar_time_utc_iso8601",
+      "bar_time_semantics",
+      "bar_interval_seconds",
+      "open",
+      "high",
+      "low",
+      "close",
+      "open_available",
+      "bar_index"
+    ],
+    "required_contract_fields": [
+      "path_version",
+      "observation_requirement_id",
+      "lifecycle_identity",
+      "identity_semantics",
+      "symbol",
+      "timeframe",
+      "timeframe_identity",
+      "bar_time_semantics",
+      "ordering_contract",
+      "market_timestamp_semantics",
+      "market_timestamp_normalization_version",
+      "normalization_applied_by_producer",
+      "dataset",
+      "dataset_version",
+      "schema_generation",
+      "producer",
+      "producer_version",
+      "interval",
+      "lineage",
+      "path_completeness_state",
+      "completeness",
+      "bars",
+      "path_digest"
+    ],
+    "schema_generation": 2,
+    "synthetic_historical_paths": 0,
+    "threshold": {
+      "authority": "stage4_ex2_l7_blocker_adjudication (governed EX2 roster) + core.shadow.observability.EX2_REQUIRED_CONTRACT_FIELDS",
+      "classification": "THRESHOLD_GOVERNED",
+      "constant": "EX2_LIFECYCLE_PATH_COMPLETENESS",
+      "forbidden": "The 9,045-row widened reconstruction and any (symbol, ts) range-join reconstruction are permanently forbidden.",
+      "observation_requirement_id": "OR-14",
+      "preserved_verbatim": true,
+      "rules": [
+        {
+          "description": "100% of governed lifecycles must carry a COMPLETE ordered M5 OHLC path bound to the lifecycle identity.",
+          "field": "path_state",
+          "kind": "minimum_complete_observations",
+          "operator": "==",
+          "value": "COMPLETE"
+        },
+        {
+          "description": "Every governed lifecycle, no exclusions.",
+          "field": "lifecycle_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "value": 1.0
+        }
+      ],
+      "threshold_source": "OBSERVATION_REQUIREMENT_CONTRACT"
+    },
+    "threshold_preserved_verbatim": true
+  },
+  "gap_reconciliation": {
+    "counts": {
+      "BACKFILL_PENDING": 0,
+      "COLLECTING": 0,
+      "CONTRACT_BLOCKED": 0,
+      "FUTURE_ONLY": 4,
+      "SATISFIED_OBSERVATION": 0,
+      "UPSTREAM_BLOCKED": 0,
+      "WAITING_THRESHOLD": 27
+    },
+    "rows": [
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-E5",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "E5",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Full outcomes needed for walk-forward split",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          },
+          {
+            "description": "Need decision context to prevent lookahead",
+            "field": "lineage_coverage",
+            "kind": "minimum_lineage_valid_coverage",
+            "operator": ">=",
+            "registry_field": "lineage_coverage",
+            "value": 0.8
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-M3",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-02",
+          "OR-03"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "M3",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "H4 regime required",
+            "field": "h4_regime_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "h4_regime_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Phase must be populated",
+            "field": "market_phase_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "market_phase_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          },
+          {
+            "description": "Distinct canonical opportunities required for chronological validation",
+            "field": "sample_size",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "sample_size",
+            "value": 90
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-M4",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-02",
+          "OR-05"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "M4",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "H4 regime required",
+            "field": "h4_regime_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "h4_regime_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Phase required",
+            "field": "market_phase_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "market_phase_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Clean strategy required",
+            "field": "strategy_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "strategy_coverage",
+            "value": 0.5
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-M5",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-02"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "M5",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Phase history required",
+            "field": "market_phase_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "market_phase_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Closed outcome R required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-M6",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-02"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "M6",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Phase must be populated",
+            "field": "market_phase_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "market_phase_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-M7",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-02",
+          "OR-03"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "M7",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "H4 regime required",
+            "field": "h4_regime_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "h4_regime_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Phase required",
+            "field": "market_phase_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "market_phase_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          },
+          {
+            "description": "Distinct canonical opportunities required for chronological validation",
+            "field": "sample_size",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "sample_size",
+            "value": 90
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-M8",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-02"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "M8",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Phase history required",
+            "field": "market_phase_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "market_phase_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          },
+          {
+            "description": "Distinct joined canonical opportunities required for chronological validation",
+            "field": "sample_size",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "sample_size",
+            "value": 60
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-M9",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-02",
+          "OR-04"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "M9",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Phase must be populated to stratify by phase",
+            "field": "market_phase_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "market_phase_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-M10",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-02",
+          "OR-04"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "M10",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Phase required for stratification",
+            "field": "market_phase_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "market_phase_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Clean strategy labels needed",
+            "field": "strategy_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "strategy_coverage",
+            "value": 0.5
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-M11",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-03",
+          "OR-04"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "M11",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Regime required",
+            "field": "h4_regime_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "h4_regime_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Phase required",
+            "field": "market_phase_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "market_phase_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          },
+          {
+            "description": "Need decision context linked to outcomes",
+            "field": "lineage_coverage",
+            "kind": "minimum_lineage_valid_coverage",
+            "operator": ">=",
+            "registry_field": "lineage_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Distinct joined canonical opportunities required for chronological validation",
+            "field": "sample_size",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "sample_size",
+            "value": 120
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-D2",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "D2",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Need trace→outcome join",
+            "field": "lineage_coverage",
+            "kind": "minimum_lineage_valid_coverage",
+            "operator": ">=",
+            "registry_field": "lineage_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          },
+          {
+            "description": "Distinct paired canonical opportunities required for chronological calibration",
+            "field": "sample_size",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "sample_size",
+            "value": 100
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "FUTURE_COLLECTION_ONLY",
+        "closeout_state": "FUTURE_ONLY",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "decision_trace",
+        "dataset_version": "decision_trace_v1",
+        "disposition": "PRODUCER_CHANGE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-DECISION-TRACE-G2",
+        "gap_id": "STAGE4-DATA-D3",
+        "historical_backfill": "FUTURE_COLLECTION_ONLY",
+        "observation_requirement_id": "OR-08",
+        "observation_requirements_served": [
+          "OR-08",
+          "OR-09"
+        ],
+        "owner_identifier": "decision_diagnostics producer (supporting/decision_trace)",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-DECISION-TRACE-G1",
+          "producer_version": "decision_trace_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "e47a78881a241abbed25061f94a8fcf64004c7174ac1233657242c583cfb45d4",
+        "producer_version": "decision_trace_producer_v2",
+        "question_id": "D3",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "FUTURE_ONLY",
+        "schema_fingerprint": "9d36eda49f9441f3c1a40a08dd85298546c059bb43309258777fc37b0281ab18",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Need trace→outcome join",
+            "field": "lineage_coverage",
+            "kind": "minimum_lineage_valid_coverage",
+            "operator": ">=",
+            "registry_field": "lineage_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          },
+          {
+            "description": "Distinct paired canonical opportunities required for chronological EV-gate validation",
+            "field": "sample_size",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "sample_size",
+            "value": 100
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "valid_evidence"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-D4",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "D4",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Need trace→outcome join",
+            "field": "lineage_coverage",
+            "kind": "minimum_lineage_valid_coverage",
+            "operator": ">=",
+            "registry_field": "lineage_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          },
+          {
+            "description": "Distinct paired canonical opportunities required for chronological score-threshold validation",
+            "field": "sample_size",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "sample_size",
+            "value": 100
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-D5",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "D5",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Need rejection trace→shadow counterfactual join",
+            "field": "lineage_coverage",
+            "kind": "minimum_lineage_valid_coverage",
+            "operator": ">=",
+            "registry_field": "lineage_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Counterfactual shadow outcomes for rejected opportunities",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.5
+          },
+          {
+            "description": "Distinct rejected canonical opportunities with paired outcomes required for chronological validation",
+            "field": "sample_size",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "sample_size",
+            "value": 100
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-S4",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-04",
+          "OR-06"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "S4",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Clean strategy required",
+            "field": "strategy_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "strategy_coverage",
+            "value": 0.5
+          },
+          {
+            "description": "Phase required",
+            "field": "market_phase_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "market_phase_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-R3",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-06",
+        "observation_requirements_served": [
+          "OR-06"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "R3",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Nearly all records must have R-multiple for variance estimation",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          },
+          {
+            "description": "Need full lifecycle for accurate win rate",
+            "field": "lineage_coverage",
+            "kind": "minimum_lineage_valid_coverage",
+            "operator": ">=",
+            "registry_field": "lineage_coverage",
+            "value": 0.8
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-R4",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-06",
+        "observation_requirements_served": [
+          "OR-06",
+          "OR-07"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "R4",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Full outcome history required for drawdown modelling",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-R5",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-06",
+        "observation_requirements_served": [
+          "OR-06",
+          "OR-07"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "R5",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Full outcome distribution required for Kelly calculation",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-L1",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-02",
+          "OR-05",
+          "OR-06",
+          "OR-07"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "L1",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Pattern required",
+            "field": "pattern_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "pattern_coverage",
+            "value": 0.5
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          },
+          {
+            "description": "HD11 overall canonical-opportunity minimum",
+            "field": "sample_size",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "sample_size",
+            "value": 200
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-L2",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-06",
+        "observation_requirements_served": [
+          "OR-06",
+          "OR-07"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "L2",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Pre-change governed observations required.",
+            "field": "pre",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "value": 100
+          },
+          {
+            "description": "Post-change governed observations required.",
+            "field": "post",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "value": 100
+          },
+          {
+            "description": "Minimum observations per comparison cell.",
+            "field": "cell",
+            "kind": "minimum_per_class_or_cell_count",
+            "operator": ">=",
+            "value": 30
+          }
+        ],
+        "threshold_source": "ADJUDICATION_MIN_CONSTANT",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-L4",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-02",
+          "OR-06",
+          "OR-07"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "L4",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Regime history required",
+            "field": "h4_regime_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "h4_regime_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-L5",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-05",
+          "OR-06",
+          "OR-07"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "L5",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Pattern required",
+            "field": "pattern_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "pattern_coverage",
+            "value": 0.5
+          },
+          {
+            "description": "Strategy required",
+            "field": "strategy_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "strategy_coverage",
+            "value": 0.5
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-P1",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-04"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "P1",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Full outcomes needed for impact estimation",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          },
+          {
+            "description": "Need decision context for change modelling",
+            "field": "lineage_coverage",
+            "kind": "minimum_lineage_valid_coverage",
+            "operator": ">=",
+            "registry_field": "lineage_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Clean strategy required for segmentation",
+            "field": "strategy_coverage",
+            "kind": "minimum_non_null_ratio",
+            "operator": ">=",
+            "registry_field": "strategy_coverage",
+            "value": 0.5
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-EX10",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-06",
+        "observation_requirements_served": [
+          "OR-06",
+          "OR-07"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "EX10",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Need outcomes for train/test split",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          },
+          {
+            "description": "Need sufficient sample for temporal split",
+            "field": "sample_size",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "sample_size",
+            "value": 200
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-HORIZON-1",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-06",
+          "OR-10"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "HORIZON-1",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Minimum comparable opportunities",
+            "field": "sample_size",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "sample_size",
+            "value": 30
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-STRAT-1",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-11"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "STRAT-1",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Minimum matched confidence/outcome pairs",
+            "field": "sample_size",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "sample_size",
+            "value": 30
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-X5",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-08",
+          "OR-09"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "X5",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Need trace→outcome join",
+            "field": "lineage_coverage",
+            "kind": "minimum_lineage_valid_coverage",
+            "operator": ">=",
+            "registry_field": "lineage_coverage",
+            "value": 0.8
+          },
+          {
+            "description": "Outcome required",
+            "field": "outcome_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "registry_field": "outcome_coverage",
+            "value": 0.95
+          },
+          {
+            "description": "Distinct paired canonical opportunities required for chronological predicted-EV-vs-realised-R validation",
+            "field": "sample_size",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "sample_size",
+            "value": 100
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "WAITING_THRESHOLD",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "STAGE4-DATA-PORT-1",
+        "historical_backfill": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "observation_requirement_id": "OR-01",
+        "observation_requirements_served": [
+          "OR-01",
+          "OR-12"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "PORT-1",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "WAITING_THRESHOLD",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Need cycles with rankings for selection analysis",
+            "field": "ranking_cycles",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "ranking_cycles",
+            "value": 5
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "threshold_met_where_applicable"
+        ]
+      },
+      {
+        "audited_backfill_claim": "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY",
+        "closeout_state": "FUTURE_ONLY",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "opportunities",
+        "dataset_version": "opportunities_v1",
+        "disposition": "PARTIAL_DATASET_CHANGE_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-OPPORTUNITIES-G1",
+        "gap_id": "STAGE4-DATA-OPP-1",
+        "historical_backfill": "NOT_BACKFILLABLE_DISJOINT_VOCABULARIES",
+        "observation_requirement_id": "OR-13",
+        "observation_requirements_served": [
+          "OR-13"
+        ],
+        "owner_identifier": "core/opportunity/persistence.py",
+        "predecessor": null,
+        "producer_fingerprint": "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214",
+        "producer_version": "opportunities_producer_v1",
+        "question_id": "OPP-1",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "FUTURE_ONLY",
+        "schema_fingerprint": "7982df6f464fe23409a4875a9d56c9892a4114a133015383ac5296c445d17121",
+        "schema_generation": 1,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Need opportunities with shadow outcomes",
+            "field": "assessed_opportunities",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "registry_field": "assessed_opportunities",
+            "value": 10
+          }
+        ],
+        "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
+        "unmet_satisfied_gates": [
+          "valid_evidence"
+        ]
+      },
+      {
+        "audited_backfill_claim": "FUTURE_COLLECTION_ONLY",
+        "closeout_state": "FUTURE_ONLY",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "NEW_DATASET_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "EX2 (OG-EX2-4db003c3ab76)",
+        "historical_backfill": "FUTURE_COLLECTION_ONLY",
+        "observation_requirement_id": "OR-14",
+        "observation_requirements_served": [
+          "OR-14"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "EX2",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "FUTURE_ONLY",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "100% of governed lifecycles must carry a COMPLETE ordered M5 OHLC path bound to the lifecycle identity.",
+            "field": "path_state",
+            "kind": "minimum_complete_observations",
+            "operator": "==",
+            "value": "COMPLETE"
+          },
+          {
+            "description": "Every governed lifecycle, no exclusions.",
+            "field": "lifecycle_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "value": 1.0
+          }
+        ],
+        "threshold_source": "OBSERVATION_REQUIREMENT_CONTRACT",
+        "unmet_satisfied_gates": [
+          "valid_evidence"
+        ]
+      },
+      {
+        "audited_backfill_claim": "FUTURE_COLLECTION_ONLY",
+        "closeout_state": "FUTURE_ONLY",
+        "collection_start": "2026-09-29",
+        "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+        "dataset": "shadow_runtime",
+        "dataset_version": "shadow_runtime_v1",
+        "disposition": "NEW_DATASET_REQUIRED",
+        "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+        "gap_id": "L7 (OG-L7-4db003c3ab76)",
+        "historical_backfill": "FUTURE_COLLECTION_ONLY",
+        "observation_requirement_id": "OR-15",
+        "observation_requirements_served": [
+          "OR-15"
+        ],
+        "owner_identifier": "core/shadow/persistence.py + core/shadow/runtime.py",
+        "predecessor": {
+          "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+          "producer_version": "shadow_runtime_producer_v1",
+          "schema_generation": 1
+        },
+        "producer_fingerprint": "d463f8778de70f03e6632df26968ec839aaa99a2ed2161e0a1a62c7fcde05146",
+        "producer_version": "shadow_runtime_producer_v2",
+        "question_id": "L7",
+        "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
+        "requirement_state": "FUTURE_ONLY",
+        "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
+        "schema_generation": 2,
+        "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_rules": [
+          {
+            "description": "Minimum CONTROL-arm assigned lifecycles.",
+            "field": "control",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "value": 100
+          },
+          {
+            "description": "Minimum CANDIDATE-arm assigned lifecycles.",
+            "field": "candidate",
+            "kind": "minimum_eligible_sample_count",
+            "operator": ">=",
+            "value": 100
+          },
+          {
+            "description": "Minimum observations per comparison cell.",
+            "field": "cell",
+            "kind": "minimum_per_class_or_cell_count",
+            "operator": ">=",
+            "value": 30
+          },
+          {
+            "description": "100% of the governed population must be producer-assigned; unassigned rows fail closed.",
+            "field": "assignment_coverage",
+            "kind": "minimum_event_coverage",
+            "operator": ">=",
+            "value": 1.0
+          }
+        ],
+        "threshold_source": "OBSERVATION_REQUIREMENT_CONTRACT",
+        "unmet_satisfied_gates": [
+          "valid_evidence"
+        ]
+      }
+    ]
+  },
+  "l7": {
+    "arm_policy_version": "experiment_arm_policy_v2",
+    "arm_schema_version": "experiment_arm_schema_v2",
+    "assignment_mechanism": "DETERMINISTIC_IDENTITY_HASH",
+    "contract_complete": true,
+    "dataset": "shadow_runtime",
+    "dataset_version": "shadow_runtime_v1",
+    "design_deficiencies": {
+      "blocking": false,
+      "deficiencies": [
+        "NO_STRATIFICATION_BY_REGIME_SYMBOL_OR_HORIZON",
+        "NO_GUARANTEED_PER_CELL_BALANCE_ON_FINITE_SAMPLES",
+        "NO_BLOCK_OR_CLUSTER_STRUCTURE",
+        "BALANCE_HOLDS_ONLY_IN_EXPECTATION"
+      ],
+      "mechanism": "DETERMINISTIC_IDENTITY_HASH",
+      "rationale": "These are limitations of a random-assignment mechanism, not contract violations. The L7 contract requires a producer-issued, pre-outcome, reproducible CONTROL/CANDIDATE label with minimum per-arm and per-cell samples, all of which this mechanism satisfies. If a future contract requires stratification or guaranteed balance, this list is the exact deficiency to close."
+    },
+    "design_semantics": {
+      "assignment_probability_per_arm": 0.5,
+      "balance_guarantee": "IN_EXPECTATION_OVER_THE_POPULATION_ONLY",
+      "contract_basis": "The L7 question contract requires a producer-issued, pre-outcome, reproducible CONTROL/CANDIDATE label with a minimum per-arm and per-cell sample. Deterministic identity hashing satisfies every one of those requirements.",
+      "does_not_provide": [
+        "STRATIFIED_RANDOMIZATION",
+        "GUARANTEED_FINITE_SAMPLE_BALANCE",
+        "BLOCK_RANDOMIZATION",
+        "CLUSTER_RANDOMIZATION",
+        "COVARIATE_ADAPTIVE_RANDOMIZATION"
+      ],
+      "mechanism": "DETERMINISTIC_IDENTITY_HASH",
+      "provides": [
+        "RANDOM_ASSIGNMENT_IN_EXPLANATION",
+        "UNBIASED_ARM_ALLOCATION",
+        "EXACT_REPRODUCIBILITY",
+        "PRE_OUTCOME_ISSUANCE",
+        "OUTCOME_BLINDNESS"
+      ],
+      "threshold_interpretation": "L7_MIN (control>=100, candidate>=100, cell>=30) are MINIMUM SAMPLE requirements satisfied by collecting until each arm and cell has enough observations. They are NOT balance guarantees and are not implied by the assignment mechanism.",
+      "valid_under_question_contract": true
+    },
+    "experiment_id": "L7_ADAPTATION_EVIDENCE",
+    "experimental_design_valid": true,
+    "future_only": true,
+    "historical_backfill_possible": false,
+    "historical_backfill_refusal": "No producer-issued arm ever existed historically. The arm may never be rewritten or back-filled.",
+    "observation_requirement_id": "OR-15",
+    "required_contract_fields": [
+      "experiment_arm",
+      "arm_schema_version",
+      "experiment_id",
+      "treatment_id",
+      "arm_to_treatment_mapping_version",
+      "arm_to_treatment_mapping",
+      "arm_assigned_at_event",
+      "arm_assigned_at_utc",
+      "arm_assigned_at_market_time_utc",
+      "arm_assignment_id",
+      "arm_policy_version",
+      "arm_assignment_method",
+      "arm_assignment_digest_byte",
+      "arm_assignment_digest",
+      "arm_assigned_for",
+      "arm_producer",
+      "arm_producer_version",
+      "arm_dataset",
+      "arm_dataset_version",
+      "arm_schema_generation",
+      "arm_pre_outcome_attestation",
+      "arm_design_semantics",
+      "arm_unassigned_reason"
+    ],
+    "schema_generation": 2,
+    "schema_version_overload_removed": true,
+    "threshold": {
+      "authority": "research_engine.registry.learning_adaptation_adjudication.L7_MIN",
+      "classification": "THRESHOLD_GOVERNED",
+      "constant": "L7_MIN",
+      "forbidden": null,
+      "observation_requirement_id": "OR-15",
+      "preserved_verbatim": true,
+      "rules": [
+        {
+          "description": "Minimum CONTROL-arm assigned lifecycles.",
+          "field": "control",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "value": 100
+        },
+        {
+          "description": "Minimum CANDIDATE-arm assigned lifecycles.",
+          "field": "candidate",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "value": 100
+        },
+        {
+          "description": "Minimum observations per comparison cell.",
+          "field": "cell",
+          "kind": "minimum_per_class_or_cell_count",
+          "operator": ">=",
+          "value": 30
+        },
+        {
+          "description": "100% of the governed population must be producer-assigned; unassigned rows fail closed.",
+          "field": "assignment_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "value": 1.0
+        }
+      ],
+      "threshold_source": "OBSERVATION_REQUIREMENT_CONTRACT"
+    },
+    "threshold_preserved_verbatim": true
+  },
+  "mutation_ledger": {
+    "backfills_performed": 0,
+    "historical_mutations": 0,
+    "q71_started": false,
+    "q71_started_count": 0,
+    "research_reentry_events": 0,
+    "s3_writes": 0
+  },
+  "opp1": {
+    "conservation": {
+      "missing": 50329,
+      "present": 50521,
+      "present_plus_missing_equals_total": true,
+      "total": 100850
+    },
+    "coverage_after_ratio": 0.500952,
+    "coverage_before_ratio": 0.500952,
+    "coverage_changed": false,
+    "dataset": "opportunities",
+    "dataset_version": "opportunities_v1",
+    "identity_strength": "CANONICAL_OPPORTUNITY_ID_PRESENT_100PCT",
+    "lineage_preservation": "canonical_opportunity_id is present on 100% of rows and is the join key for any future repair; no lineage is lost by preserving the residual gap.",
+    "observation_requirement_id": "OR-13",
+    "question_id": "OPP-1",
+    "reason_categories": [
+      {
+        "authoritative_backfill_possible": false,
+        "backfill_refusal": "NOT BACKFILLABLE. The two shapes use DISJOINT closed vocabularies: legacy state ['DETECTED', 'ASSESSED', 'EXECUTED', 'REJECTED', 'EXPIRED'] vs V10 opportunity_state ['VALID', 'INVALID', 'WATCHING']. Mapping one onto the other is a field REINTERPRETATION (an inference about what a lifecycle state meant), not a deterministic value recovery, and the canonical policy forbids inferring unavailable historical values.",
+        "cause": "PRODUCER_DIVERSION_DISJOINT_VOCABULARY",
+        "explanation": "Two producers write ONE dataset version with two disjoint record shapes. core/opportunity/persistence.py emits opportunity_id/state/overall_score; core/persistence/opportunity_writer.py emits opportunity_state/quality/observation_id and never the governed triple. The missing rows are the V10-written rows, not corrupted or joined-away rows.",
+        "records": 50329,
+        "share": 0.499048
+      }
+    ],
+    "records_missing_governed_triple": 50329,
+    "records_repaired": 0,
+    "records_still_missing": 50329,
+    "records_with_governed_triple": 50521,
+    "remaining_unexplained": 0,
+    "residual_gap_preserved_truthfully": true,
+    "sampled_shape_evidence": {
+      "legacy_shape_rows": 201,
+      "rows_sampled": 400,
+      "shapes_sum_to_sample": true,
+      "v10_shape_rows": 199
+    },
+    "timestamp_compatibility": "bar_time is present on the V10 shape; the legacy shape carries detected_at_bar_time. Both are bar-open epochs, but they identify different producer eras and cannot be merged into one row.",
+    "total_rows": 100850
+  },
+  "p_success": {
+    "authoritative_owner": "core.pipeline.probability_estimator.ProbabilityEstimator",
+    "d3_state": "COLLECTING",
+    "dataset": "decision_trace",
+    "dataset_version": "decision_trace_v1",
+    "derived_from_realized_outcome": false,
+    "emitting_module": "core/decision_trace.py",
+    "evidence_epoch": "STAGE4-EPOCH-DECISION-TRACE-G2",
+    "future_collection": true,
+    "historical_backfill_possible": false,
+    "historical_backfill_refusal": "confirmation_score and market_state were not persisted and the calibration curve was not pinned per row, so the estimator inputs are not available deterministically. Reconstructing them would be an inference and is refused.",
+    "missing_state_behavior": "state=UNAVAILABLE with a named reason and p_success=None. Never 0.0, never 0.5, never silently omitted.",
+    "observation_requirement_id": "OR-08",
+    "pre_outcome": true,
+    "producer_implemented": true,
+    "producer_module": "core/pipeline/predicted_success.py",
+    "producer_version": "decision_trace_producer_v2",
+    "questions": [
+      "D3",
+      "X5"
+    ],
+    "root_cause": "PRODUCER OMISSION, not an upstream data gap: the V10 pipeline never invoked the probability estimator, so the V10 branch of decision_trace read p_success from a dict that never carried it. 25360/25516 rows held the key, 0 held a usable value.",
+    "schema_generation": 2,
+    "value_range": [
+      0.0,
+      1.0
+    ],
+    "value_type": "float",
+    "x5_state": "COLLECTING"
+  },
+  "policy_id": "stage4_data_versioning_policy_v1",
+  "reentry": {
+    "eligible": 0,
+    "executed": 0,
+    "ineligible": 31,
+    "policy": "REENTRY_ELIGIBLE requires a satisfied observation requirement, a met threshold, a frozen evidence epoch and satisfied dependencies. None hold yet, so no question re-entered."
+  },
+  "shadow_runtime": {
+    "collection_start": "2026-09-29",
+    "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
+    "current_producer_version": "shadow_runtime_producer_v2",
+    "current_schema_generation": 2,
+    "dataset": "shadow_runtime",
+    "dataset_version": "shadow_runtime_v1",
+    "fields_added": [
+      "decision_snapshot",
+      "market_time_attestation",
+      "experiment_arm",
+      "lifecycle_m5_path"
+    ],
+    "previous_producer_version": "shadow_runtime_producer_v1",
+    "previous_schema_generation": 1
+  },
+  "stage": "STAGE4_OBSERVATION_GAP_CLOSEOUT",
+  "stamp": "20260929",
+  "thresholds": {
+    "gaps_method_threshold_definition_required": 0,
+    "gaps_with_governed_threshold": 31
+  }
+}

@@ -1,0 +1,4181 @@
+{
+  "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+  "certified_data_gap_relationships": 29,
+  "certified_gap_relationships": 37,
+  "certified_implementation_gap_relationships": 8,
+  "dependency_edges": [
+    {
+      "dependency_status": "UNRESOLVED",
+      "dependency_type": "SCIENTIFIC_DEPENDENCY",
+      "from": "GWI-L6-IMPL",
+      "to": "GWI-G3-IMPL"
+    }
+  ],
+  "existing_feature_map": [
+    {
+      "feature": "lifecycle/research_agenda.py",
+      "purpose": "attention ORDER of executable opportunities",
+      "reason": "blocked work retained but never queueable",
+      "verdict": "REUSED_FOR_PRIORITY_INPUTS"
+    },
+    {
+      "feature": "lifecycle/research_queue.py",
+      "purpose": "bounded NEXT-work recommendation (READY only)",
+      "reason": "gaps are definitionally non-executable",
+      "verdict": "REJECTED_AS_AUTHORITY"
+    },
+    {
+      "feature": "lifecycle/research_priority.py",
+      "purpose": "lexicographic ordering, no profit criterion",
+      "reason": "priority from blocked-count/fanout/immediacy",
+      "verdict": "REUSED_AS_PATTERN"
+    },
+    {
+      "feature": "v10/universes/future_data_contract.py",
+      "purpose": "verified persistence paths, additive-only evolution",
+      "reason": "producer identity plus V1 immutability",
+      "verdict": "REUSED"
+    },
+    {
+      "feature": "registry/master_repair_ledger.py",
+      "purpose": "frozen Wave-A blocker planning consolidation",
+      "reason": "planning snapshot without lifecycle semantics",
+      "verdict": "REUSED_FOR_PHRASE"
+    },
+    {
+      "feature": "lifecycle/revisit_governance.py",
+      "purpose": "closed revisit triggers; revisit is not execute",
+      "reason": "re-entry: resolution, rerun, finding v2",
+      "verdict": "EXTENDED"
+    },
+    {
+      "feature": "control_plane/report_ownership.py",
+      "purpose": "adjudicated single-owner fail-closed map",
+      "reason": "ownership fail-closed plus L3/D1 precedent",
+      "verdict": "REUSED_AS_PATTERN"
+    },
+    {
+      "feature": "lifecycle/research_agenda_store.py",
+      "purpose": "atomic local JSON, dedup, immutable history",
+      "reason": "canonical state persistence discipline",
+      "verdict": "REUSED_AS_PATTERN"
+    }
+  ],
+  "live_or_s3_reads": false,
+  "new_scientific_research_run": false,
+  "q71_started": false,
+  "relationships": [
+    {
+      "finding_id": "E5:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-E5-DATA",
+      "question_id": "E5",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "M3:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M3-DATA",
+      "question_id": "M3",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "M4:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M4-DATA",
+      "question_id": "M4",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "M5:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M5-DATA",
+      "question_id": "M5",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "M6:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M6-DATA",
+      "question_id": "M6",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "M7:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M7-DATA",
+      "question_id": "M7",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "M8:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M8-DATA",
+      "question_id": "M8",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "M9:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M9-DATA",
+      "question_id": "M9",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "M10:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M10-DATA",
+      "question_id": "M10",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "M11:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M11-DATA",
+      "question_id": "M11",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "D2:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-D2-DATA",
+      "question_id": "D2",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "D3:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-D3-DATA",
+      "question_id": "D3",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "D4:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-D4-DATA",
+      "question_id": "D4",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "D5:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-D5-DATA",
+      "question_id": "D5",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "S4:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-S4-DATA",
+      "question_id": "S4",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "R3:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-R3-DATA",
+      "question_id": "R3",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "R4:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-R4-DATA",
+      "question_id": "R4",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "R5:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-R5-DATA",
+      "question_id": "R5",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "L1:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-L1-DATA",
+      "question_id": "L1",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "L2:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-L2-DATA",
+      "question_id": "L2",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "L4:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-L4-DATA",
+      "question_id": "L4",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "L5:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-L5-DATA",
+      "question_id": "L5",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "P1:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-P1-DATA",
+      "question_id": "P1",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "EX10:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-EX10-DATA",
+      "question_id": "EX10",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "HORIZON-1:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-HORIZON-1-DATA",
+      "question_id": "HORIZON-1",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "STRAT-1:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-STRAT-1-DATA",
+      "question_id": "STRAT-1",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "X5:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-X5-DATA",
+      "question_id": "X5",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "PORT-1:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-PORT-1-DATA",
+      "question_id": "PORT-1",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "OPP-1:v1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-OPP-1-DATA",
+      "question_id": "OPP-1",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE"
+    },
+    {
+      "finding_id": "R1:v1",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-R1-IMPL",
+      "question_id": "R1",
+      "scientific_state": "IMPLEMENTATION_BLOCKED"
+    },
+    {
+      "finding_id": "R2:v1",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-R2-IMPL",
+      "question_id": "R2",
+      "scientific_state": "IMPLEMENTATION_BLOCKED"
+    },
+    {
+      "finding_id": "L3:v1",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-L3-IMPL",
+      "question_id": "L3",
+      "scientific_state": "IMPLEMENTATION_BLOCKED"
+    },
+    {
+      "finding_id": "L6:v1",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-L6-IMPL",
+      "question_id": "L6",
+      "scientific_state": "IMPLEMENTATION_BLOCKED"
+    },
+    {
+      "finding_id": "L7:v1",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-L7-IMPL",
+      "question_id": "L7",
+      "scientific_state": "IMPLEMENTATION_BLOCKED"
+    },
+    {
+      "finding_id": "G2:v1",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-G2-IMPL",
+      "question_id": "G2",
+      "scientific_state": "IMPLEMENTATION_BLOCKED"
+    },
+    {
+      "finding_id": "G3:v1",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-G3-IMPL",
+      "question_id": "G3",
+      "scientific_state": "IMPLEMENTATION_BLOCKED"
+    },
+    {
+      "finding_id": "EX2:v1",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-EX2-IMPL",
+      "question_id": "EX2",
+      "scientific_state": "IMPLEMENTATION_BLOCKED"
+    }
+  ],
+  "schema": 1,
+  "stamp": "20260929",
+  "store_fingerprint": "026b905a714917af56ab7b3e082946d8754683fdd3962639a4f09c2889b720ca",
+  "unique_work_items": 37,
+  "work_items": [
+    {
+      "affected_finding_ids": [
+        "E5:v1"
+      ],
+      "affected_question_ids": [
+        "E5"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-E5",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-E5-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P0",
+      "priority_rationale": "collection delay compounds; certified=P0; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Does the measured edge survive on unseen market data using walk-forward testing with rolling windows?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "E5"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "M3:v1"
+      ],
+      "affected_question_ids": [
+        "M3"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-M3",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M3-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "decision_snapshot.h4_regime",
+        "decision_snapshot.market_phase",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "decision_snapshot.h4_regime",
+        "decision_snapshot.market_phase",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "decision_snapshot.h4_regime",
+          "decision_snapshot.market_phase",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Does market_phase (IMPULSE/PULLBACK/CONSOLIDATION/EXHAUSTION/REVERSAL) improve prediction beyond H4 regime alone?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "M3"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "M4:v1"
+      ],
+      "affected_question_ids": [
+        "M4"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-M4",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M4-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "decision_snapshot.h4_regime | decision_snapshot.market_phase | decision_snapshot.strategy; simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "decision_snapshot.h4_regime | decision_snapshot.market_phase | decision_snapshot.strategy; simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "decision_snapshot.h4_regime | decision_snapshot.market_phase | decision_snapshot.strategy; simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Which regime \u00d7 phase \u00d7 strategy combinations produce edge?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "M4"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "M5:v1"
+      ],
+      "affected_question_ids": [
+        "M5"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-M5",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M5-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "simulated_outcome.pnl_r_multiple | decision_snapshot.market_phase"
+      ],
+      "missing_observable": [
+        "simulated_outcome.pnl_r_multiple | decision_snapshot.market_phase"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "simulated_outcome.pnl_r_multiple | decision_snapshot.market_phase"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Do rapid phase transitions predict subsequent realised strategy drawdown in cumulative R? This is not account-equity or mark-to-market drawdown.",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "M5"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "M6:v1"
+      ],
+      "affected_question_ids": [
+        "M6"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-M6",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M6-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "decision_snapshot.market_phase; simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "decision_snapshot.market_phase; simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "decision_snapshot.market_phase; simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Which market phases (IMPULSE/PULLBACK/CONSOLIDATION/EXHAUSTION/REVERSAL) contain real edge?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "M6"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "M7:v1"
+      ],
+      "affected_question_ids": [
+        "M7"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-M7",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M7-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "decision_snapshot.h4_regime",
+        "decision_snapshot.market_phase",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "decision_snapshot.h4_regime",
+        "decision_snapshot.market_phase",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "decision_snapshot.h4_regime",
+          "decision_snapshot.market_phase",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Does combining regime and phase improve predictive power beyond either alone?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "M7"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "M8:v1"
+      ],
+      "affected_question_ids": [
+        "M8"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [
+        {
+          "owner_discovery_required": false,
+          "owner_identifier": "producer:shadow_trades",
+          "owner_type": "SCHEMA_PRODUCER",
+          "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+          "resolution_domain": "dataset-producer/shadow_trades"
+        }
+      ],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "market_context",
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "market_context": "market_context_v1",
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "market_context",
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-M8",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M8-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "market_phase + timestamp",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "market_phase + timestamp",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:market_context",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "core/market_context/persistence.py",
+        "resolution_domain": "dataset-producer/market_context"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "market_phase + timestamp",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Do market phase transitions (e.g. IMPULSE\u2192EXHAUSTION) predict future trade outcomes?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "M8"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "M9:v1"
+      ],
+      "affected_question_ids": [
+        "M9"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-M9",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M9-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "decision_snapshot.market_phase | decision_snapshot.pattern; simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "decision_snapshot.market_phase | decision_snapshot.pattern; simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P0",
+      "priority_rationale": "collection delay compounds; certified=P0; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "decision_snapshot.market_phase | decision_snapshot.pattern; simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "For each market phase (IMPULSE, PULLBACK, CONSOLIDATION, EXHAUSTION, REVERSAL), which patterns or behaviours actually belong there and produce positive expectancy?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "M9"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "M10:v1"
+      ],
+      "affected_question_ids": [
+        "M10"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-M10",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M10-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "decision_snapshot.market_phase | decision_snapshot.pattern (family derived via STRATEGY_FAMILIES mapping); simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "decision_snapshot.market_phase | decision_snapshot.pattern (family derived via STRATEGY_FAMILIES mapping); simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P0",
+      "priority_rationale": "collection delay compounds; certified=P0; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "decision_snapshot.market_phase | decision_snapshot.pattern (family derived via STRATEGY_FAMILIES mapping); simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Does each market phase require a different strategy family (reversal, continuation, momentum, breakout) rather than different pattern weighting within one family?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "M10"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "M11:v1"
+      ],
+      "affected_question_ids": [
+        "M11"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [
+        {
+          "owner_discovery_required": false,
+          "owner_identifier": "producer:decision_trace",
+          "owner_type": "SCHEMA_PRODUCER",
+          "owning_module": "core/decision_trace.py",
+          "resolution_domain": "dataset-producer/decision_trace"
+        }
+      ],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades",
+        "decision_trace"
+      ],
+      "current_schema_versions": {
+        "decision_trace": "decision_trace_v1",
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades",
+        "decision_trace"
+      ],
+      "gap_id": "STAGE4-DATA-M11",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-M11-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "v10_market_state.regime + v10_market_state.h4.market_phase + v10_market_state.h1.dominant_trend",
+        "decision_snapshot.pattern",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "v10_market_state.regime + v10_market_state.h4.market_phase + v10_market_state.h1.dominant_trend",
+        "decision_snapshot.pattern",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P0",
+      "priority_rationale": "collection delay compounds; certified=P0; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "v10_market_state.regime + v10_market_state.h4.market_phase + v10_market_state.h1.dominant_trend",
+          "decision_snapshot.pattern",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Does market context (regime + phase + bias) provide more predictive value for trade outcomes than the pattern identity itself?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "M11"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "D2:v1"
+      ],
+      "affected_question_ids": [
+        "D2"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [
+        {
+          "owner_discovery_required": false,
+          "owner_identifier": "producer:shadow_trades",
+          "owner_type": "SCHEMA_PRODUCER",
+          "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+          "resolution_domain": "dataset-producer/shadow_trades"
+        }
+      ],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "decision_trace": "decision_trace_v1",
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-D2",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-D2-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:decision_trace",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "core/decision_trace.py",
+        "resolution_domain": "dataset-producer/decision_trace"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P0",
+      "priority_rationale": "collection delay compounds; certified=P0; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Is the system's predicted probability (p_success) calibrated to actual win rate?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "D2"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "D3:v1"
+      ],
+      "affected_question_ids": [
+        "D3"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [
+        {
+          "owner_discovery_required": false,
+          "owner_identifier": "producer:shadow_trades",
+          "owner_type": "SCHEMA_PRODUCER",
+          "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+          "resolution_domain": "dataset-producer/shadow_trades"
+        }
+      ],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "decision_trace": "decision_trace_v1",
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-D3",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-D3-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "p_success",
+        "v10_entry",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "p_success",
+        "v10_entry",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:decision_trace",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "core/decision_trace.py",
+        "resolution_domain": "dataset-producer/decision_trace"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "p_success",
+          "v10_entry",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Does the pre-decision predicted-EV (R units) gate relate to subsequent realised R?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "D3"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "V2_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "D4:v1"
+      ],
+      "affected_question_ids": [
+        "D4"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [
+        {
+          "owner_discovery_required": false,
+          "owner_identifier": "producer:shadow_trades",
+          "owner_type": "SCHEMA_PRODUCER",
+          "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+          "resolution_domain": "dataset-producer/shadow_trades"
+        }
+      ],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "decision_trace": "decision_trace_v1",
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-D4",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-D4-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:decision_trace",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "core/decision_trace.py",
+        "resolution_domain": "dataset-producer/decision_trace"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Does the canonical pre-decision score (score_strategy) separate subsequent realised R, and is a discovery-selected threshold supported on later unseen data?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "D4"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "D5:v1"
+      ],
+      "affected_question_ids": [
+        "D5"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [
+        {
+          "owner_discovery_required": false,
+          "owner_identifier": "producer:shadow_trades",
+          "owner_type": "SCHEMA_PRODUCER",
+          "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+          "resolution_domain": "dataset-producer/shadow_trades"
+        }
+      ],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "decision_trace": "decision_trace_v1",
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-D5",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-D5-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:decision_trace",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "core/decision_trace.py",
+        "resolution_domain": "dataset-producer/decision_trace"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Do rejected/no-trade canonical opportunities subsequently show counterfactual shadow outcomes indicating the rejection logic filters harmful or discards useful opportunities?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "D5"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "S4:v1"
+      ],
+      "affected_question_ids": [
+        "S4"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-S4",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-S4-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "identity.canonical_opportunity_id | identity.shadow_type | decision_snapshot.strategy | decision_snapshot.market_phase | simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "identity.canonical_opportunity_id | identity.shadow_type | decision_snapshot.strategy | decision_snapshot.market_phase | simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "identity.canonical_opportunity_id | identity.shadow_type | decision_snapshot.strategy | decision_snapshot.market_phase | simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Are strategies specialised for certain market phases? (e.g. REVERSAL only in EXHAUSTION)",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "S4"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "CONTRACT_ONLY_CHANGE",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "R3:v1"
+      ],
+      "affected_question_ids": [
+        "R3"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-R3",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-R3-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "canonical_opportunity_id"
+      ],
+      "missing_observable": [
+        "canonical_opportunity_id"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P0",
+      "priority_rationale": "collection delay compounds; certified=P0; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "canonical_opportunity_id"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Given the measured edge, win rate, variance and position sizing, what is the probability that this system eventually reaches catastrophic drawdown?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "R3"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "CONTRACT_ONLY_CHANGE",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "R4:v1"
+      ],
+      "affected_question_ids": [
+        "R4"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-R4",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-R4-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "canonical_opportunity_id",
+        "entry_time"
+      ],
+      "missing_observable": [
+        "canonical_opportunity_id",
+        "entry_time"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P0",
+      "priority_rationale": "collection delay compounds; certified=P0; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "canonical_opportunity_id",
+          "entry_time"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "At what realised drawdown should the system automatically suspend trading because historical recovery probability becomes unacceptable?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "R4"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "CONTRACT_ONLY_CHANGE",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "R5:v1"
+      ],
+      "affected_question_ids": [
+        "R5"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-R5",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-R5-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "canonical_opportunity_id"
+      ],
+      "missing_observable": [
+        "canonical_opportunity_id"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "canonical_opportunity_id"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "What position sizing model (fixed risk, Kelly, half-Kelly, fractional Kelly, fixed lot, dynamic) maximises long-term growth while respecting acceptable drawdown?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "R5"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "CONTRACT_ONLY_CHANGE",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "L1:v1"
+      ],
+      "affected_question_ids": [
+        "L1"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-L1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-L1-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "identity.canonical_opportunity_id | identity.shadow_type | decision_snapshot.pattern | simulated_outcome.pnl_r_multiple",
+        "OPEN.entry_market_time | OPEN.entry_market_time_utc_epoch_s | OPEN.market_timestamp_semantics | OPEN.market_timestamp_normalization_version",
+        "CANDLE:mt5_data:M5.payload.ts and OHLC"
+      ],
+      "missing_observable": [
+        "identity.canonical_opportunity_id | identity.shadow_type | decision_snapshot.pattern | simulated_outcome.pnl_r_multiple",
+        "OPEN.entry_market_time | OPEN.entry_market_time_utc_epoch_s | OPEN.market_timestamp_semantics | OPEN.market_timestamp_normalization_version",
+        "CANDLE:mt5_data:M5.payload.ts and OHLC"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "identity.canonical_opportunity_id | identity.shadow_type | decision_snapshot.pattern | simulated_outcome.pnl_r_multiple",
+          "OPEN.entry_market_time | OPEN.entry_market_time_utc_epoch_s | OPEN.market_timestamp_semantics | OPEN.market_timestamp_normalization_version",
+          "CANDLE:mt5_data:M5.payload.ts and OHLC"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Are patterns degrading in performance over time?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "L1"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "CONTRACT_ONLY_CHANGE",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "L2:v1"
+      ],
+      "affected_question_ids": [
+        "L2"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-L2",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-L2-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "canonical_opportunity_id",
+        "entry_time"
+      ],
+      "missing_observable": [
+        "canonical_opportunity_id",
+        "entry_time"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "canonical_opportunity_id",
+          "entry_time"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Does the system improve after architecture changes? (compare pre/post periods)",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "L2"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "CONTRACT_ONLY_CHANGE",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "L4:v1"
+      ],
+      "affected_question_ids": [
+        "L4"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [
+        {
+          "owner_discovery_required": false,
+          "owner_identifier": "producer:market_context",
+          "owner_type": "SCHEMA_PRODUCER",
+          "owning_module": "core/market_context/persistence.py",
+          "resolution_domain": "dataset-producer/market_context"
+        }
+      ],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades",
+        "market_context"
+      ],
+      "current_schema_versions": {
+        "market_context": "market_context_v1",
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades",
+        "market_context"
+      ],
+      "gap_id": "STAGE4-DATA-L4",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-L4-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "identity.canonical_opportunity_id | identity.symbol | identity.shadow_type | simulated_outcome.pnl_r_multiple",
+        "OPEN.entry_market_time canonical UTC authority",
+        "symbol | bar_time | regime"
+      ],
+      "missing_observable": [
+        "identity.canonical_opportunity_id | identity.symbol | identity.shadow_type | simulated_outcome.pnl_r_multiple",
+        "OPEN.entry_market_time canonical UTC authority",
+        "symbol | bar_time | regime"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "identity.canonical_opportunity_id | identity.symbol | identity.shadow_type | simulated_outcome.pnl_r_multiple",
+          "OPEN.entry_market_time canonical UTC authority",
+          "symbol | bar_time | regime"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Does market behaviour change over time in ways that invalidate strategy assumptions?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "L4"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "CONTRACT_ONLY_CHANGE",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "L5:v1"
+      ],
+      "affected_question_ids": [
+        "L5"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-L5",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-L5-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "identity.canonical_opportunity_id | identity.evaluated_horizon | decision_snapshot.strategy | decision_snapshot.entry_time | simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "identity.canonical_opportunity_id | identity.evaluated_horizon | decision_snapshot.strategy | decision_snapshot.entry_time | simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "identity.canonical_opportunity_id | identity.evaluated_horizon | decision_snapshot.strategy | decision_snapshot.entry_time | simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Do patterns, strategies, or market assumptions lose predictive power over time?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "L5"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "CONTRACT_ONLY_CHANGE",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "P1:v1"
+      ],
+      "affected_question_ids": [
+        "P1"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [
+        {
+          "owner_discovery_required": false,
+          "owner_identifier": "producer:decision_trace",
+          "owner_type": "SCHEMA_PRODUCER",
+          "owning_module": "core/decision_trace.py",
+          "resolution_domain": "dataset-producer/decision_trace"
+        }
+      ],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades",
+        "decision_trace"
+      ],
+      "current_schema_versions": {
+        "decision_trace": "decision_trace_v1",
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades",
+        "decision_trace"
+      ],
+      "gap_id": "STAGE4-DATA-P1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-P1-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "decision_snapshot.pattern",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "decision_snapshot.pattern",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P0",
+      "priority_rationale": "collection delay compounds; certified=P0; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "decision_snapshot.pattern",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "If a specific recommendation is promoted into production, what measurable improvement in EV, win rate, drawdown, trade frequency, and risk is expected?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "P1"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "FUTURE_VERSION_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "EX10:v1"
+      ],
+      "affected_question_ids": [
+        "EX10"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-EX10",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-EX10-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "canonical_opportunity_id",
+        "entry_time"
+      ],
+      "missing_observable": [
+        "canonical_opportunity_id",
+        "entry_time"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P0",
+      "priority_rationale": "collection delay compounds; certified=P0; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "canonical_opportunity_id",
+          "entry_time"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Does the exit policy improvement hold on out-of-sample data using time-ordered walk-forward validation?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "EX10"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "CONTRACT_ONLY_CHANGE",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "HORIZON-1:v1"
+      ],
+      "affected_question_ids": [
+        "HORIZON-1"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [
+        {
+          "owner_discovery_required": false,
+          "owner_identifier": "producer:horizon_candidates",
+          "owner_type": "SCHEMA_PRODUCER",
+          "owning_module": "research_engine/experiments/selection_research.py",
+          "resolution_domain": "dataset-producer/horizon_candidates"
+        }
+      ],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades",
+        "horizon_candidates"
+      ],
+      "current_schema_versions": {
+        "horizon_candidates": "horizon_candidates_v1",
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades",
+        "horizon_candidates"
+      ],
+      "gap_id": "STAGE4-DATA-HORIZON-1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-HORIZON-1-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "identity.canonical_opportunity_id | identity.evaluated_horizon | identity.shadow_type | simulated_outcome.pnl_r_multiple",
+        "canonical_opportunity_id | horizon | selection_status"
+      ],
+      "missing_observable": [
+        "identity.canonical_opportunity_id | identity.evaluated_horizon | identity.shadow_type | simulated_outcome.pnl_r_multiple",
+        "canonical_opportunity_id | horizon | selection_status"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "identity.canonical_opportunity_id | identity.evaluated_horizon | identity.shadow_type | simulated_outcome.pnl_r_multiple",
+          "canonical_opportunity_id | horizon | selection_status"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Within-opportunity comparison: for each canonical opportunity with simulated outcomes for the selected horizon AND >=1 alternative horizon, was the selection supported by subsequent evidence? Simulated counterfactuals on shadow-observed opportunities.",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "HORIZON-1"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "CONTRACT_ONLY_CHANGE",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "STRAT-1:v1"
+      ],
+      "affected_question_ids": [
+        "STRAT-1"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [
+        {
+          "owner_discovery_required": false,
+          "owner_identifier": "producer:shadow_trades",
+          "owner_type": "SCHEMA_PRODUCER",
+          "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+          "resolution_domain": "dataset-producer/shadow_trades"
+        }
+      ],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "strategy_candidates",
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "shadow_trades": "shadow_trades_v1",
+        "strategy_candidates": "strategy_candidates_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "strategy_candidates",
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-STRAT-1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-STRAT-1-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "confidence | rank | selected | canonical_opportunity_id",
+        "simulated_outcome.pnl_r_multiple (PRIMARY_HORIZON_SIMULATION)"
+      ],
+      "missing_observable": [
+        "confidence | rank | selected | canonical_opportunity_id",
+        "simulated_outcome.pnl_r_multiple (PRIMARY_HORIZON_SIMULATION)"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:strategy_candidates",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/experiments/strategy_expectancy.py",
+        "resolution_domain": "dataset-producer/strategy_candidates"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "confidence | rank | selected | canonical_opportunity_id",
+          "simulated_outcome.pnl_r_multiple (PRIMARY_HORIZON_SIMULATION)"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Ranking/monotonicity analysis of pre-decision strategy-selection confidence against subsequent primary-horizon shadow outcomes. NOT calibration (confidence is a relative score). Rejected strategies have no simulated outcomes \u2014 selection optimality cannot yet be proven.",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "STRAT-1"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "CONTRACT_ONLY_CHANGE",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "X5:v1"
+      ],
+      "affected_question_ids": [
+        "X5"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [
+        {
+          "owner_discovery_required": false,
+          "owner_identifier": "producer:shadow_trades",
+          "owner_type": "SCHEMA_PRODUCER",
+          "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+          "resolution_domain": "dataset-producer/shadow_trades"
+        }
+      ],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "decision_trace": "decision_trace_v1",
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-X5",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-X5-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "p_success",
+        "v10_entry",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "p_success",
+        "v10_entry",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:decision_trace",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "core/decision_trace.py",
+        "resolution_domain": "dataset-producer/decision_trace"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "p_success",
+          "v10_entry",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Does pre-decision predicted EV (predicted_ev_r_v1, R units) correspond to subsequent realised R at canonical-opportunity level, and does it persist on later unseen evidence?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "X5"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "V2_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "PORT-1:v1"
+      ],
+      "affected_question_ids": [
+        "PORT-1"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [
+        {
+          "owner_discovery_required": false,
+          "owner_identifier": "producer:shadow_trades",
+          "owner_type": "SCHEMA_PRODUCER",
+          "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+          "resolution_domain": "dataset-producer/shadow_trades"
+        }
+      ],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "portfolio_rankings",
+        "shadow_trades"
+      ],
+      "current_schema_versions": {
+        "portfolio_rankings": "portfolio_ranking_v1",
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "portfolio_rankings",
+        "shadow_trades"
+      ],
+      "gap_id": "STAGE4-DATA-PORT-1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-PORT-1-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "candidates.selection_status",
+        "candidates.rank_position",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "missing_observable": [
+        "candidates.selection_status",
+        "candidates.rank_position",
+        "simulated_outcome.pnl_r_multiple"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:portfolio_rankings",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/experiments/portfolio_ranking.py",
+        "resolution_domain": "dataset-producer/portfolio_rankings"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "candidates.selection_status",
+          "candidates.rank_position",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Did the portfolio/ranking layer select the best available opportunity from the ranked candidate set? Evaluates whether the selected candidate's outcome is competitive with the best-ranked candidate in the same cycle.",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "PORT-1"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "V2_REQUIRED",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "OPP-1:v1"
+      ],
+      "affected_question_ids": [
+        "OPP-1"
+      ],
+      "assured_finding_version": 1,
+      "backward_compatibility": "additive-only; V1 rows immutable",
+      "blocker_reason": "missing observable; future collection only",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [
+        {
+          "owner_discovery_required": false,
+          "owner_identifier": "producer:horizon_candidates",
+          "owner_type": "SCHEMA_PRODUCER",
+          "owning_module": "research_engine/experiments/selection_research.py",
+          "resolution_domain": "dataset-producer/horizon_candidates"
+        }
+      ],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "current_datasets": [
+        "shadow_trades",
+        "horizon_candidates"
+      ],
+      "current_schema_versions": {
+        "horizon_candidates": "horizon_candidates_v1",
+        "shadow_trades": "shadow_trades_v1"
+      },
+      "dependency_type": null,
+      "depends_on": [],
+      "earliest_epoch": "FIRST_POST_2026-09-27_FROZEN_EPOCH_WITH_COMPLETE_NEW_CONTRACT",
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "future_producers": [
+        "shadow_trades",
+        "horizon_candidates"
+      ],
+      "gap_id": "STAGE4-DATA-OPP-1",
+      "gap_type": "DATA_SCHEMA_GAP",
+      "gap_work_item_id": "GWI-OPP-1-DATA",
+      "identity_requirement": "canonical_opportunity_id/entity lineage",
+      "migration_requirement": "Additive V2/V3 field/event evolution; legacy rows remain historical and must not be backfilled or silently substituted.",
+      "minimum_sample": "governed evidence contract thresholds",
+      "missing_field_event_relationship": [
+        "opportunity_id",
+        "state",
+        "overall_score"
+      ],
+      "missing_observable": [
+        "opportunity_id",
+        "state",
+        "overall_score"
+      ],
+      "old_data_remains_valid": true,
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "producer:shadow_trades",
+        "owner_type": "SCHEMA_PRODUCER",
+        "owning_module": "research_engine/v10/universes/shadow_reality_universe.py",
+        "resolution_domain": "dataset-producer/shadow_trades"
+      },
+      "permitted_consumption": [
+        "engineering_planning",
+        "schema_planning",
+        "research_agenda",
+        "priority_logic",
+        "revisit_scheduling"
+      ],
+      "priority": "P1",
+      "priority_rationale": "collection delay compounds; certified=P1; fanout=0",
+      "proposed_contract": "Persist the missing observable at its causal event time with canonical_opportunity_id/entity_id lineage and CURRENT epoch provenance.",
+      "proposed_schema_change": {
+        "add_required_observables": [
+          "opportunity_id",
+          "state",
+          "overall_score"
+        ],
+        "epoch_attestation": "CURRENT",
+        "preserve_lineage": true
+      },
+      "question_definition": "Were the opportunities promoted into the decision pipeline better than the opportunities rejected or filtered out?",
+      "recovery_reference": "Gate1 EXHAUSTED plus Wave4 lossy",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "future frozen epoch satisfies contract",
+      "reeval_trigger": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "schema_change_deployed",
+        "producer_emitting",
+        "sample_condition_satisfied",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "schema+producer+sample+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "schema_version_target": "v2",
+      "state_requirement": "CURRENT",
+      "status": "OPEN",
+      "substate": "COLLECTION_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "OPP-1"
+      ],
+      "timestamp_requirement": "causal event time plus CURRENT epoch",
+      "version": 1,
+      "version_consequence": "CONTRACT_ONLY_CHANGE",
+      "why_impossible": "Frozen Gate 1 accounting is EXHAUSTED and Wave 4 resolves the required observable/relationship as unavailable or irrecoverably lossy."
+    },
+    {
+      "affected_finding_ids": [
+        "R1:v1"
+      ],
+      "affected_question_ids": [
+        "R1"
+      ],
+      "assured_finding_version": 2,
+      "blocker_reason": "runner population 10,803 != governed population 635",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "dependency_type": null,
+      "depends_on": [],
+      "detail": {
+        "current_behaviour": "runner r1_risk_layer_effectiveness.run_r1 n=10803",
+        "current_runner": "r1_risk_layer_effectiveness.run_r1",
+        "dependency_chain": [],
+        "dependency_label": "HD10 governed population adapter",
+        "dependent_modules": [
+          "research_engine/experiments/r1_risk_layer_effectiveness.py"
+        ],
+        "dependent_questions": [],
+        "evidence_already_exists": true,
+        "exact_mismatch": "runner population 10,803 != governed population 635",
+        "expected_governed_method": "governed runner on frozen Gate1 population for R1",
+        "expected_governed_population": 635,
+        "question_contract": "HD10 R1 over the Gate 1 required-field population",
+        "required_code_repair": "Add a frozen-population HD10 adapter accepting exactly the 635 governed records.",
+        "required_tests": [
+          "test_r1_governed_population"
+        ],
+        "rerun_immediately_after_repair": true,
+        "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+        "revalidation": "population+tests+rerun+assurance+finding-v2"
+      },
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 3,
+      "gap_id": "STAGE4-IMPL-R1",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-R1-IMPL",
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "runner:R1",
+        "owner_type": "RESEARCH_RUNNER",
+        "owning_module": "research_engine/experiments/r1_risk_layer_effectiveness.py",
+        "resolution_domain": "research-engine/HD10-population"
+      },
+      "permitted_consumption": [
+        "IMPLEMENTATION_REPAIR"
+      ],
+      "priority": "P0",
+      "priority_rationale": "repair unlocks existing evidence; certified=P0; fanout=0",
+      "question_definition": "Does the risk layer (guards, daily loss limit, exposure) improve overall expectancy and survival?",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_bindings": [
+        {
+          "bound_state": "VALIDATION_REQUIRED",
+          "gap_type": "IMPLEMENTATION_GAP",
+          "pre_rerun_evidence": [
+            "code_repair_verified",
+            "governed_population_aligned",
+            "targeted_tests_passed"
+          ],
+          "reentry_id": "RE-IMPL-20260929-R1"
+        }
+      ],
+      "reentry_condition": "repair verified plus population aligned",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "code_repair_verified",
+        "targeted_tests_passed",
+        "governed_population_aligned",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+      "resolution_evidence": [
+        "assurance_revalidated",
+        "code_repair_verified",
+        "governed_population_aligned",
+        "new_finding_version",
+        "scientific_rerun_completed",
+        "targeted_tests_passed"
+      ],
+      "resolution_linkage": [
+        {
+          "assurance_status": "VERIFIED",
+          "certification_id": "R1:c2",
+          "finding_id": "R1:v2",
+          "reentry_id": "RE-IMPL-20260929-R1",
+          "scientific_result_fingerprint": "61de59d75afd5d2e18570c6305fafef0f396a223fe6ebeaedaa98f0682bd3ffc"
+        }
+      ],
+      "status": "RESOLVED",
+      "substate": "RESEARCH_RERUN_REQUIRED",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "R1"
+      ],
+      "version": 1,
+      "version_consequence": "NO_SCHEMA_CHANGE"
+    },
+    {
+      "affected_finding_ids": [
+        "R2:v1"
+      ],
+      "affected_question_ids": [
+        "R2"
+      ],
+      "assured_finding_version": 2,
+      "blocker_reason": "runner population 10,803 != governed population 635",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "dependency_type": null,
+      "depends_on": [],
+      "detail": {
+        "current_behaviour": "runner r2_guard_attribution.run_r2 n=10803",
+        "current_runner": "r2_guard_attribution.run_r2",
+        "dependency_chain": [],
+        "dependency_label": "HD10 governed population adapter",
+        "dependent_modules": [
+          "research_engine/experiments/r2_guard_attribution.py"
+        ],
+        "dependent_questions": [],
+        "evidence_already_exists": true,
+        "exact_mismatch": "runner population 10,803 != governed population 635",
+        "expected_governed_method": "governed runner on frozen Gate1 population for R2",
+        "expected_governed_population": 635,
+        "question_contract": "HD10 R2 over the Gate 1 required-field population",
+        "required_code_repair": "Add a frozen-population HD10 adapter accepting exactly the 635 governed records.",
+        "required_tests": [
+          "test_r2_governed_population"
+        ],
+        "rerun_immediately_after_repair": true,
+        "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+        "revalidation": "population+tests+rerun+assurance+finding-v2"
+      },
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 3,
+      "gap_id": "STAGE4-IMPL-R2",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-R2-IMPL",
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "runner:R2",
+        "owner_type": "RESEARCH_RUNNER",
+        "owning_module": "research_engine/experiments/r2_guard_attribution.py",
+        "resolution_domain": "research-engine/HD10-population"
+      },
+      "permitted_consumption": [
+        "IMPLEMENTATION_REPAIR"
+      ],
+      "priority": "P0",
+      "priority_rationale": "repair unlocks existing evidence; certified=P0; fanout=0",
+      "question_definition": "Did each individual guard (spread, correlation, regime, daily loss) improve final expectancy?",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_bindings": [
+        {
+          "bound_state": "VALIDATION_REQUIRED",
+          "gap_type": "IMPLEMENTATION_GAP",
+          "pre_rerun_evidence": [
+            "code_repair_verified",
+            "governed_population_aligned",
+            "targeted_tests_passed"
+          ],
+          "reentry_id": "RE-IMPL-20260929-R2"
+        }
+      ],
+      "reentry_condition": "repair verified plus population aligned",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "code_repair_verified",
+        "targeted_tests_passed",
+        "governed_population_aligned",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+      "resolution_evidence": [
+        "assurance_revalidated",
+        "code_repair_verified",
+        "governed_population_aligned",
+        "new_finding_version",
+        "scientific_rerun_completed",
+        "targeted_tests_passed"
+      ],
+      "resolution_linkage": [
+        {
+          "assurance_status": "VERIFIED",
+          "certification_id": "R2:c2",
+          "finding_id": "R2:v2",
+          "reentry_id": "RE-IMPL-20260929-R2",
+          "scientific_result_fingerprint": "ea6fde44af786fe0785053b8f1d740848b41df6ab4017ddf6171821b6ec06ec7"
+        }
+      ],
+      "status": "RESOLVED",
+      "substate": "RESEARCH_RERUN_REQUIRED",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "R2"
+      ],
+      "version": 1,
+      "version_consequence": "NO_SCHEMA_CHANGE"
+    },
+    {
+      "affected_finding_ids": [
+        "L3:v1"
+      ],
+      "affected_question_ids": [
+        "L3"
+      ],
+      "assured_finding_version": 2,
+      "blocker_reason": "declared report is canonically owned by D1",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "dependency_type": null,
+      "depends_on": [],
+      "detail": {
+        "current_behaviour": "runner declared runner with q1_component_reward.json n=None",
+        "current_runner": "declared runner with q1_component_reward.json",
+        "dependency_chain": [],
+        "dependency_label": "report ownership registry",
+        "dependent_modules": [
+          "research_engine/control_plane/report_ownership.py"
+        ],
+        "dependent_questions": [],
+        "evidence_already_exists": true,
+        "exact_mismatch": "declared report is canonically owned by D1",
+        "expected_governed_method": "governed runner on frozen Gate1 population for L3",
+        "expected_governed_population": 95,
+        "question_contract": "L3 must own a distinct governed learning report",
+        "required_code_repair": "Assign L3 an independent report identity and ownership contract.",
+        "required_tests": [
+          "test_l3_governed_population"
+        ],
+        "rerun_immediately_after_repair": true,
+        "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+        "revalidation": "population+tests+rerun+assurance+finding-v2"
+      },
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 3,
+      "gap_id": "STAGE4-IMPL-L3",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-L3-IMPL",
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "runner:L3",
+        "owner_type": "CONTROL_PLANE",
+        "owning_module": "research_engine/control_plane/report_ownership.py",
+        "resolution_domain": "control-plane/report-ownership"
+      },
+      "permitted_consumption": [
+        "IMPLEMENTATION_REPAIR"
+      ],
+      "priority": "P0",
+      "priority_rationale": "repair unlocks existing evidence; certified=P0; fanout=0",
+      "question_definition": "Are the scoring weight assumptions, regime classifications, and strategy mappings still correct?",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_bindings": [
+        {
+          "bound_state": "VALIDATION_REQUIRED",
+          "gap_type": "IMPLEMENTATION_GAP",
+          "pre_rerun_evidence": [
+            "code_repair_verified",
+            "governed_population_aligned",
+            "targeted_tests_passed"
+          ],
+          "reentry_id": "RE-IMPL-20260929-L3"
+        }
+      ],
+      "reentry_condition": "repair verified plus population aligned",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "code_repair_verified",
+        "targeted_tests_passed",
+        "governed_population_aligned",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+      "resolution_evidence": [
+        "assurance_revalidated",
+        "code_repair_verified",
+        "governed_population_aligned",
+        "new_finding_version",
+        "scientific_rerun_completed",
+        "targeted_tests_passed"
+      ],
+      "resolution_linkage": [
+        {
+          "assurance_status": "VERIFIED",
+          "certification_id": "L3:c2",
+          "finding_id": "L3:v2",
+          "reentry_id": "RE-IMPL-20260929-L3",
+          "scientific_result_fingerprint": "c9f697735d955de0697475831c5ee9532006dc6b696280198199acbfa650aafe"
+        }
+      ],
+      "status": "RESOLVED",
+      "substate": "RESEARCH_RERUN_REQUIRED",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "L3"
+      ],
+      "version": 1,
+      "version_consequence": "NO_SCHEMA_CHANGE"
+    },
+    {
+      "affected_finding_ids": [
+        "L6:v1"
+      ],
+      "affected_question_ids": [
+        "L6"
+      ],
+      "assured_finding_version": 2,
+      "blocker_reason": "no governed runner/module exists for 1,852 usable records",
+      "blocks": [
+        "GWI-G3-IMPL"
+      ],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "dependency_type": null,
+      "depends_on": [],
+      "detail": {
+        "current_behaviour": "runner missing n=None",
+        "current_runner": "missing",
+        "dependency_chain": [],
+        "dependency_label": "new L6 runner",
+        "dependent_modules": [
+          "research_engine/experiments/learning_trust.py"
+        ],
+        "dependent_questions": [
+          "G3"
+        ],
+        "evidence_already_exists": false,
+        "exact_mismatch": "no governed runner/module exists for 1,852 usable records",
+        "expected_governed_method": "governed runner on frozen Gate1 population for L6",
+        "expected_governed_population": 1852,
+        "question_contract": "L6 requires a governed historical learning runner",
+        "required_code_repair": "Implement the canonical L6 method and persist an independently owned report.",
+        "required_tests": [
+          "test_l6_governed_population"
+        ],
+        "rerun_immediately_after_repair": true,
+        "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+        "revalidation": "population+tests+rerun+assurance+finding-v2"
+      },
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 3,
+      "gap_id": "STAGE4-IMPL-L6",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-L6-IMPL",
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "runner:L6",
+        "owner_type": "RESEARCH_RUNNER",
+        "owning_module": "research_engine/experiments/learning_trust.py",
+        "resolution_domain": "research-engine/runner"
+      },
+      "permitted_consumption": [
+        "IMPLEMENTATION_REPAIR"
+      ],
+      "priority": "P0",
+      "priority_rationale": "repair unlocks existing evidence; certified=P0; fanout=1",
+      "question_definition": "How trustworthy is each research conclusion given dataset validity, coverage, and sample size?",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_bindings": [
+        {
+          "bound_state": "VALIDATION_REQUIRED",
+          "gap_type": "IMPLEMENTATION_GAP",
+          "pre_rerun_evidence": [
+            "code_repair_verified",
+            "governed_population_aligned",
+            "targeted_tests_passed"
+          ],
+          "reentry_id": "RE-IMPL-20260929-L6"
+        }
+      ],
+      "reentry_condition": "repair verified plus population aligned",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "code_repair_verified",
+        "targeted_tests_passed",
+        "governed_population_aligned",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+      "resolution_evidence": [
+        "assurance_revalidated",
+        "code_repair_verified",
+        "governed_population_aligned",
+        "new_finding_version",
+        "scientific_rerun_completed",
+        "targeted_tests_passed"
+      ],
+      "resolution_linkage": [
+        {
+          "assurance_status": "VERIFIED",
+          "certification_id": "L6:c2",
+          "finding_id": "L6:v2",
+          "reentry_id": "RE-IMPL-20260929-L6",
+          "scientific_result_fingerprint": "44042edb888a6578db428c9cc303d46c930f9376b697ebcbec1ce1edb8036f2f"
+        }
+      ],
+      "status": "RESOLVED",
+      "substate": "RESEARCH_RERUN_REQUIRED",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "L6"
+      ],
+      "version": 1,
+      "version_consequence": "NO_SCHEMA_CHANGE"
+    },
+    {
+      "affected_finding_ids": [
+        "L7:v1"
+      ],
+      "affected_question_ids": [
+        "L7"
+      ],
+      "assured_finding_version": 1,
+      "blocker_reason": "runner labels are absent from the canonical evidence contract",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "dependency_type": null,
+      "depends_on": [],
+      "detail": {
+        "current_behaviour": "runner declared runner n=None",
+        "current_runner": "declared runner",
+        "dependency_chain": [],
+        "dependency_label": "L7 label contract",
+        "dependent_modules": [
+          "research_engine/experiments/learning_comparison.py"
+        ],
+        "dependent_questions": [],
+        "evidence_already_exists": true,
+        "exact_mismatch": "runner labels are absent from the canonical evidence contract",
+        "expected_governed_method": "governed runner on frozen Gate1 population for L7",
+        "expected_governed_population": 14046,
+        "question_contract": "L7 comparison requires governed control_label and candidate_label",
+        "required_code_repair": "Govern control/candidate label fields and bind them to the L7 runner.",
+        "required_tests": [
+          "test_l7_governed_population"
+        ],
+        "rerun_immediately_after_repair": true,
+        "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+        "revalidation": "population+tests+rerun+assurance+finding-v2"
+      },
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "gap_id": "STAGE4-IMPL-L7",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-L7-IMPL",
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "runner:L7",
+        "owner_type": "RESEARCH_RUNNER",
+        "owning_module": "research_engine/experiments/learning_comparison.py",
+        "resolution_domain": "research-engine/label-contract"
+      },
+      "permitted_consumption": [
+        "IMPLEMENTATION_REPAIR"
+      ],
+      "priority": "P0",
+      "priority_rationale": "repair unlocks existing evidence; certified=P0; fanout=0",
+      "question_definition": "Does a proposed strategy change outperform the currently promoted version when evaluated in shadow mode with statistical significance?",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "repair verified plus population aligned",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "code_repair_verified",
+        "targeted_tests_passed",
+        "governed_population_aligned",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "status": "OPEN",
+      "substate": "REPAIR_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "L7"
+      ],
+      "version": 1,
+      "version_consequence": "NO_SCHEMA_CHANGE"
+    },
+    {
+      "affected_finding_ids": [
+        "G2:v1"
+      ],
+      "affected_question_ids": [
+        "G2"
+      ],
+      "assured_finding_version": 2,
+      "blocker_reason": "runner denominator 22,521 != governed population 261",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "dependency_type": null,
+      "depends_on": [],
+      "detail": {
+        "current_behaviour": "runner lineage_coverage.run_g2 n=22521",
+        "current_runner": "lineage_coverage.run_g2",
+        "dependency_chain": [],
+        "dependency_label": "HD14 denominator adapter",
+        "dependent_modules": [
+          "research_engine/experiments/lineage_coverage.py"
+        ],
+        "dependent_questions": [],
+        "evidence_already_exists": true,
+        "exact_mismatch": "runner denominator 22,521 != governed population 261",
+        "expected_governed_method": "governed runner on frozen Gate1 population for G2",
+        "expected_governed_population": 261,
+        "question_contract": "G2 lineage coverage over 261 Gate 1 eligible records",
+        "required_code_repair": "Reconcile identity grain and pass exactly the governed 261-record population.",
+        "required_tests": [
+          "test_g2_governed_population"
+        ],
+        "rerun_immediately_after_repair": true,
+        "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+        "revalidation": "population+tests+rerun+assurance+finding-v2"
+      },
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 3,
+      "gap_id": "STAGE4-IMPL-G2",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-G2-IMPL",
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "runner:G2",
+        "owner_type": "RESEARCH_RUNNER",
+        "owning_module": "research_engine/experiments/lineage_coverage.py",
+        "resolution_domain": "research-engine/HD14-denominator"
+      },
+      "permitted_consumption": [
+        "IMPLEMENTATION_REPAIR"
+      ],
+      "priority": "P0",
+      "priority_rationale": "repair unlocks existing evidence; certified=P0; fanout=0",
+      "question_definition": "What percentage of canonical opportunities have valid decision-to-outcome lineage on (entity_id, canonical_opportunity_id)?",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_bindings": [
+        {
+          "bound_state": "VALIDATION_REQUIRED",
+          "gap_type": "IMPLEMENTATION_GAP",
+          "pre_rerun_evidence": [
+            "code_repair_verified",
+            "governed_population_aligned",
+            "targeted_tests_passed"
+          ],
+          "reentry_id": "RE-IMPL-20260929-G2"
+        }
+      ],
+      "reentry_condition": "repair verified plus population aligned",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "code_repair_verified",
+        "targeted_tests_passed",
+        "governed_population_aligned",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+      "resolution_evidence": [
+        "assurance_revalidated",
+        "code_repair_verified",
+        "governed_population_aligned",
+        "new_finding_version",
+        "scientific_rerun_completed",
+        "targeted_tests_passed"
+      ],
+      "resolution_linkage": [
+        {
+          "assurance_status": "VERIFIED",
+          "certification_id": "G2:c2",
+          "finding_id": "G2:v2",
+          "reentry_id": "RE-IMPL-20260929-G2",
+          "scientific_result_fingerprint": "5b065be892e09945a86bad56c54c90359877a3400f2c8cdfacb5a9c0f20537aa"
+        }
+      ],
+      "status": "RESOLVED",
+      "substate": "RESEARCH_RERUN_REQUIRED",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "G2"
+      ],
+      "version": 1,
+      "version_consequence": "NO_SCHEMA_CHANGE"
+    },
+    {
+      "affected_finding_ids": [
+        "G3:v1"
+      ],
+      "affected_question_ids": [
+        "G3"
+      ],
+      "assured_finding_version": 2,
+      "blocker_reason": "required L6 scientific dependency is not implemented",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "dependency_type": "SCIENTIFIC_DEPENDENCY",
+      "depends_on": [
+        "GWI-L6-IMPL"
+      ],
+      "detail": {
+        "current_behaviour": "runner declared runner n=None",
+        "current_runner": "declared runner",
+        "dependency_chain": [
+          "GWI-L6-IMPL"
+        ],
+        "dependency_label": "L6",
+        "dependent_modules": [
+          "research_engine/control_plane/assured_epistemic_findings.py"
+        ],
+        "dependent_questions": [],
+        "evidence_already_exists": true,
+        "exact_mismatch": "required L6 scientific dependency is not implemented",
+        "expected_governed_method": "governed runner on frozen Gate1 population for G3",
+        "expected_governed_population": 1852,
+        "question_contract": "G3 governance conclusion requires a governed CURRENT L6 dependency",
+        "required_code_repair": "Implement and certify L6, then bind its CURRENT result into G3.",
+        "required_tests": [
+          "test_g3_governed_population"
+        ],
+        "rerun_immediately_after_repair": false,
+        "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+        "revalidation": "population+tests+rerun+assurance+finding-v2"
+      },
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 3,
+      "gap_id": "STAGE4-IMPL-G3",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-G3-IMPL",
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "runner:G3",
+        "owner_type": "CONTROL_PLANE",
+        "owning_module": "research_engine/control_plane/assured_epistemic_findings.py",
+        "resolution_domain": "control-plane/scientific-dependency"
+      },
+      "permitted_consumption": [
+        "IMPLEMENTATION_REPAIR"
+      ],
+      "priority": "P1",
+      "priority_rationale": "future accumulation required; certified=P1; fanout=0",
+      "question_definition": "Can research conclusions be trusted given current validation status, coverage percentages, and sample sizes?",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_bindings": [
+        {
+          "bound_state": "VALIDATION_REQUIRED",
+          "gap_type": "IMPLEMENTATION_GAP",
+          "pre_rerun_evidence": [
+            "code_repair_verified",
+            "governed_population_aligned",
+            "targeted_tests_passed"
+          ],
+          "reentry_id": "RE-IMPL-20260929-G3"
+        }
+      ],
+      "reentry_condition": "L6 certified CURRENT then G3 repair",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "code_repair_verified",
+        "targeted_tests_passed",
+        "governed_population_aligned",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+      "resolution_evidence": [
+        "assurance_revalidated",
+        "code_repair_verified",
+        "governed_population_aligned",
+        "new_finding_version",
+        "scientific_rerun_completed",
+        "targeted_tests_passed"
+      ],
+      "resolution_linkage": [
+        {
+          "assurance_status": "VERIFIED",
+          "certification_id": "G3:c2",
+          "finding_id": "G3:v2",
+          "reentry_id": "RE-IMPL-20260929-G3",
+          "scientific_result_fingerprint": "e1b56a43f8f2bcdeb7b89ef8fb439d55c3c56f2a2a487ff009cc912744b7fe7d"
+        }
+      ],
+      "status": "RESOLVED",
+      "substate": "RESEARCH_RERUN_REQUIRED",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "G3"
+      ],
+      "version": 1,
+      "version_consequence": "NO_SCHEMA_CHANGE"
+    },
+    {
+      "affected_finding_ids": [
+        "EX2:v1"
+      ],
+      "affected_question_ids": [
+        "EX2"
+      ],
+      "assured_finding_version": 1,
+      "blocker_reason": "runner reconstructs 9,045 observations != governed population 8,760",
+      "blocks": [],
+      "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+      "co_owners": [],
+      "consumable_as_scientific_truth": false,
+      "created_at": "2026-09-29T00:00:00Z",
+      "dependency_type": null,
+      "depends_on": [],
+      "detail": {
+        "current_behaviour": "runner exit_policy_governed.run_ex2 n=9045",
+        "current_runner": "exit_policy_governed.run_ex2",
+        "dependency_chain": [],
+        "dependency_label": "HD09 frozen population adapter",
+        "dependent_modules": [
+          "research_engine/experiments/exit_policy_governed.py"
+        ],
+        "dependent_questions": [],
+        "evidence_already_exists": true,
+        "exact_mismatch": "runner reconstructs 9,045 observations != governed population 8,760",
+        "expected_governed_method": "governed runner on frozen Gate1 population for EX2",
+        "expected_governed_population": 8760,
+        "question_contract": "HD09 EX2 over the frozen Gate 1 exit-policy population",
+        "required_code_repair": "Add a frozen governed-population HD09 adapter and forbid repository event-file reconstruction.",
+        "required_tests": [
+          "test_ex2_governed_population"
+        ],
+        "rerun_immediately_after_repair": true,
+        "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+        "revalidation": "population+tests+rerun+assurance+finding-v2"
+      },
+      "evidence_contract_id": "frozen Gate1 2026-09-27",
+      "evidence_contract_version": "v1",
+      "finding_version_expected": 2,
+      "gap_id": "STAGE4-IMPL-EX2",
+      "gap_type": "IMPLEMENTATION_GAP",
+      "gap_work_item_id": "GWI-EX2-IMPL",
+      "owner": {
+        "owner_discovery_required": false,
+        "owner_identifier": "runner:EX2",
+        "owner_type": "RESEARCH_RUNNER",
+        "owning_module": "research_engine/experiments/exit_policy_governed.py",
+        "resolution_domain": "research-engine/HD09-population"
+      },
+      "permitted_consumption": [
+        "IMPLEMENTATION_REPAIR"
+      ],
+      "priority": "P0",
+      "priority_rationale": "repair unlocks existing evidence; certified=P0; fanout=0",
+      "question_definition": "Does a trailing stop mechanism capture more of the available MFE than the current exit, using bar-by-bar sequential simulation?",
+      "reentry_action": "rerun question under historical pass",
+      "reentry_condition": "repair verified plus population aligned",
+      "required_assurance_gate": "FinalAssuranceCertification",
+      "required_evidence": [
+        "code_repair_verified",
+        "targeted_tests_passed",
+        "governed_population_aligned",
+        "scientific_rerun_completed",
+        "assurance_revalidated",
+        "new_finding_version"
+      ],
+      "resolution_criteria": "repair+tests+population+rerun+assurance+v2",
+      "resolution_evidence": [],
+      "status": "OPEN",
+      "substate": "REPAIR_PENDING",
+      "superseded_by": null,
+      "supersedes": null,
+      "target_question_ids": [
+        "EX2"
+      ],
+      "version": 1,
+      "version_consequence": "NO_SCHEMA_CHANGE"
+    }
+  ]
+}

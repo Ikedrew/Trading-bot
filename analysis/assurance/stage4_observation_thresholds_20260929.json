@@ -1,0 +1,992 @@
+{
+  "contract_thresholds_preserved": {
+    "OR-14": {
+      "authority": "stage4_ex2_l7_blocker_adjudication (governed EX2 roster) + core.shadow.observability.EX2_REQUIRED_CONTRACT_FIELDS",
+      "classification": "THRESHOLD_GOVERNED",
+      "constant": "EX2_LIFECYCLE_PATH_COMPLETENESS",
+      "forbidden": "The 9,045-row widened reconstruction and any (symbol, ts) range-join reconstruction are permanently forbidden.",
+      "observation_requirement_id": "OR-14",
+      "preserved_verbatim": true,
+      "rules": [
+        {
+          "description": "100% of governed lifecycles must carry a COMPLETE ordered M5 OHLC path bound to the lifecycle identity.",
+          "field": "path_state",
+          "kind": "minimum_complete_observations",
+          "operator": "==",
+          "value": "COMPLETE"
+        },
+        {
+          "description": "Every governed lifecycle, no exclusions.",
+          "field": "lifecycle_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "value": 1.0
+        }
+      ],
+      "threshold_source": "OBSERVATION_REQUIREMENT_CONTRACT"
+    },
+    "OR-15": {
+      "authority": "research_engine.registry.learning_adaptation_adjudication.L7_MIN",
+      "classification": "THRESHOLD_GOVERNED",
+      "constant": "L7_MIN",
+      "forbidden": null,
+      "observation_requirement_id": "OR-15",
+      "preserved_verbatim": true,
+      "rules": [
+        {
+          "description": "Minimum CONTROL-arm assigned lifecycles.",
+          "field": "control",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "value": 100
+        },
+        {
+          "description": "Minimum CANDIDATE-arm assigned lifecycles.",
+          "field": "candidate",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "value": 100
+        },
+        {
+          "description": "Minimum observations per comparison cell.",
+          "field": "cell",
+          "kind": "minimum_per_class_or_cell_count",
+          "operator": ">=",
+          "value": 30
+        },
+        {
+          "description": "100% of the governed population must be producer-assigned; unassigned rows fail closed.",
+          "field": "assignment_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "value": 1.0
+        }
+      ],
+      "threshold_source": "OBSERVATION_REQUIREMENT_CONTRACT"
+    }
+  },
+  "counts": {
+    "gaps_method_threshold_definition_required": 0,
+    "gaps_with_governed_threshold": 31
+  },
+  "gaps_method_threshold_definition_required": [],
+  "gaps_with_governed_threshold": [
+    "EX2 (OG-EX2-4db003c3ab76)",
+    "L7 (OG-L7-4db003c3ab76)",
+    "STAGE4-DATA-D2",
+    "STAGE4-DATA-D3",
+    "STAGE4-DATA-D4",
+    "STAGE4-DATA-D5",
+    "STAGE4-DATA-E5",
+    "STAGE4-DATA-EX10",
+    "STAGE4-DATA-HORIZON-1",
+    "STAGE4-DATA-L1",
+    "STAGE4-DATA-L2",
+    "STAGE4-DATA-L4",
+    "STAGE4-DATA-L5",
+    "STAGE4-DATA-M10",
+    "STAGE4-DATA-M11",
+    "STAGE4-DATA-M3",
+    "STAGE4-DATA-M4",
+    "STAGE4-DATA-M5",
+    "STAGE4-DATA-M6",
+    "STAGE4-DATA-M7",
+    "STAGE4-DATA-M8",
+    "STAGE4-DATA-M9",
+    "STAGE4-DATA-OPP-1",
+    "STAGE4-DATA-P1",
+    "STAGE4-DATA-PORT-1",
+    "STAGE4-DATA-R3",
+    "STAGE4-DATA-R4",
+    "STAGE4-DATA-R5",
+    "STAGE4-DATA-S4",
+    "STAGE4-DATA-STRAT-1",
+    "STAGE4-DATA-X5"
+  ],
+  "per_gap": {
+    "EX2 (OG-EX2-4db003c3ab76)": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-14",
+      "question_id": "EX2",
+      "rules": [
+        {
+          "description": "100% of governed lifecycles must carry a COMPLETE ordered M5 OHLC path bound to the lifecycle identity.",
+          "field": "path_state",
+          "kind": "minimum_complete_observations",
+          "operator": "==",
+          "value": "COMPLETE"
+        },
+        {
+          "description": "Every governed lifecycle, no exclusions.",
+          "field": "lifecycle_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "value": 1.0
+        }
+      ],
+      "threshold_source": "OBSERVATION_REQUIREMENT_CONTRACT"
+    },
+    "L7 (OG-L7-4db003c3ab76)": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-15",
+      "question_id": "L7",
+      "rules": [
+        {
+          "description": "Minimum CONTROL-arm assigned lifecycles.",
+          "field": "control",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "value": 100
+        },
+        {
+          "description": "Minimum CANDIDATE-arm assigned lifecycles.",
+          "field": "candidate",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "value": 100
+        },
+        {
+          "description": "Minimum observations per comparison cell.",
+          "field": "cell",
+          "kind": "minimum_per_class_or_cell_count",
+          "operator": ">=",
+          "value": 30
+        },
+        {
+          "description": "100% of the governed population must be producer-assigned; unassigned rows fail closed.",
+          "field": "assignment_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "value": 1.0
+        }
+      ],
+      "threshold_source": "OBSERVATION_REQUIREMENT_CONTRACT"
+    },
+    "STAGE4-DATA-D2": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "D2",
+      "rules": [
+        {
+          "description": "Need trace→outcome join",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "registry_field": "lineage_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct paired canonical opportunities required for chronological calibration",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "sample_size",
+          "value": 100
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-D3": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-08",
+      "question_id": "D3",
+      "rules": [
+        {
+          "description": "Need trace→outcome join",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "registry_field": "lineage_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct paired canonical opportunities required for chronological EV-gate validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "sample_size",
+          "value": 100
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-D4": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "D4",
+      "rules": [
+        {
+          "description": "Need trace→outcome join",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "registry_field": "lineage_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct paired canonical opportunities required for chronological score-threshold validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "sample_size",
+          "value": 100
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-D5": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "D5",
+      "rules": [
+        {
+          "description": "Need rejection trace→shadow counterfactual join",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "registry_field": "lineage_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Counterfactual shadow outcomes for rejected opportunities",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.5
+        },
+        {
+          "description": "Distinct rejected canonical opportunities with paired outcomes required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "sample_size",
+          "value": 100
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-E5": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "E5",
+      "rules": [
+        {
+          "description": "Full outcomes needed for walk-forward split",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        },
+        {
+          "description": "Need decision context to prevent lookahead",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "registry_field": "lineage_coverage",
+          "value": 0.8
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-EX10": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-06",
+      "question_id": "EX10",
+      "rules": [
+        {
+          "description": "Need outcomes for train/test split",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        },
+        {
+          "description": "Need sufficient sample for temporal split",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "sample_size",
+          "value": 200
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-HORIZON-1": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "HORIZON-1",
+      "rules": [
+        {
+          "description": "Minimum comparable opportunities",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "sample_size",
+          "value": 30
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-L1": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "L1",
+      "rules": [
+        {
+          "description": "Pattern required",
+          "field": "pattern_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "pattern_coverage",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        },
+        {
+          "description": "HD11 overall canonical-opportunity minimum",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "sample_size",
+          "value": 200
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-L2": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-06",
+      "question_id": "L2",
+      "rules": [
+        {
+          "description": "Pre-change governed observations required.",
+          "field": "pre",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "value": 100
+        },
+        {
+          "description": "Post-change governed observations required.",
+          "field": "post",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "value": 100
+        },
+        {
+          "description": "Minimum observations per comparison cell.",
+          "field": "cell",
+          "kind": "minimum_per_class_or_cell_count",
+          "operator": ">=",
+          "value": 30
+        }
+      ],
+      "threshold_source": "ADJUDICATION_MIN_CONSTANT"
+    },
+    "STAGE4-DATA-L4": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "L4",
+      "rules": [
+        {
+          "description": "Regime history required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "h4_regime_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-L5": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "L5",
+      "rules": [
+        {
+          "description": "Pattern required",
+          "field": "pattern_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "pattern_coverage",
+          "value": 0.5
+        },
+        {
+          "description": "Strategy required",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "strategy_coverage",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-M10": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "M10",
+      "rules": [
+        {
+          "description": "Phase required for stratification",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "market_phase_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Clean strategy labels needed",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "strategy_coverage",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-M11": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "M11",
+      "rules": [
+        {
+          "description": "Regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "h4_regime_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "market_phase_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        },
+        {
+          "description": "Need decision context linked to outcomes",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "registry_field": "lineage_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Distinct joined canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "sample_size",
+          "value": 120
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-M3": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "M3",
+      "rules": [
+        {
+          "description": "H4 regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "h4_regime_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Phase must be populated",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "market_phase_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "sample_size",
+          "value": 90
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-M4": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "M4",
+      "rules": [
+        {
+          "description": "H4 regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "h4_regime_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "market_phase_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Clean strategy required",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "strategy_coverage",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-M5": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "M5",
+      "rules": [
+        {
+          "description": "Phase history required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "market_phase_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Closed outcome R required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-M6": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "M6",
+      "rules": [
+        {
+          "description": "Phase must be populated",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "market_phase_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-M7": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "M7",
+      "rules": [
+        {
+          "description": "H4 regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "h4_regime_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "market_phase_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "sample_size",
+          "value": 90
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-M8": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "M8",
+      "rules": [
+        {
+          "description": "Phase history required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "market_phase_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct joined canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "sample_size",
+          "value": 60
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-M9": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "M9",
+      "rules": [
+        {
+          "description": "Phase must be populated to stratify by phase",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "market_phase_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-OPP-1": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-13",
+      "question_id": "OPP-1",
+      "rules": [
+        {
+          "description": "Need opportunities with shadow outcomes",
+          "field": "assessed_opportunities",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "assessed_opportunities",
+          "value": 10
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-P1": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "P1",
+      "rules": [
+        {
+          "description": "Full outcomes needed for impact estimation",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        },
+        {
+          "description": "Need decision context for change modelling",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "registry_field": "lineage_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Clean strategy required for segmentation",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "strategy_coverage",
+          "value": 0.5
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-PORT-1": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "PORT-1",
+      "rules": [
+        {
+          "description": "Need cycles with rankings for selection analysis",
+          "field": "ranking_cycles",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "ranking_cycles",
+          "value": 5
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-R3": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-06",
+      "question_id": "R3",
+      "rules": [
+        {
+          "description": "Nearly all records must have R-multiple for variance estimation",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        },
+        {
+          "description": "Need full lifecycle for accurate win rate",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "registry_field": "lineage_coverage",
+          "value": 0.8
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-R4": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-06",
+      "question_id": "R4",
+      "rules": [
+        {
+          "description": "Full outcome history required for drawdown modelling",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-R5": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-06",
+      "question_id": "R5",
+      "rules": [
+        {
+          "description": "Full outcome distribution required for Kelly calculation",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-S4": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "S4",
+      "rules": [
+        {
+          "description": "Clean strategy required",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "strategy_coverage",
+          "value": 0.5
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "registry_field": "market_phase_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-STRAT-1": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "STRAT-1",
+      "rules": [
+        {
+          "description": "Minimum matched confidence/outcome pairs",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "sample_size",
+          "value": 30
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    },
+    "STAGE4-DATA-X5": {
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "question_id": "X5",
+      "rules": [
+        {
+          "description": "Need trace→outcome join",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "registry_field": "lineage_coverage",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "registry_field": "outcome_coverage",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct paired canonical opportunities required for chronological predicted-EV-vs-realised-R validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "registry_field": "sample_size",
+          "value": 100
+        }
+      ],
+      "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES"
+    }
+  },
+  "policy": "No universal numeric sample size. Thresholds are derived from each question's own scientific method (registry validation_rules), an authoritative adjudication *_MIN constant, or an existing observation-requirement contract. No arbitrary fallback exists.",
+  "rule_kinds": [
+    "minimum_eligible_sample_count",
+    "minimum_complete_observations",
+    "minimum_non_null_ratio",
+    "minimum_per_class_or_cell_count",
+    "minimum_symbols",
+    "minimum_regimes_or_phases",
+    "minimum_time_coverage",
+    "minimum_event_coverage",
+    "minimum_lineage_valid_coverage"
+  ],
+  "stamp": "20260929"
+}

@@ -1,0 +1,77 @@
+# Downstream consumption-gate verification
+
+store: `d80ed828d5a35f315c7d1f0e1836f30e02c215eb5abf7b0f8d45d5d27cccc4c9`
+
+- D1: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- D2: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- D3: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- D4: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- D5: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- D6: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- E1: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- E2: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- E3: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- E4: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- E5: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- EX1: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- EX10: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- EX2: admitted=True truth=False perm=IMPLEMENTATION_REPAIR
+- EX3: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- EX4: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- EX5: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- EX6: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- EX7: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- EX8: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- EX9: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- EXEC1: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- G1: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- G2: admitted=True truth=False perm=IMPLEMENTATION_REPAIR
+- G3: admitted=True truth=False perm=IMPLEMENTATION_REPAIR
+- HORIZON-1: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- L1: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- L2: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- L3: admitted=True truth=False perm=IMPLEMENTATION_REPAIR
+- L4: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- L5: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- L6: admitted=True truth=False perm=IMPLEMENTATION_REPAIR
+- L7: admitted=True truth=False perm=IMPLEMENTATION_REPAIR
+- M1: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- M10: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- M11: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- M2: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- M3: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- M4: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- M5: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- M6: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- M7: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- M8: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- M9: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- MGMT-1: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- MGMT-2: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- OPP-1: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- P1: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- PORT-1: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- PROT1: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- R1: admitted=True truth=False perm=IMPLEMENTATION_REPAIR
+- R2: admitted=True truth=False perm=IMPLEMENTATION_REPAIR
+- R3: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- R4: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- R5: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- RISK-1: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- S1: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- S2: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- S3: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- S4: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- S5: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- S6: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- S7: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- STRAT-1: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- X1: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- X2: admitted=True truth=True perm=OPTIMISATION,INVESTIGATION
+- X3: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- X4: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- X5: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+- X6: admitted=True truth=False perm=EVIDENCE_COLLECTION,OBSERVABILITY
+
+truth=14 (expect 14); leaks=0 (expect 0)
+

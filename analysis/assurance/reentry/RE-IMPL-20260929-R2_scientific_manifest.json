@@ -1,0 +1,73 @@
+{
+  "analysis_time": "2026-09-28T00:00:00Z",
+  "as_of_utc": "2026-09-27T00:00:00Z",
+  "fingerprint": "59da969ba5c096a10df8c3bc871c157c7811d18abf0506e1d1164c2443878c73",
+  "live_or_s3_reads": false,
+  "new_scientific_research_run": false,
+  "question_count": 1,
+  "questions": [
+    {
+      "assurance_status": "NOT_REQUALIFIED",
+      "candidate_historical_population": 36641,
+      "canonical_question": "Did each individual guard (spread, correlation, regime, daily loss) improve final expectancy?",
+      "current_report_before": "VALID_CURRENT",
+      "current_report_path": "analysis\\reports\\reentry\\RE-IMPL-20260929-R2\\r2_guard_attribution.json",
+      "current_report_status": "BLOCKED",
+      "current_result_valid_before": true,
+      "excluded_historical_population": 36006,
+      "historical_exhaustion_state": "EXHAUSTED",
+      "initial_classification": "CURRENT_VALID_RESULT",
+      "missing_report_resolved": false,
+      "next_action": "NONE",
+      "question_id": "R2",
+      "reason": "CURRENT artifact with status BLOCKED",
+      "result_fingerprint": "ea6fde44af786fe0785053b8f1d740848b41df6ab4017ddf6171821b6ec06ec7",
+      "runner_analytical_population": 635,
+      "runner_executed": false,
+      "runner_failed": false,
+      "runner_function": "run_r2",
+      "runner_inputs": [
+        "decision_records",
+        "outcome_records",
+        "governed_records",
+        "persist"
+      ],
+      "runner_module": "research_engine.experiments.r2_guard_attribution",
+      "runner_status": "AVAILABLE",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "stale_or_legacy_replaced": false,
+      "unexplained_historical_population": 0,
+      "usable_historical_population": 635
+    }
+  ],
+  "requested_scope": [
+    "R2"
+  ],
+  "schema": 1,
+  "scientific_state_counts": {
+    "COMPLETE": 0,
+    "HISTORICALLY_UNANSWERABLE": 1,
+    "IMPLEMENTATION_BLOCKED": 0,
+    "INSUFFICIENT_DATA": 0,
+    "NEGATIVE_RESULT": 0,
+    "NO_EFFECT": 0,
+    "WAITING_DATA": 0
+  },
+  "scope": [
+    "R2"
+  ],
+  "scope_size": 1,
+  "stage": "STAGE4_HISTORICAL_SCOPED_RESEARCH_PASS",
+  "summary": {
+    "historical_runners_executed": 0,
+    "historical_runners_found": 1,
+    "runner_failures": 0,
+    "unrelated_questions_executed": 0
+  },
+  "upstream_fingerprints": {
+    "evidence_snapshot": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "reconstruction": "e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43",
+    "wave2": "a93dbbf8e9b269e98937dc1f23b29f17107be0f6405c116d3894439ba5f45697",
+    "wave3": "bca9c1c4b0dc7b6610da1075119bf01a02f9515551b3e8bd1288efeb23d40034"
+  }
+}

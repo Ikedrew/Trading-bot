@@ -1,0 +1,3860 @@
+{
+  "certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+  "finding_version": 1,
+  "findings": [
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 36641,
+      "canonical_question": "Which of the 10 scoring components best predict actual R-multiple outcomes?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "D1",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/q1_component_reward.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 36546,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved D1 (Which of the 10 scoring components best predict actual R-multiple outcomes?): CURRENT artifact with status INSUFFICIENT_DATA. usable=95 anal=0 cand=36641. missing ['components.* | score_strategy | score_neutral', 'simulated_outcome.pnl_r_multiple | r_multiple']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "components.* | score_strategy | score_neutral",
+          "simulated_outcome.pnl_r_multiple | r_multiple"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need entity_id join to link scores to outcomes",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "D1",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "3e15542d430018c24ae58645c53f1fd683d44893e327de6553d33c9c7c33d195",
+      "runner_method": "research_engine.experiments.component_reward.run",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 95
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 36641,
+      "canonical_question": "Is the system's predicted probability (p_success) calibrated to actual win rate?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "D2",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/d2_paired_probability_calibration_v1.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 36641,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable D2 (Is the system's predicted probability (p_success) calibrated to actual win rate?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=36641. schema gap STAGE4-DATA-D2; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need trace\u2192outcome join",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "Distinct paired canonical opportunities required for chronological calibration",
+              "name": "",
+              "threshold": 100
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "D2",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "2a899d9e614211ace1cba63a7c4cd39c18bad79e842b98f75abcc13f06abe59a",
+      "runner_method": "research_engine.experiments.d2_paired_calibration.run_d2",
+      "schema_gap_id": "STAGE4-DATA-D2",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 36641,
+      "canonical_question": "Does the pre-decision predicted-EV (R units) gate relate to subsequent realised R?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "D3",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/d3_predicted_ev_gate_validation_v1.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 36641,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable D3 (Does the pre-decision predicted-EV (R units) gate relate to subsequent realised R?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=36641. schema gap STAGE4-DATA-D3; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "p_success",
+          "v10_entry",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need trace\u2192outcome join",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "Distinct paired canonical opportunities required for chronological EV-gate validation",
+              "name": "",
+              "threshold": 100
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "D3",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "ef3e1fb8153aa61d6765769ae6595fe1e6443cde4b2cd6cf0c1aa555bc1e2b63",
+      "runner_method": "research_engine.experiments.d3_predicted_ev_gate.run_d3",
+      "schema_gap_id": "STAGE4-DATA-D3",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 36641,
+      "canonical_question": "Does the canonical pre-decision score (score_strategy) separate subsequent realised R, and is a discovery-selected threshold supported on later unseen data?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "D4",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/d4_score_threshold_validation_v1.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 36006,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable D4 (Does the canonical pre-decision score (score_strategy) separate subsequent realised R, and is a discovery-selected threshold supported on later unseen data?): CURRENT artifact with status BLOCKED. usable=635 anal=0 cand=36641. schema gap STAGE4-DATA-D4; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need trace\u2192outcome join",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "Distinct paired canonical opportunities required for chronological score-threshold validation",
+              "name": "",
+              "threshold": 100
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "D4",
+      "report_authority_valid": true,
+      "report_status": "BLOCKED",
+      "result_fingerprint": "df0232bc77d096206502ed34cf0a7d1ab73019ff5f388cd4127ee4838d7e54e5",
+      "runner_method": "research_engine.experiments.d4_score_threshold_validation.run_d4",
+      "schema_gap_id": "STAGE4-DATA-D4",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 635
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 36641,
+      "canonical_question": "Do rejected/no-trade canonical opportunities subsequently show counterfactual shadow outcomes indicating the rejection logic filters harmful or discards useful opportunities?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "D5",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/d5_rejected_opportunity_validation_v1.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 36006,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable D5 (Do rejected/no-trade canonical opportunities subsequently show counterfactual shadow outcomes indicating the rejection logic filters harmful or discards useful opportunities?): CURRENT artifact with status BLOCKED. usable=635 anal=0 cand=36641. schema gap STAGE4-DATA-D5; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need rejection trace\u2192shadow counterfactual join",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Counterfactual shadow outcomes for rejected opportunities",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Distinct rejected canonical opportunities with paired outcomes required for chronological validation",
+              "name": "",
+              "threshold": 100
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "D5",
+      "report_authority_valid": true,
+      "report_status": "BLOCKED",
+      "result_fingerprint": "44b8d01f7531426cc860ca747c9be0402eb1f447892f783f7b342e0dc89189b0",
+      "runner_method": "research_engine.experiments.d5_rejected_opportunity_validation.run_d5",
+      "schema_gap_id": "STAGE4-DATA-D5",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 635
+    },
+    {
+      "analytical_count": 40,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14581,
+      "canonical_question": "Does the portfolio ranker's ordering of candidates (by rank_position) match realised/shadow outcomes \u2014 i.e., do higher-ranked candidates genuinely outperform lower-ranked ones?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "D6",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/d6_portfolio_ranking.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14065,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved D6 (Does the portfolio ranker's ordering of candidates (by rank_position) match realised/shadow outcomes \u2014 i.e., do higher-ranked candidates genuinely outperform lower-ranked ones?): CURRENT artifact with status INSUFFICIENT_DATA. usable=516 anal=40 cand=14581. missing ['candidates.rank_position', 'simulated_outcome.pnl_r_multiple']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "candidates.rank_position",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need ranking cycles for rank distribution",
+              "name": "",
+              "threshold": 10
+            },
+            {
+              "description": "Need candidate rows for ranking analysis",
+              "name": "",
+              "threshold": 30
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "D6",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "896df06d07e8b238b2b335e70ee2eec2e10343facff8642c9fe8d2cbd3113c8f",
+      "runner_method": "research_engine.experiments.portfolio_ranking.run_portfolio_ranking",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 516
+    },
+    {
+      "analytical_count": 1852,
+      "assurance_reason": "Independent certification verified NEGATIVE_RESULT against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "What is the true expectancy of the production decision pipeline measured by R-multiple per trade?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "E1",
+        "reason": "verified settled state",
+        "scientific_state": "NEGATIVE_RESULT",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/q19_expected_value.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 12225,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved negative/null E1 (What is the true expectancy of the production decision pipeline measured by R-multiple per trade?): CURRENT artifact with status COMPLETE. usable=1852 anal=1852 cand=14077. research_engine.experiments.expected_value.run report COMPLETE. Settled finding, not absence of evidence.",
+      "next_action": "NONE",
+      "question_id": "E1",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "0618f683f06ba328d15b392462adc70a698b56d8798b32d216f2c9c2a088c590",
+      "runner_method": "research_engine.experiments.expected_value.run",
+      "schema_gap_id": null,
+      "scientific_state": "NEGATIVE_RESULT",
+      "supersedes": null,
+      "usable_count": 1852
+    },
+    {
+      "analytical_count": 1852,
+      "assurance_reason": "Independent certification verified COMPLETE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Which candlestick patterns contain positive expectancy across all conditions?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "E2",
+        "reason": "verified settled state",
+        "scientific_state": "COMPLETE",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/q5_pattern_degradation.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 12225,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved positive E2 (Which candlestick patterns contain positive expectancy across all conditions?): CURRENT artifact with status COMPLETE. usable=1852 anal=1852 cand=14077. research_engine.experiments.legacy_canonical.run_q05 report COMPLETE. Consumable as scientific truth.",
+      "next_action": "NONE",
+      "question_id": "E2",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "8698704ea8e02413ae0e63121ec091081189ec1df5d7908c0d200b3211d58724",
+      "runner_method": "research_engine.experiments.legacy_canonical.run_q05",
+      "schema_gap_id": null,
+      "scientific_state": "COMPLETE",
+      "supersedes": null,
+      "usable_count": 1852
+    },
+    {
+      "analytical_count": 1083,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Which active non-NONE V10 StrategyFamily values contain positive expectancy on completed primary shadow outcomes?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "E3",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/e3_strategy_family_expectancy.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved E3 (Which active non-NONE V10 StrategyFamily values contain positive expectancy on completed primary shadow outcomes?): CURRENT artifact with status INSUFFICIENT_DATA. usable=14046 anal=1083 cand=14077. missing ['strategy', 'r_multiple']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "strategy",
+          "r_multiple"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Clean strategy field required (not combined with horizon)",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Outcome data required",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "Shared report-validity floor",
+              "name": "",
+              "threshold": 50
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "E3",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "94b08699ee4269fe155e65e18c462c3e0cfb8a571faa9d6e1d7d059ef8c40722",
+      "runner_method": "research_engine.experiments.strategy_expectancy.run_e3",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 4,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Which strategy \u00d7 pattern combinations produce edge? (e.g. REVERSAL + TWEEZER_TOP)",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "E4",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/e4_strategy_pattern_combinations.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 12225,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved E4 (Which strategy \u00d7 pattern combinations produce edge? (e.g. REVERSAL + TWEEZER_TOP)): CURRENT artifact with status INSUFFICIENT_DATA. usable=1852 anal=4 cand=14077. missing ['decision_snapshot.strategy | decision_snapshot.pattern; simulated_outcome.pnl_r_multiple']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "decision_snapshot.strategy | decision_snapshot.pattern; simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Clean strategy required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Pattern required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "E4",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "ae59c03def35e1eff42fcafb9d76a62d6fad160aa42b2f147ccb4ba0b1021573",
+      "runner_method": "research_engine.experiments.edge_depth.run_e4",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 1852
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does the measured edge survive on unseen market data using walk-forward testing with rolling windows?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "E5",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/e5_out_of_sample.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable E5 (Does the measured edge survive on unseen market data using walk-forward testing with rolling windows?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-E5; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Full outcomes needed for walk-forward split",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "Need decision context to prevent lookahead",
+              "name": "",
+              "threshold": 0.8
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "E5",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "b1dc437262139e0d803e1381168ce11e4730ffd424562c708c9614fd22ef9c66",
+      "runner_method": "research_engine.experiments.out_of_sample_validation.run_out_of_sample_validation",
+      "schema_gap_id": "STAGE4-DATA-E5",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 9601,
+      "assurance_reason": "Independent certification verified COMPLETE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does modifying exit policy (trailing stop, reduced TP, time-based) improve system expected value compared to the current max_bars timeout?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "EX1",
+        "reason": "verified settled state",
+        "scientific_state": "COMPLETE",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/ex1_exit_efficiency.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved positive EX1 (Does modifying exit policy (trailing stop, reduced TP, time-based) improve system expected value compared to the current max_bars timeout?): CURRENT artifact with status COMPLETE. usable=14046 anal=9601 cand=14077. research_engine.experiments.exit_policy_governed.run_ex1 report COMPLETE. Consumable as scientific truth.",
+      "next_action": "NONE",
+      "question_id": "EX1",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "a8435d2b1d42b141fa311f5dbb15d0a54fa13be2c11fcef03dbbfaf7244f3536",
+      "runner_method": "research_engine.experiments.exit_policy_governed.run_ex1",
+      "schema_gap_id": null,
+      "scientific_state": "COMPLETE",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does the exit policy improvement hold on out-of-sample data using time-ordered walk-forward validation?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "EX10",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable EX10 (Does the exit policy improvement hold on out-of-sample data using time-ordered walk-forward validation?): Historical governed population has no analytically usable rows; absent/unresolved: entry_time. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-EX10; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "canonical_opportunity_id",
+          "entry_time"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need outcomes for train/test split",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "Need sufficient sample for temporal split",
+              "name": "",
+              "threshold": 200
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "EX10",
+      "report_authority_valid": true,
+      "report_status": "NO_GOVERNED_SCIENTIFIC_REPORT",
+      "result_fingerprint": "cacf08f6a23a223ff53e7c481ec43b2d8543495896fa7fa6c16c69196b8356af",
+      "runner_method": "research_engine.experiments.exit_policy_walk_forward.run_ex10",
+      "schema_gap_id": "STAGE4-DATA-EX10",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 9045,
+      "assurance_reason": "Independent certification verified IMPLEMENTATION_BLOCKED against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does a trailing stop mechanism capture more of the available MFE than the current exit, using bar-by-bar sequential simulation?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "IMPLEMENTATION_REPAIR"
+        ],
+        "question_id": "EX2",
+        "reason": "verified block: repair only",
+        "scientific_state": "IMPLEMENTATION_BLOCKED",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/ex2_profit_retention.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 5317,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": "EX2",
+      "interpretation": "Unresolved impl block EX2 (Does a trailing stop mechanism capture more of the available MFE than the current exit, using bar-by-bar sequential simulation?): HD09 EX2 reconstructs 9,045 exit-policy observations from repository event files, but the frozen Gate 1 usable population is 8,760; the runner has no frozen governed-population adapter. usable=8760 anal=9045 cand=14077. research_engine.experiments.exit_policy_governed.run_ex2 report COMPLETE; impl-gap EX2; repair only.",
+      "next_action": "IMPLEMENT_RUNNER",
+      "question_id": "EX2",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "b2f42c72a3d261bf93903a08c297a83237ba8bdad216172a7a63ef51668aa1a9",
+      "runner_method": "research_engine.experiments.exit_policy_governed.run_ex2",
+      "schema_gap_id": null,
+      "scientific_state": "IMPLEMENTATION_BLOCKED",
+      "supersedes": null,
+      "usable_count": 8760
+    },
+    {
+      "analytical_count": 14046,
+      "assurance_reason": "Independent certification verified COMPLETE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "What take-profit distance maximises expectancy? Tests TP at 0.25R through 3.0R using MFE data to determine reachability.",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "EX3",
+        "reason": "verified settled state",
+        "scientific_state": "COMPLETE",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/ex3_tp_distance.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved positive EX3 (What take-profit distance maximises expectancy? Tests TP at 0.25R through 3.0R using MFE data to determine reachability.): CURRENT artifact with status COMPLETE. usable=14046 anal=14046 cand=14077. research_engine.experiments.exit_management.run_ex3 report COMPLETE. Consumable as scientific truth.",
+      "next_action": "NONE",
+      "question_id": "EX3",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "9242a072a5d1c5ed4458c7c5d9f6808d36fdbc4fb9d857f9b2fae689c43ebeac",
+      "runner_method": "research_engine.experiments.exit_management.run_ex3",
+      "schema_gap_id": null,
+      "scientific_state": "COMPLETE",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 14046,
+      "assurance_reason": "Independent certification verified COMPLETE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does the current SL distance preserve signal quality, or does widening/tightening SL improve outcomes?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "EX4",
+        "reason": "verified settled state",
+        "scientific_state": "COMPLETE",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/ex4_sl_distance.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved positive EX4 (Does the current SL distance preserve signal quality, or does widening/tightening SL improve outcomes?): CURRENT artifact with status COMPLETE. usable=14046 anal=14046 cand=14077. research_engine.experiments.exit_management.run_ex4 report COMPLETE. Consumable as scientific truth.",
+      "next_action": "NONE",
+      "question_id": "EX4",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "127a378914cc3114ef7d17930139110478de566b359868c756269864614f71ac",
+      "runner_method": "research_engine.experiments.exit_management.run_ex4",
+      "schema_gap_id": null,
+      "scientific_state": "COMPLETE",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 9601,
+      "assurance_reason": "Independent certification verified WAITING_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does trade horizon (SCALP/INTRADAY/EXTENDED) require a different exit policy? Tests trailing parameters per horizon.",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "EX5",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "WAITING_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/ex5_horizon_exit.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved EX5 (Does trade horizon (SCALP/INTRADAY/EXTENDED) require a different exit policy? Tests trailing parameters per horizon.): CURRENT artifact with status WAITING_DATA. usable=14046 anal=9601 cand=14077. trigger GOVERNED_EVIDENCE_CONTRACT_REEVALUATION ['canonical_opportunity_id']; rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract. NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "canonical_opportunity_id"
+        ],
+        "scientific_state": "WAITING_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need horizon field populated",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Need outcomes",
+              "name": "",
+              "threshold": 0.95
+            }
+          ],
+          "dimension_coverage": 1.0,
+          "governed_coverage": 0.9745229395046691,
+          "remaining_dimension_valid_lifecycles": 0,
+          "remaining_distinct_opportunities": 0,
+          "remaining_paired_lifecycles": 0,
+          "remaining_sufficient_levels": 1,
+          "required_dimension_coverage": 0.5,
+          "required_dimension_valid_lifecycles": 4801,
+          "required_distinct_opportunities": 200,
+          "required_governed_coverage": 0.95,
+          "required_opportunities_per_candidate_level_cell": 30,
+          "required_paired_lifecycles": 200,
+          "required_sufficient_levels": 2
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "EX5",
+      "report_authority_valid": true,
+      "report_status": "WAITING_DATA",
+      "result_fingerprint": "705bd4361e7aa4ac5b8e73c3ec9bb7a31c6c57d0cc952b63942be5d8c3dd17eb",
+      "runner_method": "research_engine.experiments.exit_policy_heterogeneity.run_ex5",
+      "schema_gap_id": null,
+      "scientific_state": "WAITING_DATA",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 1046,
+      "assurance_reason": "Independent certification verified WAITING_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does each strategy family (REVERSAL/MOMENTUM/CONTINUATION) require a different exit policy?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "EX6",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "WAITING_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/ex6_strategy_exit.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 12225,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved EX6 (Does each strategy family (REVERSAL/MOMENTUM/CONTINUATION) require a different exit policy?): CURRENT artifact with status WAITING_DATA. usable=1852 anal=1046 cand=14077. trigger GOVERNED_EVIDENCE_CONTRACT_REEVALUATION ['canonical_opportunity_id']; rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract. NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "canonical_opportunity_id"
+        ],
+        "scientific_state": "WAITING_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need strategy field for segmentation",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Need outcomes",
+              "name": "",
+              "threshold": 0.95
+            }
+          ],
+          "dimension_coverage": 0.10894698468909489,
+          "governed_coverage": 0.9745229395046691,
+          "remaining_dimension_valid_lifecycles": 3755,
+          "remaining_distinct_opportunities": 0,
+          "remaining_paired_lifecycles": 0,
+          "remaining_sufficient_levels": 0,
+          "required_dimension_coverage": 0.5,
+          "required_dimension_valid_lifecycles": 4801,
+          "required_distinct_opportunities": 200,
+          "required_governed_coverage": 0.95,
+          "required_opportunities_per_candidate_level_cell": 30,
+          "required_paired_lifecycles": 200,
+          "required_sufficient_levels": 2
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "EX6",
+      "report_authority_valid": true,
+      "report_status": "WAITING_DATA",
+      "result_fingerprint": "a33054e18a0b20c38f47cba49786c64214d036b1a2a0575f6c069658ea5bab76",
+      "runner_method": "research_engine.experiments.exit_policy_heterogeneity.run_ex6",
+      "schema_gap_id": null,
+      "scientific_state": "WAITING_DATA",
+      "supersedes": null,
+      "usable_count": 1852
+    },
+    {
+      "analytical_count": 9591,
+      "assurance_reason": "Independent certification verified COMPLETE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does market regime (TRENDING/RANGING/TRANSITIONAL) require a different exit policy?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "EX7",
+        "reason": "verified settled state",
+        "scientific_state": "COMPLETE",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/ex7_regime_exit.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved positive EX7 (Does market regime (TRENDING/RANGING/TRANSITIONAL) require a different exit policy?): CURRENT artifact with status COMPLETE. usable=14046 anal=9591 cand=14077. research_engine.experiments.exit_policy_heterogeneity.run_ex7 report COMPLETE. Consumable as scientific truth.",
+      "next_action": "NONE",
+      "question_id": "EX7",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "9b4a6fe292c260294c01ac5ee2583c7b73ee3952206b6da7a11158965c509544",
+      "runner_method": "research_engine.experiments.exit_policy_heterogeneity.run_ex7",
+      "schema_gap_id": null,
+      "scientific_state": "COMPLETE",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 1046,
+      "assurance_reason": "Independent certification verified WAITING_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Do different candlestick patterns require different exit policies based on their MFE/MAE profiles?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "EX8",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "WAITING_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/ex8_pattern_exit.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 12225,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved EX8 (Do different candlestick patterns require different exit policies based on their MFE/MAE profiles?): CURRENT artifact with status WAITING_DATA. usable=1852 anal=1046 cand=14077. trigger GOVERNED_EVIDENCE_CONTRACT_REEVALUATION ['canonical_opportunity_id']; rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract. NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "canonical_opportunity_id"
+        ],
+        "scientific_state": "WAITING_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need pattern field",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Need outcomes",
+              "name": "",
+              "threshold": 0.95
+            }
+          ],
+          "dimension_coverage": 0.10894698468909489,
+          "governed_coverage": 0.9745229395046691,
+          "remaining_dimension_valid_lifecycles": 3755,
+          "remaining_distinct_opportunities": 0,
+          "remaining_paired_lifecycles": 0,
+          "remaining_sufficient_levels": 0,
+          "required_dimension_coverage": 0.5,
+          "required_dimension_valid_lifecycles": 4801,
+          "required_distinct_opportunities": 200,
+          "required_governed_coverage": 0.95,
+          "required_opportunities_per_candidate_level_cell": 30,
+          "required_paired_lifecycles": 200,
+          "required_sufficient_levels": 2
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "EX8",
+      "report_authority_valid": true,
+      "report_status": "WAITING_DATA",
+      "result_fingerprint": "2d08e1988cadabcbb7131e19f1d06e1b5799182b09587704e4b8d7f004e1a830",
+      "runner_method": "research_engine.experiments.exit_policy_heterogeneity.run_ex8",
+      "schema_gap_id": null,
+      "scientific_state": "WAITING_DATA",
+      "supersedes": null,
+      "usable_count": 1852
+    },
+    {
+      "analytical_count": 936,
+      "assurance_reason": "Independent certification verified COMPLETE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does the proposed exit policy reduce the timeout exit rate and convert timeout losses into captured profits?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "EX9",
+        "reason": "verified settled state",
+        "scientific_state": "COMPLETE",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/ex9_timeout_loss.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved positive EX9 (Does the proposed exit policy reduce the timeout exit rate and convert timeout losses into captured profits?): CURRENT artifact with status COMPLETE. usable=14046 anal=936 cand=14077. research_engine.experiments.exit_policy_governed.run_ex9 report COMPLETE. Consumable as scientific truth.",
+      "next_action": "NONE",
+      "question_id": "EX9",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "36bdd181e7500410f35ffab989f205e9c9758a3ca6f1df632152f50bd9be1bfc",
+      "runner_method": "research_engine.experiments.exit_policy_governed.run_ex9",
+      "schema_gap_id": null,
+      "scientific_state": "COMPLETE",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 365,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 55782,
+      "canonical_question": "Do execution failures or adverse conditions degrade otherwise valid opportunities?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "EXEC1",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/w4_exec1_execution_failures.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 55417,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved EXEC1 (Do execution failures or adverse conditions degrade otherwise valid opportunities?): CURRENT artifact with status INSUFFICIENT_DATA. usable=365 anal=365 cand=55782. missing ['result_ok + retcode + account execution identity', 'market_access.spread_atr_ratio']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "result_ok + retcode + account execution identity",
+          "market_access.spread_atr_ratio"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Minimum execution-result observations",
+              "name": "",
+              "threshold": 30
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "EXEC1",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "9834d88ff967f4e3c1928caa07bc42ea3be0c40343e6d53a00f167b1f769441b",
+      "runner_method": "research_engine.experiments.execution_protection_research.run_exec1",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 365
+    },
+    {
+      "analytical_count": 70,
+      "assurance_reason": "Independent certification verified NEGATIVE_RESULT against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Is the current dataset suitable for the intended research questions? (field coverage, source type, sample size)",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "G1",
+        "reason": "verified settled state",
+        "scientific_state": "NEGATIVE_RESULT",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/g1_dataset_suitability.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved negative/null G1 (Is the current dataset suitable for the intended research questions? (field coverage, source type, sample size)): CURRENT artifact with status BLOCKED. usable=14046 anal=70 cand=14077. research_engine.experiments.dataset_suitability.run_g1 report BLOCKED. Settled finding, not absence of evidence.",
+      "next_action": "NONE",
+      "question_id": "G1",
+      "report_authority_valid": true,
+      "report_status": "BLOCKED",
+      "result_fingerprint": "9583f0f7592f5b16767ca67ddea8cc298aa0e70673daeeb51af89a99b4e9a5a9",
+      "runner_method": "research_engine.experiments.dataset_suitability.run_g1",
+      "schema_gap_id": null,
+      "scientific_state": "NEGATIVE_RESULT",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 22521,
+      "assurance_reason": "Independent certification verified IMPLEMENTATION_BLOCKED against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 36641,
+      "canonical_question": "What percentage of canonical opportunities have valid decision-to-outcome lineage on (entity_id, canonical_opportunity_id)?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "IMPLEMENTATION_REPAIR"
+        ],
+        "question_id": "G2",
+        "reason": "verified block: repair only",
+        "scientific_state": "IMPLEMENTATION_BLOCKED",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/g2_lineage_coverage.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 36380,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": "G2",
+      "interpretation": "Unresolved impl block G2 (What percentage of canonical opportunities have valid decision-to-outcome lineage on (entity_id, canonical_opportunity_id)?): HD14 runner denominator is 22,521 identities but the canonical Gate 1 usable G2 population is 261; reconciling the distinct denominator contracts requires an engineering contract repair. usable=261 anal=22521 cand=36641. research_engine.experiments.lineage_coverage.run_g2 report COMPLETE; impl-gap G2; repair only.",
+      "next_action": "IMPLEMENT_RUNNER",
+      "question_id": "G2",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "b8569a83f96f9e8fb8ce61ab48cd583ea774cf23b436dc898d0fccec2eddfcc4",
+      "runner_method": "research_engine.experiments.lineage_coverage.run_g2",
+      "schema_gap_id": null,
+      "scientific_state": "IMPLEMENTATION_BLOCKED",
+      "supersedes": null,
+      "usable_count": 261
+    },
+    {
+      "analytical_count": null,
+      "assurance_reason": "Independent certification verified IMPLEMENTATION_BLOCKED against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Can research conclusions be trusted given current validation status, coverage percentages, and sample sizes?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "IMPLEMENTATION_REPAIR"
+        ],
+        "question_id": "G3",
+        "reason": "verified block: repair only",
+        "scientific_state": "IMPLEMENTATION_BLOCKED",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 12225,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": "G3",
+      "interpretation": "Unresolved impl block G3 (Can research conclusions be trusted given current validation status, coverage percentages, and sample sizes?): G3 requires a governed CURRENT L6 dependency, but L6 has no declared runner or owned report. usable=1852 anal=None cand=14077. research_engine.experiments.research_validity.run_g3 report MISSING; impl-gap G3; repair only.",
+      "next_action": "IMPLEMENT_RUNNER",
+      "question_id": "G3",
+      "report_authority_valid": true,
+      "report_status": "MISSING",
+      "result_fingerprint": "",
+      "runner_method": "research_engine.experiments.research_validity.run_g3",
+      "schema_gap_id": null,
+      "scientific_state": "IMPLEMENTATION_BLOCKED",
+      "supersedes": null,
+      "usable_count": 1852
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 81994,
+      "canonical_question": "Within-opportunity comparison: for each canonical opportunity with simulated outcomes for the selected horizon AND >=1 alternative horizon, was the selection supported by subsequent evidence? Simulated counterfactuals on shadow-observed opportunities.",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "HORIZON-1",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/horizon1_selection_quality.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 81994,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable HORIZON-1 (Within-opportunity comparison: for each canonical opportunity with simulated outcomes for the selected horizon AND >=1 alternative horizon, was the selection supported by subsequent evidence? Simulated counterfactuals on shadow-observed opportunities.): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=81994. schema gap STAGE4-DATA-HORIZON-1; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "identity.canonical_opportunity_id | identity.evaluated_horizon | identity.shadow_type | simulated_outcome.pnl_r_multiple",
+          "canonical_opportunity_id | horizon | selection_status"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Minimum comparable opportunities",
+              "name": "",
+              "threshold": 30
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "HORIZON-1",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "485bef7ddbf180353b2352ddcbd55872535aa93fe2e05175d82c2855ec087f61",
+      "runner_method": "research_engine.experiments.selection_research.run_horizon1",
+      "schema_gap_id": "STAGE4-DATA-HORIZON-1",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Are patterns degrading in performance over time?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "L1",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable L1 (Are patterns degrading in performance over time?): Historical governed population has no analytically usable rows; absent/unresolved: entry_time. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-L1; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "identity.canonical_opportunity_id | identity.shadow_type | decision_snapshot.pattern | simulated_outcome.pnl_r_multiple",
+          "OPEN.entry_market_time | OPEN.entry_market_time_utc_epoch_s | OPEN.market_timestamp_semantics | OPEN.market_timestamp_normalization_version",
+          "CANDLE:mt5_data:M5.payload.ts and OHLC"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Pattern required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "HD11 overall canonical-opportunity minimum",
+              "name": "",
+              "threshold": 200
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "L1",
+      "report_authority_valid": true,
+      "report_status": "NO_GOVERNED_SCIENTIFIC_REPORT",
+      "result_fingerprint": "6b0681615003adf7ec24c5f5fa92870c3c5db308fa39cf24c0f9954860dd35f4",
+      "runner_method": "research_engine.experiments.pattern_degradation.run_l1",
+      "schema_gap_id": "STAGE4-DATA-L1",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does the system improve after architecture changes? (compare pre/post periods)",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "L2",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/q15_learning_velocity.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable L2 (Does the system improve after architecture changes? (compare pre/post periods)): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-L2; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "canonical_opportunity_id",
+          "entry_time"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {},
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "L2",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "35a33495e843176e2fbcfd271488702e97759b586eca57a4566d5870d80ca79b",
+      "runner_method": "research_engine.experiments.legacy_canonical.run_q15",
+      "schema_gap_id": "STAGE4-DATA-L2",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": null,
+      "assurance_reason": "Independent certification verified IMPLEMENTATION_BLOCKED against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 36641,
+      "canonical_question": "Are the scoring weight assumptions, regime classifications, and strategy mappings still correct?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "IMPLEMENTATION_REPAIR"
+        ],
+        "question_id": "L3",
+        "reason": "verified block: repair only",
+        "scientific_state": "IMPLEMENTATION_BLOCKED",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 36546,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": "L3",
+      "interpretation": "Unresolved impl block L3 (Are the scoring weight assumptions, regime classifications, and strategy mappings still correct?): Declared q1_component_reward.json is adjudicated to D1; L3 has no independently owned CURRENT report path. usable=95 anal=None cand=36641. research_engine.experiments.component_reward.run report MISSING; impl-gap L3; repair only.",
+      "next_action": "IMPLEMENT_RUNNER",
+      "question_id": "L3",
+      "report_authority_valid": true,
+      "report_status": "MISSING",
+      "result_fingerprint": "",
+      "runner_method": "research_engine.experiments.component_reward.run",
+      "schema_gap_id": null,
+      "scientific_state": "IMPLEMENTATION_BLOCKED",
+      "supersedes": null,
+      "usable_count": 95
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 15679,
+      "canonical_question": "Does market behaviour change over time in ways that invalidate strategy assumptions?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "L4",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 15679,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable L4 (Does market behaviour change over time in ways that invalidate strategy assumptions?): Historical governed population has no analytically usable rows; absent/unresolved: entry_time. usable=0 anal=0 cand=15679. schema gap STAGE4-DATA-L4; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "identity.canonical_opportunity_id | identity.symbol | identity.shadow_type | simulated_outcome.pnl_r_multiple",
+          "OPEN.entry_market_time canonical UTC authority",
+          "symbol | bar_time | regime"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Regime history required",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "L4",
+      "report_authority_valid": true,
+      "report_status": "NO_GOVERNED_SCIENTIFIC_REPORT",
+      "result_fingerprint": "91dc2f4e0d9757d6008da98f51f20958a19b827a71d49d81080e7e6a833b5555",
+      "runner_method": "research_engine.experiments.market_behaviour_stability.run_l4",
+      "schema_gap_id": "STAGE4-DATA-L4",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Do patterns, strategies, or market assumptions lose predictive power over time?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "L5",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/l5_model_drift_detection.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable L5 (Do patterns, strategies, or market assumptions lose predictive power over time?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-L5; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "identity.canonical_opportunity_id | identity.evaluated_horizon | decision_snapshot.strategy | decision_snapshot.entry_time | simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Pattern required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Strategy required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "L5",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "46f434ff06148475dbe214682393327a54b54ca477d2630cce64aa97fbd301ab",
+      "runner_method": "research_engine.experiments.edge_depth.run_l5",
+      "schema_gap_id": "STAGE4-DATA-L5",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": null,
+      "assurance_reason": "Independent certification verified IMPLEMENTATION_BLOCKED against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "How trustworthy is each research conclusion given dataset validity, coverage, and sample size?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "IMPLEMENTATION_REPAIR"
+        ],
+        "question_id": "L6",
+        "reason": "verified block: repair only",
+        "scientific_state": "IMPLEMENTATION_BLOCKED",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 12225,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": "L6",
+      "interpretation": "Unresolved impl block L6 (How trustworthy is each research conclusion given dataset validity, coverage, and sample size?): No governed runner/module is declared. usable=1852 anal=None cand=14077. MISSING report MISSING; impl-gap L6; repair only.",
+      "next_action": "IMPLEMENT_RUNNER",
+      "question_id": "L6",
+      "report_authority_valid": true,
+      "report_status": "MISSING",
+      "result_fingerprint": "",
+      "runner_method": "MISSING",
+      "schema_gap_id": null,
+      "scientific_state": "IMPLEMENTATION_BLOCKED",
+      "supersedes": null,
+      "usable_count": 1852
+    },
+    {
+      "analytical_count": null,
+      "assurance_reason": "Independent certification verified IMPLEMENTATION_BLOCKED against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does a proposed strategy change outperform the currently promoted version when evaluated in shadow mode with statistical significance?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "IMPLEMENTATION_REPAIR"
+        ],
+        "question_id": "L7",
+        "reason": "verified block: repair only",
+        "scientific_state": "IMPLEMENTATION_BLOCKED",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": "L7",
+      "interpretation": "Unresolved impl block L7 (Does a proposed strategy change outperform the currently promoted version when evaluated in shadow mode with statistical significance?): Runner requires governed control_label and candidate_label, but the canonical L7 contract declares neither. usable=14046 anal=None cand=14077. research_engine.experiments.shadow_ab_validation.run_shadow_ab_validation report MISSING; impl-gap L7; repair only.",
+      "next_action": "IMPLEMENT_RUNNER",
+      "question_id": "L7",
+      "report_authority_valid": true,
+      "report_status": "MISSING",
+      "result_fingerprint": "",
+      "runner_method": "research_engine.experiments.shadow_ab_validation.run_shadow_ab_validation",
+      "schema_gap_id": null,
+      "scientific_state": "IMPLEMENTATION_BLOCKED",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 14036,
+      "assurance_reason": "Independent certification verified COMPLETE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does H4 regime classification (TRENDING/RANGING/TRANSITIONAL) predict trade R-multiple?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "M1",
+        "reason": "verified settled state",
+        "scientific_state": "COMPLETE",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/m1_h4_regime_prediction_v1.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved positive M1 (Does H4 regime classification (TRENDING/RANGING/TRANSITIONAL) predict trade R-multiple?): CURRENT artifact with status COMPLETE. usable=14046 anal=14036 cand=14077. research_engine.experiments.market_prediction_rw2.run_m1 report COMPLETE. Consumable as scientific truth.",
+      "next_action": "NONE",
+      "question_id": "M1",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "00f3416f84a6350dfffbb549eac0810f0615a6b4402cdbebcb01d1c0d8f94ef1",
+      "runner_method": "research_engine.experiments.market_prediction_rw2.run_m1",
+      "schema_gap_id": null,
+      "scientific_state": "COMPLETE",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does each market phase require a different strategy family (reversal, continuation, momentum, breakout) rather than different pattern weighting within one family?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "M10",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/m10_strategy_family_per_phase.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable M10 (Does each market phase require a different strategy family (reversal, continuation, momentum, breakout) rather than different pattern weighting within one family?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-M10; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "decision_snapshot.market_phase | decision_snapshot.pattern (family derived via STRATEGY_FAMILIES mapping); simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Phase required for stratification",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Clean strategy labels needed",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "M10",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "9395212d4502995bd68e4f3d5096c2a081d1d6098eb51285541ab9c94c9da667",
+      "runner_method": "research_engine.experiments.m10_strategy_family_per_phase.run_m10_strategy_family_per_phase",
+      "schema_gap_id": "STAGE4-DATA-M10",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 36641,
+      "canonical_question": "Does market context (regime + phase + bias) provide more predictive value for trade outcomes than the pattern identity itself?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "M11",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/m11_context_vs_pattern_prediction_v1.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 36641,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable M11 (Does market context (regime + phase + bias) provide more predictive value for trade outcomes than the pattern identity itself?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=36641. schema gap STAGE4-DATA-M11; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "v10_market_state.regime + v10_market_state.h4.market_phase + v10_market_state.h1.dominant_trend",
+          "decision_snapshot.pattern",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Regime required",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Phase required",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "Need decision context linked to outcomes",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Distinct joined canonical opportunities required for chronological validation",
+              "name": "",
+              "threshold": 120
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "M11",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "0b1359e33825b8685c39c47bf33cdca74c128df3992aa8282ab6d68b65a9d6b5",
+      "runner_method": "research_engine.experiments.market_prediction_rw2.run_m11",
+      "schema_gap_id": "STAGE4-DATA-M11",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 4,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Which H4 regimes produce edge for each strategy type?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "M2",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/m2_regime_strategy_edge.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved M2 (Which H4 regimes produce edge for each strategy type?): CURRENT artifact with status INSUFFICIENT_DATA. usable=14046 anal=4 cand=14077. missing ['decision_snapshot.h4_regime | decision_snapshot.strategy; simulated_outcome.pnl_r_multiple']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "decision_snapshot.h4_regime | decision_snapshot.strategy; simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "H4 regime required",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Clean strategy required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "M2",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "2342809380203e62f9a7d83c0cf2c2d0bfaac651e279d920a97a5671a407b9cf",
+      "runner_method": "research_engine.experiments.market_research.run_m2",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does market_phase (IMPULSE/PULLBACK/CONSOLIDATION/EXHAUSTION/REVERSAL) improve prediction beyond H4 regime alone?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "M3",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/m3_phase_incremental_prediction_v1.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable M3 (Does market_phase (IMPULSE/PULLBACK/CONSOLIDATION/EXHAUSTION/REVERSAL) improve prediction beyond H4 regime alone?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-M3; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "decision_snapshot.h4_regime",
+          "decision_snapshot.market_phase",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "H4 regime required",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Phase must be populated",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "Distinct canonical opportunities required for chronological validation",
+              "name": "",
+              "threshold": 90
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "M3",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "2829834215326a5ee0354f82e77068f0cd9d688db967900381e5f55f206a081c",
+      "runner_method": "research_engine.experiments.market_prediction_rw2.run_m3",
+      "schema_gap_id": "STAGE4-DATA-M3",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Which regime \u00d7 phase \u00d7 strategy combinations produce edge?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "M4",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/m4_regime_phase_strategy.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable M4 (Which regime \u00d7 phase \u00d7 strategy combinations produce edge?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-M4; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "decision_snapshot.h4_regime | decision_snapshot.market_phase | decision_snapshot.strategy; simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "H4 regime required",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Phase required",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Clean strategy required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "M4",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "a0c073047315dd9f5b0ce6e0e6f8e05e25346693a645f9d21352aadda2cd8b03",
+      "runner_method": "research_engine.experiments.market_research.run_m4",
+      "schema_gap_id": "STAGE4-DATA-M4",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Do rapid phase transitions predict subsequent realised strategy drawdown in cumulative R? This is not account-equity or mark-to-market drawdown.",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "M5",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/m5_phase_transitions_drawdown.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable M5 (Do rapid phase transitions predict subsequent realised strategy drawdown in cumulative R? This is not account-equity or mark-to-market drawdown.): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-M5; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "simulated_outcome.pnl_r_multiple | decision_snapshot.market_phase"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Phase history required",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Closed outcome R required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "M5",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "4535a3d6bbc01e9607cf782b7524c52a7238dcd29a740f76bacfa86ffa5c4987",
+      "runner_method": "research_engine.experiments.market_temporal.run_m5",
+      "schema_gap_id": "STAGE4-DATA-M5",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Which market phases (IMPULSE/PULLBACK/CONSOLIDATION/EXHAUSTION/REVERSAL) contain real edge?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "M6",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/m6_phase_expectancy.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable M6 (Which market phases (IMPULSE/PULLBACK/CONSOLIDATION/EXHAUSTION/REVERSAL) contain real edge?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-M6; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "decision_snapshot.market_phase; simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Phase must be populated",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "M6",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "afeaa4de61fdfe19595c97f601de66c69ed5f8213141da62668bb4dfd9672a13",
+      "runner_method": "research_engine.experiments.market_research.run_m6",
+      "schema_gap_id": "STAGE4-DATA-M6",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does combining regime and phase improve predictive power beyond either alone?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "M7",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/m7_regime_phase_prediction_v1.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable M7 (Does combining regime and phase improve predictive power beyond either alone?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-M7; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "decision_snapshot.h4_regime",
+          "decision_snapshot.market_phase",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "H4 regime required",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Phase required",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "Distinct canonical opportunities required for chronological validation",
+              "name": "",
+              "threshold": 90
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "M7",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "9cd575d455e7acc0fa8206838fd5d7fad24655e0bcb24d339ac236b88ef65005",
+      "runner_method": "research_engine.experiments.market_prediction_rw2.run_m7",
+      "schema_gap_id": "STAGE4-DATA-M7",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 15679,
+      "canonical_question": "Do market phase transitions (e.g. IMPULSE\u2192EXHAUSTION) predict future trade outcomes?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "M8",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/m8_phase_transition_prediction_v1.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 15679,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable M8 (Do market phase transitions (e.g. IMPULSE\u2192EXHAUSTION) predict future trade outcomes?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=15679. schema gap STAGE4-DATA-M8; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "market_phase + timestamp",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Phase history required",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "Distinct joined canonical opportunities required for chronological validation",
+              "name": "",
+              "threshold": 60
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "M8",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "0766ce00fd69bf61db02d11a1b836a721469d02298141a54a24b32d41067780c",
+      "runner_method": "research_engine.experiments.market_prediction_rw2.run_m8",
+      "schema_gap_id": "STAGE4-DATA-M8",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "For each market phase (IMPULSE, PULLBACK, CONSOLIDATION, EXHAUSTION, REVERSAL), which patterns or behaviours actually belong there and produce positive expectancy?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "M9",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/m9_phase_pattern.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable M9 (For each market phase (IMPULSE, PULLBACK, CONSOLIDATION, EXHAUSTION, REVERSAL), which patterns or behaviours actually belong there and produce positive expectancy?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-M9; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "decision_snapshot.market_phase | decision_snapshot.pattern; simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Phase must be populated to stratify by phase",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "M9",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "98fca6ee87d7bd4b21658b65e6f74a5d3d9a4efa2ead414ad23f7eecec3b1056",
+      "runner_method": "research_engine.experiments.m9_phase_pattern.run_m9_phase_pattern",
+      "schema_gap_id": "STAGE4-DATA-M9",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 84,
+      "assurance_reason": "Independent certification verified COMPLETE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 233,
+      "canonical_question": "Observational association between management actions and realised outcomes. NOT causal.",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "MGMT-1",
+        "reason": "verified settled state",
+        "scientific_state": "COMPLETE",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/mgmt1_management_effectiveness.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 149,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved positive MGMT-1 (Observational association between management actions and realised outcomes. NOT causal.): CURRENT artifact with status COMPLETE. usable=84 anal=84 cand=233. research_engine.experiments.management_research.run_mgmt1 report COMPLETE. Consumable as scientific truth.",
+      "next_action": "NONE",
+      "question_id": "MGMT-1",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "fb773bca32a5964a5a57c499dd7b5881fe6e54ab5f8b86bf381e7ca7c50a9c0b",
+      "runner_method": "research_engine.experiments.management_research.run_mgmt1",
+      "schema_gap_id": null,
+      "scientific_state": "COMPLETE",
+      "supersedes": null,
+      "usable_count": 84
+    },
+    {
+      "analytical_count": 95,
+      "assurance_reason": "Independent certification verified COMPLETE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 233,
+      "canonical_question": "Per-action-type outcome analysis (SLTP_MODIFY, PARTIAL_CLOSE, CLOSE). OBSERVATIONAL.",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "MGMT-2",
+        "reason": "verified settled state",
+        "scientific_state": "COMPLETE",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/mgmt2_action_type_analysis.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 138,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved positive MGMT-2 (Per-action-type outcome analysis (SLTP_MODIFY, PARTIAL_CLOSE, CLOSE). OBSERVATIONAL.): CURRENT artifact with status COMPLETE. usable=95 anal=95 cand=233. research_engine.experiments.management_research.run_mgmt2 report COMPLETE. Consumable as scientific truth.",
+      "next_action": "NONE",
+      "question_id": "MGMT-2",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "4bbe6937573f3d07ae7b5eb5b30e086e2a1c37c526bb4ae05782290c8f0c0bf8",
+      "runner_method": "research_engine.experiments.management_research.run_mgmt2",
+      "schema_gap_id": null,
+      "scientific_state": "COMPLETE",
+      "supersedes": null,
+      "usable_count": 95
+    },
+    {
+      "analytical_count": 3073,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 22619,
+      "canonical_question": "Were the opportunities promoted into the decision pipeline better than the opportunities rejected or filtered out?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "OPP-1",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/opp1_opportunity_selection.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 19546,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable OPP-1 (Were the opportunities promoted into the decision pipeline better than the opportunities rejected or filtered out?): CURRENT artifact with status BLOCKED. usable=3073 anal=3073 cand=22619. schema gap STAGE4-DATA-OPP-1; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "opportunity_id",
+          "state",
+          "overall_score"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need opportunities with shadow outcomes",
+              "name": "",
+              "threshold": 10
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "OPP-1",
+      "report_authority_valid": true,
+      "report_status": "BLOCKED",
+      "result_fingerprint": "1d6907bbc37e856859b067836b877043070feb3a8a7e6e36575ef87d841d619c",
+      "runner_method": "research_engine.experiments.opportunity_selection.run_opp_1",
+      "schema_gap_id": "STAGE4-DATA-OPP-1",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 3073
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 36641,
+      "canonical_question": "If a specific recommendation is promoted into production, what measurable improvement in EV, win rate, drawdown, trade frequency, and risk is expected?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "P1",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/p1_promotion_impact.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 36641,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable P1 (If a specific recommendation is promoted into production, what measurable improvement in EV, win rate, drawdown, trade frequency, and risk is expected?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=36641. schema gap STAGE4-DATA-P1; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "decision_snapshot.pattern",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Full outcomes needed for impact estimation",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "Need decision context for change modelling",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Clean strategy required for segmentation",
+              "name": "",
+              "threshold": 0.5
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "P1",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "771edab3aefc3109be69fd2f9e7156a07fdfc4d6af2b645b3e86514b0929d47d",
+      "runner_method": "research_engine.experiments.promotion_impact.run_promotion_impact",
+      "schema_gap_id": "STAGE4-DATA-P1",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14581,
+      "canonical_question": "Did the portfolio/ranking layer select the best available opportunity from the ranked candidate set? Evaluates whether the selected candidate's outcome is competitive with the best-ranked candidate in the same cycle.",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "PORT-1",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/port1_portfolio_selection.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14581,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable PORT-1 (Did the portfolio/ranking layer select the best available opportunity from the ranked candidate set? Evaluates whether the selected candidate's outcome is competitive with the best-ranked candidate in the same cycle.): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=14581. schema gap STAGE4-DATA-PORT-1; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "candidates.selection_status",
+          "candidates.rank_position",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need cycles with rankings for selection analysis",
+              "name": "",
+              "threshold": 5
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "PORT-1",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "2771ecad91b1f6462075b295c1f21476d6339663f069e1a445a1c3d771a92883",
+      "runner_method": "research_engine.experiments.portfolio_ranking.run_port_1",
+      "schema_gap_id": "STAGE4-DATA-PORT-1",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 125,
+      "assurance_reason": "Independent certification verified COMPLETE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 125,
+      "canonical_question": "Are positions retaining the protection (SL/TP) the system intended?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "PROT1",
+        "reason": "verified settled state",
+        "scientific_state": "COMPLETE",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/w4_prot1_protection_integrity.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 0,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved positive PROT1 (Are positions retaining the protection (SL/TP) the system intended?): CURRENT artifact with status COMPLETE. usable=125 anal=125 cand=125. research_engine.experiments.execution_protection_research.run_prot1 report COMPLETE. Consumable as scientific truth.",
+      "next_action": "NONE",
+      "question_id": "PROT1",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "f6c8f3d7445b4b889a89c6910956ef88a7c8850e22aef4872482e4fbd40779d3",
+      "runner_method": "research_engine.experiments.execution_protection_research.run_prot1",
+      "schema_gap_id": null,
+      "scientific_state": "COMPLETE",
+      "supersedes": null,
+      "usable_count": 125
+    },
+    {
+      "analytical_count": 10803,
+      "assurance_reason": "Independent certification verified IMPLEMENTATION_BLOCKED against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 36641,
+      "canonical_question": "Does the risk layer (guards, daily loss limit, exposure) improve overall expectancy and survival?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "IMPLEMENTATION_REPAIR"
+        ],
+        "question_id": "R1",
+        "reason": "verified block: repair only",
+        "scientific_state": "IMPLEMENTATION_BLOCKED",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/r1_risk_layer_effectiveness.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 36006,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": "R1",
+      "interpretation": "Unresolved impl block R1 (Does the risk layer (guards, daily loss limit, exposure) improve overall expectancy and survival?): HD10 runner analytical population is 10,803 opportunities but the canonical Gate 1 usable population for R1 is 635; the runner lacks an adapter for the governed required-field population. usable=635 anal=10803 cand=36641. research_engine.experiments.r1_risk_layer_effectiveness.run_r1 report BLOCKED; impl-gap R1; repair only.",
+      "next_action": "IMPLEMENT_RUNNER",
+      "question_id": "R1",
+      "report_authority_valid": true,
+      "report_status": "BLOCKED",
+      "result_fingerprint": "8bf5cb2b03b7a4b2db0897be9c117a21a1326ebe09a57702a06bb9637fb91e54",
+      "runner_method": "research_engine.experiments.r1_risk_layer_effectiveness.run_r1",
+      "schema_gap_id": null,
+      "scientific_state": "IMPLEMENTATION_BLOCKED",
+      "supersedes": null,
+      "usable_count": 635
+    },
+    {
+      "analytical_count": 10803,
+      "assurance_reason": "Independent certification verified IMPLEMENTATION_BLOCKED against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 36641,
+      "canonical_question": "Did each individual guard (spread, correlation, regime, daily loss) improve final expectancy?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "IMPLEMENTATION_REPAIR"
+        ],
+        "question_id": "R2",
+        "reason": "verified block: repair only",
+        "scientific_state": "IMPLEMENTATION_BLOCKED",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/r2_guard_attribution.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 36006,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": "R2",
+      "interpretation": "Unresolved impl block R2 (Did each individual guard (spread, correlation, regime, daily loss) improve final expectancy?): HD10 runner analytical population is 10,803 opportunities but the canonical Gate 1 usable population for R2 is 635; the runner lacks an adapter for the governed required-field population. usable=635 anal=10803 cand=36641. research_engine.experiments.r2_guard_attribution.run_r2 report BLOCKED; impl-gap R2; repair only.",
+      "next_action": "IMPLEMENT_RUNNER",
+      "question_id": "R2",
+      "report_authority_valid": true,
+      "report_status": "BLOCKED",
+      "result_fingerprint": "c6cff5b9c47a6fece30aca8236f4bbacce7be7402ac1874c8455880540f2bf2a",
+      "runner_method": "research_engine.experiments.r2_guard_attribution.run_r2",
+      "schema_gap_id": null,
+      "scientific_state": "IMPLEMENTATION_BLOCKED",
+      "supersedes": null,
+      "usable_count": 635
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Given the measured edge, win rate, variance and position sizing, what is the probability that this system eventually reaches catastrophic drawdown?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "R3",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable R3 (Given the measured edge, win rate, variance and position sizing, what is the probability that this system eventually reaches catastrophic drawdown?): Historical governed population has no analytically usable rows; absent/unresolved: win_rate, position_size. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-R3; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "canonical_opportunity_id"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Nearly all records must have R-multiple for variance estimation",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "Need full lifecycle for accurate win rate",
+              "name": "",
+              "threshold": 0.8
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "R3",
+      "report_authority_valid": true,
+      "report_status": "NO_GOVERNED_SCIENTIFIC_REPORT",
+      "result_fingerprint": "350f5c2a40a413b449db144836c5331f17b2d5b3acb07417604e16a5fbb611d9",
+      "runner_method": "research_engine.experiments.probability_of_ruin.run_probability_of_ruin",
+      "schema_gap_id": "STAGE4-DATA-R3",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "At what realised drawdown should the system automatically suspend trading because historical recovery probability becomes unacceptable?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "R4",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable R4 (At what realised drawdown should the system automatically suspend trading because historical recovery probability becomes unacceptable?): Historical governed population has no analytically usable rows; absent/unresolved: entry_time. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-R4; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "canonical_opportunity_id",
+          "entry_time"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Full outcome history required for drawdown modelling",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "R4",
+      "report_authority_valid": true,
+      "report_status": "NO_GOVERNED_SCIENTIFIC_REPORT",
+      "result_fingerprint": "db9f01cbafef6aed1477e248afa4a783c0e173289d93170a9e7c0d4b529cc516",
+      "runner_method": "research_engine.experiments.drawdown_threshold.run_drawdown_threshold",
+      "schema_gap_id": "STAGE4-DATA-R4",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "What position sizing model (fixed risk, Kelly, half-Kelly, fractional Kelly, fixed lot, dynamic) maximises long-term growth while respecting acceptable drawdown?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "R5",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable R5 (What position sizing model (fixed risk, Kelly, half-Kelly, fractional Kelly, fixed lot, dynamic) maximises long-term growth while respecting acceptable drawdown?): Historical governed population has no analytically usable rows; absent/unresolved: win_rate. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-R5; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "canonical_opportunity_id"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Full outcome distribution required for Kelly calculation",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "R5",
+      "report_authority_valid": true,
+      "report_status": "NO_GOVERNED_SCIENTIFIC_REPORT",
+      "result_fingerprint": "af82c6b048a55fc974bba0cc9484cb003da12db5989dbd38806643d5a9375c8d",
+      "runner_method": "research_engine.experiments.position_sizing.run_position_sizing",
+      "schema_gap_id": "STAGE4-DATA-R5",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 84,
+      "assurance_reason": "Independent certification verified COMPLETE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 84,
+      "canonical_question": "When the bot realises a loss, does the realised loss magnitude respect the 1-R planned-risk definition? How often do realised losses exceed the plan (ELEVATED/CRITICAL)?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "RISK-1",
+        "reason": "verified settled state",
+        "scientific_state": "COMPLETE",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/w5_risk1_control_fidelity.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 0,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved positive RISK-1 (When the bot realises a loss, does the realised loss magnitude respect the 1-R planned-risk definition? How often do realised losses exceed the plan (ELEVATED/CRITICAL)?): CURRENT artifact with status COMPLETE. usable=84 anal=84 cand=84. research_engine.experiments.risk_research.run_risk1 report COMPLETE. Consumable as scientific truth.",
+      "next_action": "NONE",
+      "question_id": "RISK-1",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "d0eec19567c0d052ebba4a54ee155413b0d5397a59fe1a0b2f20692c1b922124",
+      "runner_method": "research_engine.experiments.risk_research.run_risk1",
+      "schema_gap_id": null,
+      "scientific_state": "COMPLETE",
+      "supersedes": null,
+      "usable_count": 84
+    },
+    {
+      "analytical_count": 1083,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Superseded alias of E3: expectancy for each active non-NONE V10 StrategyFamily on completed primary shadow outcomes.",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "S1",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/e3_strategy_family_expectancy.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved S1 (Superseded alias of E3: expectancy for each active non-NONE V10 StrategyFamily on completed primary shadow outcomes.): Governed scientific alias of E3: CURRENT artifact with status INSUFFICIENT_DATA. usable=14046 anal=1083 cand=14077. missing ['strategy', 'r_multiple']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "strategy",
+          "r_multiple"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Clean strategy values required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "S1",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "94b08699ee4269fe155e65e18c462c3e0cfb8a571faa9d6e1d7d059ef8c40722",
+      "runner_method": "alias:S1->E3:research_engine.experiments.strategy_expectancy.run_e3",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 14046,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Does trade horizon (SCALP/INTRADAY/EXTENDED) independently affect expectancy?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "S2",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/s2_horizon_expectancy.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved S2 (Does trade horizon (SCALP/INTRADAY/EXTENDED) independently affect expectancy?): CURRENT artifact with status INSUFFICIENT_DATA. usable=14046 anal=14046 cand=14077. missing ['identity.evaluated_horizon | identity.shadow_type | simulated_outcome.pnl_r_multiple']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "identity.evaluated_horizon | identity.shadow_type | simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Separate horizon field required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "S2",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "392904cadce1eb6c48d25888690e98d4f3e8f344345e2e076b828b68300cd257",
+      "runner_method": "research_engine.experiments.selection_research.run_s2",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 14046,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Which strategy \u00d7 horizon combinations work? (e.g. REVERSAL+SCALP vs CONTINUATION+EXTENDED)",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "S3",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/s3_strategy_horizon_combinations.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved S3 (Which strategy \u00d7 horizon combinations work? (e.g. REVERSAL+SCALP vs CONTINUATION+EXTENDED)): CURRENT artifact with status INSUFFICIENT_DATA. usable=14046 anal=14046 cand=14077. missing ['identity.canonical_opportunity_id | identity.evaluated_horizon | decision_snapshot.strategy | simulated_outcome.pnl_r_multiple']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "identity.canonical_opportunity_id | identity.evaluated_horizon | decision_snapshot.strategy | simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Clean strategy required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Separate horizon required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "S3",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "414ba873b6a5bbc8cc7ec97f1f9e4d8145b21899e9eed97573b01049d2bc08f5",
+      "runner_method": "research_engine.experiments.selection_research.run_s3",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Are strategies specialised for certain market phases? (e.g. REVERSAL only in EXHAUSTION)",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "S4",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/s4_strategy_phase_specialisation.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14077,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable S4 (Are strategies specialised for certain market phases? (e.g. REVERSAL only in EXHAUSTION)): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=14077. schema gap STAGE4-DATA-S4; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "identity.canonical_opportunity_id | identity.shadow_type | decision_snapshot.strategy | decision_snapshot.market_phase | simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Clean strategy required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Phase required",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "S4",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "2258a9bdd0dd906e3245ae87f36e64c0928cbf58e902fa4bc521acb44c959109",
+      "runner_method": "research_engine.experiments.selection_research.run_s4",
+      "schema_gap_id": "STAGE4-DATA-S4",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 1852,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Which active non-NONE V10 StrategyFamily values retain expectancy after accounting for the evaluated trade horizon (SCALP/INTRADAY/EXTENDED) under which outcomes were simulated?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "S5",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/s5_strategy_identity_expectancy.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved S5 (Which active non-NONE V10 StrategyFamily values retain expectancy after accounting for the evaluated trade horizon (SCALP/INTRADAY/EXTENDED) under which outcomes were simulated?): CURRENT artifact with status INSUFFICIENT_DATA. usable=14046 anal=1852 cand=14077. missing ['identity.canonical_opportunity_id', 'identity.strategy_id', 'identity.evaluated_horizon', 'simulated_outcome.pnl_r_multiple', 'lifecycle.status']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "identity.canonical_opportunity_id",
+          "identity.strategy_id",
+          "identity.evaluated_horizon",
+          "simulated_outcome.pnl_r_multiple",
+          "lifecycle.status"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Clean strategy required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Evaluated horizon required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "CURRENT horizon-simulation row floor; distinct canonical-opportunity 100/30/20 gates are enforced by the S5 runner",
+              "name": "",
+              "threshold": 100
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "S5",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "46589f7693eeb6b626f020be67d825ffc1006f2c462fcd23c11e77e43553c90c",
+      "runner_method": "research_engine.experiments.strategy_identity_expectancy.run_s5",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 1852,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Which canonical trade horizons (SCALP/INTRADAY/EXTENDED) retain expectancy after accounting for the six active V10 StrategyFamily values?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "S6",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/s6_horizon_expectancy.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved S6 (Which canonical trade horizons (SCALP/INTRADAY/EXTENDED) retain expectancy after accounting for the six active V10 StrategyFamily values?): CURRENT artifact with status INSUFFICIENT_DATA. usable=14046 anal=1852 cand=14077. missing ['identity.canonical_opportunity_id', 'identity.strategy_id', 'identity.evaluated_horizon', 'simulated_outcome.pnl_r_multiple', 'lifecycle.status']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "identity.canonical_opportunity_id",
+          "identity.strategy_id",
+          "identity.evaluated_horizon",
+          "simulated_outcome.pnl_r_multiple",
+          "lifecycle.status"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Separate horizon field required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Authoritative StrategyFamily required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "CURRENT horizon-simulation row floor; distinct canonical-opportunity 100/30/20 gates are enforced by the S6 runner",
+              "name": "",
+              "threshold": 100
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "S6",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "36a035aa861ab86d65d479221efc1d03b3d77dfa1b2f3c0884a4827e0fb33415",
+      "runner_method": "research_engine.experiments.horizon_expectancy.run_s6",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14077,
+      "canonical_question": "Are strategies profitable only at specific horizons? (e.g. REVERSAL works at SCALP but not EXTENDED)",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "S7",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/s7_strategy_horizon_interaction.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 31,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved S7 (Are strategies profitable only at specific horizons? (e.g. REVERSAL works at SCALP but not EXTENDED)): CURRENT artifact with status INSUFFICIENT_DATA. usable=14046 anal=0 cand=14077. missing ['identity.canonical_opportunity_id', 'identity.strategy_id', 'identity.evaluated_horizon', 'simulated_outcome.pnl_r_multiple', 'lifecycle.status']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "identity.canonical_opportunity_id",
+          "identity.strategy_id",
+          "identity.evaluated_horizon",
+          "simulated_outcome.pnl_r_multiple",
+          "lifecycle.status"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Authoritative StrategyFamily required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Canonical evaluated horizon required",
+              "name": "",
+              "threshold": 0.5
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "CURRENT row floor; the S7 runner enforces 150 distinct opportunities, 30 per included cell, and a deterministic sufficient 2x2 grid",
+              "name": "",
+              "threshold": 150
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "S7",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "1d04ddfbdee0f04ac059b02f704f929087fde49bb689bd72203b3a4537ce7da2",
+      "runner_method": "research_engine.experiments.strategy_horizon_interaction.run_s7",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 14046
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 17103,
+      "canonical_question": "Ranking/monotonicity analysis of pre-decision strategy-selection confidence against subsequent primary-horizon shadow outcomes. NOT calibration (confidence is a relative score). Rejected strategies have no simulated outcomes \u2014 selection optimality cannot yet be proven.",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "STRAT-1",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/strat1_confidence_predictive_value.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 17103,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable STRAT-1 (Ranking/monotonicity analysis of pre-decision strategy-selection confidence against subsequent primary-horizon shadow outcomes. NOT calibration (confidence is a relative score). Rejected strategies have no simulated outcomes \u2014 selection optimality cannot yet be proven.): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=17103. schema gap STAGE4-DATA-STRAT-1; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "confidence | rank | selected | canonical_opportunity_id",
+          "simulated_outcome.pnl_r_multiple (PRIMARY_HORIZON_SIMULATION)"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Minimum matched confidence/outcome pairs",
+              "name": "",
+              "threshold": 30
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "STRAT-1",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "7e6d1e9b88d8c2889c037690efddf24346ca98b491340bb1889aad7f3e6bd8d9",
+      "runner_method": "research_engine.experiments.selection_research.run_strat1",
+      "schema_gap_id": "STAGE4-DATA-STRAT-1",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 23,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 33218,
+      "canonical_question": "What is the real slippage model per symbol per session?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "X1",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/w4_x1_slippage.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 33195,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved X1 (What is the real slippage model per symbol per session?): CURRENT artifact with status INSUFFICIENT_DATA. usable=23 anal=23 cand=33218. missing ['slippage (slippage_semantic=measured_execution_slippage)', 'market_access.session_state']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "slippage (slippage_semantic=measured_execution_slippage)",
+          "market_access.session_state"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Minimum measured slippage observations",
+              "name": "",
+              "threshold": 30
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "X1",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "3d4c516790e9e3bf19274afa450fa7954edfc764d6f3bce41633a94336b54587",
+      "runner_method": "research_engine.experiments.execution_protection_research.run_x1",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 23
+    },
+    {
+      "analytical_count": 434,
+      "assurance_reason": "Independent certification verified COMPLETE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 548,
+      "canonical_question": "Are broker rejections/failures predictable by time, symbol, or market condition?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "OPTIMISATION",
+          "INVESTIGATION"
+        ],
+        "question_id": "X2",
+        "reason": "verified settled state",
+        "scientific_state": "COMPLETE",
+        "scientific_truth_consumable": true
+      },
+      "current_report_path": "analysis/reports/w4_x2_broker_failures.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 114,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Resolved positive X2 (Are broker rejections/failures predictable by time, symbol, or market condition?): CURRENT artifact with status COMPLETE. usable=434 anal=434 cand=548. research_engine.experiments.execution_protection_research.run_x2 report COMPLETE. Consumable as scientific truth.",
+      "next_action": "NONE",
+      "question_id": "X2",
+      "report_authority_valid": true,
+      "report_status": "COMPLETE",
+      "result_fingerprint": "dfe5ae4475f2aafadb2cebec407eaa5787302a968903cef4c05341f1a018ff19",
+      "runner_method": "research_engine.experiments.execution_protection_research.run_x2",
+      "schema_gap_id": null,
+      "scientific_state": "COMPLETE",
+      "supersedes": null,
+      "usable_count": 434
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 33218,
+      "canonical_question": "Which trading sessions produce the best execution quality (lowest slippage, fewest rejects)?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "X3",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/w4_x3_session_quality.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 33195,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved X3 (Which trading sessions produce the best execution quality (lowest slippage, fewest rejects)?): CURRENT artifact with status INSUFFICIENT_DATA. usable=23 anal=0 cand=33218. missing ['slippage + slippage_semantic + result_ok', 'market_access.session_state']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "slippage + slippage_semantic + result_ok",
+          "market_access.session_state"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Minimum matched execution observations",
+              "name": "",
+              "threshold": 30
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "X3",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "41a1d9c12b2c033e755715012837489e15b639d5f8c5eeebc9eab8cbad5a9309",
+      "runner_method": "research_engine.experiments.execution_protection_research.run_x3",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 23
+    },
+    {
+      "analytical_count": 25,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 14161,
+      "canonical_question": "How much theoretical edge (from shadow R) is lost during real execution?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "X4",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/q16_shadow_validation.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 14131,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved X4 (How much theoretical edge (from shadow R) is lost during real execution?): CURRENT artifact with status INSUFFICIENT_DATA. usable=30 anal=25 cand=14161. missing ['simulated_outcome.pnl_r_multiple | r_multiple', 'outcome.r_multiple_realised | live_r_multiple']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "simulated_outcome.pnl_r_multiple | r_multiple",
+          "outcome.r_multiple_realised | live_r_multiple"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need shadow\u2194live outcome join",
+              "name": "",
+              "threshold": 0.8
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "X4",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "1569d34cb31313ec4a2de3ffdf9a6d1b57c6f511dfa734ddfb35dc42f259e7f2",
+      "runner_method": "research_engine.experiments.shadow_validation.run",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 30
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified HISTORICALLY_UNANSWERABLE against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 36641,
+      "canonical_question": "Does pre-decision predicted EV (predicted_ev_r_v1, R units) correspond to subsequent realised R at canonical-opportunity level, and does it persist on later unseen evidence?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "X5",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/x5_predicted_ev_realised_r_validation_v1.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 36641,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved unrecoverable X5 (Does pre-decision predicted EV (predicted_ev_r_v1, R units) correspond to subsequent realised R at canonical-opportunity level, and does it persist on later unseen evidence?): CURRENT artifact with status INSUFFICIENT_DATA. usable=0 anal=0 cand=36641. schema gap STAGE4-DATA-X5; V2/V3 additive only.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "p_success",
+          "v10_entry",
+          "simulated_outcome.pnl_r_multiple"
+        ],
+        "scientific_state": "HISTORICALLY_UNANSWERABLE",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Need trace\u2192outcome join",
+              "name": "",
+              "threshold": 0.8
+            },
+            {
+              "description": "Outcome required",
+              "name": "",
+              "threshold": 0.95
+            },
+            {
+              "description": "Distinct paired canonical opportunities required for chronological predicted-EV-vs-realised-R validation",
+              "name": "",
+              "threshold": 100
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "X5",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "0797fbf9266fd87b9fd73d12e9ffc2f20e2d4ad1f42a5173af48fc22ced5880f",
+      "runner_method": "research_engine.experiments.x5_predicted_ev_realised_r_validation.run_x5",
+      "schema_gap_id": "STAGE4-DATA-X5",
+      "scientific_state": "HISTORICALLY_UNANSWERABLE",
+      "supersedes": null,
+      "usable_count": 0
+    },
+    {
+      "analytical_count": 0,
+      "assurance_reason": "Independent certification verified INSUFFICIENT_DATA against frozen evidence/accounting and canonical ownership.",
+      "assurance_status": "VERIFIED",
+      "candidate_count": 55782,
+      "canonical_question": "Under what conditions (symbol, session, spread, volatility) does execution quality degrade?",
+      "consumption": {
+        "admitted": true,
+        "assurance_status": "VERIFIED",
+        "permitted_consumption": [
+          "EVIDENCE_COLLECTION",
+          "OBSERVABILITY"
+        ],
+        "question_id": "X6",
+        "reason": "verified unresolved: evidence work only",
+        "scientific_state": "INSUFFICIENT_DATA",
+        "scientific_truth_consumable": false
+      },
+      "current_report_path": "analysis/reports/x6_execution_stability.json",
+      "evidence_epoch": "CURRENT",
+      "evidence_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "exclusion_count": 55704,
+      "finding_status": "CURRENT",
+      "finding_version": 1,
+      "historical_exhaustion": "EXHAUSTED",
+      "implementation_gap_id": null,
+      "interpretation": "Unresolved X6 (Under what conditions (symbol, session, spread, volatility) does execution quality degrade?): CURRENT artifact with status INSUFFICIENT_DATA. usable=78 anal=0 cand=55782. missing ['account_id', 'broker_symbol', 'slippage_semantic', 'result_ok', 'retcode', 'timestamp_utc', 'market_access.session_state', 'market_access.spread', 'market_access.spread_atr_ratio', 'canonical_opportunity_id', 'v10_market_state.regime.volatility_state']. Shortfall/revisit semantics; NOT market truth.",
+      "next_action": {
+        "condition": "rerun only after a new frozen evidence epoch satisfies the listed observable/threshold contract",
+        "missing_observables": [
+          "account_id",
+          "broker_symbol",
+          "slippage_semantic",
+          "result_ok",
+          "retcode",
+          "timestamp_utc",
+          "market_access.session_state",
+          "market_access.spread",
+          "market_access.spread_atr_ratio",
+          "canonical_opportunity_id",
+          "v10_market_state.regime.volatility_state"
+        ],
+        "scientific_state": "INSUFFICIENT_DATA",
+        "thresholds": {
+          "canonical_validation_rules": [
+            {
+              "description": "Minimum matched execution-result observations",
+              "name": "",
+              "threshold": 100
+            }
+          ]
+        },
+        "trigger_type": "GOVERNED_EVIDENCE_CONTRACT_REEVALUATION"
+      },
+      "question_id": "X6",
+      "report_authority_valid": true,
+      "report_status": "INSUFFICIENT_DATA",
+      "result_fingerprint": "30392ac63925ca93dc522ff3795ab61b03f7bd1225495b3f6955ed850c77554e",
+      "runner_method": "research_engine.experiments.execution_stability.run_x6",
+      "schema_gap_id": null,
+      "scientific_state": "INSUFFICIENT_DATA",
+      "supersedes": null,
+      "usable_count": 78
+    }
+  ],
+  "manifest_fingerprint": "47decf0656b53f2910b9dcca986312e0c1163f1c559dd68a0fa7ae46f799250a",
+  "q71_started": false,
+  "question_count": 70,
+  "schema": 1,
+  "scientific_state_counts": {
+    "COMPLETE": 12,
+    "HISTORICALLY_UNANSWERABLE": 29,
+    "IMPLEMENTATION_BLOCKED": 8,
+    "INSUFFICIENT_DATA": 16,
+    "NEGATIVE_RESULT": 2,
+    "WAITING_DATA": 3
+  },
+  "stage": "STAGE4_ASSURED_EPISTEMIC_FINDINGS",
+  "store_fingerprint": "d80ed828d5a35f315c7d1f0e1836f30e02c215eb5abf7b0f8d45d5d27cccc4c9",
+  "supersession": {
+    "policy": "immutable history; revisions append",
+    "superseded_count": 0
+  }
+}

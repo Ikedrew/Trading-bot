@@ -1,0 +1,396 @@
+{
+  "artifact": "stage4_final_predeployment_verification_20260929",
+  "generated": "2026-09-29",
+  "stage": "Stage 4 - final pre-commit / pre-VM deployment verification",
+  "scope_constraints": {
+    "no_new_observability_features_added": true,
+    "no_contract_redesign": true,
+    "no_threshold_changes": true,
+    "no_reentry_started": true,
+    "no_q71_plus_started": true,
+    "no_rb1_created": true,
+    "s3_writes_during_verification": 0,
+    "research_reentry_events": 0
+  },
+  "head": {
+    "commit": "b4530689c1fff901568bd997a3e68ff0e84787d6",
+    "message": "Complete Stage 4 observation governance and data versioning",
+    "branch": "master",
+    "ahead_of_origin": 4
+  },
+  "task1_dependency_graph": {
+    "entrypoint": "core/shadow/runtime.py :: ShadowRuntime",
+    "chain": [
+      "core/shadow/runtime.py",
+      "-> core/observability_contract.py (assert_producer_contract at __init__, assert_emission_contract at _write, build_record_lineage)",
+      "-> core/shadow/observability.py (SHADOW_RUNTIME_GEN2_FIELDS, SHADOW_RUNTIME_SCHEMA_GENERATION, SHADOW_RUNTIME_PRODUCER_VERSION, build_decision_snapshot, build_market_time_attestation, assign_experiment_arm, build_lifecycle_m5_path, m5_bar_entry, ex2_contract_errors, experiment_arm_errors)",
+      "-> core/shadow/models.py (SCHEMA_VERSION=shadow_runtime_v1, generation/producer constants, LifecycleState, utc_market_block, M5_BAR_INTERVAL_S)",
+      "-> core/shadow/persistence.py (ShadowEventWriter, load_events, get_broker_offset_seconds)",
+      "-> core/shadow/assumptions.py (build_assumptions, DEFAULT_CHECKPOINT_INTERVAL)",
+      "-> core/trade_truth.py (compute_mae_r, compute_mfe_r, compute_r_multiple)",
+      "-> core/clock.py (utc_ms, utc_ms_to_iso)",
+      "-> core/config.py (SHADOW_EXPERIMENT_ARM_ENABLED, optional SHADOW_RUNTIME_DIR)",
+      "-> core/pipeline/predicted_success.py (DECISION_TRACE_* identity, predict_success_probability)",
+      "-> core/decision_trace.py (DecisionRecord.predicted_success -> to_dict -> persisted field)",
+      "-> core/pipeline/probability_estimator.py (ProbabilityEstimator, authoritative value owner)",
+      "-> core/pipeline/market_state_engine.py (MarketState mapping)"
+    ],
+    "records": [
+      {
+        "path": "core/observability_contract.py",
+        "tracked": false,
+        "modified": true,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": false,
+        "must_include_next_commit": true,
+        "note": "UNTRACKED. Canonical fail-closed contract module. Absent from HEAD entirely."
+      },
+      {
+        "path": "core/shadow/observability.py",
+        "tracked": true,
+        "modified": true,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": true,
+        "must_include_next_commit": true,
+        "note": "Adds SHADOW_RUNTIME_GEN2_FIELDS consumed by the startup guard."
+      },
+      {
+        "path": "core/shadow/runtime.py",
+        "tracked": true,
+        "modified": true,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": true,
+        "must_include_next_commit": true,
+        "note": "Guard call sites __init__ and _write, lineage pinning, quarantine."
+      },
+      {
+        "path": "core/pipeline/predicted_success.py",
+        "tracked": true,
+        "modified": true,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": true,
+        "must_include_next_commit": true,
+        "note": "Adds DECISION_TRACE_* identity consumed by assert_producer_contract."
+      },
+      {
+        "path": "tests/test_shadow_runtime_serialization_guard.py",
+        "tracked": false,
+        "modified": true,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": false,
+        "must_include_next_commit": true,
+        "note": "UNTRACKED. Guards the deployment behaviour."
+      },
+      {
+        "path": "tests/test_shadow_lifecycle_observability.py",
+        "tracked": true,
+        "modified": true,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": true,
+        "must_include_next_commit": true,
+        "note": "Stale-expectation corrections only."
+      },
+      {
+        "path": "core/shadow/models.py",
+        "tracked": true,
+        "modified": false,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": true,
+        "must_include_next_commit": false
+      },
+      {
+        "path": "core/shadow/persistence.py",
+        "tracked": true,
+        "modified": false,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": true,
+        "must_include_next_commit": false
+      },
+      {
+        "path": "core/shadow/assumptions.py",
+        "tracked": true,
+        "modified": false,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": true,
+        "must_include_next_commit": false
+      },
+      {
+        "path": "core/trade_truth.py",
+        "tracked": true,
+        "modified": false,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": true,
+        "must_include_next_commit": false
+      },
+      {
+        "path": "core/clock.py",
+        "tracked": true,
+        "modified": false,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": true,
+        "must_include_next_commit": false
+      },
+      {
+        "path": "core/config.py",
+        "tracked": true,
+        "modified": false,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": true,
+        "must_include_next_commit": false
+      },
+      {
+        "path": "core/decision_trace.py",
+        "tracked": true,
+        "modified": false,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": true,
+        "must_include_next_commit": false
+      },
+      {
+        "path": "core/pipeline/probability_estimator.py",
+        "tracked": true,
+        "modified": false,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": true,
+        "must_include_next_commit": false
+      },
+      {
+        "path": "core/pipeline/market_state_engine.py",
+        "tracked": true,
+        "modified": false,
+        "required_by_new_behavior": true,
+        "already_committed_at_head": true,
+        "must_include_next_commit": false
+      }
+    ],
+    "excluded_unrelated_stage4_artifacts": [
+      "analysis/reports/*.json (research report churn)",
+      "analysis/summaries/research_knowledge.json",
+      "analysis/assurance/_stage4_*_20260929.json (scratch probes)",
+      "analysis/assurance/reentry/** (research re-entry manifests)",
+      "analysis/assurance/checkpoints/** (generated evidence)",
+      "err.txt, out.txt",
+      "_*.py root scratch tools",
+      ".pytest_* scratch directories"
+    ]
+  },
+  "task2_gen2_selfcontained": {
+    "SHADOW_RUNTIME_GEN2_FIELDS_present": true,
+    "schema_generation_2_present": true,
+    "current_producer_version_present": true,
+    "evidence_epoch_present": true,
+    "shadow_runtime_v1_registry_entry_resolves": true,
+    "contract_imports_without_error": true,
+    "epoch_table_validation_problems": [],
+    "dependency_from_unstaged_scratch_file": 0,
+    "dependency_from_generated_local_state": 0,
+    "dependency_from_pytest_probe_bak_temp_audit_helper": 0,
+    "invariant_FRESH_CHECKOUT_DEPENDENCY_ON_UNCOMMITTED_LOCAL_FILE": 0
+  },
+  "task3_psuccess_path": {
+    "chain": "ProbabilityEstimator -> predicted_success.predict_success_probability -> decision_trace._predicted_success -> DecisionRecord.predicted_success -> to_dict()['predicted_success'] persisted",
+    "model_version_lineage_present": true,
+    "lineage_fields": [
+      "estimator_owner",
+      "block_version",
+      "outcome_label",
+      "market_state_mapping_version",
+      "input_digest"
+    ],
+    "missing_state_handling_present": true,
+    "missing_state_behaviour": "state=UNAVAILABLE, p_success=None, named reason; never 0.0 or 0.5",
+    "test_only_fixture_dependency": false,
+    "local_generated_artifact_dependency": false,
+    "all_modules_committed_or_in_proposed_commit": true
+  },
+  "task4_ex2_l7": {
+    "EX2": {
+      "path_builder": "core/shadow/observability.py :: build_lifecycle_m5_path",
+      "bar_plumbing": "m5_bar_entry, summarise_m5_path; bar_open threaded from core/runtime/bar_provider.py",
+      "model_fields": "EX2_REQUIRED_CONTRACT_FIELDS, EX2_REQUIRED_BAR_FIELDS",
+      "integration_path": "core/shadow/runtime.py :: evaluate_bar -> lifecycle.m5_path; OPEN/CLOSE emission",
+      "runtime_persistence": "core/shadow/persistence.py :: ShadowEventWriter; PROGRESS checkpoint persists the path",
+      "contract_metadata_validation": "ex2_contract_errors(); dataset/dataset_version/schema_generation/producer_version stamped in the block",
+      "files": [
+        "core/shadow/observability.py",
+        "core/shadow/runtime.py",
+        "core/shadow/models.py",
+        "core/shadow/persistence.py",
+        "core/observability_contract.py",
+        "core/runtime/bar_provider.py"
+      ]
+    },
+    "L7": {
+      "arm_assignment_builder": "core/shadow/observability.py :: assign_experiment_arm",
+      "assignment_metadata": "L7_REQUIRED_CONTRACT_FIELDS (23 fields), arm_pre_outcome_attestation, ARM_DESIGN_SEMANTICS, l7_design_deficiencies()",
+      "runtime_persistence": "OPEN event persists experiment_arm; arm_assigned_at_event=OPEN",
+      "registry_contract_correction": "experiment_arm_errors() rejects a dataset schema identity presented as an arm; the arm lives in its own versioned field",
+      "schema_version_as_arm_fallback_present_in_active_runtime": false,
+      "schema_version_as_arm_evidence": "assign_experiment_arm docstring states schema_version carries record-structure identity and must never be overloaded as an arm; test_arm_is_never_overloaded_onto_schema_version guards it",
+      "files": [
+        "core/shadow/observability.py",
+        "core/shadow/runtime.py",
+        "core/shadow/models.py",
+        "core/shadow/persistence.py",
+        "core/observability_contract.py"
+      ]
+    }
+  },
+  "task5_observability_test_failures": {
+    "adjudication": "A - tests are stale relative to the governed contract (both keys)",
+    "authority_used": [
+      "core/shadow/observability.py :: EX2_REQUIRED_CONTRACT_FIELDS",
+      "core/shadow/observability.py :: L7_REQUIRED_CONTRACT_FIELDS",
+      "core/observability_contract.py :: SHADOW_RUNTIME_REQUIRED_BY_EVENT",
+      "analysis/assurance/stage4_ex2_l7_blocker_adjudication_20260929.json"
+    ],
+    "summary": {
+      "required_by_governed_contract": "NO - the governed key is 'completeness', not 'summary'",
+      "producer_missing_it": "NO - build_lifecycle_m5_path emits 'completeness' and 'path_completeness_state'",
+      "test_stale": "YES"
+    },
+    "assignment_decision_record": {
+      "required_by_governed_contract": "NO - absent from L7_REQUIRED_CONTRACT_FIELDS and from every governed audit artifact; the governed structure is 'arm_pre_outcome_attestation' plus arm_* metadata",
+      "producer_missing_it": "NO - arm_pre_outcome_attestation carries verdict, assigned_at_event, outcome_knowledge_at_assignment, derivation_inputs",
+      "test_stale": "YES",
+      "additional_evidence": "The string 'assignment_decision_record' appears in exactly one file in the codebase: the test itself. It never existed at HEAD."
+    },
+    "nonexistent_error_code": {
+      "symbol": "EXPERIMENT_ARM_NOT_ISSUED_AT_ASSIGNMENT",
+      "exists_in_production_code": false,
+      "exists_only_in": "tests/test_shadow_lifecycle_observability.py"
+    },
+    "dead_code_found": {
+      "symbol": "core/shadow/observability.py :: ARM_ISSUER",
+      "status": "defined but never referenced by production code",
+      "action": "not changed - no new features and no cleanup in this pass"
+    },
+    "fixes_applied": [
+      "3 EX2 assertions: ['summary'] -> ['completeness'] (governed key)",
+      "2 ROOT-05 authority/timing assertions retargeted to arm_pre_outcome_attestation + arm_producer + arm_assigned_at_event",
+      "1 contamination assertion retargeted to arm_pre_outcome_attestation.outcome_knowledge_at_assignment",
+      "1 issuance-timing assertion rewritten to assert governed OPEN issuance and that no governed rejection code exists",
+      "added imports ARM_ISSUER and SHADOW_RUNTIME_PRODUCER"
+    ],
+    "producer_code_changed": false,
+    "result_after_fix": "60/60 pass in tests/test_shadow_lifecycle_observability.py"
+  },
+  "task6_pre_existing_failures": {
+    "verified_against_clean_head_checkout": true,
+    "method": "git archive HEAD extracted to an isolated directory; the same suites executed with NO working-tree changes",
+    "test_shadow_counterfactual_population": {
+      "test": "test_watermark_exactly_once_preserved",
+      "error": "TypeError: 'NoneType' object is not subscriptable",
+      "fails_at_clean_head": true,
+      "classification": "BASELINE EXCLUSION - pre-existing, not a dependency regression"
+    },
+    "test_phase3_capture_contract": {
+      "test": "TestNegativeCases::test_case_f_shadow_gate_off_in_source_and_config",
+      "error": "assert True is False on cfg.SHADOW_RUNTIME_V2_ENABLED",
+      "fails_at_clean_head": true,
+      "classification": "BASELINE EXCLUSION - pre-existing; core/config.py:98 sets SHADOW_RUNTIME_V2_ENABLED = True, unchanged by this deployment"
+    },
+    "repaired": false
+  },
+  "task7_fresh_checkout_simulation": {
+    "method": "git archive HEAD -> clean tree, then overlay ONLY the intended commit files; PYTHONPATH pinned to the isolated tree",
+    "main_repository_mutated": false,
+    "imports_succeed": true,
+    "producer_contract_startup_guard_passes": true,
+    "PLAN_writes": true,
+    "OPEN_writes": true,
+    "CLOSE_writes": true,
+    "gen2_metadata_correct": true,
+    "gen2_metadata_observed": {
+      "schema_generation": 2,
+      "producer_version": "shadow_runtime_producer_v2",
+      "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
+      "schema_version_field": "shadow_runtime_v1"
+    },
+    "psuccess_path_resolves": true,
+    "hidden_local_dependency": false,
+    "smoke_all_passed": true,
+    "smoke_step_count": 24,
+    "core_modules_imported": 17,
+    "suspect_imports_found": 0,
+    "test_results_in_isolated_tree": "87 passed (60 lifecycle observability + 27 serialization guard)"
+  },
+  "task8_commit_file_list": {
+    "MUST_COMMIT": [
+      "core/observability_contract.py",
+      "core/shadow/observability.py",
+      "core/shadow/runtime.py",
+      "core/pipeline/predicted_success.py",
+      "tests/test_shadow_runtime_serialization_guard.py",
+      "tests/test_shadow_lifecycle_observability.py",
+      "analysis/assurance/stage4_final_predeployment_verification_20260929.json"
+    ],
+    "ALREADY_COMMITTED_DEPENDENCY": [
+      "core/shadow/models.py",
+      "core/shadow/persistence.py",
+      "core/shadow/assumptions.py",
+      "core/shadow/integration.py",
+      "core/trade_truth.py",
+      "core/clock.py",
+      "core/config.py",
+      "core/decision_trace.py",
+      "core/pipeline/probability_estimator.py",
+      "core/pipeline/market_state_engine.py",
+      "core/production_data_contract.py",
+      "core/runtime/bar_provider.py",
+      "core/runtime/live_scanner.py"
+    ],
+    "DO_NOT_COMMIT": [
+      "_*.py (root scratch audit/debug tools)",
+      "_probe*.py, .probe_accounting.py",
+      "_bak_*.json, .pytest_*/, .verify_*/, tmp*/, _exit_path_audit/",
+      "analysis/assurance/_stage4_*.json (scratch probes)",
+      "analysis/assurance/reentry/** (research re-entry manifests)",
+      "analysis/assurance/checkpoints/** (generated evidence)",
+      "analysis/reports/*.json, analysis/summaries/research_knowledge.json (research report churn)",
+      "err.txt, out.txt"
+    ]
+  },
+  "task9_vm_requirements": {
+    "new_env_vars": false,
+    "new_env_vars_evidence": "no os.environ/getenv/dotenv usage in any of the 4 changed core modules",
+    "config_change": false,
+    "config_change_evidence": "SHADOW_EXPERIMENT_ARM_ENABLED is read via getattr(..., True) and is absent from core/config.py; the default is ON. No new config key required. SHADOW_RUNTIME_DIR already existed.",
+    "s3_prefix_change": false,
+    "s3_prefix_evidence": "persistence.py prefix is still s3_base_prefix('shadow_runtime') with schema_version=SCHEMA_VERSION; the guard raises before any S3 path is computed",
+    "iam_permission_change": false,
+    "iam_evidence": "no new S3 operations; identical write to the existing shadow_runtime prefix",
+    "package_dependency_install": false,
+    "package_evidence": "no new third-party imports; only hashlib, json, logging, typing, pathlib",
+    "database_schema_migration": false,
+    "database_evidence": "no DB/DDL touched; the governance registry is an in-module immutable dict",
+    "new_directory_creation": false,
+    "directory_evidence": "ShadowEventWriter creates logs/shadow_runtime_v1/<SYMBOL>/ on demand exactly as before; no new path introduced",
+    "state_reset": false,
+    "state_reset_evidence": "gen-1 history stays readable; incompatible recovered lifecycles are quarantined, not deleted; no historical mutation and no reset required",
+    "additional_operational_note": "On first start the startup guard runs inside ShadowRuntime.__init__. If contract and producer constants ever disagree the bot fails closed at startup rather than emitting drifted records. Intended behaviour, not an operational step."
+  },
+  "regression_suite": {
+    "files": [
+      "tests/test_shadow_runtime_contract.py",
+      "tests/test_shadow_runtime_ingestion.py",
+      "tests/test_shadow_pipeline.py",
+      "tests/test_shadow_live_integration_adapter.py",
+      "tests/test_shadow_bar_dedup.py",
+      "tests/test_shadow_timestamp_repair.py",
+      "tests/test_decision_trace.py",
+      "tests/test_decision_trace_v2.py"
+    ],
+    "result": "137 passed, 0 failed"
+  },
+  "final_readiness": {
+    "fresh_checkout_simulation_passed": true,
+    "runtime_dependency_solely_in_dirty_tree": false,
+    "deployment_critical_files_enumerated": true,
+    "seven_observability_failures_adjudicated": true,
+    "baseline_failures_proven_unrelated": true,
+    "vm_requirements_explicit": true,
+    "verdict": "DEPLOYMENT READY",
+    "verdict_qualifier": "Ready to commit. NOT committed and NOT deployed by this pass, as instructed. Two pre-existing baseline test failures remain and are recorded as exclusions, not blockers."
+  }
+}

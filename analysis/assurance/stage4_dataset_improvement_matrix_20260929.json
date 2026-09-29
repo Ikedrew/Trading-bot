@@ -1,0 +1,596 @@
+{
+  "backfill_analysis": {
+    "FUTURE_COLLECTION_ONLY": 3,
+    "HISTORICALLY_BACKFILLABLE_AUTHORITATIVELY": 8,
+    "NOT_APPLICABLE": 4
+  },
+  "baseline_certification_fingerprint": "b42b4bfcfa1eaf7df09cac9f88011c89362cf2ca907217e8466fff9fea3adc8b",
+  "dataset_improvement_matrix": [
+    {
+      "backfill_possible": "PARTIAL (OR-01..OR-07 yes; OR-14/OR-15 no)",
+      "current_generation": 1,
+      "current_schema": "shadow_runtime_v1",
+      "dataset": "shadow_runtime",
+      "dataset_version_bump": "YES -> generation 2",
+      "date_span": "2026-09-07..2026-09-29",
+      "dependency_order": 1,
+      "future_only": [
+        "OR-14",
+        "OR-15"
+      ],
+      "grain_corrections": [
+        "OHLC bars bound to (shadow_trade_id, canonical_opportunity_id, trade_horizon)",
+        "experiment arm bound one-per-lifecycle, not per-dataset"
+      ],
+      "identity_corrections": [
+        "nested identity.canonical_opportunity_id mirror for contract conformance"
+      ],
+      "lineage_additions": [
+        "arm assignment decision record (issuer, request id, policy version)",
+        "M5 path -> lifecycle binding edge"
+      ],
+      "new_dataset_required": "YES (exit_bar_path_m5_v2)",
+      "new_fields": [
+        "decision_snapshot.market_phase (non-null, bound at OPEN)",
+        "decision_snapshot.h4_regime (100% non-null)",
+        "decision_snapshot.pattern (100% non-null)",
+        "decision_snapshot.strategy (100% non-null)",
+        "identity.canonical_opportunity_id (nested mirror)",
+        "market_timestamp_semantics + market_timestamp_normalization_version on 100% of OPEN",
+        "exit_bar_path_m5_v2[] (ordered OHLC bound to the lifecycle)",
+        "experiment_arm + arm_assigned_at + arm_schema_version + arm_policy_version"
+      ],
+      "persisted_objects": 200,
+      "persisted_rows": 66258,
+      "priority": "P0",
+      "priority_rationale": "sole owner of 9 of 15 observation requirements; every other change depends on it",
+      "producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "producer_module": "core/shadow/runtime.py:580",
+      "producer_version_bump": "YES",
+      "questions": [
+        "E5",
+        "D2",
+        "D4",
+        "D5",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "S4",
+        "X5",
+        "P1",
+        "L1",
+        "L4",
+        "L5",
+        "L2",
+        "EX10",
+        "R3",
+        "R4",
+        "R5",
+        "HORIZON-1",
+        "STRAT-1",
+        "PORT-1",
+        "EX2",
+        "L7"
+      ],
+      "reentry_unlocked": [
+        "EX2",
+        "L7",
+        "E5",
+        "D2",
+        "D4",
+        "D5",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "S4",
+        "X5",
+        "P1",
+        "L1",
+        "L2",
+        "L4",
+        "L5",
+        "R3",
+        "R4",
+        "R5",
+        "EX10",
+        "HORIZON-1",
+        "STRAT-1",
+        "PORT-1"
+      ],
+      "requirements": [
+        "OR-01",
+        "OR-02",
+        "OR-03",
+        "OR-04",
+        "OR-05",
+        "OR-06",
+        "OR-07",
+        "OR-14",
+        "OR-15"
+      ],
+      "schema_version_bump": "YES -> shadow_runtime_v2",
+      "semantic_corrections": [
+        "live_facts.market_phase is emitted but 100% NULL -- must carry the value",
+        "trade_state_progression [{bar,close,r}] is NOT an OHLC path"
+      ],
+      "timestamp_corrections": [
+        "market_timestamp_semantics/normalization_version on 100% of OPEN rows",
+        "arm_assigned_at strictly precedes outcome population"
+      ]
+    },
+    {
+      "backfill_possible": "NO",
+      "current_generation": 1,
+      "current_schema": "events_v1",
+      "dataset": "events",
+      "dataset_version_bump": "YES -> generation 2",
+      "date_span": "2026-09-03..2026-09-29",
+      "dependency_order": 2,
+      "future_only": [
+        "OR-14"
+      ],
+      "grain_corrections": [
+        "CANDLE rows must be joinable to a lifecycle without post-hoc range inference"
+      ],
+      "identity_corrections": [
+        "carry the canonical lifecycle identity on the M5 bar record"
+      ],
+      "lineage_additions": [
+        "M5 aggregation lineage from the base timeframe feed"
+      ],
+      "new_dataset_required": "NO (if exit_bar_path_m5_v2 is owned separately)",
+      "new_fields": [
+        "lifecycle_binding: shadow_trade_id, canonical_opportunity_id, trade_horizon",
+        "payload.timestamp_semantics + timestamp_normalization_version on 100% of M5 rows"
+      ],
+      "persisted_objects": 48737,
+      "persisted_rows": "15359 CANDLE sampled / 249 partitions",
+      "priority": "P0",
+      "priority_rationale": "bar side of the EX2 path; must emit before the bound path dataset can close",
+      "producer": "observation_stream (mt5_data CANDLE writer)",
+      "producer_module": "observation_stream",
+      "producer_version_bump": "YES",
+      "questions": [
+        "EX2",
+        "L1",
+        "L4"
+      ],
+      "reentry_unlocked": [
+        "EX2"
+      ],
+      "requirements": [
+        "OR-14"
+      ],
+      "schema_version_bump": "YES -> events_v2",
+      "semantic_corrections": [
+        "payload key naming o/h/l/c vs contract open/high/low/close"
+      ],
+      "timestamp_corrections": [
+        "payload.timestamp_semantics on 100% (currently 76/15359)"
+      ]
+    },
+    {
+      "backfill_possible": "NO (p_success was never populated)",
+      "current_generation": 1,
+      "current_schema": "decision_trace_v1",
+      "dataset": "decision_trace",
+      "dataset_version_bump": "NO",
+      "date_span": "2026-09-07..2026-09-29",
+      "dependency_order": 3,
+      "future_only": [
+        "OR-08"
+      ],
+      "grain_corrections": [],
+      "identity_corrections": [],
+      "lineage_additions": [],
+      "new_dataset_required": "NO",
+      "new_fields": [
+        "p_success populated (currently emitted but 100% NULL)"
+      ],
+      "persisted_objects": 200,
+      "persisted_rows": 25516,
+      "priority": "P1",
+      "priority_rationale": "single nullable field; v10_entry (OR-09) is already satisfied",
+      "producer": "decision_diagnostics producer (supporting/decision_trace)",
+      "producer_module": "decision_diagnostics",
+      "producer_version_bump": "YES",
+      "questions": [
+        "D3",
+        "X5"
+      ],
+      "reentry_unlocked": [
+        "D3",
+        "X5"
+      ],
+      "requirements": [
+        "OR-08",
+        "OR-09"
+      ],
+      "schema_version_bump": "NO",
+      "semantic_corrections": [],
+      "timestamp_corrections": []
+    },
+    {
+      "backfill_possible": "YES",
+      "current_generation": 1,
+      "current_schema": "opportunities_v1",
+      "dataset": "opportunities",
+      "dataset_version_bump": "NO",
+      "date_span": "2026-09-07..2026-09-29",
+      "dependency_order": 4,
+      "future_only": [],
+      "grain_corrections": [
+        "one state row per canonical opportunity"
+      ],
+      "identity_corrections": [],
+      "lineage_additions": [],
+      "new_dataset_required": "NO",
+      "new_fields": [
+        "state-bearing record emitted for every canonical_opportunity_id (currently 50.1%)"
+      ],
+      "persisted_objects": 200,
+      "persisted_rows": 100850,
+      "priority": "P2",
+      "priority_rationale": "50.1% coverage is the binding constraint; identity is already universal",
+      "producer": "core/opportunity/persistence.py",
+      "producer_module": "core/opportunity/persistence.py",
+      "producer_version_bump": "YES",
+      "questions": [
+        "OPP-1"
+      ],
+      "reentry_unlocked": [
+        "OPP-1"
+      ],
+      "requirements": [
+        "OR-13"
+      ],
+      "schema_version_bump": "NO",
+      "semantic_corrections": [],
+      "timestamp_corrections": []
+    },
+    {
+      "backfill_possible": "NO",
+      "current_generation": 1,
+      "current_schema": "shadow_trades_v1 (DECLARED, NEVER EMITTED)",
+      "dataset": "shadow_trades",
+      "dataset_version_bump": "N/A",
+      "date_span": null,
+      "dependency_order": 0,
+      "future_only": [
+        "all"
+      ],
+      "grain_corrections": [],
+      "identity_corrections": [],
+      "lineage_additions": [],
+      "new_dataset_required": "NO -- re-point the register to shadow_runtime_v1",
+      "new_fields": [
+        "(none -- this dataset has never emitted a single S3 object)"
+      ],
+      "persisted_objects": 0,
+      "persisted_rows": 0,
+      "priority": "P0",
+      "priority_rationale": "governance correction: phantom owner of 27 of 31 governed gaps",
+      "producer": "core/shadow_trades.py (writer defined, never emitted to S3)",
+      "producer_module": "core/shadow_trades.py:_persist_to_s3",
+      "producer_version_bump": "NO",
+      "questions": [
+        "E5",
+        "D2",
+        "D3",
+        "D4",
+        "D5",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "S4",
+        "X5",
+        "P1",
+        "L1",
+        "L2",
+        "L4",
+        "L5",
+        "R3",
+        "R4",
+        "R5",
+        "EX10",
+        "HORIZON-1",
+        "STRAT-1",
+        "PORT-1",
+        "L7"
+      ],
+      "reentry_unlocked": [],
+      "requirements": [
+        "OR-01",
+        "OR-02",
+        "OR-03",
+        "OR-04",
+        "OR-05",
+        "OR-06",
+        "OR-07",
+        "OR-15"
+      ],
+      "schema_version_bump": "N/A",
+      "semantic_corrections": [
+        "the register names a dataset whose producer never persists"
+      ],
+      "timestamp_corrections": []
+    }
+  ],
+  "dependency_order": [
+    "shadow_trades",
+    "shadow_runtime",
+    "events",
+    "decision_trace",
+    "opportunities"
+  ],
+  "persisted_dataset_universe": {
+    "decision_trace": {
+      "coverage": {
+        "canonical_opportunity_id": "25516/25516",
+        "p_success": "25360/25516 (25360 nullish -> 0 usable)",
+        "schema_version": "25516/25516",
+        "symbol": "25516/25516",
+        "timestamp_utc": "25516/25516",
+        "trade_horizon": "25360/25516 (25360 nullish -> 0 usable)",
+        "v10_entry": "25360/25516 (non-null)",
+        "v10_market_state.h1.dominant_trend": "25360/25516 (non-null)",
+        "v10_market_state.h4.market_phase": "25360/25516 (non-null)",
+        "v10_market_state.regime": "25360/25516 (non-null)"
+      },
+      "dataset": "decision_trace",
+      "date_max": "2026-09-29",
+      "date_min": "2026-09-07",
+      "objects": 200,
+      "persisted": true,
+      "prefix": "supporting/decision_trace/schema_version=decision_trace_v1/",
+      "role": "SUPPORTING",
+      "rows": 25516,
+      "schema": "decision_trace_v1"
+    },
+    "events": {
+      "coverage": {
+        "canonical_opportunity_id": "0/15359",
+        "entity_id": "0/15359",
+        "event_layout_version": "1 for all 15387 sampled rows",
+        "payload.o/h/l/c/ts": "15359/15359 (100%)",
+        "payload.open/high/low/close": "0/15359 (contract names long keys)",
+        "payload.source_broker_offset_seconds": "76/15359",
+        "payload.timestamp_normalization_version": "76/15359",
+        "payload.timestamp_semantics": "76/15359",
+        "shadow_trade_id": "0/15359",
+        "source:timeframe": "mt5_data:M5 12389; M15 2057; H1 649; H4 183; D1 47; W1 24; MN 10",
+        "trade_horizon": "0/15359",
+        "ts_utc_ms": "15359/15359",
+        "type": "CANDLE 15359 / FEED_HEALTH 9 / SYSTEM_HEALTH 19"
+      },
+      "dataset": "events",
+      "date_max": "2026-09-29",
+      "date_min": "2026-09-03",
+      "objects": 48737,
+      "persisted": true,
+      "prefix": "core/events/schema_version=events_v1/",
+      "role": "CORE",
+      "rows": "15359 CANDLE rows over 249 partitions",
+      "schema": "events_v1"
+    },
+    "horizon_candidates": {
+      "coverage": {
+        "bar_time": "76710/76710",
+        "canonical_opportunity_id": "76710/76710",
+        "confidence": "76710/76710",
+        "eligible": "76710/76710",
+        "horizon": "76710/76710",
+        "selection_status": "76710/76710",
+        "symbol": "76710/76710"
+      },
+      "dataset": "horizon_candidates",
+      "date_max": "2026-09-29",
+      "date_min": "2026-09-07",
+      "objects": 200,
+      "persisted": true,
+      "prefix": "supporting/horizon_candidates/schema_version=horizon_candidates_v1/",
+      "role": "SUPPORTING",
+      "rows": 76710,
+      "schema": "horizon_candidates_v1"
+    },
+    "market_context": {
+      "coverage": {
+        "bar_time": "1754/1754",
+        "h1.direction": "1754/1754",
+        "h4.regime": "1754/1754",
+        "phase": "1754/1754",
+        "regime": "1754/1754",
+        "symbol": "1754/1754",
+        "timestamp_utc": "1754/1754"
+      },
+      "dataset": "market_context",
+      "date_max": "2026-09-29",
+      "date_min": "2026-09-03",
+      "objects": 230,
+      "persisted": true,
+      "prefix": "core/market_context/schema_version=market_context_v1/",
+      "role": "CORE",
+      "rows": 1754,
+      "schema": "market_context_v1"
+    },
+    "opportunities": {
+      "coverage": {
+        "bar_time": "50329/100850",
+        "bias_phase": "50521/100850",
+        "canonical_opportunity_id": "100850/100850",
+        "h4_regime": "50521/100850",
+        "opportunity_id": "50521/100850",
+        "overall_score": "50521/100850",
+        "state": "50521/100850",
+        "symbol": "100850/100850"
+      },
+      "dataset": "opportunities",
+      "date_max": "2026-09-29",
+      "date_min": "2026-09-07",
+      "objects": 200,
+      "persisted": true,
+      "prefix": "core/opportunities/schema_version=opportunities_v1/",
+      "role": "CORE",
+      "rows": 100850,
+      "schema": "opportunities_v1"
+    },
+    "portfolio_rankings": {
+      "coverage": {
+        "candidates[].rank_position": "present on all 570 rows (list element)",
+        "candidates[].rank_score": "present on all 570 rows (list element)",
+        "candidates[].selection_status": "present on all 570 rows (list element)",
+        "candidates[].symbol": "present on all 570 rows (list element)",
+        "cycle_id": "570/570",
+        "dataset_version": "570/570",
+        "ranked_at_utc": "570/570",
+        "schema_version": "570/570"
+      },
+      "dataset": "portfolio_rankings",
+      "date_max": "2026-09-29",
+      "date_min": "2026-09-07",
+      "objects": 20,
+      "persisted": true,
+      "prefix": "supporting/portfolio_rankings/schema_version=portfolio_ranking_v1/",
+      "role": "SUPPORTING",
+      "rows": 570,
+      "schema": "portfolio_ranking_v1"
+    },
+    "research_shadow_trades": {
+      "coverage": {
+        "list_objects_v2 KeyCount": "0"
+      },
+      "dataset": "research_shadow_trades",
+      "objects": 0,
+      "persisted": false,
+      "prefix": "supporting/research_shadow_trades/  <-- NO SUCH PREFIX",
+      "role": "SUPPORTING (declared)",
+      "rows": 0,
+      "schema": "research_shadow_trades_v1"
+    },
+    "shadow_runtime": {
+      "coverage": {
+        "arm_assigned_at": "0/66258",
+        "arm_schema_version": "0/66258",
+        "broker_offset_seconds": "66258/66258",
+        "canonical_opportunity_id": "66258/66258 (top-level)",
+        "entry_market_time": "20460/66258",
+        "entry_market_time_utc_epoch_s": "20460/66258",
+        "exit_market_time": "20421/66258",
+        "experiment_arm": "0/66258",
+        "identity.canonical_opportunity_id": "0/66258",
+        "identity.evaluated_horizon": "20460/66258",
+        "identity.shadow_type": "20460/66258",
+        "identity.trade_horizon": "20460/66258",
+        "live_facts.h4_regime": "20460/66258 (4003 nullish)",
+        "live_facts.horizon_selection_status": "20460/66258",
+        "live_facts.market_phase": "20460/66258 (20460 nullish -> 0 usable)",
+        "live_facts.pattern": "20460/66258 (18047 nullish)",
+        "live_facts.strategy": "20460/66258 (3841 nullish)",
+        "live_facts.v10_selected_horizon": "20460/66258",
+        "market_timestamp_normalization_version": "7473/66258",
+        "market_timestamp_semantics": "7473/66258",
+        "outcome.mae_r": "20421/66258",
+        "outcome.mfe_r": "20421/66258",
+        "outcome.pnl_r_multiple": "20421/66258",
+        "shadow_trade_id": "66258/66258 (25028 nullish)",
+        "simulated_outcome.pnl_r_multiple": "0/66258",
+        "symbol": "66258/66258",
+        "trade_state_progression": "20421 rows, shape [{bar,close,r}]"
+      },
+      "dataset": "shadow_runtime",
+      "date_max": "2026-09-29",
+      "date_min": "2026-09-07",
+      "objects": 200,
+      "persisted": true,
+      "prefix": "supporting/shadow_runtime/schema_version=shadow_runtime_v1/",
+      "role": "SUPPORTING",
+      "rows": 66258,
+      "schema": "shadow_runtime_v1"
+    },
+    "shadow_trades": {
+      "coverage": {
+        "declared in core/production_data_contract.py": "yes",
+        "list_objects_v2 KeyCount supporting/research_shadow_trades/": "0",
+        "list_objects_v2 KeyCount supporting/shadow_trades/": "0",
+        "writer defined in core/shadow_trades.py": "yes (_persist_to_s3)"
+      },
+      "dataset": "shadow_trades",
+      "date_max": null,
+      "date_min": null,
+      "objects": 0,
+      "persisted": false,
+      "prefix": "supporting/shadow_trades/  <-- NO SUCH PREFIX",
+      "role": "SUPPORTING (declared)",
+      "rows": 0,
+      "schema": "shadow_trades_v1"
+    },
+    "strategy_candidates": {
+      "coverage": {
+        "bar_time": "3386/3386",
+        "canonical_opportunity_id": "3386/3386",
+        "confidence": "3386/3386",
+        "rank": "3386/3386",
+        "selected": "3386/3386",
+        "symbol": "3386/3386"
+      },
+      "dataset": "strategy_candidates",
+      "date_max": "2026-09-29",
+      "date_min": "2026-09-07",
+      "objects": 125,
+      "persisted": true,
+      "prefix": "supporting/strategy_candidates/schema_version=strategy_candidates_v1/",
+      "role": "SUPPORTING",
+      "rows": 3386,
+      "schema": "strategy_candidates_v1"
+    },
+    "strategy_observations": {
+      "coverage": {
+        "authority": "25575/25575",
+        "bar_time": "25575/25575",
+        "canonical_opportunity_id": "25575/25575",
+        "detected_pattern": "25575/25575 (23084 nullish -> 2491 usable)",
+        "h4_regime": "25575/25575",
+        "market_phase": "25575/25575",
+        "record_role": "25575/25575",
+        "strategy_family": "25575/25575",
+        "timestamp_utc": "25575/25575"
+      },
+      "dataset": "strategy_observations",
+      "date_max": "2026-09-29",
+      "date_min": "2026-09-07",
+      "objects": 200,
+      "persisted": true,
+      "prefix": "supporting/strategy_observations/schema_version=strategy_observation_v1/",
+      "role": "SUPPORTING",
+      "rows": 25575,
+      "schema": "strategy_observation_v1"
+    }
+  },
+  "schema": "stage4_dataset_improvement_matrix_v1",
+  "stamp": "20260929",
+  "version_consequences": {
+    "CONTRACT_ONLY_CHANGE": 4,
+    "NEW_DATASET_REQUIRED": 2,
+    "NO_SCHEMA_CHANGE": 3,
+    "PRODUCER_VERSION_REQUIRED": 9,
+    "SCHEMA_VERSION_REQUIRED": 4
+  }
+}

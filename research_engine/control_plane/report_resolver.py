@@ -293,6 +293,21 @@ def resolve_report_validity(
         governed_valid, governed_reason = validate_l4_report(report_data)
         if not governed_valid:
             return ReportValidity.INVALIDATED, governed_reason
+    if expected_question_id == "L3" and filename == "l3_architecture_assumption_validity.json":
+        from research_engine.experiments.architecture_assumption_validity import validate_l3_report
+        governed_valid, governed_reason = validate_l3_report(report_data)
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
+    if expected_question_id == "L6" and filename == "l6_learning_cycle_validation.json":
+        from research_engine.experiments.learning_cycle_validation import validate_l6_report
+        governed_valid, governed_reason = validate_l6_report(report_data)
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
+    if expected_question_id == "L7" and filename == "l7_adaptation_evidence.json":
+        from research_engine.experiments.adaptation_evidence import validate_l7_report
+        governed_valid, governed_reason = validate_l7_report(report_data)
+        if not governed_valid:
+            return ReportValidity.INVALIDATED, governed_reason
     if expected_question_id == "G1":
         from research_engine.experiments.dataset_suitability import validate_g1_report
         governed_valid, governed_reason = validate_g1_report(report_data)

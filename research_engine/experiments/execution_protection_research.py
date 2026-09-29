@@ -467,8 +467,12 @@ def run_x2() -> dict[str, Any]:
     )
     res = result_selection.records_for_analysis()
     att = attempt_selection.records_for_analysis()
+    # execution_attempts is explicitly optional for X2.  An absent frozen
+    # optional dataset is accounted as zero attempts in the report; it must
+    # not turn otherwise CURRENT execution-result provenance into UNVERIFIED.
     evidence_provenance = build_evidence_provenance(
-        result_selection, attempt_selection,
+        result_selection,
+        *((attempt_selection,) if attempt_selection.component["input_records"] else ()),
     )
     n = len(res)
 

@@ -1,0 +1,49 @@
+{
+  "edges": [
+    {
+      "dependency_status": "UNRESOLVED",
+      "dependency_type": "SCIENTIFIC_DEPENDENCY",
+      "from": "GWI-L6-IMPL",
+      "to": "GWI-G3-IMPL"
+    }
+  ],
+  "work_items": [
+    "GWI-E5-DATA",
+    "GWI-M3-DATA",
+    "GWI-M4-DATA",
+    "GWI-M5-DATA",
+    "GWI-M6-DATA",
+    "GWI-M7-DATA",
+    "GWI-M8-DATA",
+    "GWI-M9-DATA",
+    "GWI-M10-DATA",
+    "GWI-M11-DATA",
+    "GWI-D2-DATA",
+    "GWI-D3-DATA",
+    "GWI-D4-DATA",
+    "GWI-D5-DATA",
+    "GWI-S4-DATA",
+    "GWI-R3-DATA",
+    "GWI-R4-DATA",
+    "GWI-R5-DATA",
+    "GWI-L1-DATA",
+    "GWI-L2-DATA",
+    "GWI-L4-DATA",
+    "GWI-L5-DATA",
+    "GWI-P1-DATA",
+    "GWI-EX10-DATA",
+    "GWI-HORIZON-1-DATA",
+    "GWI-STRAT-1-DATA",
+    "GWI-X5-DATA",
+    "GWI-PORT-1-DATA",
+    "GWI-OPP-1-DATA",
+    "GWI-R1-IMPL",
+    "GWI-R2-IMPL",
+    "GWI-L3-IMPL",
+    "GWI-L6-IMPL",
+    "GWI-L7-IMPL",
+    "GWI-G2-IMPL",
+    "GWI-G3-IMPL",
+    "GWI-EX2-IMPL"
+  ]
+}

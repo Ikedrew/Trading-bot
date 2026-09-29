@@ -1,0 +1,35 @@
+{
+  "counts": {
+    "certification_superseded": 6,
+    "certification_versions": 76,
+    "finding_superseded": 6,
+    "finding_versions": 76,
+    "questions": 70,
+    "reentry_events": 6,
+    "scientific_result_versions": 76,
+    "supersession_events": 6
+  },
+  "demonstration": null,
+  "dependency_edges": [
+    {
+      "dependency_type": "SCIENTIFIC_DEPENDENCY",
+      "dependent_question_id": "G3",
+      "edge_id": "L6->G3",
+      "prerequisite_question_id": "L6",
+      "source": "gap_governance:GWI-L6-IMPL->GWI-G3-IMPL"
+    }
+  ],
+  "effective_state_fingerprint": "bc9770b1132397d28e0a68b1b72db7f86e7080b8788220fd7991a4e6fc58f6de",
+  "pre_existing_baseline_drift": "PRE_EXISTING_BASELINE_DRIFT: operational-baseline assertions expect (60,10)/(58,12) while the repository currently returns (63,7); reproduced on a clean checkout before this task and deliberately not repaired here.",
+  "schema": 1,
+  "stage": "STAGE4_SCIENTIFIC_REENTRY",
+  "store_fingerprint": "6f6b74cbfb648ebcdf748368aad8a4402f95532973252ec758989f7e0dd2e120",
+  "triggers": [
+    "IMPLEMENTATION_REPAIR",
+    "DATA_THRESHOLD_REACHED",
+    "SCHEMA_COLLECTION_RECOVERED",
+    "DEPENDENCY_RESOLVED",
+    "GOVERNED_METHOD_REPAIR",
+    "NEW_EVIDENCE_EPOCH"
+  ]
+}

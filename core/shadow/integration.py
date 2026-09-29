@@ -233,8 +233,13 @@ def evaluate_closed_bar(
     bar_low: float,
     bar_close: float,
     bar_index: int = 0,
+    bar_open: float | None = None,
 ) -> None:
-    """Closed-bar adapter: authoritative lifecycle transition for active shadows."""
+    """Closed-bar adapter: authoritative lifecycle transition for active shadows.
+
+    ``bar_open`` is optional for backward compatibility, but supplying it is
+    what makes the ROOT-04 lifecycle M5 path OHLC-complete for EX2.
+    """
     from core.shadow.runtime import get_shadow_runtime
 
     get_shadow_runtime().evaluate_bar(
@@ -244,4 +249,5 @@ def evaluate_closed_bar(
         bar_low=bar_low,
         bar_close=bar_close,
         bar_index=bar_index,
+        bar_open=bar_open,
     )

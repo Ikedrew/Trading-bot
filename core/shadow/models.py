@@ -124,6 +124,10 @@ class LifecycleState:
     last_evaluated_bar_time: int = 0
     state_log: list[dict[str, float]] = field(default_factory=list)
     data_gaps: list[dict[str, Any]] = field(default_factory=list)
+    # ROOT-04: ordered M5 OHLC bars this lifecycle actually evaluated.  Kept
+    # on the lifecycle (not only on CLOSE) so a PROGRESS checkpoint can carry
+    # it and a crash cannot lose the path already observed.
+    m5_path: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -134,6 +138,9 @@ class LifecycleState:
             "state_log_tail": self.state_log[-10:],
             "state_log_len": len(self.state_log),
             "data_gaps": list(self.data_gaps),
+            # The full M5 path is checkpointed verbatim: truncating it would
+            # silently destroy the evidence ROOT-04 exists to provide.
+            "m5_path": [dict(row) for row in self.m5_path],
         }
 
     @classmethod
@@ -145,4 +152,5 @@ class LifecycleState:
             last_evaluated_bar_time=int(d.get("last_evaluated_bar_time", 0)),
             state_log=list(d.get("state_log_tail", [])),
             data_gaps=list(d.get("data_gaps", [])),
+            m5_path=[dict(row) for row in (d.get("m5_path") or [])],
         )

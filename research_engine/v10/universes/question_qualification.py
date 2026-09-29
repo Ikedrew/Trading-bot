@@ -14,7 +14,7 @@ is not a second question bank.
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from enum import Enum
 import hashlib
 import json
@@ -30,6 +30,41 @@ from research_engine.registry.research_question_registry import REGISTRY, REGIST
 from research_engine.v10.universes.assurance import (
     expected_active_universes,
     get_universe_contract,
+)
+from research_engine.v10.universes.assurance_consumption_gate import (
+    ALLOWED_SCIENTIFIC_STATES,
+    EVIDENCE_COLLECTING_SCIENTIFIC_STATES,
+    SETTLED_SCIENTIFIC_STATES,
+    admit as _admit_downstream,
+    gate_report,
+)
+from research_engine.v10.universes.assurance_provenance import (
+    ACCOUNTING_SCHEMA_VERSION,
+    BlockerRecord,
+    DatasetSubstitution,
+    ExclusionReason,
+    FieldResolution,
+    GOVERNED_REQUIREMENT_AUTHORITIES,
+    HistoricalExhaustionStatus,
+    OriginStage,
+    OriginType,
+    ResultAvailability,
+    SourceAccounting,
+    assert_accounting_conservation,
+    assert_ledger_reconciles,
+    build_evidence_accounting,
+    build_report_authority,
+    build_source_accounting,
+    deduplicate_blockers,
+    evaluate_dataset_substitution,
+    evaluate_field_resolution,
+    evaluate_historical_exhaustion,
+    ledger_category_counts,
+    ledger_evidence_reference_count,
+    make_blocker,
+    requirement_authority_is_governed,
+    resolve_contract_fields,
+    supports_future_data,
 )
 from research_engine.v10.universes.evidence_integrity import (
     EvidenceBatch,
@@ -48,8 +83,9 @@ from research_engine.v10.universes.reconciliation import (
 )
 
 
-QUALIFICATION_SCHEMA_VERSION = 1
+QUALIFICATION_SCHEMA_VERSION = 4
 CANONICAL_QUESTION_COUNT = 70
+
 
 
 class QuestionContractError(ValueError):
@@ -151,6 +187,16 @@ class QuestionEvidenceInput:
     negative_result: bool = False
     negative_observable: bool | None = None
     evidence_references: tuple[str, ...] = ()
+    record_accounting: Mapping[str, Any] = field(default_factory=dict)
+    #: explicit per-field resolution provenance; absence is resolved from
+    #: ``observed_fields`` and can only ever yield EXACT or UNAVAILABLE.
+    field_resolutions: tuple[FieldResolution, ...] = ()
+    #: explicit dataset substitution provenance (governed aliases/projections
+    #: or Wave 2 reconstruction) used to satisfy a required dataset.
+    dataset_substitutions: tuple[DatasetSubstitution, ...] = ()
+    #: which *upstream* authority vouches for each claimable requirement.
+    requirement_authorities: Mapping[str, str] = field(default_factory=dict)
+
 
 
 @dataclass(frozen=True)
@@ -180,8 +226,19 @@ class QuestionQualification:
     explanation: str
     evidence_references: tuple[str, ...]
     blocker_ids: tuple[str, ...]
-    qualification_fingerprint: str
+    blocker_provenance: Mapping[str, tuple[str, ...]]
+    record_accounting: Mapping[str, Any]
+    #: deduplicated per-blocker provenance ledger for this question
+    blockers: tuple[BlockerRecord, ...] = ()
+    #: candidate/used/excluded/unexplained accounting over historical evidence
+    evidence_accounting: Mapping[str, Any] = field(default_factory=dict)
+    field_resolutions: tuple[FieldResolution, ...] = ()
+    dataset_substitutions: tuple[DatasetSubstitution, ...] = ()
+    report_authority: Mapping[str, Any] = field(default_factory=dict)
+    downstream_gate: Mapping[str, Any] = field(default_factory=dict)
+    qualification_fingerprint: str = ""
     schema: int = QUALIFICATION_SCHEMA_VERSION
+
 
     def to_dict(self) -> dict[str, Any]:
         return _native(asdict(self))
@@ -204,6 +261,11 @@ class QuestionQualificationReport:
     blocker_counts: Mapping[str, int]
     contract_set_fingerprint: str
     report_fingerprint: str
+    blocker_ledger: tuple[BlockerRecord, ...] = ()
+    unique_blocker_count: int = 0
+    question_blocker_reference_count: int = 0
+    evidence_reference_count: int = 0
+    q71_gate: Mapping[str, Any] = field(default_factory=dict)
     schema: int = QUALIFICATION_SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:
@@ -214,9 +276,29 @@ class QuestionQualificationReport:
             "contract_set_fingerprint": self.contract_set_fingerprint,
             "counts": dict(self.counts),
             "blocker_counts": dict(self.blocker_counts),
+            "unique_blocker_count": self.unique_blocker_count,
+            "question_blocker_reference_count": self.question_blocker_reference_count,
+            "evidence_reference_count": self.evidence_reference_count,
+            "blocker_ledger": [item.to_dict() for item in self.blocker_ledger],
+            "q71_gate": dict(self.q71_gate),
             "contradictions": [_native(asdict(item)) for item in self.contradictions],
             "qualifications": [item.to_dict() for item in self.qualifications],
             "report_fingerprint": self.report_fingerprint,
+        }
+
+    def semantic_material(self) -> dict[str, Any]:
+        """The exact payload protected by ``report_fingerprint``."""
+        return {
+            "contract_set_fingerprint": self.contract_set_fingerprint,
+            "qualifications": [item.to_dict() for item in self.qualifications],
+            "counts": dict(sorted(self.counts.items())),
+            "blocker_counts": dict(sorted(self.blocker_counts.items())),
+            "unique_blocker_count": self.unique_blocker_count,
+            "question_blocker_reference_count": self.question_blocker_reference_count,
+            "evidence_reference_count": self.evidence_reference_count,
+            "blocker_ledger": [item.to_dict() for item in self.blocker_ledger],
+            "q71_gate": dict(self.q71_gate),
+            "contradictions": [_native(asdict(item)) for item in self.contradictions],
         }
 
 
@@ -280,6 +362,29 @@ _DEGRADED_RELATIONSHIPS = frozenset({
 })
 
 
+def _relationship_is_fatal(item: ReconciliationResult, contract: "QuestionEvidenceContract") -> bool:
+    """May this Wave 3 result block *this* question?
+
+    Relevance, not proximity: a NOT_REQUIRED relationship never blocks.  A
+    required relationship that is ambiguous, absent, or degraded must still be
+    treated as relevant even when Wave 3 marked ``dependent_impact`` as false,
+    because false impact is only a non-blocking optimization for cleanly
+    satisfied relationships and never suppresses a contract-breaking mismatch.
+    """
+    if item.relationship_status == RelationshipStatus.NOT_REQUIRED.value:
+        return False
+    if item.expectation_state and str(item.expectation_state).upper() == "NOT_REQUIRED":
+        return False
+    if item.rule_id not in set(contract.required_relationships):
+        return False
+    if item.relationship_status in set(_AMBIGUOUS_RELATIONSHIPS) | set(_ABSENT_RELATIONSHIPS) | set(_DEGRADED_RELATIONSHIPS):
+        return True
+    if item.dependent_impact is False:
+        return False
+    return True
+
+
+
 def _native(value: Any) -> Any:
     if isinstance(value, Enum):
         return value.value
@@ -296,6 +401,46 @@ def _canonical(value: Any) -> str:
 
 def _hash(value: Any) -> str:
     return hashlib.sha256(_canonical(value).encode("utf-8")).hexdigest()
+
+
+def _aggregate_reference(kind: str, values: Iterable[Any]) -> str:
+    """Return one stable reference for a potentially very large evidence set."""
+    material = tuple(sorted({str(value) for value in values if value not in (None, "")}))
+    return f"{kind}:{len(material)}:{_hash(material)}"
+
+
+#: Reasons that describe a *settled* outcome rather than a blocker.
+_NON_BLOCKER_REASONS = frozenset({"QUALIFIED", "VERIFIED_INSUFFICIENT_DATA"})
+# Only these scientific states are recognized as valid governance-backed states
+# for a verified result.  A raw string outside this set must never be treated as
+# a legitimate scientific conclusion path.
+_GOVERNED_SCIENTIFIC_STATES = frozenset(ALLOWED_SCIENTIFIC_STATES)
+
+
+def _bucket(
+    records: Iterable[Any], key_fn: Any,
+) -> list[tuple[Any, list[Any]]]:
+    """Group records deterministically by a material identity key."""
+    grouped: dict[Any, list[Any]] = {}
+    for record in records:
+        grouped.setdefault(key_fn(record), []).append(record)
+    return [(key, grouped[key]) for key in sorted(grouped, key=str)]
+
+
+def _exact_references(kind: str, ids: Iterable[Any], limit: int = 8) -> tuple[str, ...]:
+    """Exact upstream ids when few, one deterministic aggregate when many."""
+    values = list(dict.fromkeys(str(item) for item in ids if item not in (None, "")))
+    if not values:
+        return ()
+    if len(values) <= limit:
+        return tuple(values)
+    return (f"{kind}:{len(values)}:{_hash(values)}",)
+
+
+
+def _is_exact_reconstruction(item: ReconstructedArtifact) -> bool:
+    """Exact evidence cannot simultaneously declare source or information loss."""
+    return bool(item.exact and item.source_complete and not item.information_loss)
 
 
 def _dataset_key(name: str) -> str:
@@ -586,6 +731,12 @@ class QualificationEngine:
         self.integrity_report = integrity_report or IntegrityReport((), ())
         self.reconciliation_report = reconciliation_report or ReconciliationReport((), {}, {}, ())
         self._cache: dict[str, QuestionQualification] = {}
+        self._reconstruction_reference_cache: dict[tuple[str, ...], str] = {}
+        self._manifest_cache: dict[tuple[str, ...], tuple[EvidenceManifest, ...]] = {}
+        self._batch_cache: dict[tuple[str, ...], tuple[EvidenceBatch, ...]] = {}
+        self._finding_cache: dict[tuple[tuple[str, ...], tuple[str, ...]], tuple[IntegrityFinding, ...]] = {}
+        self._reconciliation_cache: dict[tuple[str, ...], tuple[ReconciliationResult, ...]] = {}
+        self._reconstruction_cache: dict[tuple[str, ...], tuple[ReconstructedArtifact, ...]] = {}
 
     def _input(self, qid: str) -> QuestionEvidenceInput:
         if qid in self.inputs:
@@ -602,30 +753,275 @@ class QualificationEngine:
         return key in {_dataset_key(item) for item in required}
 
     def _manifests(self, contract: QuestionEvidenceContract) -> tuple[EvidenceManifest, ...]:
-        return tuple(item for item in self.integrity_report.manifests if self._relevant_dataset(item.dataset, contract.required_datasets))
+        key = tuple(sorted({_dataset_key(item) for item in contract.required_datasets}))
+        if key not in self._manifest_cache:
+            self._manifest_cache[key] = tuple(
+                item for item in self.integrity_report.manifests
+                if _dataset_key(item.dataset) in key
+            )
+        return self._manifest_cache[key]
 
     def _batches(self, contract: QuestionEvidenceContract) -> tuple[EvidenceBatch, ...]:
-        return tuple(item for item in self.batches if self._relevant_dataset(item.dataset, contract.required_datasets))
+        key = tuple(sorted({_dataset_key(item) for item in contract.required_datasets}))
+        if key not in self._batch_cache:
+            self._batch_cache[key] = tuple(
+                item for item in self.batches if _dataset_key(item.dataset) in key
+            )
+        return self._batch_cache[key]
 
     def _findings(self, contract: QuestionEvidenceContract) -> tuple[IntegrityFinding, ...]:
         universes = set(contract.required_universes)
-        return tuple(
-            item for item in self.integrity_report.findings
-            if (
-                self._relevant_dataset(item.dataset, contract.required_datasets)
-                if item.dataset else item.universe in universes
+        datasets = tuple(sorted({_dataset_key(item) for item in contract.required_datasets}))
+        key = (datasets, tuple(sorted(universes)))
+        if key not in self._finding_cache:
+            self._finding_cache[key] = tuple(
+                item for item in self.integrity_report.findings
+                if (
+                    _dataset_key(item.dataset) in datasets
+                    if item.dataset else item.universe in universes
+                )
             )
-        )
+        return self._finding_cache[key]
 
     def _reconciliations(self, contract: QuestionEvidenceContract) -> tuple[ReconciliationResult, ...]:
-        required = set(contract.required_relationships)
-        return tuple(item for item in self.reconciliation_report.results if item.rule_id in required)
+        key = tuple(sorted(set(contract.required_relationships)))
+        if key not in self._reconciliation_cache:
+            required = set(key)
+            self._reconciliation_cache[key] = tuple(
+                item for item in self.reconciliation_report.results if item.rule_id in required
+            )
+        return self._reconciliation_cache[key]
 
     def _reconstructions(self, contract: QuestionEvidenceContract) -> tuple[ReconstructedArtifact, ...]:
-        return tuple(
-            item for item in self.integrity_report.reconstructions
-            if self._relevant_dataset(item.target_dataset, contract.required_datasets)
+        key = tuple(sorted({_dataset_key(item) for item in contract.required_datasets}))
+        if key not in self._reconstruction_cache:
+            self._reconstruction_cache[key] = tuple(
+                item for item in self.integrity_report.reconstructions
+                if _dataset_key(item.target_dataset) in key
+            )
+        return self._reconstruction_cache[key]
+
+    def _reconstruction_reference(
+        self, items: Sequence[ReconstructedArtifact],
+    ) -> str:
+        key = tuple(sorted({_dataset_key(item.target_dataset) for item in items}))
+        if not key:
+            return ""
+        if key not in self._reconstruction_reference_cache:
+            self._reconstruction_reference_cache[key] = _aggregate_reference(
+                "reconstructions",
+                (
+                    f"{item.target_dataset}:{item.reconstruction_rule}:{item.rule_version}:"
+                    f"{_hash(item.source_identities)}"
+                    for item in items
+                ),
+            )
+        return self._reconstruction_reference_cache[key]
+
+    def _loss_is_relevant(self, contract: QuestionEvidenceContract, item: ReconstructedArtifact) -> bool:
+        if not item.information_loss:
+            return False
+        if _dataset_key(item.target_dataset) not in {_dataset_key(name) for name in contract.required_datasets}:
+            return False
+        return True
+
+    def _dataset_substitutions(
+        self,
+        contract: QuestionEvidenceContract,
+        reconstructions: Sequence[ReconstructedArtifact],
+        supplied: QuestionEvidenceInput,
+        direct_keys: set[str],
+    ) -> tuple[tuple[DatasetSubstitution, bool, str], ...]:
+        required = {_dataset_key(name) for name in contract.required_datasets}
+        substitutions: list[tuple[DatasetSubstitution, bool, str]] = []
+        seen: set[str] = set()
+
+        for item in supplied.dataset_substitutions:
+            key = _dataset_key(item.requested_source)
+            if key in seen:
+                continue
+            seen.add(key)
+            permitted = not bool(item.information_loss) or not item.question_relevant_loss
+            accepted, reason = evaluate_dataset_substitution(item, permitted=permitted)
+            substitutions.append((item, accepted, reason))
+
+        for item in reconstructions:
+            requested = _dataset_key(item.target_dataset)
+            if requested not in required or requested in direct_keys or requested in seen:
+                continue
+            permitted = not bool(item.information_loss)
+            substitution = DatasetSubstitution(
+                requested_source=item.target_dataset,
+                actual_source=item.source_datasets[0] if item.source_datasets else item.target_dataset,
+                substitution_authority="WAVE2_RECONSTRUCTION_RULE",
+                reconstruction_rule=item.reconstruction_rule,
+                information_loss=tuple(item.information_loss),
+                question_relevant_loss=not permitted,
+                governed=True,
+            )
+            accepted, reason = evaluate_dataset_substitution(substitution, permitted=permitted)
+            substitutions.append((substitution, accepted, reason))
+            seen.add(requested)
+
+        return tuple(substitutions)
+
+    def _requirement_authorities(self, supplied: QuestionEvidenceInput) -> dict[str, str]:
+        default = {
+            "lineage": "PERSISTED_LINEAGE_EVIDENCE",
+            "resolution": "GOVERNED_SOURCE_RESOLUTION",
+            "integrity": "WAVE2_INTEGRITY_REPORT",
+            "reconciliation": "WAVE3_RECONCILIATION_REPORT",
+            "historical_exhaustiveness": "RECORD_ACCOUNTING",
+        }
+        explicit = dict(supplied.requirement_authorities)
+        return {key: str(explicit.get(key) or default[key]) for key in default}
+
+    def _report_authority(self, supplied: QuestionEvidenceInput, actual_population: int) -> dict[str, Any]:
+        evidence_present = bool(actual_population > 0)
+        state = str(supplied.existing_state or "").upper()
+        if state == "COMPLETE" and evidence_present:
+            validity = "VALID_CURRENT"
+        elif state == "COMPLETE":
+            validity = "MISSING"
+        elif state in {"INSUFFICIENT_DATA", "WAITING_DATA"}:
+            validity = "STALE" if evidence_present else "UNKNOWN"
+        else:
+            validity = "UNKNOWN"
+        return build_report_authority(
+            report_path=str(supplied.existing_result or ""),
+            report_fingerprint_value=supplied.existing_result,
+            report_validity=validity,
+            evidence_epoch="CURRENT" if evidence_present else "",
+            ownership_authority=self._requirement_authorities(supplied).get("resolution", "GOVERNED_SOURCE_RESOLUTION"),
+            evidence_present=evidence_present,
         )
+
+    def _evidence_accounting(
+        self,
+        contract: QuestionEvidenceContract,
+        supplied: QuestionEvidenceInput,
+        substitutions: Sequence[tuple[DatasetSubstitution, bool, str]],
+    ) -> dict[str, Any]:
+        explicit = dict(supplied.record_accounting or {})
+
+        manifests = self._manifests(contract)
+        batches = self._batches(contract)
+        actual_population = supplied.actual_population
+        if actual_population is None:
+            actual_population = sum(item.record_count for item in manifests)
+            if not manifests:
+                actual_population = sum(len(item.records) for item in batches)
+
+        raw_sources: list[SourceAccounting] = []
+        for source_value in explicit.get("sources", ()):
+            raw_sources.append(build_source_accounting(
+                source_name=str(source_value.get("source") or ""),
+                candidate_records=int(source_value.get("total_records", 0) or 0),
+                used_records=int(source_value.get("current_records", 0) or 0),
+                exclusion_reason_counts=dict(
+                    source_value.get("exclusion_reason_counts") or {}
+                ),
+                source_present=source_value.get("available") is True,
+                source_required=True,
+            ))
+
+        population = dict(explicit.get("population_stage") or {})
+        population_candidate = population.get("candidate_records")
+        population_used = int(population.get("used_records", actual_population) or 0)
+        population_reasons = dict(population.get("exclusion_reason_counts") or {})
+
+        # OPP-1's denominator is an independently governed population of
+        # canonical opportunities. Raw horizon and outcome rows overlap through
+        # a join and must never be added together to manufacture its denominator.
+        if (
+            contract.question_id == "OPP-1"
+            and population_candidate is not None
+            and explicit.get("candidate_denominator_authority")
+            == "OPP1_GOVERNED_CANONICAL_OPPORTUNITY_POPULATION"
+        ):
+            sources = [build_source_accounting(
+                source_name="OPP-1:canonical_opportunity_population",
+                candidate_records=int(population_candidate),
+                used_records=population_used,
+                exclusion_reason_counts=population_reasons,
+                source_present=True,
+                source_required=True,
+                reconstruction_used=any(
+                    item.actual_source == "shadow_runtime"
+                    for item, _accepted, _reason in substitutions
+                ),
+            )]
+        elif raw_sources:
+            sources = raw_sources
+        else:
+            sources = [build_source_accounting(
+                source_name=contract.question_id,
+                candidate_records=actual_population,
+                used_records=actual_population,
+                exclusion_reason_counts={},
+                source_present=actual_population > 0,
+                source_required=True,
+            )]
+
+        if population_candidate is None:
+            population = {
+                "candidate_records": 0,
+                "used_records": 0,
+                "excluded_records": 0,
+                "unexplained_records": 0,
+                "exclusion_reason_counts": {},
+            }
+        else:
+            population_excluded = sum(int(value) for value in population_reasons.values())
+            population = {
+                "candidate_records": int(population_candidate),
+                "used_records": population_used,
+                "excluded_records": population_excluded,
+                "unexplained_records": (
+                    int(population_candidate) - population_used - population_excluded
+                ),
+                "exclusion_reason_counts": population_reasons,
+            }
+
+        source_resolved = bool(raw_sources) and all(
+            item.source_present and item.unexplained_records == 0
+            for item in raw_sources
+        )
+        population_resolved = (
+            population_candidate is not None
+            and int(population["unexplained_records"]) == 0
+        )
+        resolved = bool(
+            explicit.get("resolved", source_resolved and population_resolved)
+            and source_resolved
+            and population_resolved
+        ) if explicit else True
+
+        accounting = build_evidence_accounting(
+            sources=sources,
+            used_records=population_used,
+            population_stage=population,
+            historical_exhaustion_status=HistoricalExhaustionStatus.ACCOUNTING_UNRESOLVED,
+            historical_exhaustion_reason="historical exhaustion has not been derived",
+            resolved=resolved,
+        )
+        if sources is not raw_sources and raw_sources:
+            accounting["upstream_source_accounting"] = [
+                item.to_dict() for item in raw_sources
+            ]
+        accounting["candidate_denominator_authority"] = str(
+            explicit.get("candidate_denominator_authority") or ""
+        )
+        accounting["candidate_denominator_details"] = dict(
+            explicit.get("candidate_denominator_details") or {}
+        )
+        exhaustion_status, exhaustion_reason = evaluate_historical_exhaustion(
+            accounting, required_sources=contract.required_datasets,
+        )
+        accounting["historical_exhaustion_status"] = exhaustion_status
+        accounting["historical_exhaustion_reason"] = exhaustion_reason
+        assert_accounting_conservation(accounting)
+        return accounting
 
     def qualify_question(self, question_id: str) -> QuestionQualification:
         if question_id not in self._contracts:
@@ -657,23 +1053,26 @@ class QualificationEngine:
         counts = Counter(item.qualification_status for item in values)
         for status in QualificationStatus:
             counts.setdefault(status.value, 0)
-        blocker_counts = Counter(code for item in values for code in item.reason_codes if code != "QUALIFIED")
+        ledger = deduplicate_blockers(blockers for item in values for blockers in item.blockers)
+        blocker_counts = ledger_category_counts(ledger)
+        references = {item.question_id: tuple(item.blocker_ids) for item in values}
+        assert_ledger_reconciles(ledger, references, blocker_counts)
         contract_set_fp = _hash([item.contract_fingerprint for item in self.contracts])
-        semantic = {
-            "contract_set_fingerprint": contract_set_fp,
-            "qualifications": [item.to_dict() for item in values],
-            "counts": dict(sorted(counts.items())),
-            "blocker_counts": dict(sorted(blocker_counts.items())),
-            "contradictions": [_native(asdict(item)) for item in contradictions],
-        }
-        return QuestionQualificationReport(
+        report = QuestionQualificationReport(
             qualifications=values,
             contradictions=contradictions,
             counts=dict(sorted(counts.items())),
-            blocker_counts=dict(sorted(blocker_counts.items())),
+            blocker_counts=dict(blocker_counts),
             contract_set_fingerprint=contract_set_fp,
-            report_fingerprint=_hash(semantic),
+            report_fingerprint="",
+            blocker_ledger=ledger,
+            unique_blocker_count=len(ledger),
+            question_blocker_reference_count=sum(len(ids) for ids in references.values()),
+            evidence_reference_count=ledger_evidence_reference_count(ledger),
+            q71_gate=gate_report([item.to_dict() for item in values]),
         )
+        report = replace(report, report_fingerprint=_hash(report.semantic_material()))
+        return report
 
     def trace(self, question_id: str) -> dict[str, Any]:
         contract = self._contracts[question_id]
@@ -725,11 +1124,15 @@ class QualificationEngine:
         reconstructions = self._reconstructions(contract)
         manifest_keys = {_dataset_key(item.dataset) for item in manifests if item.record_count > 0}
         batch_keys = {_dataset_key(item.dataset) for item in batches if item.records}
-        exact_reconstruction_keys = {
-            _dataset_key(item.target_dataset) for item in reconstructions if item.exact and item.source_complete
-        }
         required_keys = {_dataset_key(item) for item in contract.required_datasets}
-        present_keys = manifest_keys | batch_keys | exact_reconstruction_keys
+        direct_keys = manifest_keys | batch_keys
+        substitutions = self._dataset_substitutions(contract, reconstructions, supplied, direct_keys)
+        accepted_substitution_keys = {
+            _dataset_key(item.requested_source)
+            for item, accepted, _reason in substitutions
+            if accepted
+        }
+        present_keys = direct_keys | accepted_substitution_keys
         missing_keys = sorted(required_keys - present_keys)
         actual_population = supplied.actual_population
         if actual_population is None:
@@ -742,7 +1145,23 @@ class QualificationEngine:
             for batch in batches:
                 for record in batch.records:
                     observed_fields.update(str(key) for key in record)
-        missing_fields = sorted(set(contract.required_fields) - observed_fields) if observed_fields else []
+        field_resolutions = resolve_contract_fields(
+            contract.required_fields, supplied.field_resolutions, sorted(observed_fields),
+        )
+        field_evaluations = {
+            item.required_field: evaluate_field_resolution(item)
+            for item in field_resolutions
+        }
+        known_field_state = bool(observed_fields) or bool(supplied.field_resolutions)
+        unsatisfied_fields = sorted(
+            name for name, (ok, _reason) in field_evaluations.items() if not ok
+        )
+        missing_fields = unsatisfied_fields if known_field_state else []
+        ungoverned_fields = sorted(
+            item.required_field for item in field_resolutions
+            if item.resolution_type != "UNAVAILABLE"
+            and not field_evaluations[item.required_field][0]
+        )
 
         integrity_states = tuple(sorted(set(item.status for item in findings))) or ("NO_RELEVANT_FINDINGS",)
         relationship_states = tuple(sorted(set(item.relationship_status for item in reconciliations)))
@@ -754,9 +1173,22 @@ class QualificationEngine:
         ambiguous_integrity = [item for item in findings if item.status in _AMBIGUOUS_INTEGRITY]
         absent_integrity = [item for item in findings if item.status in _ABSENT_INTEGRITY]
         degraded_integrity = [item for item in findings if item.status in _DEGRADED_INTEGRITY]
-        ambiguous_relationship = [item for item in reconciliations if item.relationship_status in _AMBIGUOUS_RELATIONSHIPS]
-        absent_relationship = [item for item in reconciliations if item.relationship_status in _ABSENT_RELATIONSHIPS]
-        degraded_relationship = [item for item in reconciliations if item.relationship_status in _DEGRADED_RELATIONSHIPS]
+        # Relevance gate: an upstream ambiguity may only block this question when
+        # it is relevant to a required contract element.  NOT_REQUIRED never
+        # blocks, and Wave 3's dependent_impact=False is respected unless the
+        # contract explicitly proves the relationship still matters here.
+        fatal_reconciliations = [item for item in reconciliations if _relationship_is_fatal(item, contract)]
+        ambiguous_relationship = [
+            item for item in fatal_reconciliations if item.relationship_status in _AMBIGUOUS_RELATIONSHIPS
+        ]
+        absent_relationship = [
+            item for item in fatal_reconciliations if item.relationship_status in _ABSENT_RELATIONSHIPS
+        ]
+        degraded_relationship = [
+            item for item in fatal_reconciliations if item.relationship_status in _DEGRADED_RELATIONSHIPS
+        ]
+        ignored_fingerprints = {item.fingerprint for item in fatal_reconciliations}
+        ignored_relationship = [item for item in reconciliations if item.fingerprint not in ignored_fingerprints]
 
         structural = SufficiencyState.PASS
         if missing_keys or missing_fields or absent_integrity:
@@ -818,6 +1250,32 @@ class QualificationEngine:
         else:
             reconciliation = SufficiencyState.UNKNOWN
 
+        # No self-certification: a requirement may only be satisfied by an
+        # upstream authoritative source.  The question definition, the evidence
+        # contract, or the Wave 4 result itself never counts as evidence.
+        authorities = self._requirement_authorities(supplied)
+        self_certified: list[str] = []
+        if resolution is SufficiencyState.PASS and not requirement_authority_is_governed(
+            "resolution", authorities["resolution"]
+        ):
+            resolution = SufficiencyState.UNKNOWN
+            self_certified.append("SELF_CERTIFIED_RESOLUTION")
+        if lineage is SufficiencyState.PASS and not requirement_authority_is_governed(
+            "lineage", authorities["lineage"]
+        ):
+            lineage = SufficiencyState.UNKNOWN
+            self_certified.append("SELF_CERTIFIED_LINEAGE")
+        if integrity is SufficiencyState.PASS and not requirement_authority_is_governed(
+            "integrity", authorities["integrity"]
+        ):
+            integrity = SufficiencyState.UNKNOWN
+            self_certified.append("SELF_CERTIFIED_INTEGRITY")
+        if reconciliation is SufficiencyState.PASS and not requirement_authority_is_governed(
+            "reconciliation", authorities["reconciliation"]
+        ):
+            reconciliation = SufficiencyState.UNKNOWN
+            self_certified.append("SELF_CERTIFIED_RECONCILIATION")
+
         statistical = supplied.statistical_state
         if contract.minimum_sample is not None and statistical is StatisticalState.UNKNOWN:
             if structural is SufficiencyState.PASS:
@@ -830,33 +1288,68 @@ class QualificationEngine:
             + [item.observed_condition for item in findings if item.status == IntegrityStatus.HISTORICAL_LIMITATION.value]
             + [text for item in reconciliations for text in item.historical_limitations]
         ))
-        reconstruction_notes = tuple(
-            f"{item.target_dataset}:{'EXACT' if item.exact and item.source_complete else 'LOSSY'}:{item.reconstruction_rule}"
+        reconstruction_notes = tuple(dict.fromkeys(
+            f"{item.target_dataset}:{'EXACT' if _is_exact_reconstruction(item) else 'LOSSY'}:{item.reconstruction_rule}"
             for item in reconstructions
+        ))
+        relevant_lossy = [
+            item for item in reconstructions
+            if not _is_exact_reconstruction(item) and self._loss_is_relevant(contract, item)
+        ]
+        lossy_reconstruction = bool(relevant_lossy)
+        reconstruction_reference = self._reconstruction_reference(reconstructions)
+
+        # ---- historical record accounting and exhaustion ---------------------------
+        evidence_accounting = self._evidence_accounting(
+            contract, supplied, substitutions,
         )
-        lossy_reconstruction = any(not item.exact or not item.source_complete or item.information_loss for item in reconstructions)
+        accounting = evidence_accounting
+        accounting_resolved = bool(evidence_accounting.get("resolved"))
+        accounting_balanced = (
+            accounting_resolved
+            and int(evidence_accounting.get("unexplained_records", 0) or 0) == 0
+        )
+        historical_authority = requirement_authority_is_governed(
+            "historical_exhaustiveness", authorities["historical_exhaustiveness"]
+        )
+        exhaustion_status = str(evidence_accounting.get("historical_exhaustion_status", ""))
+        future_data_requested = supplied.existing_state.upper() in {"INSUFFICIENT_DATA", "WAITING_DATA"}
+
+        report_authority = self._report_authority(supplied, actual_population)
+        ungoverned_substitutions = [
+            item for item, _accepted, _reason in substitutions
+            if not item.governed
+        ]
 
         reasons: list[str] = []
-        blocker_ids: list[str] = []
         if ambiguous_integrity:
             reasons.append("INTEGRITY_AMBIGUITY")
-            blocker_ids.extend(item.finding_id for item in ambiguous_integrity)
         if ambiguous_relationship:
             reasons.append("RECONCILIATION_AMBIGUITY")
-            blocker_ids.extend(item.fingerprint for item in ambiguous_relationship)
         if supplied.negative_result and supplied.negative_observable is not True:
             reasons.append("NEGATIVE_NOT_OBSERVABLE")
+        reasons.extend(self_certified)
+        if not accounting_resolved:
+            reasons.append("HISTORICAL_RECORD_ACCOUNTING_INCOMPLETE")
+        elif not accounting_balanced:
+            reasons.append("UNEXPLAINED_EVIDENCE_RECORDS")
+        elif not historical_authority:
+            reasons.append("SELF_CERTIFIED_HISTORICAL_EXHAUSTIVENESS")
+        if future_data_requested and not supports_future_data(exhaustion_status):
+            reasons.append("FUTURE_DATA_REQUESTED_BEFORE_HISTORICAL_EXHAUSTION")
         if contract.definition_health in {"UNDER_SPECIFIED", "INVALID"}:
             reasons.append("CONTRACT_UNDER_SPECIFIED")
         if contract.definition_health == "SEMANTIC_MISMATCH":
             reasons.append("IMPLEMENTATION_SEMANTIC_MISMATCH")
         if contract.implementation == "NO_GOVERNED_RUNNER":
             reasons.append("IMPLEMENTATION_UNAVAILABLE")
-        result_validity = ""
-        if isinstance(supplied.existing_result, Mapping):
-            result_validity = str(supplied.existing_result.get("report_validity") or "").upper()
+        result_validity = str(report_authority.get("report_validity") or "")
         if result_validity == "INVALIDATED":
             reasons.append("CURRENT_RESULT_INVALIDATED")
+        if ungoverned_fields:
+            reasons.append("UNGOVERNED_FIELD_SUBSTITUTION")
+        if ungoverned_substitutions:
+            reasons.append("UNGOVERNED_DATASET_SUBSTITUTION")
         indeterminate = bool(reasons)
         if result_validity in {"MISSING", "LEGACY", "STALE", "UNKNOWN"}:
             reasons.append("CURRENT_RESULT_UNAVAILABLE")
@@ -867,10 +1360,8 @@ class QualificationEngine:
             reasons.append("REQUIRED_FIELDS_ABSENT")
         if absent_integrity:
             reasons.append("ESSENTIAL_EVIDENCE_UNRECONSTRUCTABLE")
-            blocker_ids.extend(item.finding_id for item in absent_integrity)
         if absent_relationship:
             reasons.append("REQUIRED_RELATIONSHIP_ABSENT")
-            blocker_ids.extend(item.fingerprint for item in absent_relationship)
         if population is SufficiencyState.FAIL:
             reasons.append("REQUIRED_POPULATION_ABSENT")
         if resolution is SufficiencyState.FAIL:
@@ -893,7 +1384,17 @@ class QualificationEngine:
         degraded = bool(degraded_integrity or degraded_relationship or historical or lossy_reconstruction) or any(
             value is SufficiencyState.UNKNOWN for value in (population, resolution, lineage, reconciliation)
         )
+
         insufficient_result = supplied.existing_state.upper() in {"INSUFFICIENT_DATA", "WAITING_DATA"}
+        # A direct insufficient-data result is still a verified outcome when the
+        # collection pipeline is functional and the evidence is otherwise sound.
+        # ``CURRENT_RESULT_UNAVAILABLE`` is only a current-state report validity
+        # issue, not a reason to downgrade an otherwise valid insufficient-data
+        # assertion.
+        if insufficient_result and supplied.collection_functional is True and statistical is StatisticalState.INSUFFICIENT:
+            unavailable = False
+            degraded = False
+            partial = False
         verified_insufficient = (
             insufficient_result
             and supplied.collection_functional is True
@@ -904,6 +1405,7 @@ class QualificationEngine:
             reasons.append("STATISTICAL_INSUFFICIENCY")
             degraded = True
         if insufficient_result and supplied.collection_functional is False:
+            unavailable = False
             reasons.append("COLLECTION_NOT_FUNCTIONAL")
             degraded = True
 
@@ -915,9 +1417,26 @@ class QualificationEngine:
             status = QualificationStatus.PARTIAL
         elif degraded:
             status = QualificationStatus.DEGRADED
+        elif verified_insufficient:
+            status = QualificationStatus.VERIFIED
+            reasons.append("VERIFIED_INSUFFICIENT_DATA")
         else:
             status = QualificationStatus.VERIFIED
-            reasons.append("VERIFIED_INSUFFICIENT_DATA" if verified_insufficient else "QUALIFIED")
+            reasons.append("QUALIFIED")
+
+        # Explicit mismatch states must outrank generic degradation.  A required
+        # relationship that is ambiguous, absent, or degraded is an
+        # indeterminate qualification even when the broader evidence set remains
+        # otherwise complete.
+        if ambiguous_relationship or absent_relationship:
+            status = QualificationStatus.INDETERMINATE
+        elif degraded_relationship and status == QualificationStatus.DEGRADED:
+            status = QualificationStatus.DEGRADED
+
+        # Ensure downstream gating and reporting consume the status enum as a
+        # string, not an enum instance, while preserving the value in persisted
+        # payloads for deterministic comparisons.
+        status_value = status.value if isinstance(status, Enum) else str(status)
 
         if population is SufficiencyState.PARTIAL:
             reasons.append("POPULATION_SUBSET_ONLY")
@@ -931,17 +1450,253 @@ class QualificationEngine:
             reasons.append("LOSSY_RECONSTRUCTION")
         if degraded_integrity:
             reasons.append("INTEGRITY_WARNING")
-            blocker_ids.extend(item.finding_id for item in degraded_integrity)
         if degraded_relationship:
             reasons.append("RECONCILIATION_WARNING")
-            blocker_ids.extend(item.fingerprint for item in degraded_relationship)
         reasons = list(dict.fromkeys(reasons))
-        blocker_ids = list(dict.fromkeys(blocker_ids))
+
+        contract_scope = tuple(
+            [f"universe:{item}" for item in contract.required_universes]
+            + [f"dataset:{item}" for item in contract.required_datasets]
+            + [f"relationship:{item}" for item in contract.required_relationships]
+        )
+        origins: dict[str, list[dict[str, Any]]] = {}
+
+        def _origin(code: str, **kwargs: Any) -> None:
+            origins.setdefault(code, []).append(kwargs)
+
+        for code, records in (
+            ("INTEGRITY_AMBIGUITY", ambiguous_integrity),
+            ("ESSENTIAL_EVIDENCE_UNRECONSTRUCTABLE", absent_integrity),
+            ("INTEGRITY_WARNING", degraded_integrity),
+        ):
+            for key, members in _bucket(
+                records,
+                lambda item: (item.status, str(item.dataset or ""), str(item.universe or "")),
+            ):
+                status, dataset, universe = key
+                ids = [item.finding_id for item in members]
+                _origin(
+                    code,
+                    origin_stage=OriginStage.WAVE2,
+                    origin_type=OriginType.INTEGRITY_FINDING,
+                    origin_id=ids[0] if len(ids) == 1 else f"wave2:{status}:{dataset or universe}",
+                    dataset=dataset or None,
+                    universe=universe or None,
+                    affected_record_count=len(members),
+                    evidence_references=_exact_references("wave2-finding", ids),
+                    relevance_scope=(f"dataset:{dataset}" if dataset else f"universe:{universe}",),
+                    required_by_contract=contract_scope,
+                    affected_population=dataset or universe,
+                    dependent_impact=None,
+                )
+
+        for code, records in (
+            ("RECONCILIATION_AMBIGUITY", ambiguous_relationship),
+            ("REQUIRED_RELATIONSHIP_ABSENT", absent_relationship),
+            ("RECONCILIATION_WARNING", degraded_relationship),
+        ):
+            for key, members in _bucket(
+                records, lambda item: (item.rule_id, item.relationship_status),
+            ):
+                rule_id, status = key
+                ids = [item.fingerprint for item in members]
+                _origin(
+                    code,
+                    origin_stage=OriginStage.WAVE3,
+                    origin_type=OriginType.RECONCILIATION_RESULT,
+                    origin_id=ids[0] if len(ids) == 1 else f"wave3:{rule_id}:{status}",
+                    relationship=rule_id,
+                    affected_record_count=len(members),
+                    evidence_references=_exact_references("wave3-result", ids),
+                    relevance_scope=(f"relationship:{rule_id}",),
+                    required_by_contract=contract_scope,
+                    affected_population=(
+                        f"{members[0].source_universe}->{members[0].target_universe}"
+                    ),
+                    dependent_impact=members[0].dependent_impact,
+                )
+
+        for key, members in _bucket(
+            relevant_lossy,
+            lambda item: (item.target_dataset, item.reconstruction_rule, item.rule_version),
+        ):
+            dataset, rule, version = key
+            _origin(
+                "LOSSY_RECONSTRUCTION",
+                origin_stage=OriginStage.WAVE2,
+                origin_type=OriginType.RECONSTRUCTION,
+                origin_id=f"wave2-reconstruction:{dataset}:{rule}:{version}",
+                dataset=dataset,
+                affected_record_count=len(members),
+                evidence_references=(_aggregate_reference(
+                    "reconstructions",
+                    (
+                        f"{item.target_dataset}:{item.reconstruction_rule}:"
+                        f"{item.rule_version}:{_hash(item.source_identities)}"
+                        for item in members
+                    ),
+                ),),
+                relevance_scope=(f"dataset:{dataset}",),
+                required_by_contract=contract_scope,
+                affected_population=dataset,
+                dependent_impact=None,
+            )
+
+        for name in missing_keys:
+            _origin(
+                "ESSENTIAL_DATASET_ABSENT",
+                origin_stage=OriginStage.WAVE4_REQUIREMENT,
+                origin_type=OriginType.EVIDENCE_REQUIREMENT,
+                origin_id=f"contract:{contract.contract_fingerprint}#dataset:{name}",
+                dataset=name,
+                evidence_references=(f"dataset:{name}",),
+                relevance_scope=(f"dataset:{name}",),
+                required_by_contract=contract_scope,
+                affected_population=name,
+            )
+        for name in missing_fields:
+            _origin(
+                "REQUIRED_FIELDS_ABSENT",
+                origin_stage=OriginStage.WAVE4_REQUIREMENT,
+                origin_type=OriginType.FIELD_RESOLUTION,
+                origin_id=f"contract:{contract.contract_fingerprint}#field:{name}",
+                required_field=name,
+                evidence_references=(f"field:{name}",),
+                relevance_scope=(f"field:{name}",),
+                required_by_contract=contract_scope,
+                affected_population=name,
+            )
+        for name in ungoverned_fields:
+            _origin(
+                "UNGOVERNED_FIELD_SUBSTITUTION",
+                origin_stage=OriginStage.WAVE4_REQUIREMENT,
+                origin_type=OriginType.FIELD_RESOLUTION,
+                origin_id=f"contract:{contract.contract_fingerprint}#field:{name}",
+                required_field=name,
+                evidence_references=(f"field-resolution:{name}",),
+                relevance_scope=(f"field:{name}",),
+                required_by_contract=contract_scope,
+                affected_population=name,
+            )
+        for item in ungoverned_substitutions:
+            _origin(
+                "UNGOVERNED_DATASET_SUBSTITUTION",
+                origin_stage=OriginStage.WAVE4_REQUIREMENT,
+                origin_type=OriginType.DATASET_SUBSTITUTION,
+                origin_id=f"contract:{contract.contract_fingerprint}#substitution:{item.requested_source}",
+                dataset=item.requested_source,
+                evidence_references=(f"dataset-substitution:{item.requested_source}",),
+                relevance_scope=(f"dataset:{item.requested_source}",),
+                required_by_contract=contract_scope,
+                affected_population=item.actual_source,
+            )
+
+        answer_reference = (
+            f"{contract.question_id}:{report_authority.get('report_fingerprint') or 'none'}"
+        )
+        for code in ("CURRENT_RESULT_INVALIDATED", "CURRENT_RESULT_UNAVAILABLE"):
+            _origin(
+                code,
+                origin_stage=OriginStage.REPORT_VALIDITY,
+                origin_type=OriginType.REPORT_AUTHORITY,
+                origin_id=(
+                    report_authority.get("report_path")
+                    or report_authority.get("report_fingerprint")
+                    or f"answer:{answer_reference}"
+                ),
+                evidence_references=(f"answer:{answer_reference}",),
+                required_by_contract=(f"epoch:{contract.time_horizon}",),
+                affected_population=str(report_authority.get("result_availability") or ""),
+            )
+
+        accounting_reference = f"record-accounting:{contract.question_id}:{_hash(evidence_accounting)}"
+        for code, origin_type in (
+            ("HISTORICAL_RECORD_ACCOUNTING_INCOMPLETE", OriginType.RECORD_ACCOUNTING),
+            ("UNEXPLAINED_EVIDENCE_RECORDS", OriginType.RECORD_ACCOUNTING),
+            ("SELF_CERTIFIED_HISTORICAL_EXHAUSTIVENESS", OriginType.RECORD_ACCOUNTING),
+            ("FUTURE_DATA_REQUESTED_BEFORE_HISTORICAL_EXHAUSTION", OriginType.RECORD_ACCOUNTING),
+        ):
+            _origin(
+                code,
+                origin_stage=OriginStage.HISTORICAL_ACCOUNTING,
+                origin_type=origin_type,
+                origin_id=accounting_reference,
+                evidence_references=(accounting_reference,),
+                required_by_contract=contract_scope,
+                affected_population=str(
+                    evidence_accounting.get("historical_exhaustion_status") or ""
+                ),
+                affected_record_count=int(evidence_accounting.get("unexplained_records", 0) or 0),
+            )
+
+        for code in reasons:
+            if code in origins:
+                continue
+            if code.startswith("SELF_CERTIFIED_"):
+                stage, origin_type = OriginStage.WAVE4_REQUIREMENT, OriginType.EVIDENCE_REQUIREMENT
+            elif code == "STATISTICAL_INSUFFICIENCY" or code.startswith("VERIFIED_INSUFFICIENT"):
+                stage, origin_type = (
+                    OriginStage.STATISTICAL_SUFFICIENCY, OriginType.STATISTICAL_ASSESSMENT,
+                )
+            elif code.startswith("IMPLEMENTATION_") or code == "CONTRACT_UNDER_SPECIFIED":
+                stage, origin_type = (
+                    OriginStage.IMPLEMENTATION, OriginType.IMPLEMENTATION_BINDING,
+                )
+            else:
+                stage, origin_type = OriginStage.WAVE4_REQUIREMENT, OriginType.EVIDENCE_REQUIREMENT
+            _origin(
+                code,
+                origin_stage=stage,
+                origin_type=origin_type,
+                origin_id=f"contract:{contract.contract_fingerprint}#{code}",
+                evidence_references=(f"contract:{contract.contract_fingerprint}",),
+                required_by_contract=contract_scope,
+                affected_population=contract.population,
+            )
+
+        blockers = deduplicate_blockers([
+            make_blocker(
+                question_id=contract.question_id,
+                reason_code=code,
+                fatal_to_question=True,
+                **entry,
+            )
+            for code in reasons
+            if code not in _NON_BLOCKER_REASONS
+            for entry in origins.get(code, ())
+        ])
+        blocker_ids = tuple(item.blocker_id for item in blockers)
+        blocker_provenance: dict[str, tuple[str, ...]] = {
+            code: tuple(item.blocker_id for item in blockers if item.reason_code == code)
+            for code in reasons
+        }
+        for code in reasons:
+            if code not in _NON_BLOCKER_REASONS and not blocker_provenance[code]:
+                raise QuestionContractError(
+                    f"{contract.question_id}: reason {code} persisted without blocker provenance"
+                )
+
+
+
+
 
         evidence_refs = list(supplied.evidence_references)
         evidence_refs.extend(item.fingerprint for item in manifests)
-        evidence_refs.extend(item.finding_id for item in findings)
-        evidence_refs.extend(item.fingerprint for item in reconciliations)
+        if findings:
+            evidence_refs.append(_aggregate_reference(
+                "integrity-findings", (item.finding_id for item in findings),
+            ))
+        if reconciliations:
+            evidence_refs.append(_aggregate_reference(
+                "reconciliation-results", (item.fingerprint for item in reconciliations),
+            ))
+        if reconstructions:
+            evidence_refs.append(reconstruction_reference)
+        for item, _accepted, _reason in substitutions:
+            evidence_refs.append(
+                f"dataset-substitution:{item.requested_source}:{item.substitution_authority or 'NONE'}"
+            )
+        evidence_refs.append(f"report-authority:{contract.question_id}:{report_authority.get('report_fingerprint') or 'none'}")
         evidence_refs = list(dict.fromkeys(evidence_refs))
         evidence_scope = dict(supplied.evidence_scope)
         if not evidence_scope:
@@ -972,15 +1727,39 @@ class QualificationEngine:
             statistical=statistical.value,
         )
         explanation = (
-            f"{status.value}: " + ", ".join(reasons)
+            f"{status_value}: " + ", ".join(reasons)
             + f"; observed={actual_population}; required datasets={list(contract.required_datasets)}"
         )
+        raw_scientific_state = str(supplied.existing_state or "").upper()
+        scientific_state = (
+            raw_scientific_state
+            if raw_scientific_state in _GOVERNED_SCIENTIFIC_STATES
+            else "UNCLASSIFIED"
+        )
+        if (
+            scientific_state in EVIDENCE_COLLECTING_SCIENTIFIC_STATES
+            and not supports_future_data(exhaustion_status)
+        ):
+            scientific_state = "UNCLASSIFIED"
+        gate_decision = _admit_downstream(
+            question_id=contract.question_id,
+            assurance_state=status_value,
+            scientific_state=scientific_state,
+        )
+        downstream_gate = {
+            "assurance_state": status_value,
+            "scientific_state": scientific_state,
+            "admitted": gate_decision.admitted,
+            "consumable_as_scientific_truth": gate_decision.scientific_truth_consumable,
+            "permitted_hypothesis_classes": tuple(gate_decision.permitted_hypothesis_classes),
+            "reason": gate_decision.reason,
+        }
         semantic = {
             "question_fingerprint": contract.question_fingerprint,
             "contract_fingerprint": contract.contract_fingerprint,
             "existing_state": supplied.existing_state,
             "existing_result": supplied.existing_result,
-            "status": status.value,
+            "status": status_value,
             "sufficiency": asdict(assessment),
             "integrity": integrity_states,
             "reconciliation": relationship_states,
@@ -990,6 +1769,18 @@ class QualificationEngine:
             "unsupported_scope": unsupported,
             "reasons": reasons,
             "evidence_references": evidence_refs,
+            "blocker_provenance": blocker_provenance,
+            "record_accounting": accounting,
+            "evidence_accounting": evidence_accounting,
+            "blockers": [item.to_dict() for item in blockers],
+            "field_resolutions": [item.to_dict() for item in field_resolutions],
+            "dataset_substitutions": [item.to_dict() for item, _a, _r in substitutions],
+            "report_authority": report_authority,
+            "downstream_gate": downstream_gate,
+            "requirement_authorities": dict(sorted(authorities.items())),
+            "relationship_relevance_ignored": tuple(
+                item.fingerprint for item in ignored_relationship
+            ),
         }
         return QuestionQualification(
             question_id=contract.question_id,
@@ -997,7 +1788,7 @@ class QualificationEngine:
             contract_fingerprint=contract.contract_fingerprint,
             existing_research_state=supplied.existing_state or "NOT_SUPPLIED",
             existing_research_result=supplied.existing_result,
-            qualification_status=status.value,
+            qualification_status=status_value,
             phenomenon=contract.phenomenon,
             required_population=contract.population,
             required_resolution=contract.resolution,
@@ -1017,6 +1808,14 @@ class QualificationEngine:
             explanation=explanation,
             evidence_references=tuple(evidence_refs),
             blocker_ids=tuple(blocker_ids),
+            blocker_provenance=blocker_provenance,
+            record_accounting=evidence_accounting,
+            blockers=blockers,
+            evidence_accounting=evidence_accounting,
+            field_resolutions=field_resolutions,
+            dataset_substitutions=tuple(item for item, _accepted, _reason in substitutions),
+            report_authority=report_authority,
+            downstream_gate=downstream_gate,
             qualification_fingerprint=_hash(semantic),
         )
 

@@ -13,6 +13,11 @@ from research_engine.v10.universes.evidence_integrity import (
     ReconstructedArtifact,
 )
 from research_engine.v10.universes.models import Universe
+from research_engine.v10.universes.assurance_provenance import (
+    HistoricalExhaustionStatus,
+    assert_accounting_conservation,
+    evaluate_historical_exhaustion,
+)
 from research_engine.v10.universes.question_qualification import (
     QualificationEngine,
     QualificationStatus,
@@ -328,6 +333,131 @@ def test_lossy_reconstruction_is_never_verified():
     result = _x2_engine(integrity_report=report).qualify_question("X2")
     assert result.qualification_status == QualificationStatus.DEGRADED.value
     assert "LOSSY_RECONSTRUCTION" in result.reason_codes
+
+
+def test_information_loss_cannot_be_admitted_or_labelled_as_exact():
+    artifact = ReconstructedArtifact(
+        artifact={"trade_id": "t-1"}, target_universe="EXECUTION",
+        target_dataset="execution_results_v1", source_datasets=("source",),
+        source_identities=("s-1",), reconstruction_rule="normalised-copy",
+        rule_version="1", source_complete=True, exact=True,
+        information_loss=("lifecycle lineage",),
+        reconstruction_timestamp="2026-09-27T00:00:00Z",
+    )
+    report = IntegrityReport((), (), (artifact,))
+    engine = QualificationEngine(
+        inputs={"X2": _supported_input()},
+        batches=(_batch("execution_attempts_v1"),),
+        integrity_report=report,
+    )
+    result = engine.qualify_question("X2")
+    assert "ESSENTIAL_DATASET_ABSENT" in result.reason_codes
+    assert "LOSSY_RECONSTRUCTION" in result.reason_codes
+    assert result.reconstruction_involvement == (
+        "execution_results_v1:LOSSY:normalised-copy",
+    )
+
+
+def test_every_blocker_has_compact_reason_specific_provenance():
+    result = QualificationEngine().qualify_question("X2")
+    blockers = [code for code in result.reason_codes if code != "QUALIFIED"]
+    assert set(result.blocker_provenance) == set(result.reason_codes)
+    assert all(result.blocker_provenance[code] for code in blockers)
+    assert set(result.blocker_ids) == {
+        reference
+        for code in blockers
+        for reference in result.blocker_provenance[code]
+    }
+
+
+def test_incomplete_historical_record_accounting_fails_closed():
+    supplied = _supported_input(record_accounting={
+        "historical_exhaustive": False,
+        "source_record_count": 3,
+        "current_record_count": 1,
+        "historical_record_count": 1,
+    })
+    result = _x2_engine(supplied).qualify_question("X2")
+    assert result.qualification_status == QualificationStatus.INDETERMINATE.value
+    assert "HISTORICAL_RECORD_ACCOUNTING_INCOMPLETE" in result.reason_codes
+    assert result.blocker_provenance["HISTORICAL_RECORD_ACCOUNTING_INCOMPLETE"]
+
+
+def _governed_record_accounting(*, resolved=True, population_unexplained=0):
+    return {
+        "resolved": resolved,
+        "historical_exhaustive": resolved,
+        "sources": [{
+            "source": "execution_results_v1", "available": True,
+            "total_records": 12, "current_records": 9,
+            "transitional_records": 1, "legacy_records": 2,
+            "balanced": True,
+            "exclusion_reason_counts": {
+                "WRONG_EVIDENCE_EPOCH_TRANSITIONAL": 1,
+                "WRONG_EVIDENCE_EPOCH_LEGACY": 2,
+            },
+        }],
+        "population_stage": {
+            "candidate_records": 9,
+            "used_records": 6,
+            "excluded_records": 3 - population_unexplained,
+            "unexplained_records": population_unexplained,
+            "exclusion_reason_counts": {
+                "AMBIGUOUS_OR_UNMATCHED_IDENTITY": 1,
+                "FAILED_SIZEING_QUALITY_PREDICATE": 1,
+                "MISSING_REQUIRED_FIELD": 1 - population_unexplained,
+            },
+        },
+        "candidate_denominator_authority": "CONTROL_PLANE_EVIDENCE_RESOLVER",
+    }
+
+
+def test_source_and_population_accounting_conserve_without_double_counting():
+    result = _x2_engine(_supported_input(
+        actual_population=6,
+        record_accounting=_governed_record_accounting(),
+    )).qualify_question("X2")
+    accounting = result.evidence_accounting
+    assert_accounting_conservation(accounting)
+    assert accounting["candidate_records"] == 12
+    assert accounting["used_records"] == 9
+    assert accounting["excluded_records"] == 3
+    assert accounting["unexplained_records"] == 0
+    assert accounting["population_stage"]["candidate_records"] == 9
+    assert accounting["population_stage"]["used_records"] == 6
+    assert accounting["population_stage"]["excluded_records"] == 3
+    assert sum(accounting["exclusion_reason_counts"].values()) == 3
+    assert sum(accounting["population_stage"]["exclusion_reason_counts"].values()) == 3
+    assert accounting["historical_exhaustion_status"] == HistoricalExhaustionStatus.EXHAUSTED
+
+
+def test_unexplained_or_unresolved_accounting_cannot_be_exhausted():
+    unresolved = _governed_record_accounting(resolved=False)
+    unresolved["population_stage"]["candidate_records"] = None
+    unexplained = _governed_record_accounting(population_unexplained=1)
+    assert evaluate_historical_exhaustion(unresolved)[0] == HistoricalExhaustionStatus.ACCOUNTING_UNRESOLVED
+    assert evaluate_historical_exhaustion(unexplained)[0] == HistoricalExhaustionStatus.ACCOUNTING_UNRESOLVED
+
+
+def test_waiting_data_is_suppressed_until_exhaustion_is_proven():
+    unresolved = _x2_engine(_supported_input(
+        existing_state="WAITING_DATA",
+        statistical_state=StatisticalState.INSUFFICIENT,
+        record_accounting={"resolved": False},
+    )).qualify_question("X2")
+    assert unresolved.evidence_accounting["historical_exhaustion_status"] == "ACCOUNTING_UNRESOLVED"
+    assert unresolved.downstream_gate["scientific_state"] == "UNCLASSIFIED"
+    assert "FUTURE_DATA_REQUESTED_BEFORE_HISTORICAL_EXHAUSTION" in unresolved.reason_codes
+
+    exhausted = _x2_engine(_supported_input(
+        existing_state="WAITING_DATA",
+        statistical_state=StatisticalState.INSUFFICIENT,
+        actual_population=6,
+        record_accounting=_governed_record_accounting(),
+    )).qualify_question("X2")
+    assert exhausted.evidence_accounting["historical_exhaustion_status"] == "EXHAUSTED"
+    assert exhausted.downstream_gate["scientific_state"] == "WAITING_DATA"
+    assert "FUTURE_DATA_REQUESTED_BEFORE_HISTORICAL_EXHAUSTION" not in exhausted.reason_codes
 
 
 def test_trace_blockers_set_qualification_and_restart_determinism():

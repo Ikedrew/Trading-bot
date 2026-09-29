@@ -1,0 +1,75 @@
+{
+  "analysis_time": "2026-09-28T00:00:00Z",
+  "as_of_utc": "2026-09-27T00:00:00Z",
+  "fingerprint": "610ac7bbd5a750b88813f2751b6a9c96e642024b8d27aadc438d4f8bb3f5c4d8",
+  "live_or_s3_reads": false,
+  "new_scientific_research_run": false,
+  "question_count": 1,
+  "questions": [
+    {
+      "assurance_status": "NOT_REQUALIFIED",
+      "candidate_historical_population": 36641,
+      "canonical_question": "What percentage of canonical opportunities have valid decision-to-outcome lineage on (entity_id, canonical_opportunity_id)?",
+      "current_report_before": "MISSING",
+      "current_report_path": "analysis\\reports\\reentry\\RE-IMPL-20260929-G2\\g2_lineage_coverage.json",
+      "current_report_status": "COMPLETE",
+      "current_result_valid_before": false,
+      "excluded_historical_population": 36380,
+      "historical_exhaustion_state": "EXHAUSTED",
+      "initial_classification": "HISTORICAL_RUN_REQUIRED",
+      "missing_report_resolved": true,
+      "next_action": "NONE",
+      "question_id": "G2",
+      "reason": "CURRENT artifact with status COMPLETE",
+      "result_fingerprint": "5b065be892e09945a86bad56c54c90359877a3400f2c8cdfacb5a9c0f20537aa",
+      "runner_analytical_population": 261,
+      "runner_executed": true,
+      "runner_failed": false,
+      "runner_function": "run_g2",
+      "runner_inputs": [
+        "decision_records",
+        "outcome_records",
+        "datasets",
+        "snapshot",
+        "as_of_utc",
+        "governed_records"
+      ],
+      "runner_module": "research_engine.experiments.lineage_coverage",
+      "runner_status": "AVAILABLE",
+      "scientific_state": "COMPLETE",
+      "stale_or_legacy_replaced": false,
+      "unexplained_historical_population": 0,
+      "usable_historical_population": 261
+    }
+  ],
+  "requested_scope": [
+    "G2"
+  ],
+  "schema": 1,
+  "scientific_state_counts": {
+    "COMPLETE": 1,
+    "HISTORICALLY_UNANSWERABLE": 0,
+    "IMPLEMENTATION_BLOCKED": 0,
+    "INSUFFICIENT_DATA": 0,
+    "NEGATIVE_RESULT": 0,
+    "NO_EFFECT": 0,
+    "WAITING_DATA": 0
+  },
+  "scope": [
+    "G2"
+  ],
+  "scope_size": 1,
+  "stage": "STAGE4_HISTORICAL_SCOPED_RESEARCH_PASS",
+  "summary": {
+    "historical_runners_executed": 1,
+    "historical_runners_found": 1,
+    "runner_failures": 0,
+    "unrelated_questions_executed": 0
+  },
+  "upstream_fingerprints": {
+    "evidence_snapshot": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "reconstruction": "e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43",
+    "wave2": "a93dbbf8e9b269e98937dc1f23b29f17107be0f6405c116d3894439ba5f45697",
+    "wave3": "bca9c1c4b0dc7b6610da1075119bf01a02f9515551b3e8bd1288efeb23d40034"
+  }
+}
