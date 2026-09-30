@@ -44,6 +44,7 @@ from core.production_data_contract import PRODUCTION_SCHEMA_REGISTRY
 from research_engine.control_plane.assured_epistemic_findings import (
     EXPECTED_CERTIFICATION_FINGERPRINT,
 )
+from research_engine.control_plane import stage4_identity as I
 
 # ---------------------------------------------------------------------------
 # Authorities consumed (read-only).  The completed Stage 4 observation/dataset
@@ -820,6 +821,10 @@ def validate_store(store: Mapping[str, Any]) -> None:
     seen_requirements: set[str] = set()
     for transition in transitions:
         rid = str(transition.get("observation_requirement_id", ""))
+        try:
+            I.validate_requirement_id(rid)
+        except I.Stage4IdentityError as exc:
+            raise DatasetAuthorityError(str(exc)) from exc
         if not rid or rid in seen_requirements:
             raise DatasetAuthorityError("DUPLICATE_REQUIREMENT_TRANSITION")
         seen_requirements.add(rid)
@@ -832,6 +837,11 @@ def validate_store(store: Mapping[str, Any]) -> None:
     # be accounted for as either REPOINTED or RETAINED_UNTOUCHED.
     matrix_requirements = {str(rid) for rid in store.get(
         "audited_observation_requirements", ())}
+    try:
+        for rid in matrix_requirements:
+            I.validate_requirement_id(rid)
+    except I.Stage4IdentityError as exc:
+        raise DatasetAuthorityError(str(exc)) from exc
     conservation_pre = store.get("conservation", {})
     retained = {str(rid) for rid in conservation_pre.get(
         "retained_untouched_observation_requirements", ())}

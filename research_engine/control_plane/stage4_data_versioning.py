@@ -69,6 +69,8 @@ import json
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Sequence
 
+from research_engine.control_plane import stage4_identity as I
+
 from core.production_data_contract import PRODUCTION_SCHEMA_REGISTRY
 
 POLICY_ID = "stage4_data_versioning_policy_v1"
@@ -297,6 +299,11 @@ class SchemaGeneration:
             raise DataVersioningError("SCHEMA_GENERATION_WITHOUT_PRODUCER")
         if self.generation > 1 and self.predecessor_generation is None:
             raise DataVersioningError("SCHEMA_GENERATION_MISSING_PREDECESSOR")
+        try:
+            for rid in self.observation_requirements:
+                I.validate_requirement_id(rid)
+        except I.Stage4IdentityError as exc:
+            raise DataVersioningError(str(exc)) from exc
 
     @property
     def schema_fingerprint(self) -> str:
@@ -403,6 +410,30 @@ class EvidenceEpoch:
             raise DataVersioningError("EVIDENCE_EPOCH_WITHOUT_CONTRACT_VERSIONS")
         if self.research_reentry_events != 0:
             raise DataVersioningError("UNEXPECTED_RESEARCH_REENTRY_IN_EPOCH")
+        try:
+            for rid in self.observation_requirements:
+                I.validate_requirement_id(rid)
+        except I.Stage4IdentityError as exc:
+            raise DataVersioningError(str(exc)) from exc
+
+    @property
+    def evidence_set(self) -> I.EvidenceSet:
+        """Canonical identity for the governed dataset slice opened by this epoch."""
+        member = I.EvidenceMemberReference(
+            reference_type="governed_dataset_slice",
+            reference_id=self.epoch_id,
+            dataset=self.dataset,
+            locator=(f"schema_generation={self.schema_generation};"
+                     f"producer_version={self.producer_version}"),
+            content_fingerprint=self.schema_fingerprint,
+        )
+        # The ID is derived from immutable epoch identity, not clock time or a
+        # mutable filename. Registry collision checks bind it to membership.
+        return I.EvidenceSet(
+            evidence_set_id="ESET-" + self.epoch_id,
+            observation_requirement_ids=self.observation_requirements,
+            members=(member,),
+        )
 
     @property
     def schema_fingerprint(self) -> str:
@@ -413,8 +444,12 @@ class EvidenceEpoch:
         })
 
     def to_dict(self) -> dict[str, Any]:
+        evidence_set = self.evidence_set
         return {
             "epoch_id": self.epoch_id,
+            "evidence_set_id": evidence_set.evidence_set_id,
+            "evidence_member_references": [
+                member.to_dict() for member in evidence_set.members],
             "dataset": self.dataset,
             "dataset_version": self.dataset_version,
             "schema_generation": self.schema_generation,
@@ -553,6 +588,8 @@ class VersionRegistry:
             "schema_generation": gen.generation,
             "producer_version": producer.producer_version,
             "evidence_epoch": epoch.epoch_id if epoch else None,
+            "evidence_set_id": (
+                epoch.evidence_set.evidence_set_id if epoch else None),
             "predecessor": (
                 None if gen.predecessor_generation is None else {
                     "schema_generation": gen.predecessor_generation,
@@ -609,7 +646,9 @@ class VersionRegistry:
                     f"PRODUCER_VERSION_UNKNOWN_GENERATION:{dataset}:"
                     f"{pv.schema_generation}")
 
+        evidence_sets = I.EvidenceSetRegistry()
         for epoch in self._epochs.values():
+            evidence_sets.add(epoch.evidence_set)
             if (epoch.dataset, epoch.schema_generation) not in self._generations:
                 raise DataVersioningError(
                     "EVIDENCE_EPOCH_UNKNOWN_GENERATION:" + epoch.epoch_id)

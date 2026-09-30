@@ -13,6 +13,10 @@ import json
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from research_engine.control_plane.stage4_identity import (
+    requirement_id_for_question,
+)
+
 
 ROOT = Path(__file__).resolve().parents[2]
 CHECKPOINT = ROOT / "analysis" / "assurance" / "checkpoints" / "wave4_20260927"
@@ -274,6 +278,7 @@ def _base_requirement(question_id: str, *, work_item_id: str, reentry_id: str,
                       evidence_contract_consumer: list[str]) -> dict:
     return {
         "question_id": question_id,
+        "observation_requirement_id": requirement_id_for_question(question_id),
         "gap_work_item_id": work_item_id,
         "missing_observable": missing_observable,
         "required_producer": "producer:shadow_trades",

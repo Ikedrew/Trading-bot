@@ -25,6 +25,7 @@ from typing import Any, Mapping, Sequence
 from research_engine.control_plane import stage4_data_versioning as V
 from research_engine.control_plane import stage4_observation_state as S
 from research_engine.control_plane import stage4_observation_thresholds as TH
+from research_engine.control_plane import stage4_identity as I
 from core.shadow import observability as OBS
 
 STAMP = "20260929"
@@ -356,6 +357,9 @@ def _opportunities_generations(collection_start: str,
 
 def build_version_registry(matrix: Mapping[str, Any]) -> V.VersionRegistry:
     """Build the governed version authority for the Stage 4 datasets."""
+    authority = I.RequirementAuthority(matrix["observation_requirements"])
+    if authority.ids != I.CANONICAL_REQUIREMENT_IDS:
+        raise CloseoutError("CANONICAL_REQUIREMENT_AUTHORITY_DRIFT")
     collection_start = _iso_day(STAMP)
     requirements = list(matrix["observation_requirements"])
     blocks = (
@@ -603,6 +607,7 @@ def _authority_for(requirement: Mapping[str, Any],
                 "schema_generation": 1,
                 "producer_version": "PRE_EXISTING_PRODUCER",
                 "evidence_epoch": None,
+                "evidence_set_id": None,
                 "predecessor": None,
                 "schema_fingerprint": None,
                 "producer_fingerprint": None,
@@ -614,6 +619,7 @@ def _authority_for(requirement: Mapping[str, Any],
             "schema_generation": 1,
             "producer_version": "PRE_EXISTING_PRODUCER",
             "evidence_epoch": None, "predecessor": None,
+            "evidence_set_id": None,
             "schema_fingerprint": None, "producer_fingerprint": None,
             "collection_start": _iso_day(STAMP),
             "compatibility_class": V.ADDITIVE_SCHEMA_EVOLUTION,
@@ -662,6 +668,7 @@ def reconcile_gaps(
             "schema_generation": authority["schema_generation"],
             "producer_version": authority["producer_version"],
             "evidence_epoch": authority["evidence_epoch"],
+            "evidence_set_id": authority["evidence_set_id"],
             "predecessor": authority["predecessor"],
             "schema_fingerprint": authority["schema_fingerprint"],
             "producer_fingerprint": authority["producer_fingerprint"],

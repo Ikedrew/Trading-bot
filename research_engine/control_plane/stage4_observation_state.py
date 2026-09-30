@@ -16,6 +16,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from research_engine.control_plane.stage4_identity import (
+    Stage4IdentityError, validate_requirement_id,
+)
+
 # ═══════════════════════════════════════════════════════════════════════════
 # STATES
 # ═══════════════════════════════════════════════════════════════════════════
@@ -104,6 +108,12 @@ class RequirementEvidence:
     backfill_complete: bool = False
     collecting: bool = False
 
+    def __post_init__(self) -> None:
+        try:
+            validate_requirement_id(self.observation_requirement_id)
+        except Stage4IdentityError as exc:
+            raise ObservationStateError(str(exc)) from exc
+
     def satisfied_gates(self) -> tuple[str, ...]:
         """Which of the six SATISFIED gates this evidence supports."""
         return tuple(
@@ -145,9 +155,6 @@ def next_state(current: str, evidence: RequirementEvidence) -> str:
     """
     if current not in STATES:
         raise ObservationStateError("UNKNOWN_REQUIREMENT_STATE:" + str(current))
-    if not str(evidence.observation_requirement_id or "").strip():
-        raise ObservationStateError("EVIDENCE_WITHOUT_REQUIREMENT_ID")
-
     candidate = _candidate_state(evidence)
     if candidate is None or candidate == current:
         return current

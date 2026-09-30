@@ -506,6 +506,30 @@ def validate_store(store: Mapping[str, Any]) -> None:
             raise GapGovernanceError("HISTORICAL_ABSENCE_NOT_PROVEN:" + qid)
         if transition.get("future_collection_only") is not True:
             raise GapGovernanceError("FUTURE_COLLECTION_RULE_MISSING:" + qid)
+        # Old persisted transitions predate the canonical field and remain
+        # readable without rewriting history. New records must carry it. This
+        # check follows the historical invariants so their diagnostic ordering
+        # remains stable for malformed legacy inputs.
+        from research_engine.control_plane.stage4_identity import (
+            Stage4IdentityError, requirement_id_for_question,
+            validate_requirement_id,
+        )
+        canonical_rid = transition.get("observation_requirement_id")
+        try:
+            if canonical_rid is None:
+                # Compatibility is limited to the two already-persisted rows.
+                if transition in store.get("observation_gap_transitions", ()):
+                    requirement_id_for_question(qid)
+                else:
+                    raise Stage4IdentityError(
+                        "MISSING_OBSERVATION_REQUIREMENT_ID")
+            else:
+                expected_rid = requirement_id_for_question(qid)
+                if validate_requirement_id(str(canonical_rid)) != expected_rid:
+                    raise GapGovernanceError(
+                        "OBSERVATION_REQUIREMENT_QUESTION_MISMATCH:" + qid)
+        except Stage4IdentityError as exc:
+            raise GapGovernanceError(str(exc)) from exc
 def _assert_acyclic(by_id: dict, edges: list) -> None:
     graph: dict[str, list[str]] = {wid: [] for wid in by_id}
     for edge in edges:
@@ -850,6 +874,46 @@ def record_observation_gap_transition(
         raise GapGovernanceError("OBSERVATION_GAP_QUESTION_REQUIRED")
     if any(str(item.get("question_id")) == qid for item in transitions):
         raise GapGovernanceError("DUPLICATE_OBSERVATION_GAP_TRANSITION:" + qid)
+    # Preserve the established diagnostic ordering, then enforce the new
+    # identity boundary before the object is admitted to the store.
+    required_transition_fields = {
+        "question_id", "gap_work_item_id", "missing_observable",
+        "required_producer", "required_dataset_domain", "required_fields",
+        "semantic_definition", "required_grain", "required_canonical_identity",
+        "required_capture_timestamp_event", "required_lineage",
+        "allowed_values_type", "minimum_completeness_rule",
+        "evidence_contract_consumer", "historical_backfill_possible",
+        "future_collection_only", "expected_reentry_trigger_class",
+        "adjudication_evidence_fingerprint",
+        "source_implementation_work_item_id", "source_reentry_id", "status",
+    }
+    missing = sorted(required_transition_fields - set(requirement))
+    if missing:
+        raise GapGovernanceError(
+            "OBSERVATION_GAP_TRANSITION_INCOMPLETE:" + ",".join(missing))
+    source = get_work_item(
+        store, str(requirement["source_implementation_work_item_id"]))
+    if source.get("status") != STATUS_RESOLVED:
+        raise GapGovernanceError(
+            "OBSERVATION_GAP_BEFORE_IMPLEMENTATION_EXHAUSTED:" + qid)
+    if str(requirement.get("status")) != STATUS_OPEN:
+        raise GapGovernanceError("NEW_OBSERVATION_GAP_NOT_OPEN:" + qid)
+    if requirement.get("historical_backfill_possible") is not False:
+        raise GapGovernanceError("HISTORICAL_ABSENCE_NOT_PROVEN:" + qid)
+    if requirement.get("future_collection_only") is not True:
+        raise GapGovernanceError("FUTURE_COLLECTION_RULE_MISSING:" + qid)
+    from research_engine.control_plane.stage4_identity import (
+        Stage4IdentityError, requirement_id_for_question,
+        validate_requirement_id,
+    )
+    try:
+        rid = validate_requirement_id(str(
+            requirement.get("observation_requirement_id") or ""))
+        if rid != requirement_id_for_question(qid):
+            raise GapGovernanceError(
+                "OBSERVATION_REQUIREMENT_QUESTION_MISMATCH:" + qid)
+    except Stage4IdentityError as exc:
+        raise GapGovernanceError(str(exc)) from exc
     transitions.append(dict(requirement))
     nxt["observation_gap_transitions"] = transitions
     validate_store(nxt)
@@ -961,10 +1025,17 @@ def observation_requirement_authority(
     """Current persisted authority for one observation requirement."""
     from research_engine.control_plane import stage4_dataset_authority as A
 
+    from research_engine.control_plane.stage4_identity import (
+        Stage4IdentityError, validate_requirement_id,
+    )
+    try:
+        rid = validate_requirement_id(requirement_id)
+    except Stage4IdentityError as exc:
+        raise GapGovernanceError(str(exc)) from exc
     resolved = authority if authority is not None else load_dataset_authority()
-    transition = A.transition_for(requirement_id, resolved)
+    transition = A.transition_for(rid, resolved)
     return {
-        "observation_requirement_id": str(requirement_id),
+        "observation_requirement_id": rid,
         "previous_dataset_reference": str(
             transition["previous_dataset_reference"]),
         "current_dataset": str(transition["corrected_dataset"]),

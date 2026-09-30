@@ -231,7 +231,13 @@ def resolve_threshold(question_id: str) -> dict[str, Any]:
 def resolve_observation_requirement_threshold(
         requirement_id: str) -> dict[str, Any]:
     """Contract threshold for an OR that already carries one (EX2 / L7)."""
-    rid = str(requirement_id or "").strip().upper()
+    from research_engine.control_plane.stage4_identity import (
+        Stage4IdentityError, validate_requirement_id,
+    )
+    try:
+        rid = validate_requirement_id(requirement_id)
+    except Stage4IdentityError as exc:
+        raise ThresholdGovernanceError(str(exc)) from exc
     contract = OR_CONTRACT_THRESHOLDS.get(rid)
     if contract is None:
         raise ThresholdGovernanceError("NO_OR_CONTRACT_THRESHOLD:" + rid)
