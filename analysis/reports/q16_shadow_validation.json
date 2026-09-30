@@ -1,84 +1,166 @@
 {
-  "question_id": "Q16",
-  "status": "COMPLETE",
+  "assumptions": [],
+  "confidence": "MEDIUM",
+  "dataset": {
+    "sample_size": 25,
+    "source": "shadow_runtime_v1(ingested, nshadow_*) + trade_truth_v1 (matched 1:1 by canonical_opportunity_id)"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_7111a385dbd90ccf",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "4c043c670920efdc1c9c53eb0b8e4d3942b5dda07b5551951e5ea4ce1b9d84b5",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 14046,
+          "records_excluded": 0,
+          "records_used": 14046,
+          "schema": "shadow_trades_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "shadow_trades",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        },
+        {
+          "digest": "642787e21e2ac9cfb737ad5dc66cb5583d850f8931458c4db970dba473bf6875",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 84,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 84,
+          "records_excluded": 0,
+          "records_used": 84,
+          "schema": "trade_truth_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "trade_truth_v1",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 84,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "7111a385dbd90ccff5723c9ad18f0bc85773a6e17fecda003c4ca25e50bd5188",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 14130,
+      "records_excluded": 0,
+      "records_used": 14130,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 14161,
+    "governed_usable_records": 30,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 0,
+    "records_used": 14130,
+    "source": "MULTI_SOURCE",
+    "sources": [
+      "shadow_trades",
+      "trade_truth_v1"
+    ],
+    "validation_score": "UNKNOWN"
+  },
+  "generated": "2026-09-28T19:57:11Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 14161,
+    "excluded_records": 14131,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run",
+    "runner_module": "research_engine.experiments.shadow_validation",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 30
+  },
   "overall": {
-    "matched_trades": 9,
-    "correlation": 0.6039,
-    "mean_absolute_error": 0.6307,
-    "directional_accuracy": 0.6667,
-    "finding": "Only 9 matched trades. Preliminary correlation: 0.60. Insufficient data for confident validation.",
+    "avg_live_r": -0.0264,
+    "avg_prediction_error": 0.0218,
+    "avg_shadow_r": -0.0046,
+    "conclusion": "Shadow model shows weak predictive power (r=0.43, n=25). Shadow may not reliably predict live outcomes.",
+    "confidence": "MEDIUM",
+    "correlation": 0.4279,
+    "directional_accuracy": 0.6,
+    "finding": "Shadow model shows weak predictive power (r=0.43, n=25). Shadow may not reliably predict live outcomes.",
     "join_contract": {
       "join_key": "canonical_opportunity_id",
-      "shadow_population": "shadow_runtime_v1 ingestion (nshadow_*), PRIMARY_HORIZON_SIMULATION",
-      "live_population": "trade_truth_v1 (identity.canonical_opportunity_id)"
+      "live_population": "trade_truth_v1 (identity.canonical_opportunity_id)",
+      "shadow_population": "shadow_runtime_v1 ingestion (nshadow_*), PRIMARY_HORIZON_SIMULATION"
     },
+    "live_win_rate": 0.64,
     "match_diagnostics": {
-      "total_shadow": 1253,
-      "total_live": 12,
-      "eligible_shadow_canonicals": 919,
-      "eligible_live_canonicals": 12,
-      "matched_pairs": 9,
-      "unmatched_shadow": 910,
-      "unmatched_live": 3,
-      "ambiguous_excluded": 0,
+      "ambiguous_excluded": 19,
+      "eligible_live_canonicals": 46,
+      "eligible_shadow_canonicals": 10973,
       "excluded_by_reason": {
-        "shadow_horizon_alternative_only": 334
-      }
+        "live_ambiguous_multiple_outcomes": 19,
+        "shadow_horizon_alternative_only": 3073
+      },
+      "matched_pairs": 25,
+      "total_live": 84,
+      "total_shadow": 14046,
+      "unmatched_live": 21,
+      "unmatched_shadow": 10948
     },
     "matched_examples": [
       {
-        "canonical_opportunity_id": "AUDUSD*1788495300*MEAN_REVERSION",
-        "live_correlation_id": "COR-20260904-8791-AUDUSD-C3A7",
-        "shadow_r_multiple": 2.0,
-        "live_r_multiple": 0.2027
+        "canonical_opportunity_id": "AUDUSD*1789372500*MEAN_REVERSION",
+        "live_correlation_id": "COR-20260914-10169-AUDUSD-49EE",
+        "live_r_multiple": 0.0243,
+        "shadow_r_multiple": 2.0
       },
       {
-        "canonical_opportunity_id": "AUDUSD*1788504300*MEAN_REVERSION",
-        "live_correlation_id": "COR-20260904-12203-AUDUSD-6189",
-        "shadow_r_multiple": 2.0,
-        "live_r_multiple": 0.2116
+        "canonical_opportunity_id": "AUDUSD*1790137500*MEAN_REVERSION",
+        "live_correlation_id": "COR-20260923-4540-AUDUSD-E6EC",
+        "live_r_multiple": 2.3602,
+        "shadow_r_multiple": 2.0
       },
       {
-        "canonical_opportunity_id": "NZDUSD*1788510900*MEAN_REVERSION",
-        "live_correlation_id": "COR-20260904-14522-NZDUSD-FCA1",
-        "shadow_r_multiple": -1.0,
-        "live_r_multiple": 0.1612
+        "canonical_opportunity_id": "AUDUSD*1790294400*MEAN_REVERSION",
+        "live_correlation_id": "COR-20260925-136063-AUDUSD-DC3D",
+        "live_r_multiple": 0.0891,
+        "shadow_r_multiple": -1.0
       }
     ],
-    "total_shadow_trades": 919,
-    "total_live_trades": 12,
-    "avg_shadow_r": 0.0123,
-    "avg_live_r": -0.1691,
-    "avg_prediction_error": 0.1815,
-    "shadow_win_rate": 0.3333,
-    "live_win_rate": 0.6667,
-    "conclusion": "Only 9 matched trades. Preliminary correlation: 0.60. Insufficient data for confident validation.",
-    "confidence": "LOW"
+    "matched_trades": 25,
+    "mean_absolute_error": 0.9413,
+    "shadow_win_rate": 0.4,
+    "total_live_trades": 46,
+    "total_shadow_trades": 10973
   },
-  "confidence": "LOW",
-  "dataset": {
-    "source": "shadow_runtime_v1(ingested, nshadow_*) + trade_truth_v1 (matched 1:1 by canonical_opportunity_id)",
-    "sample_size": 9
-  },
-  "fingerprint": {
-    "dataset_id": "shadow_runtime_v1+trade_truth_v1_2026-09-06",
-    "records_used": 9,
-    "records_excluded": 910,
-    "source": "shadow_runtime_v1+trade_truth_v1",
-    "epoch": "CURRENT",
-    "architecture_version": "new_pipeline_v1.2",
-    "validation_score": "UNKNOWN",
-    "generated": "2026-09-06"
-  },
-  "recommendation": "SHADOW_TRUSTED",
-  "assumptions": [],
-  "warnings": [],
-  "epoch": "CURRENT",
-  "generated": "2026-09-06T03:36:59Z",
   "provenance": {
     "experiment_module": "research_engine.experiments.shadow_validation",
-    "registry_id": "Q16",
     "function": "run",
-    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"
-  }
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
+    "registry_id": "Q16"
+  },
+  "question_id": "X4",
+  "recommendation": "SHADOW_UNRELIABLE",
+  "scientific_state": "INSUFFICIENT_DATA",
+  "status": "INSUFFICIENT_DATA",
+  "warnings": []
 }

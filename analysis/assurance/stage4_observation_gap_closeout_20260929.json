@@ -111,6 +111,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -131,11 +134,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "E5",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Full outcomes needed for walk-forward split",
@@ -156,7 +167,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -165,6 +177,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -187,11 +202,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "M3",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "H4 regime required",
@@ -228,7 +251,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -237,6 +261,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -259,11 +286,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "M4",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "H4 regime required",
@@ -300,7 +335,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -309,6 +345,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -330,11 +369,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "M5",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Phase history required",
@@ -355,7 +402,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -364,6 +412,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -385,11 +436,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "M6",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Phase must be populated",
@@ -410,7 +469,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -419,6 +479,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -441,11 +504,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "M7",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "H4 regime required",
@@ -482,7 +553,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -491,6 +563,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -512,11 +587,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "M8",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Phase history required",
@@ -545,7 +628,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -554,6 +638,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -576,11 +663,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "M9",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Phase must be populated to stratify by phase",
@@ -601,7 +696,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -610,6 +706,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -632,11 +731,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "M10",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Phase required for stratification",
@@ -665,7 +772,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -674,6 +782,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -696,11 +807,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "M11",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Regime required",
@@ -745,7 +864,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -754,6 +874,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -774,11 +897,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "D2",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Need trace→outcome join",
@@ -807,7 +938,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -816,6 +948,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "decision_trace",
+        "dataset_name": "decision_trace",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "decision_trace_v1",
         "disposition": "PRODUCER_CHANGE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-DECISION-TRACE-G2",
@@ -837,11 +972,19 @@
         "producer_version": "decision_trace_producer_v2",
         "question_id": "D3",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "FUTURE_ONLY",
+        "satisfaction_decision_fingerprint": "e66bf66fc37e9a31077227c966404c83f78490b36c446c51f6d6481714080776",
+        "satisfaction_decision_id": "SDEC-4AA4159C7AE6A6F83BD612EF48F767CC",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "9d36eda49f9441f3c1a40a08dd85298546c059bb43309258777fc37b0281ab18",
         "schema_generation": 2,
+        "schema_version": "decision_trace_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-E860B787146A504561FE808E",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Need trace→outcome join",
@@ -879,6 +1022,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -899,11 +1045,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "D4",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Need trace→outcome join",
@@ -932,7 +1086,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -941,6 +1096,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -961,11 +1119,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "D5",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Need rejection trace→shadow counterfactual join",
@@ -994,7 +1160,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1003,6 +1170,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1025,11 +1195,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "S4",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Clean strategy required",
@@ -1058,7 +1236,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1067,6 +1246,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1087,11 +1269,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "R3",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "10c0089662bbd83b2e23dce8eda59b4fe4422c787852acafb24d810edb8cc95f",
+        "satisfaction_decision_id": "SDEC-A7517E76F09D44D94BDA47C2EE2E0D9C",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-808C0F2A07106334E9204706",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Nearly all records must have R-multiple for variance estimation",
@@ -1112,7 +1302,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1121,6 +1312,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1142,11 +1336,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "R4",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "10c0089662bbd83b2e23dce8eda59b4fe4422c787852acafb24d810edb8cc95f",
+        "satisfaction_decision_id": "SDEC-A7517E76F09D44D94BDA47C2EE2E0D9C",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-808C0F2A07106334E9204706",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Full outcome history required for drawdown modelling",
@@ -1159,7 +1361,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1168,6 +1371,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1189,11 +1395,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "R5",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "10c0089662bbd83b2e23dce8eda59b4fe4422c787852acafb24d810edb8cc95f",
+        "satisfaction_decision_id": "SDEC-A7517E76F09D44D94BDA47C2EE2E0D9C",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-808C0F2A07106334E9204706",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Full outcome distribution required for Kelly calculation",
@@ -1206,7 +1420,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1215,6 +1430,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1239,11 +1457,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "L1",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Pattern required",
@@ -1272,7 +1498,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1281,6 +1508,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1302,11 +1532,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "L2",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "10c0089662bbd83b2e23dce8eda59b4fe4422c787852acafb24d810edb8cc95f",
+        "satisfaction_decision_id": "SDEC-A7517E76F09D44D94BDA47C2EE2E0D9C",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-808C0F2A07106334E9204706",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Pre-change governed observations required.",
@@ -1332,7 +1570,8 @@
         ],
         "threshold_source": "ADJUDICATION_MIN_CONSTANT",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1341,6 +1580,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1364,11 +1606,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "L4",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Regime history required",
@@ -1389,7 +1639,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1398,6 +1649,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1421,11 +1675,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "L5",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Pattern required",
@@ -1454,7 +1716,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1463,6 +1726,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1484,11 +1750,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "P1",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Full outcomes needed for impact estimation",
@@ -1517,7 +1791,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1526,6 +1801,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1547,11 +1825,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "EX10",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "10c0089662bbd83b2e23dce8eda59b4fe4422c787852acafb24d810edb8cc95f",
+        "satisfaction_decision_id": "SDEC-A7517E76F09D44D94BDA47C2EE2E0D9C",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-808C0F2A07106334E9204706",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Need outcomes for train/test split",
@@ -1572,7 +1858,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1581,6 +1868,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1603,11 +1893,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "HORIZON-1",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Minimum comparable opportunities",
@@ -1620,7 +1918,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1629,6 +1928,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1650,11 +1952,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "STRAT-1",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Minimum matched confidence/outcome pairs",
@@ -1667,7 +1977,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1676,6 +1987,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1698,11 +2012,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "X5",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Need trace→outcome join",
@@ -1731,7 +2053,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1740,6 +2063,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "CONTRACT_GOVERNANCE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1761,11 +2087,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "PORT-1",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "WAITING_THRESHOLD",
+        "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+        "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Need cycles with rankings for selection analysis",
@@ -1778,7 +2112,8 @@
         ],
         "threshold_source": "QUESTION_REGISTRY_VALIDATION_RULES",
         "unmet_satisfied_gates": [
-          "threshold_met_where_applicable"
+          "threshold_met_where_applicable",
+          "governed_satisfaction_decision"
         ]
       },
       {
@@ -1787,6 +2122,11 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "opportunities",
+        "dataset_name": "opportunities",
+        "dataset_snapshot_id": "DSNAP-B40B23A919D48CD2B12555A0",
+        "dataset_snapshot_ids": [
+          "DSNAP-B40B23A919D48CD2B12555A0"
+        ],
         "dataset_version": "opportunities_v1",
         "disposition": "PARTIAL_DATASET_CHANGE_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-OPPORTUNITIES-G1",
@@ -1803,11 +2143,19 @@
         "producer_version": "opportunities_producer_v1",
         "question_id": "OPP-1",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "FUTURE_ONLY",
+        "satisfaction_decision_fingerprint": "979069ce1f36e8b2a7b32a877bf56e199681325db5d8d4e0628e2f2fef6fa0bd",
+        "satisfaction_decision_id": "SDEC-A6CDFFF1FE8F03C138A0706CF5C3AC13",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "7982df6f464fe23409a4875a9d56c9892a4114a133015383ac5296c445d17121",
         "schema_generation": 1,
+        "schema_version": "opportunities_v1",
+        "snapshot_identity_state": "BOUND_TO_DATASET_SNAPSHOT",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-9E4B147CCB91FA15857F24EF",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Need opportunities with shadow outcomes",
@@ -1829,6 +2177,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "NEW_DATASET_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1849,11 +2200,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "EX2",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "FUTURE_ONLY",
+        "satisfaction_decision_fingerprint": "5d3fefd8598ca005908ab1dfaa9ef5dae11b00c435a4d4401844a62c2e103b7b",
+        "satisfaction_decision_id": "SDEC-A0613460B465949EA7892911B7AD5625",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-864A89C657C5E624589BA1B2",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "100% of governed lifecycles must carry a COMPLETE ordered M5 OHLC path bound to the lifecycle identity.",
@@ -1881,6 +2240,9 @@
         "collection_start": "2026-09-29",
         "compatibility_class": "ADDITIVE_SCHEMA_EVOLUTION",
         "dataset": "shadow_runtime",
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_id": null,
+        "dataset_snapshot_ids": [],
         "dataset_version": "shadow_runtime_v1",
         "disposition": "NEW_DATASET_REQUIRED",
         "evidence_epoch": "STAGE4-EPOCH-SHADOW-RUNTIME-G2",
@@ -1901,11 +2263,19 @@
         "producer_version": "shadow_runtime_producer_v2",
         "question_id": "L7",
         "reentry_eligibility": "REENTRY_INELIGIBLE",
+        "reentry_eligibility_state": "NOT_ELIGIBLE",
         "reentry_reason": "Observation requirement is not SATISFIED: the generation-2 evidence epoch has not yet produced usable evidence. Re-entry requires a satisfied requirement, a met threshold and a frozen evidence epoch.",
         "requirement_state": "FUTURE_ONLY",
+        "satisfaction_decision_fingerprint": "0e2cd1f77c4123d691f28eba46cde3476941045eaeaf9470bfd3b264d8725c86",
+        "satisfaction_decision_id": "SDEC-44519662E78601764C12CF7107BCB3C0",
+        "satisfaction_decision_state": "INDETERMINATE",
         "schema_fingerprint": "94d2c0f5e99a49f40a3e17a74c4ceab0e0cdbe851a2708ad06af099920c666a5",
         "schema_generation": 2,
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "UNRESOLVED_POPULATION_NOT_FROZEN",
         "threshold_classification": "THRESHOLD_GOVERNED",
+        "threshold_policy_id": "TPOL-F3E1B2605632A329EAC89613",
+        "threshold_policy_version": "1",
         "threshold_rules": [
           {
             "description": "Minimum CONTROL-arm assigned lifecycles.",

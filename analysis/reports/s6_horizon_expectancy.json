@@ -1,0 +1,281 @@
+{
+  "assumptions": [
+    "Eligible rows are completed PRIMARY_HORIZON_SIMULATION or HORIZON_ALTERNATIVE simulations.",
+    "identity.strategy_id and identity.evaluated_horizon are frozen pre-outcome authorities.",
+    "canonical_opportunity_id is the cluster; repeated horizons have total opportunity weight one.",
+    "Adjusted horizon effect is the equal-family marginal fitted mean; its interval is estimate +/- 1.96 opportunity-clustered sandwich SEs.",
+    "Every 100/30/20 distinct-opportunity gate must pass before classification."
+  ],
+  "confidence": "HIGH",
+  "dataset": {
+    "analysed_row_count": 1852,
+    "records_loaded": 14077,
+    "sample_size": 1852,
+    "source": "shadow_trades_v1 normalized from shadow_runtime_v1"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_9a54db7684b590a2",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "b95dd97b4b692fc281500f49fe8270458408b14d57944a9bfb4b9fe7fba77742",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 31,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 14077,
+          "records_excluded": 12225,
+          "records_used": 1852,
+          "schema": "shadow_trades_v1",
+          "selection": "CURRENT_SUBSET",
+          "source": "shadow_trades",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 1852,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "9a54db7684b590a22bf26cc06cd506f0a0f2f7c3be3da0c55218e53df2809d4d",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 14077,
+      "records_excluded": 12225,
+      "records_used": 1852,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 14077,
+    "governed_usable_records": 14046,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 12225,
+    "records_used": 1852,
+    "source": "shadow_trades",
+    "sources": [
+      "shadow_trades"
+    ],
+    "validation_score": "CURRENT"
+  },
+  "generated": "2026-09-28T18:44:04Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 14077,
+    "excluded_records": 31,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_s6",
+    "runner_module": "research_engine.experiments.horizon_expectancy",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 14046
+  },
+  "overall": {
+    "analysed_row_count": 1852,
+    "cells": {
+      "cell_n_distinct_canonical_opportunities": {
+        "BREAKOUT_EXPANSION|EXTENDED": 0,
+        "BREAKOUT_EXPANSION|INTRADAY": 0,
+        "BREAKOUT_EXPANSION|SCALP": 0,
+        "FALSE_BREAK|EXTENDED": 0,
+        "FALSE_BREAK|INTRADAY": 0,
+        "FALSE_BREAK|SCALP": 4,
+        "LIQUIDITY_SWEEP_REVERSAL|EXTENDED": 0,
+        "LIQUIDITY_SWEEP_REVERSAL|INTRADAY": 0,
+        "LIQUIDITY_SWEEP_REVERSAL|SCALP": 0,
+        "MEAN_REVERSION|EXTENDED": 0,
+        "MEAN_REVERSION|INTRADAY": 0,
+        "MEAN_REVERSION|SCALP": 1081,
+        "RANGE_REACTION|EXTENDED": 0,
+        "RANGE_REACTION|INTRADAY": 0,
+        "RANGE_REACTION|SCALP": 0,
+        "TREND_CONTINUATION|EXTENDED": 0,
+        "TREND_CONTINUATION|INTRADAY": 0,
+        "TREND_CONTINUATION|SCALP": 767
+      },
+      "cell_rule": "all 6 canonical StrategyFamily x 3 canonical horizon cells are required",
+      "insufficient_cells": [
+        "BREAKOUT_EXPANSION|EXTENDED",
+        "BREAKOUT_EXPANSION|INTRADAY",
+        "BREAKOUT_EXPANSION|SCALP",
+        "FALSE_BREAK|EXTENDED",
+        "FALSE_BREAK|INTRADAY",
+        "FALSE_BREAK|SCALP",
+        "LIQUIDITY_SWEEP_REVERSAL|EXTENDED",
+        "LIQUIDITY_SWEEP_REVERSAL|INTRADAY",
+        "LIQUIDITY_SWEEP_REVERSAL|SCALP",
+        "MEAN_REVERSION|EXTENDED",
+        "MEAN_REVERSION|INTRADAY",
+        "RANGE_REACTION|EXTENDED",
+        "RANGE_REACTION|INTRADAY",
+        "RANGE_REACTION|SCALP",
+        "TREND_CONTINUATION|EXTENDED",
+        "TREND_CONTINUATION|INTRADAY"
+      ],
+      "observed_cells": 3,
+      "required_cells": 18
+    },
+    "classification_rule": "Gates unmet (overall <100, family <30, any required cell <20, missing horizon, or non-estimable model) => INSUFFICIENT_EVIDENCE; otherwise POSITIVE_EVIDENCE only when the adjusted-effect 95% cluster-aware interval lower bound is >0, else NON_POSITIVE_EVIDENCE.",
+    "distinct_canonical_opportunities": 1852,
+    "estimand": "STRATEGY_ADJUSTED_HORIZON_EFFECT",
+    "estimator": {
+      "adjusted_horizon_effect": "equal-weighted average of the horizon's fitted means across all six canonical StrategyFamily values",
+      "estimable": false,
+      "model": "weighted least squares: pnl_r_multiple ~ intercept + StrategyFamily + evaluated_horizon (two-way additive, reference coding)",
+      "uncertainty": "95% opportunity-clustered sandwich interval (mean +/- 1.96 cluster-robust SEs)",
+      "weights": "row weight 1/k_o; each canonical opportunity's total weight is fixed at one"
+    },
+    "exclusions": {
+      "non_current_or_incompatible": 31,
+      "strategy_family_none": 12194,
+      "total_not_analysed": 12225
+    },
+    "finding": "Insufficient evidence for complete strategy-adjusted horizon classification",
+    "horizon_taxonomy": {
+      "authority": "core.horizon.horizon_models.TradeHorizon",
+      "canonical_horizons": [
+        "SCALP",
+        "INTRADAY",
+        "EXTENDED"
+      ],
+      "unsupported_horizons_bucketed": false
+    },
+    "horizons": {
+      "EXTENDED": {
+        "adjusted_effect": {
+          "classification": "INSUFFICIENT_EVIDENCE",
+          "estimate_r": null,
+          "interval_95": null,
+          "standard_error": null
+        },
+        "eligible_row_count": 0,
+        "n_distinct_canonical_opportunities": 0,
+        "raw_mean_r": null,
+        "raw_median_r": null,
+        "raw_win_rate": null,
+        "strategy_family_coverage": {
+          "BREAKOUT_EXPANSION": 0,
+          "FALSE_BREAK": 0,
+          "LIQUIDITY_SWEEP_REVERSAL": 0,
+          "MEAN_REVERSION": 0,
+          "RANGE_REACTION": 0,
+          "TREND_CONTINUATION": 0
+        }
+      },
+      "INTRADAY": {
+        "adjusted_effect": {
+          "classification": "INSUFFICIENT_EVIDENCE",
+          "estimate_r": null,
+          "interval_95": null,
+          "standard_error": null
+        },
+        "eligible_row_count": 0,
+        "n_distinct_canonical_opportunities": 0,
+        "raw_mean_r": null,
+        "raw_median_r": null,
+        "raw_win_rate": null,
+        "strategy_family_coverage": {
+          "BREAKOUT_EXPANSION": 0,
+          "FALSE_BREAK": 0,
+          "LIQUIDITY_SWEEP_REVERSAL": 0,
+          "MEAN_REVERSION": 0,
+          "RANGE_REACTION": 0,
+          "TREND_CONTINUATION": 0
+        }
+      },
+      "SCALP": {
+        "adjusted_effect": {
+          "classification": "INSUFFICIENT_EVIDENCE",
+          "estimate_r": null,
+          "interval_95": null,
+          "standard_error": null
+        },
+        "eligible_row_count": 1852,
+        "n_distinct_canonical_opportunities": 1852,
+        "raw_mean_r": -0.113394,
+        "raw_median_r": -1.0,
+        "raw_win_rate": 0.347192,
+        "strategy_family_coverage": {
+          "BREAKOUT_EXPANSION": 0,
+          "FALSE_BREAK": 4,
+          "LIQUIDITY_SWEEP_REVERSAL": 0,
+          "MEAN_REVERSION": 1081,
+          "RANGE_REACTION": 0,
+          "TREND_CONTINUATION": 767
+        }
+      }
+    },
+    "pairwise_availability": {
+      "counts": {
+        "INTRADAY|EXTENDED": 0,
+        "SCALP|EXTENDED": 0,
+        "SCALP|INTRADAY": 0
+      },
+      "unit": "distinct canonical_opportunity_id with both horizon simulations"
+    },
+    "sufficiency": {
+      "all_horizons_must_be_classified": true,
+      "all_horizons_present": false,
+      "below_minimum": "INSUFFICIENT_EVIDENCE",
+      "cells_sufficient": false,
+      "families_sufficient": false,
+      "minimum_distinct_canonical_opportunities_overall": 100,
+      "minimum_distinct_canonical_opportunities_per_family": 30,
+      "minimum_distinct_canonical_opportunities_per_family_horizon_cell": 20,
+      "overall_sufficient": true,
+      "required_canonical_horizons": [
+        "SCALP",
+        "INTRADAY",
+        "EXTENDED"
+      ],
+      "required_family_horizon_cells": 18,
+      "structural_cell_exemptions": 0,
+      "uncertainty": "95% opportunity-clustered sandwich interval (mean +/- 1.96 cluster-robust SEs)"
+    },
+    "taxonomy": {
+      "active_families": [
+        "LIQUIDITY_SWEEP_REVERSAL",
+        "FALSE_BREAK",
+        "TREND_CONTINUATION",
+        "BREAKOUT_EXPANSION",
+        "MEAN_REVERSION",
+        "RANGE_REACTION"
+      ],
+      "authority": "core.v10.strategy_family.StrategyFamily",
+      "excluded_value": "NONE",
+      "legacy_compatibility_only": [
+        "REVERSAL",
+        "CONTINUATION",
+        "FALSE_BREAK"
+      ],
+      "legacy_mapping_inferred": false
+    },
+    "unit_of_analysis": "one canonical_opportunity_id cluster; horizon simulations are repeated measurements and never independent opportunities"
+  },
+  "provenance": {
+    "estimand": "STRATEGY_ADJUSTED_HORIZON_EFFECT",
+    "experiment_module": "research_engine.experiments.horizon_expectancy",
+    "hd06": "ADJUDICATED: cluster-aware contracts with 100/30/20 distinct canonical-opportunity gates; repeated horizons are never pseudo-replicated",
+    "registry_id": "S6",
+    "scientific_owner": "S6"
+  },
+  "question_id": "S6",
+  "recommendation": "WAIT_FOR_EVIDENCE",
+  "scientific_state": "INSUFFICIENT_DATA",
+  "status": "INSUFFICIENT_DATA",
+  "warnings": [
+    "Shadow outcomes are simulated research evidence, not realised live P&L.",
+    "S6 estimates marginal horizon expectancy, not strategy-by-horizon interaction (S7)."
+  ]
+}

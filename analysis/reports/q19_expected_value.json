@@ -1,86 +1,105 @@
 {
-  "question_id": "Q19",
-  "status": "COMPLETE",
-  "overall": {
-    "expected_value": -0.0469,
-    "win_rate": 0.3639,
-    "profit_factor": 0.9202,
-    "avg_r": -0.0469,
-    "edge_classification": "NEGATIVE_EDGE",
-    "significant": false,
-    "finding": "System has NEGATIVE expected value. EV = -0.047R per trade (n=1253). Win rate: 36.4%. Profit factor: 0.92. System should reduce exposure or investigate causes.",
-    "total_trades": 1253,
-    "winning_trades": 456,
-    "losing_trades": 793,
-    "breakeven_trades": 4,
-    "loss_rate": 0.6329,
-    "avg_win_r": 1.4852,
-    "avg_loss_r": 0.9281,
-    "median_r": -1.0,
-    "max_win_r": 2.0,
-    "max_loss_r": -1.0,
-    "std_dev_r": 1.2458,
-    "ev_last_50": -0.3191,
-    "ev_last_100": -0.0041,
-    "ev_trend": "decaying",
-    "t_statistic": -1.3316,
-    "p_value_approx": "> 0.10",
-    "conclusion": "System has NEGATIVE expected value. EV = -0.047R per trade (n=1253). Win rate: 36.4%. Profit factor: 0.92. System should reduce exposure or investigate causes.",
-    "confidence": "HIGH",
-    "pattern_breakdown": [
-      {
-        "pattern": "UNKNOWN",
-        "trades": 1111,
-        "win_rate": 0.3708,
-        "avg_win_r": 1.4572,
-        "avg_loss_r": 0.926,
-        "expected_value": -0.0397,
-        "profit_factor": 0.9316
-      },
-      {
-        "pattern": "MEAN_REVERSION",
-        "trades": 114,
-        "win_rate": 0.2456,
-        "avg_win_r": 1.6021,
-        "avg_loss_r": 0.9351,
-        "expected_value": -0.3037,
-        "profit_factor": 0.5644
-      },
-      {
-        "pattern": "TREND_CONTINUATION",
-        "trades": 28,
-        "win_rate": 0.5714,
-        "avg_win_r": 2.0,
-        "avg_loss_r": 1.0,
-        "expected_value": 0.7143,
-        "profit_factor": 2.6667
-      }
-    ]
-  },
+  "assumptions": [],
   "confidence": "HIGH",
   "dataset": {
-    "source": "shadow_runtime_v1(ingested) + research_shadow_trades",
-    "sample_size": 1253
+    "sample_size": 1852,
+    "source": "shadow_runtime_v1(ingested) + research_shadow_trades"
   },
-  "fingerprint": {
-    "dataset_id": "shadow_trades_2026-09-06",
-    "records_used": 1253,
-    "records_excluded": 0,
-    "source": "shadow_trades",
-    "epoch": "CURRENT",
-    "architecture_version": "new_pipeline_v1.2",
-    "validation_score": "UNKNOWN",
-    "generated": "2026-09-06"
-  },
-  "recommendation": "NEGATIVE_EDGE",
-  "assumptions": [],
-  "warnings": [],
   "epoch": "CURRENT",
-  "generated": "2026-09-06T01:49:55Z",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "shadow_trades_2026-09-28",
+    "epoch": "CURRENT",
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "generated": "2026-09-28",
+    "governed_candidate_records": 14077,
+    "governed_usable_records": 1852,
+    "records_excluded": 0,
+    "records_used": 1852,
+    "source": "shadow_trades",
+    "validation_score": "UNKNOWN"
+  },
+  "generated": "2026-09-28T19:25:18Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 14077,
+    "excluded_records": 12225,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run",
+    "runner_module": "research_engine.experiments.expected_value",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 1852
+  },
+  "overall": {
+    "avg_loss_r": 0.9182,
+    "avg_r": -0.1134,
+    "avg_win_r": 1.3926,
+    "breakeven_trades": 5,
+    "conclusion": "System has NEGATIVE expected value. EV = -0.113R per trade (n=1852). Win rate: 34.7%. Profit factor: 0.81. System should reduce exposure or investigate causes.",
+    "confidence": "HIGH",
+    "edge_classification": "NEGATIVE_EDGE",
+    "ev_last_100": 0.0464,
+    "ev_last_50": 0.0507,
+    "ev_trend": "stable",
+    "expected_value": -0.1134,
+    "finding": "System has NEGATIVE expected value. EV = -0.113R per trade (n=1852). Win rate: 34.7%. Profit factor: 0.81. System should reduce exposure or investigate causes.",
+    "losing_trades": 1204,
+    "loss_rate": 0.6501,
+    "max_loss_r": -1.0,
+    "max_win_r": 2.0,
+    "median_r": -1.0,
+    "p_value_approx": "< 0.001",
+    "pattern_breakdown": [
+      {
+        "avg_loss_r": 0.9224,
+        "avg_win_r": 1.3926,
+        "expected_value": -0.1193,
+        "pattern": "MEAN_REVERSION",
+        "profit_factor": 0.8011,
+        "trades": 1081,
+        "win_rate": 0.3451
+      },
+      {
+        "avg_loss_r": 0.9119,
+        "avg_win_r": 1.4004,
+        "expected_value": -0.104,
+        "pattern": "TREND_CONTINUATION",
+        "profit_factor": 0.8248,
+        "trades": 767,
+        "win_rate": 0.3494
+      },
+      {
+        "avg_loss_r": 1.0,
+        "avg_win_r": 0.3623,
+        "expected_value": -0.3189,
+        "pattern": "FALSE_BREAK",
+        "profit_factor": 0.3623,
+        "trades": 4,
+        "win_rate": 0.5
+      }
+    ],
+    "profit_factor": 0.81,
+    "significant": true,
+    "std_dev_r": 1.1935,
+    "t_statistic": -4.0887,
+    "total_trades": 1852,
+    "win_rate": 0.3472,
+    "winning_trades": 643
+  },
   "provenance": {
     "experiment_module": "research_engine.experiments.expected_value",
-    "registry_id": "Q19",
     "function": "run",
-    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"
-  }
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
+    "registry_id": "Q19"
+  },
+  "question_id": "E1",
+  "recommendation": "NEGATIVE_EDGE",
+  "scientific_state": "NEGATIVE_RESULT",
+  "status": "COMPLETE",
+  "warnings": []
 }

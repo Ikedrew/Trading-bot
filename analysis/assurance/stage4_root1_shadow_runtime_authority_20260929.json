@@ -1591,6 +1591,38 @@
   "dataset_authority": {
     "canonical_observation_source": "shadow_runtime",
     "dataset": "shadow_runtime",
+    "dataset_identity": {
+      "current_schema_generation": 2,
+      "dataset_name": "shadow_runtime",
+      "dataset_snapshot_ids": [
+        "DSNAP-5815AEDBC8947B483BC609F7",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "epoch_snapshot_identity_states": {
+        "STAGE4-EPOCH-SHADOW-RUNTIME-G1": "BOUND_TO_DATASET_SNAPSHOT",
+        "STAGE4-EPOCH-SHADOW-RUNTIME-G2": "UNRESOLVED_POPULATION_NOT_FROZEN"
+      },
+      "evidence_set_ids": [
+        "ESET-STAGE4-EPOCH-SHADOW-RUNTIME-G1",
+        "ESET-STAGE4-EPOCH-SHADOW-RUNTIME-G2"
+      ],
+      "legacy_dataset_version_field": {
+        "compatibility_class": "LEGACY_UNRESOLVED_SNAPSHOT_IDENTITY",
+        "dataset_snapshot_id": null,
+        "interpretation": "SCHEMA_IDENTIFIER",
+        "is_dataset_snapshot_id": false,
+        "legacy_dataset_version": "shadow_runtime_v1",
+        "reason": "A schema identity does not identify an immutable record population. The exact historical population cannot be reconstructed, so no dataset_snapshot_id is synthesized."
+      },
+      "producer_versions": [
+        "shadow_runtime_producer_v1"
+      ],
+      "schema_generations": [
+        1,
+        2
+      ],
+      "schema_version": "shadow_runtime_v1"
+    },
     "dataset_version": "shadow_runtime_v1",
     "dataset_version_changed_by_this_pass": false,
     "date_span": [
@@ -1717,10 +1749,33 @@
       "corrected_dataset": "shadow_runtime",
       "corrected_dataset_version": "shadow_runtime_v1",
       "corrected_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "dataset_contract_sufficient": true,
       "dataset_schema_version_after": "shadow_runtime_v1",
       "dataset_schema_version_before": "shadow_trades_v1",
       "dataset_version_changed": false,
+      "evidence_identity": {
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_ids": [
+          "DSNAP-5815AEDBC8947B483BC609F7",
+          "DSNAP-E2FCEE7D922C0AE59114C917"
+        ],
+        "evidence_set_ids": [
+          "ESET-OR-01-POPULATION",
+          "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+          "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+        ],
+        "legacy_dataset_version_field_meaning": "corrected_dataset_version holds the SCHEMA identifier, not a population identity; the population is named by dataset_snapshot_ids.",
+        "producer_lineage_state": "PRODUCER_BOUND",
+        "producer_versions": [
+          "shadow_runtime_producer_v1"
+        ],
+        "schema_generation": 1,
+        "schema_generation_state": "SINGLE_GENERATION_CONFIRMED",
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "BOUND_TO_DATASET_SNAPSHOT"
+      },
       "failing_gates": [],
+      "final_satisfaction_authority": "GOVERNED_SATISFACTION_DECISION_ONLY",
       "gap_disposition_after_correction": "SATISFIED_CURRENTLY",
       "gap_ids": [
         "STAGE4-DATA-E5",
@@ -1747,6 +1802,7 @@
         "STAGE4-DATA-HORIZON-1"
       ],
       "gate_failure_reasons": {},
+      "governed_satisfied": false,
       "observation_requirement_id": "OR-01",
       "previous_authority_status": "NOT_PERSISTED_ZERO_OBJECT; declared in core/production_data_contract.py with a writer in core/shadow_trades.py but never emitted an object",
       "previous_dataset_reference": "shadow_trades",
@@ -1796,6 +1852,9 @@
       "required_timestamp_semantics": "causal close event time + CURRENT epoch attestation",
       "required_type": "float",
       "research_reentry_triggered": false,
+      "satisfaction_decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+      "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+      "satisfaction_decision_state": "INDETERMINATE",
       "satisfaction_gates": {
         "canonical_identity_match": true,
         "coverage_completeness_met": true,
@@ -1827,15 +1886,36 @@
       "corrected_dataset": "shadow_runtime",
       "corrected_dataset_version": "shadow_runtime_v1",
       "corrected_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "dataset_contract_sufficient": false,
       "dataset_schema_version_after": "shadow_runtime_v1",
       "dataset_schema_version_before": "shadow_trades_v1",
       "dataset_version_changed": false,
+      "evidence_identity": {
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_ids": [
+          "DSNAP-E2FCEE7D922C0AE59114C917"
+        ],
+        "evidence_set_ids": [
+          "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+          "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+        ],
+        "legacy_dataset_version_field_meaning": "corrected_dataset_version holds the SCHEMA identifier, not a population identity; the population is named by dataset_snapshot_ids.",
+        "producer_lineage_state": "PRODUCER_BOUND",
+        "producer_versions": [
+          "shadow_runtime_producer_v1"
+        ],
+        "schema_generation": 1,
+        "schema_generation_state": "SINGLE_GENERATION_CONFIRMED",
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "BOUND_TO_DATASET_SNAPSHOT"
+      },
       "failing_gates": [
         "semantics_match",
         "grain_match",
         "lineage_requirement_matches",
         "coverage_completeness_met"
       ],
+      "final_satisfaction_authority": "GOVERNED_SATISFACTION_DECISION_ONLY",
       "gap_disposition_after_correction": "REMAINS_UNRESOLVED",
       "gap_ids": [
         "STAGE4-DATA-M3",
@@ -1855,6 +1935,7 @@
         "lineage_requirement_matches": "A NULL value carries no producer lineage back to the causal decision instant.",
         "semantics_match": "live_facts.market_phase is emitted but 100% NULL inside the lifecycle record; the non-null values live at MARKET grain in market_context_v1 / decision_trace_v1 / strategy_observation_v1 and are not lifecycle-bound."
       },
+      "governed_satisfied": false,
       "observation_requirement_id": "OR-02",
       "previous_authority_status": "NOT_PERSISTED_ZERO_OBJECT; declared in core/production_data_contract.py with a writer in core/shadow_trades.py but never emitted an object",
       "previous_dataset_reference": "shadow_trades",
@@ -1895,6 +1976,9 @@
       "required_timestamp_semantics": "causal decision time (pre-entry) + CURRENT epoch",
       "required_type": "str",
       "research_reentry_triggered": false,
+      "satisfaction_decision_fingerprint": "f863e871682d67c636373fa4c9071d70f76cc63c05d02325468396db604e3f63",
+      "satisfaction_decision_id": "SDEC-D9F42558669430A9C7DEC991E7A6CC75",
+      "satisfaction_decision_state": "INDETERMINATE",
       "satisfaction_gates": {
         "canonical_identity_match": true,
         "coverage_completeness_met": false,
@@ -1926,12 +2010,33 @@
       "corrected_dataset": "shadow_runtime",
       "corrected_dataset_version": "shadow_runtime_v1",
       "corrected_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "dataset_contract_sufficient": false,
       "dataset_schema_version_after": "shadow_runtime_v1",
       "dataset_schema_version_before": "shadow_trades_v1",
       "dataset_version_changed": false,
+      "evidence_identity": {
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_ids": [
+          "DSNAP-E2FCEE7D922C0AE59114C917"
+        ],
+        "evidence_set_ids": [
+          "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+          "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+        ],
+        "legacy_dataset_version_field_meaning": "corrected_dataset_version holds the SCHEMA identifier, not a population identity; the population is named by dataset_snapshot_ids.",
+        "producer_lineage_state": "PRODUCER_BOUND",
+        "producer_versions": [
+          "shadow_runtime_producer_v1"
+        ],
+        "schema_generation": 1,
+        "schema_generation_state": "SINGLE_GENERATION_CONFIRMED",
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "BOUND_TO_DATASET_SNAPSHOT"
+      },
       "failing_gates": [
         "coverage_completeness_met"
       ],
+      "final_satisfaction_authority": "GOVERNED_SATISFACTION_DECISION_ONLY",
       "gap_disposition_after_correction": "REMAINS_UNRESOLVED",
       "gap_ids": [
         "STAGE4-DATA-M3",
@@ -1941,6 +2046,7 @@
       "gate_failure_reasons": {
         "coverage_completeness_met": "4003/20460 lifecycle rows are NULL -> only 16457 usable; not 100%."
       },
+      "governed_satisfied": false,
       "observation_requirement_id": "OR-03",
       "previous_authority_status": "NOT_PERSISTED_ZERO_OBJECT; declared in core/production_data_contract.py with a writer in core/shadow_trades.py but never emitted an object",
       "previous_dataset_reference": "shadow_trades",
@@ -1972,6 +2078,9 @@
       "required_timestamp_semantics": "causal decision time + CURRENT epoch",
       "required_type": "str",
       "research_reentry_triggered": false,
+      "satisfaction_decision_fingerprint": "14cb4ce32fadcb1a0773063838ff4f095e1833f68a991b6c61e46a8eef4f21d2",
+      "satisfaction_decision_id": "SDEC-6B90F3AEDAACFDB5817AF4EAE74A16E9",
+      "satisfaction_decision_state": "INDETERMINATE",
       "satisfaction_gates": {
         "canonical_identity_match": true,
         "coverage_completeness_met": false,
@@ -2003,12 +2112,33 @@
       "corrected_dataset": "shadow_runtime",
       "corrected_dataset_version": "shadow_runtime_v1",
       "corrected_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "dataset_contract_sufficient": false,
       "dataset_schema_version_after": "shadow_runtime_v1",
       "dataset_schema_version_before": "shadow_trades_v1",
       "dataset_version_changed": false,
+      "evidence_identity": {
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_ids": [
+          "DSNAP-E2FCEE7D922C0AE59114C917"
+        ],
+        "evidence_set_ids": [
+          "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+          "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+        ],
+        "legacy_dataset_version_field_meaning": "corrected_dataset_version holds the SCHEMA identifier, not a population identity; the population is named by dataset_snapshot_ids.",
+        "producer_lineage_state": "PRODUCER_BOUND",
+        "producer_versions": [
+          "shadow_runtime_producer_v1"
+        ],
+        "schema_generation": 1,
+        "schema_generation_state": "SINGLE_GENERATION_CONFIRMED",
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "BOUND_TO_DATASET_SNAPSHOT"
+      },
       "failing_gates": [
         "coverage_completeness_met"
       ],
+      "final_satisfaction_authority": "GOVERNED_SATISFACTION_DECISION_ONLY",
       "gap_disposition_after_correction": "REMAINS_UNRESOLVED",
       "gap_ids": [
         "STAGE4-DATA-M9",
@@ -2020,6 +2150,7 @@
       "gate_failure_reasons": {
         "coverage_completeness_met": "18047/20460 lifecycle rows are NULL -> only 2413 usable (11.8%); not 100%."
       },
+      "governed_satisfied": false,
       "observation_requirement_id": "OR-04",
       "previous_authority_status": "NOT_PERSISTED_ZERO_OBJECT; declared in core/production_data_contract.py with a writer in core/shadow_trades.py but never emitted an object",
       "previous_dataset_reference": "shadow_trades",
@@ -2052,6 +2183,9 @@
       "required_timestamp_semantics": "causal decision time + CURRENT epoch",
       "required_type": "str",
       "research_reentry_triggered": false,
+      "satisfaction_decision_fingerprint": "27c96dac9455d7e3337c007894307f3bc9dfdc631fc88f3a565f22d4418cbf80",
+      "satisfaction_decision_id": "SDEC-ACDE71515D18BFBB4CC44025D999F62F",
+      "satisfaction_decision_state": "INDETERMINATE",
       "satisfaction_gates": {
         "canonical_identity_match": true,
         "coverage_completeness_met": false,
@@ -2083,12 +2217,33 @@
       "corrected_dataset": "shadow_runtime",
       "corrected_dataset_version": "shadow_runtime_v1",
       "corrected_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "dataset_contract_sufficient": false,
       "dataset_schema_version_after": "shadow_runtime_v1",
       "dataset_schema_version_before": "shadow_trades_v1",
       "dataset_version_changed": false,
+      "evidence_identity": {
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_ids": [
+          "DSNAP-E2FCEE7D922C0AE59114C917"
+        ],
+        "evidence_set_ids": [
+          "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+          "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+        ],
+        "legacy_dataset_version_field_meaning": "corrected_dataset_version holds the SCHEMA identifier, not a population identity; the population is named by dataset_snapshot_ids.",
+        "producer_lineage_state": "PRODUCER_BOUND",
+        "producer_versions": [
+          "shadow_runtime_producer_v1"
+        ],
+        "schema_generation": 1,
+        "schema_generation_state": "SINGLE_GENERATION_CONFIRMED",
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "BOUND_TO_DATASET_SNAPSHOT"
+      },
       "failing_gates": [
         "coverage_completeness_met"
       ],
+      "final_satisfaction_authority": "GOVERNED_SATISFACTION_DECISION_ONLY",
       "gap_disposition_after_correction": "REMAINS_UNRESOLVED",
       "gap_ids": [
         "STAGE4-DATA-M4",
@@ -2098,6 +2253,7 @@
       "gate_failure_reasons": {
         "coverage_completeness_met": "3841/20460 lifecycle rows are NULL -> only 16619 usable (81.2%); not 100%."
       },
+      "governed_satisfied": false,
       "observation_requirement_id": "OR-05",
       "previous_authority_status": "NOT_PERSISTED_ZERO_OBJECT; declared in core/production_data_contract.py with a writer in core/shadow_trades.py but never emitted an object",
       "previous_dataset_reference": "shadow_trades",
@@ -2128,6 +2284,9 @@
       "required_timestamp_semantics": "causal decision time + CURRENT epoch",
       "required_type": "str",
       "research_reentry_triggered": false,
+      "satisfaction_decision_fingerprint": "cd421b8453751f34cb847400e129adcc36cb5cfac186b5ebca110cc5f44cb762",
+      "satisfaction_decision_id": "SDEC-87D5729A487C595C309BB04420EBF99B",
+      "satisfaction_decision_state": "INDETERMINATE",
       "satisfaction_gates": {
         "canonical_identity_match": true,
         "coverage_completeness_met": false,
@@ -2159,10 +2318,31 @@
       "corrected_dataset": "shadow_runtime",
       "corrected_dataset_version": "shadow_runtime_v1",
       "corrected_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "dataset_contract_sufficient": true,
       "dataset_schema_version_after": "shadow_runtime_v1",
       "dataset_schema_version_before": "shadow_trades_v1",
       "dataset_version_changed": false,
+      "evidence_identity": {
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_ids": [
+          "DSNAP-E2FCEE7D922C0AE59114C917"
+        ],
+        "evidence_set_ids": [
+          "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+          "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+        ],
+        "legacy_dataset_version_field_meaning": "corrected_dataset_version holds the SCHEMA identifier, not a population identity; the population is named by dataset_snapshot_ids.",
+        "producer_lineage_state": "PRODUCER_BOUND",
+        "producer_versions": [
+          "shadow_runtime_producer_v1"
+        ],
+        "schema_generation": 1,
+        "schema_generation_state": "SINGLE_GENERATION_CONFIRMED",
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "BOUND_TO_DATASET_SNAPSHOT"
+      },
       "failing_gates": [],
+      "final_satisfaction_authority": "GOVERNED_SATISFACTION_DECISION_ONLY",
       "gap_disposition_after_correction": "SATISFIED_CURRENTLY",
       "gap_ids": [
         "STAGE4-DATA-S4",
@@ -2177,6 +2357,7 @@
         "STAGE4-DATA-EX10"
       ],
       "gate_failure_reasons": {},
+      "governed_satisfied": false,
       "observation_requirement_id": "OR-06",
       "previous_authority_status": "NOT_PERSISTED_ZERO_OBJECT; declared in core/production_data_contract.py with a writer in core/shadow_trades.py but never emitted an object",
       "previous_dataset_reference": "shadow_trades",
@@ -2213,6 +2394,9 @@
       "required_timestamp_semantics": "recorded_at_utc",
       "required_type": "str",
       "research_reentry_triggered": false,
+      "satisfaction_decision_fingerprint": "10c0089662bbd83b2e23dce8eda59b4fe4422c787852acafb24d810edb8cc95f",
+      "satisfaction_decision_id": "SDEC-A7517E76F09D44D94BDA47C2EE2E0D9C",
+      "satisfaction_decision_state": "INDETERMINATE",
       "satisfaction_gates": {
         "canonical_identity_match": true,
         "coverage_completeness_met": true,
@@ -2244,13 +2428,34 @@
       "corrected_dataset": "shadow_runtime",
       "corrected_dataset_version": "shadow_runtime_v1",
       "corrected_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "dataset_contract_sufficient": false,
       "dataset_schema_version_after": "shadow_runtime_v1",
       "dataset_schema_version_before": "shadow_trades_v1",
       "dataset_version_changed": false,
+      "evidence_identity": {
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_ids": [
+          "DSNAP-E2FCEE7D922C0AE59114C917"
+        ],
+        "evidence_set_ids": [
+          "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+          "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+        ],
+        "legacy_dataset_version_field_meaning": "corrected_dataset_version holds the SCHEMA identifier, not a population identity; the population is named by dataset_snapshot_ids.",
+        "producer_lineage_state": "PRODUCER_BOUND",
+        "producer_versions": [
+          "shadow_runtime_producer_v1"
+        ],
+        "schema_generation": 1,
+        "schema_generation_state": "SINGLE_GENERATION_CONFIRMED",
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "BOUND_TO_DATASET_SNAPSHOT"
+      },
       "failing_gates": [
         "timestamp_semantics_match",
         "coverage_completeness_met"
       ],
+      "final_satisfaction_authority": "GOVERNED_SATISFACTION_DECISION_ONLY",
       "gap_disposition_after_correction": "REMAINS_UNRESOLVED",
       "gap_ids": [
         "STAGE4-DATA-L1",
@@ -2265,6 +2470,7 @@
         "coverage_completeness_met": "11.3% coverage is not the required 100% of OPEN rows.",
         "timestamp_semantics_match": "market_timestamp_semantics is present on only 7473/66258 rows (11.3%); shadow_timestamp_normalization.reject() fails closed without it."
       },
+      "governed_satisfied": false,
       "observation_requirement_id": "OR-07",
       "previous_authority_status": "NOT_PERSISTED_ZERO_OBJECT; declared in core/production_data_contract.py with a writer in core/shadow_trades.py but never emitted an object",
       "previous_dataset_reference": "shadow_trades",
@@ -2300,6 +2506,9 @@
       "required_timestamp_semantics": "entry_market_time + semantics attestation",
       "required_type": "int epoch_s + str semantics",
       "research_reentry_triggered": false,
+      "satisfaction_decision_fingerprint": "4bf6c467789eff46eb947622a66aee4826092fc904cd8547e7da257aa01db778",
+      "satisfaction_decision_id": "SDEC-A696CCA46F6FD396933E07123709E706",
+      "satisfaction_decision_state": "INDETERMINATE",
       "satisfaction_gates": {
         "canonical_identity_match": true,
         "coverage_completeness_met": false,
@@ -2331,9 +2540,29 @@
       "corrected_dataset": "shadow_runtime",
       "corrected_dataset_version": "shadow_runtime_v1",
       "corrected_producer": "core/shadow/persistence.py + core/shadow/runtime.py",
+      "dataset_contract_sufficient": false,
       "dataset_schema_version_after": "shadow_runtime_v1",
       "dataset_schema_version_before": "shadow_trades_v1",
       "dataset_version_changed": false,
+      "evidence_identity": {
+        "dataset_name": "shadow_runtime",
+        "dataset_snapshot_ids": [
+          "DSNAP-E2FCEE7D922C0AE59114C917"
+        ],
+        "evidence_set_ids": [
+          "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+          "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+        ],
+        "legacy_dataset_version_field_meaning": "corrected_dataset_version holds the SCHEMA identifier, not a population identity; the population is named by dataset_snapshot_ids.",
+        "producer_lineage_state": "PRODUCER_BOUND",
+        "producer_versions": [
+          "shadow_runtime_producer_v1"
+        ],
+        "schema_generation": 1,
+        "schema_generation_state": "SINGLE_GENERATION_CONFIRMED",
+        "schema_version": "shadow_runtime_v1",
+        "snapshot_identity_state": "BOUND_TO_DATASET_SNAPSHOT"
+      },
       "failing_gates": [
         "field_exists",
         "semantics_match",
@@ -2341,6 +2570,7 @@
         "lineage_requirement_matches",
         "coverage_completeness_met"
       ],
+      "final_satisfaction_authority": "GOVERNED_SATISFACTION_DECISION_ONLY",
       "gap_disposition_after_correction": "REMAINS_UNRESOLVED",
       "gap_ids": [
         "L7 (OG-L7-4db003c3ab76)"
@@ -2352,6 +2582,7 @@
         "semantics_match": "No arm is issued; shadow_runtime_v1 carries no CONTROL/CANDIDATE assignment at all.",
         "timestamp_semantics_match": "No arm_assigned_at exists, so the pre-outcome ordering cannot be proven."
       },
+      "governed_satisfied": false,
       "observation_requirement_id": "OR-15",
       "previous_authority_status": "NOT_PERSISTED_ZERO_OBJECT; declared in core/production_data_contract.py with a writer in core/shadow_trades.py but never emitted an object",
       "previous_dataset_reference": "shadow_trades",
@@ -2386,6 +2617,9 @@
       "required_timestamp_semantics": "arm_assigned_at written at assignment time, strictly before any outcome field for that entity is populated",
       "required_type": "closed_enum{CONTROL,CANDIDATE} + arm_schema_version str",
       "research_reentry_triggered": false,
+      "satisfaction_decision_fingerprint": "0e2cd1f77c4123d691f28eba46cde3476941045eaeaf9470bfd3b264d8725c86",
+      "satisfaction_decision_id": "SDEC-44519662E78601764C12CF7107BCB3C0",
+      "satisfaction_decision_state": "INDETERMINATE",
       "satisfaction_gates": {
         "canonical_identity_match": true,
         "coverage_completeness_met": false,
@@ -2464,6 +2698,11 @@
     ]
   },
   "root_change_id": "ROOT-01-DATASET-AUTHORITY",
+  "satisfaction_authority": {
+    "dataset_authority_role": "STRUCTURAL_EVIDENCE_AUTHORITY_ONLY",
+    "role": "FINAL_GOVERNED_SATISFACTION_ONLY",
+    "state_path": "C:\\Users\\ikues\\Trading bot build\\research_engine\\control_plane\\stage4_satisfaction_decision_state.json"
+  },
   "schema": 1,
   "shadow_trades_declared_gap_count": 29,
   "shadow_trades_declared_gap_ids": [
@@ -2498,6 +2737,6 @@
     "STAGE4-DATA-X5"
   ],
   "stamp": "20260929",
-  "store_fingerprint": "0c78792889d3997875d08a8888fc7e490d21eb8f81d7239439551720ded9390e",
+  "store_fingerprint": "6e40369b85d2d29360dcaef03edf12d0a87f2122330bbee92baf3f114d48cc26",
   "upstream_audit_fingerprint": "aeb8dc9b6d9a9c92b61cc5847ab6b814f9f4d90a2d051e24519270d7b362bd04"
 }

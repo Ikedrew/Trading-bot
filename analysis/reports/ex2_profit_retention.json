@@ -12,11 +12,29 @@
   "fingerprint": {
     "analytical_digest": "2597652df5e8912d0e035413d95c528313d881ff1506d1ac3c3e1ecd50a1cedb",
     "epoch": "CURRENT",
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 14077,
+    "governed_usable_records": 8760,
     "records_excluded": 0,
     "records_used": 27135,
     "source": "exit_candidate_replay_v1"
   },
-  "generated": "2026-09-23T05:06:46Z",
+  "generated": "2026-09-28T20:25:23Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 14077,
+    "excluded_records": 5317,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_ex2",
+    "runner_module": "research_engine.experiments.exit_policy_governed",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 8760
+  },
   "overall": {
     "baseline": "SHADOW_BASELINE_V1",
     "distinct_canonical_opportunities": 9045,
@@ -252,11 +270,12 @@
       "required_governed_coverage": 0.95,
       "state": "READY"
     },
-    "report_digest": "2e22026effa5d645ab7fcbaf0e441c53713af99258fcf8acb392fb0fb6d7d651"
+    "report_digest": "28874ca19d8e8b4e020996fa72f25f4fe36a327637397bc6e7d8926cb502c836"
   },
   "question_id": "EX2",
   "recommendation": "FINDING: governed simulated-policy evaluation",
   "report_schema_version": "hd09_governed_exit_research_v1",
+  "scientific_state": "COMPLETE",
   "status": "COMPLETE",
   "warnings": [
     "Research-only simulated policy outcomes; no production application authority."

@@ -11,10 +11,28 @@
   "fingerprint": {
     "analytical_digest": "f4860d4d26fc06fad321da18ba4c1dc9cd9562789df74e6c9decc48ae0fabc64",
     "epoch": "CURRENT",
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 14077,
+    "governed_usable_records": 14046,
     "records_used": 86319,
     "source": "MULTI_SOURCE"
   },
   "generated": "2026-09-23T06:32:11Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 14077,
+    "excluded_records": 31,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_ex7",
+    "runner_module": "research_engine.experiments.exit_policy_heterogeneity",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 14046
+  },
   "overall": {
     "baseline": "SHADOW_BASELINE_V1",
     "cell_effects": [
@@ -578,7 +596,7 @@
       "required_sufficient_levels": 2,
       "state": "READY"
     },
-    "report_digest": "42cac187cfb1df046872f1d50d264c3171a9e62d47275582a55c55ba93c96ff3",
+    "report_digest": "1de5e0f5fdcaf5db7cc944d7faffb5a43cd954a714e65f8e49efd632a3d2f3e9",
     "scientific_contract": {
       "candidates": "all nine CANDIDATE_POLICIES_V1",
       "covariance": "A^-1 (sum_o s_o s_o') A^-1",
@@ -660,6 +678,7 @@
   "question_id": "EX7",
   "recommendation": "FINDING: governed heterogeneity evaluation",
   "report_schema_version": "hd09_governed_exit_heterogeneity_v1",
+  "scientific_state": "COMPLETE",
   "status": "COMPLETE",
   "warnings": [
     "Research-only simulated policy effects; no production application authority."

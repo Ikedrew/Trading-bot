@@ -791,11 +791,13 @@ def mark_reentry_ready(store: dict[str, Any], wid: str,
             "reentry_id": str(reentry_id),
             "gap_type": str(tgt.get("gap_type")),
             "pre_rerun_evidence": sorted(required),
+            "pre_rerun_evidence_role": "PROGRESS_INPUTS_ONLY",
+            "governed_satisfaction_required": True,
             "bound_state": STATUS_VALIDATION_REQUIRED,
         })
     tgt["reentry_bindings"] = bindings
     tgt["status"] = STATUS_VALIDATION_REQUIRED
-    tgt["substate"] = "SCOPED_RERUN_AUTHORIZED"
+    tgt["substate"] = "AWAITING_GOVERNED_SATISFACTION_AUTHORIZATION"
     nxt["work_items"][index] = tgt
     validate_store(nxt)
     nxt["store_fingerprint"] = _fp(
@@ -1034,6 +1036,16 @@ def observation_requirement_authority(
         raise GapGovernanceError(str(exc)) from exc
     resolved = authority if authority is not None else load_dataset_authority()
     transition = A.transition_for(rid, resolved)
+    identity = dict(transition.get("evidence_identity") or {})
+    if not identity:
+        raise GapGovernanceError("EVIDENCE_IDENTITY_MISSING:" + rid)
+    # Read-side governance validation: the population identity this consumer is
+    # about to trust must resolve against the population authority.  Nothing is
+    # coerced and nothing is assumed; an unresolved population fails closed.
+    population_registry = A.snapshot_registry()
+    resolved_snapshots = [
+        population_registry.require(str(snapshot_id)).to_dict()
+        for snapshot_id in identity.get("dataset_snapshot_ids", ())]
     return {
         "observation_requirement_id": rid,
         "previous_dataset_reference": str(
@@ -1041,9 +1053,38 @@ def observation_requirement_authority(
         "current_dataset": str(transition["corrected_dataset"]),
         "current_dataset_version": str(transition["corrected_dataset_version"]),
         "current_producer": str(transition["corrected_producer"]),
+        # -- separated evidence identity (Stage 4 Refinement 2) --
+        "dataset_name": str(identity.get("dataset_name")),
+        "schema_version": str(identity.get("schema_version")),
+        "schema_generation": identity.get("schema_generation"),
+        "schema_generation_state": str(
+            identity.get("schema_generation_state")),
+        "dataset_snapshot_ids": list(
+            identity.get("dataset_snapshot_ids", ())),
+        "snapshot_identity_state": str(
+            identity.get("snapshot_identity_state")),
+        "resolved_dataset_snapshots": resolved_snapshots,
+        "producer_versions": list(identity.get("producer_versions", ())),
+        "producer_lineage_state": str(
+            identity.get("producer_lineage_state")),
+        "evidence_set_ids": list(identity.get("evidence_set_ids", ())),
+        "dataset_version_field_meaning": str(
+            identity.get("legacy_dataset_version_field_meaning")),
         "classification": str(transition["shadow_runtime_classification"]),
         "satisfies_current_contract": bool(
             transition["satisfies_current_contract"]),
+        "dataset_contract_sufficient": bool(
+            transition["dataset_contract_sufficient"]),
+        "final_satisfaction_authority": str(
+            transition["final_satisfaction_authority"]),
+        "satisfaction_decision_id": str(
+            transition["satisfaction_decision_id"]),
+        "satisfaction_decision_state": str(
+            transition["satisfaction_decision_state"]),
+        "satisfaction_decision_fingerprint": str(
+            transition["satisfaction_decision_fingerprint"]),
+        "governed_satisfied": bool(transition["governed_satisfied"]),
+        "legacy_resolution_labels_role": "THRESHOLD_INPUTS_ONLY",
         "failing_gates": list(transition["failing_gates"]),
         "blocked_by_root_change": transition["blocked_by_root_change"],
     }

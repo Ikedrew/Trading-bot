@@ -1,44 +1,63 @@
 {
-  "question_id": "Q1",
-  "status": "INSUFFICIENT_DATA",
-  "overall": {
-    "total_decisions": 142,
-    "matched_outcomes": 0,
-    "best_predictor": "",
-    "worst_predictor": "",
-    "finding": "Insufficient matched data for component analysis.",
-    "decisions_with_outcome": 0,
-    "join_rate": 0.0,
-    "component_stats": [],
-    "negative_contributors": [],
-    "interactions": [],
-    "conclusion": "Insufficient matched data for component analysis.",
-    "confidence": "INSUFFICIENT_DATA"
-  },
+  "assumptions": [],
   "confidence": "INSUFFICIENT_DATA",
   "dataset": {
-    "source": "decision_trace + shadow_trades",
-    "sample_size": 0
+    "sample_size": 0,
+    "source": "decision_trace + shadow_trades"
   },
-  "fingerprint": {
-    "dataset_id": "decision_trace+shadow_trades_2026-09-06",
-    "records_used": 0,
-    "records_excluded": 142,
-    "source": "decision_trace+shadow_trades",
-    "epoch": "CURRENT",
-    "architecture_version": "new_pipeline_v1.2",
-    "validation_score": "UNKNOWN",
-    "generated": "2026-09-06"
-  },
-  "recommendation": "INSUFFICIENT_DATA",
-  "assumptions": [],
-  "warnings": [],
   "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "decision_trace+shadow_trades_2026-09-06",
+    "epoch": "CURRENT",
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "generated": "2026-09-06",
+    "governed_candidate_records": 36641,
+    "governed_usable_records": 95,
+    "records_excluded": 142,
+    "records_used": 0,
+    "source": "decision_trace+shadow_trades",
+    "validation_score": "UNKNOWN"
+  },
   "generated": "2026-09-06T01:49:55Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 36641,
+    "excluded_records": 36546,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run",
+    "runner_module": "research_engine.experiments.component_reward",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 95
+  },
+  "overall": {
+    "best_predictor": "",
+    "component_stats": [],
+    "conclusion": "Insufficient matched data for component analysis.",
+    "confidence": "INSUFFICIENT_DATA",
+    "decisions_with_outcome": 0,
+    "finding": "Insufficient matched data for component analysis.",
+    "interactions": [],
+    "join_rate": 0.0,
+    "matched_outcomes": 0,
+    "negative_contributors": [],
+    "total_decisions": 142,
+    "worst_predictor": ""
+  },
   "provenance": {
     "experiment_module": "research_engine.experiments.component_reward",
-    "registry_id": "Q1",
     "function": "run",
-    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"
-  }
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
+    "registry_id": "Q1"
+  },
+  "question_id": "D1",
+  "recommendation": "INSUFFICIENT_DATA",
+  "scientific_state": "INSUFFICIENT_DATA",
+  "status": "INSUFFICIENT_DATA",
+  "warnings": []
 }

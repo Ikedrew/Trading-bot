@@ -1,0 +1,120 @@
+{
+  "assumptions": [
+    "MFE is the peak favourable excursion in R \u2014 the maximum distance the trade moved in favour",
+    "Reachability = fraction of trades whose MFE >= threshold",
+    "This is a REACHABILITY PROFILE, not an optimal-TP claim",
+    "No path-ordering assumption \u2014 MFE may have occurred before or after MAE",
+    "An MFE of 2R does NOT prove a 2R TP would have been hit before an adverse event"
+  ],
+  "confidence": "HIGH",
+  "dataset": {
+    "sample_size": 14046,
+    "source": "shadow_runtime_v1(ingested)"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_6d9331f6a20011a2",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "4c043c670920efdc1c9c53eb0b8e4d3942b5dda07b5551951e5ea4ce1b9d84b5",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 31,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 14077,
+          "records_excluded": 31,
+          "records_used": 14046,
+          "schema": "shadow_trades_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "shadow_trades",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "6d9331f6a20011a24fa4e7c72dd6b6af7d868d6f2fd9809b98488f74ff79e1c6",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 14077,
+      "records_excluded": 31,
+      "records_used": 14046,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 14077,
+    "governed_usable_records": 14046,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 31,
+    "records_used": 14046,
+    "source": "shadow_trades",
+    "sources": [
+      "shadow_trades"
+    ],
+    "validation_score": "UNKNOWN"
+  },
+  "generated": "2026-09-28T19:12:48Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 14077,
+    "excluded_records": 31,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_ex3",
+    "runner_module": "research_engine.experiments.exit_management",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 14046
+  },
+  "overall": {
+    "current_tp_hit_rate": 0.1735,
+    "finding": "MFE distribution: median=0.783R, p75=1.737R, max=72000.000R. Reachability: >=0.25R=77%, >=0.5R=62%, >=0.75R=51%, >=1.0R=43%, >=1.5R=30%, >=2.0R=21%, >=2.5R=10%, >=3.0R=6%. Current TP hit rate: 17%.",
+    "methodology": "TP_DISTANCE_EVIDENCE (observed favourable excursion reachability)",
+    "mfe_distribution": {
+      "max": 72000.0005,
+      "mean": 30.3552,
+      "median": 0.7826,
+      "min": 0.0,
+      "n": 14046,
+      "p25": 0.2727,
+      "p75": 1.7368
+    },
+    "reachability_profile": {
+      ">=0.25R": 0.7678,
+      ">=0.5R": 0.6237,
+      ">=0.75R": 0.5149,
+      ">=1.0R": 0.4251,
+      ">=1.5R": 0.296,
+      ">=2.0R": 0.2117,
+      ">=2.5R": 0.0987,
+      ">=3.0R": 0.0579
+    },
+    "sample_size": 14046,
+    "tp_hits": 2437
+  },
+  "provenance": {
+    "experiment_module": "research_engine.experiments.exit_management",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
+    "registry_id": "EX3"
+  },
+  "question_id": "EX3",
+  "recommendation": "FINDING: TP reachability profile computed",
+  "scientific_state": "COMPLETE",
+  "status": "COMPLETE",
+  "warnings": [
+    "Multiple TP thresholds examined (0.25R through 3.0R) \u2014 this is a distribution analysis, not a single-threshold optimisation"
+  ]
+}

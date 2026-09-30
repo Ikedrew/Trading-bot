@@ -398,6 +398,9 @@ class EvidenceEpoch:
     predecessor_epoch_id: str | None
     status: str
     research_reentry_events: int = 0
+    #: Immutable dataset POPULATION(S) this epoch's window is drawn from
+    #: (Stage 4 Refinement 2).  Empty while the population is still growing.
+    dataset_snapshot_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.status not in self.ALLOWED_STATUSES:
@@ -410,6 +413,19 @@ class EvidenceEpoch:
             raise DataVersioningError("EVIDENCE_EPOCH_WITHOUT_CONTRACT_VERSIONS")
         if self.research_reentry_events != 0:
             raise DataVersioningError("UNEXPECTED_RESEARCH_REENTRY_IN_EPOCH")
+        snapshots = tuple(sorted(set(self.dataset_snapshot_ids)))
+        for snapshot_id in snapshots:
+            try:
+                I.validate_dataset_snapshot_id(snapshot_id, allow_none=False)
+            except I.Stage4IdentityError as exc:
+                raise DataVersioningError(str(exc)) from exc
+        if snapshots and self.status in (self.STATUS_OPEN, self.STATUS_COLLECTING):
+            # A growing population cannot be content-addressed: claiming a
+            # frozen snapshot here would assert an immutable population that
+            # does not exist yet.
+            raise DataVersioningError(
+                "LIVE_POPULATION_CANNOT_HAVE_FROZEN_SNAPSHOT:" + self.epoch_id)
+        object.__setattr__(self, "dataset_snapshot_ids", snapshots)
         try:
             for rid in self.observation_requirements:
                 I.validate_requirement_id(rid)
@@ -417,22 +433,65 @@ class EvidenceEpoch:
             raise DataVersioningError(str(exc)) from exc
 
     @property
+    def schema_version(self) -> str:
+        """The schema/interpretation contract this epoch is read under.
+
+        ``dataset_version`` is the historical field name and its value is a
+        schema-registry string (``shadow_runtime_v1``): it is a SCHEMA
+        identity, never a population identity.  The population identity of
+        this epoch is ``dataset_snapshot_ids``.
+        """
+        return self.dataset_version
+
+    @property
+    def snapshot_identity_state(self) -> str:
+        """Whether this epoch's population identity is resolved or not."""
+        if self.dataset_snapshot_ids:
+            return I.SNAPSHOT_IDENTITY_BOUND
+        if self.status in (self.STATUS_OPEN, self.STATUS_COLLECTING):
+            return I.SNAPSHOT_IDENTITY_UNRESOLVED_LIVE
+        return I.SNAPSHOT_IDENTITY_UNRESOLVED_HISTORICAL
+
+    @property
     def evidence_set(self) -> I.EvidenceSet:
-        """Canonical identity for the governed dataset slice opened by this epoch."""
-        member = I.EvidenceMemberReference(
-            reference_type="governed_dataset_slice",
-            reference_id=self.epoch_id,
-            dataset=self.dataset,
-            locator=(f"schema_generation={self.schema_generation};"
-                     f"producer_version={self.producer_version}"),
-            content_fingerprint=self.schema_fingerprint,
-        )
+        """Canonical identity for the governed dataset slice opened by this epoch.
+
+        When the epoch's population is frozen, each member claims one immutable
+        dataset snapshot.  The population authority owns that snapshot's content
+        digest, so the epoch never duplicates one here.  While the population is
+        still collecting the member stays a dataset-slice reference and the
+        evidence set declares NO snapshot identity: a growing population is not
+        an immutable evidence snapshot.
+        """
+        if self.dataset_snapshot_ids:
+            members = tuple(I.EvidenceMemberReference(
+                reference_type="dataset_snapshot",
+                reference_id=snapshot_id,
+                dataset=self.dataset,
+                locator=(f"schema_version={self.dataset_version};"
+                         f"schema_generation={self.schema_generation};"
+                         f"producer_version={self.producer_version}"),
+                content_fingerprint=None,
+                dataset_snapshot_id=snapshot_id,
+            ) for snapshot_id in self.dataset_snapshot_ids)
+            snapshot_ids = self.dataset_snapshot_ids
+        else:
+            members = (I.EvidenceMemberReference(
+                reference_type="governed_dataset_slice",
+                reference_id=self.epoch_id,
+                dataset=self.dataset,
+                locator=(f"schema_generation={self.schema_generation};"
+                         f"producer_version={self.producer_version}"),
+                content_fingerprint=self.schema_fingerprint,
+            ),)
+            snapshot_ids = ()
         # The ID is derived from immutable epoch identity, not clock time or a
         # mutable filename. Registry collision checks bind it to membership.
         return I.EvidenceSet(
             evidence_set_id="ESET-" + self.epoch_id,
             observation_requirement_ids=self.observation_requirements,
-            members=(member,),
+            members=members,
+            dataset_snapshot_ids=snapshot_ids,
         )
 
     @property
@@ -452,6 +511,7 @@ class EvidenceEpoch:
                 member.to_dict() for member in evidence_set.members],
             "dataset": self.dataset,
             "dataset_version": self.dataset_version,
+            "schema_version": self.schema_version,
             "schema_generation": self.schema_generation,
             "producer_version": self.producer_version,
             "producer_fingerprint": self.producer_fingerprint,
@@ -464,6 +524,8 @@ class EvidenceEpoch:
             "predecessor_epoch_id": self.predecessor_epoch_id,
             "status": self.status,
             "research_reentry_events": self.research_reentry_events,
+            "dataset_snapshot_ids": list(self.dataset_snapshot_ids),
+            "snapshot_identity_state": self.snapshot_identity_state,
         }
 
 
@@ -551,6 +613,10 @@ class VersionRegistry:
         except KeyError:
             raise DataVersioningError("NO_EVIDENCE_EPOCH:" + str(epoch_id)) from None
 
+    def epochs(self) -> tuple[EvidenceEpoch, ...]:
+        """Every governed evidence epoch, in canonical epoch-id order."""
+        return tuple(self._epochs[epoch_id] for epoch_id in sorted(self._epochs))
+
     def epochs_for(self, dataset: str) -> tuple[EvidenceEpoch, ...]:
         return tuple(e for e in self._epochs.values() if e.dataset == dataset)
 
@@ -584,12 +650,22 @@ class VersionRegistry:
             dataset, gen.generation, gen.dataset_version)
         return {
             "dataset": dataset,
+            "dataset_name": dataset,
             "dataset_version": gen.dataset_version,
+            "schema_version": gen.dataset_version,
             "schema_generation": gen.generation,
             "producer_version": producer.producer_version,
             "evidence_epoch": epoch.epoch_id if epoch else None,
             "evidence_set_id": (
                 epoch.evidence_set.evidence_set_id if epoch else None),
+            "dataset_snapshot_ids": list(
+                epoch.dataset_snapshot_ids) if epoch else [],
+            "dataset_snapshot_id": (
+                epoch.dataset_snapshot_ids[0]
+                if epoch and len(epoch.dataset_snapshot_ids) == 1 else None),
+            "snapshot_identity_state": (
+                epoch.snapshot_identity_state if epoch
+                else I.SNAPSHOT_IDENTITY_UNRESOLVED_HISTORICAL),
             "predecessor": (
                 None if gen.predecessor_generation is None else {
                     "schema_generation": gen.predecessor_generation,

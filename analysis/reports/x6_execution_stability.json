@@ -1,0 +1,1074 @@
+{
+  "assumptions": [
+    "CURRENT execution results, contexts, and decision traces are selected before strict correlation_id joining.",
+    "Account fan-out children remain observations but each shared decision has total estimator weight one.",
+    "The rejection endpoint is descriptive and cannot alter the primary slippage inference."
+  ],
+  "confidence": "HIGH",
+  "dataset": {
+    "analysed_row_count": 0,
+    "records_loaded": 55782,
+    "sample_size": 365,
+    "source": "execution_results_v1 + execution_context + decision_trace_v1"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_bc7924f1d15cb907",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 22429,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 135,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 22564,
+          "records_excluded": 22564,
+          "records_used": 0,
+          "schema": "decision_trace_v1",
+          "selection": "CURRENT_SUBSET",
+          "source": "decision_trace_v1",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 0,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        },
+        {
+          "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 32784,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 32784,
+          "records_excluded": 32784,
+          "records_used": 0,
+          "schema": "execution_context_v1",
+          "selection": "CURRENT_SUBSET",
+          "source": "execution_context",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 0,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        },
+        {
+          "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 434,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 434,
+          "records_excluded": 434,
+          "records_used": 0,
+          "schema": "execution_results_v1",
+          "selection": "CURRENT_SUBSET",
+          "source": "execution_results_v1",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 0,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "bc7924f1d15cb9074b81d9bc846091505eb1a789b743a57dc789cc68d7b06f4d",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 55782,
+      "records_excluded": 55782,
+      "records_used": 0,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 55782,
+    "governed_usable_records": 78,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 55782,
+    "records_used": 0,
+    "source": "MULTI_SOURCE",
+    "sources": [
+      "decision_trace_v1",
+      "execution_context",
+      "execution_results_v1"
+    ],
+    "validation_score": "CURRENT_GOVERNED_X6"
+  },
+  "generated": "2026-09-28T18:48:51Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 55782,
+    "excluded_records": 55704,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_x6",
+    "runner_module": "research_engine.experiments.execution_stability",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 78
+  },
+  "overall": {
+    "analytical_population": {
+      "cluster": "correlation_id",
+      "distinct_correlation_id_decisions": 123,
+      "fan_out_children_remain_observations": true,
+      "governed_matched_account_results": 365,
+      "measured_slippage_eligible_results": 78,
+      "observation_grain": "one distinct account/broker execution result",
+      "unknown_execution_status_results": 0
+    },
+    "canonical_question": "Under what conditions (symbol, session, spread, volatility) does execution quality degrade?",
+    "claim_boundary": "CURRENT evidence and the listed sufficient evaluated cells only; producer-measured execution slippage does not establish strategy profitability, causal broker behaviour, or future execution performance",
+    "classification": "INSUFFICIENT_EVIDENCE",
+    "condition_dimensions": {
+      "session": {
+        "analytical_account_results": 0,
+        "analytical_distinct_decisions": 0,
+        "analytical_provenance": {
+          "components": [
+            {
+              "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "digest_algorithm": "sha256",
+              "epoch_counts": {
+                "CURRENT": 22429,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 135,
+                "TRANSITIONAL": 0
+              },
+              "input_records": 22564,
+              "records_excluded": 22564,
+              "records_used": 0,
+              "schema": "decision_trace_v1",
+              "selection": "CURRENT_SUBSET",
+              "source": "decision_trace_v1",
+              "state": "CURRENT",
+              "used_epoch_counts": {
+                "CURRENT": 0,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              }
+            },
+            {
+              "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "digest_algorithm": "sha256",
+              "epoch_counts": {
+                "CURRENT": 32784,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              },
+              "input_records": 32784,
+              "records_excluded": 32784,
+              "records_used": 0,
+              "schema": "execution_context_v1",
+              "selection": "CURRENT_SUBSET",
+              "source": "execution_context",
+              "state": "CURRENT",
+              "used_epoch_counts": {
+                "CURRENT": 0,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              }
+            },
+            {
+              "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "digest_algorithm": "sha256",
+              "epoch_counts": {
+                "CURRENT": 434,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              },
+              "input_records": 434,
+              "records_excluded": 434,
+              "records_used": 0,
+              "schema": "execution_results_v1",
+              "selection": "CURRENT_SUBSET",
+              "source": "execution_results_v1",
+              "state": "CURRENT",
+              "used_epoch_counts": {
+                "CURRENT": 0,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              }
+            }
+          ],
+          "digest": "bc7924f1d15cb9074b81d9bc846091505eb1a789b743a57dc789cc68d7b06f4d",
+          "digest_algorithm": "sha256",
+          "epoch": "CURRENT",
+          "input_records": 55782,
+          "records_excluded": 55782,
+          "records_used": 0,
+          "state": "CURRENT",
+          "version": "evidence_provenance_v1"
+        },
+        "authority": "execution_context.market_access.session_state",
+        "cells": {
+          "ASIA": {
+            "distinct_correlation_id_decisions": 55,
+            "failure_rate": 0.8,
+            "failures": 132,
+            "known_status_n": 165,
+            "mean_absolute_measured_slippage": 0.023818787879,
+            "measured_slippage_decision_n": 24,
+            "measured_slippage_eligible_n": 33,
+            "median_absolute_measured_slippage": 0.0015,
+            "primary_sufficient": true,
+            "rejection_decision_n": 55,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.8,
+              "lower": 0.733648701853,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.033852703136,
+              "upper": 0.866351298147,
+              "z": 1.96
+            },
+            "rejection_sufficient": true,
+            "retcode_distribution": {
+              "-1": 78,
+              "10009": 33,
+              "10016": 28,
+              "10030": 26
+            },
+            "successes": 33,
+            "total_joined_execution_results": 165,
+            "unknown_status_n": 0
+          },
+          "LONDON": {
+            "distinct_correlation_id_decisions": 28,
+            "failure_rate": 0.666666666667,
+            "failures": 56,
+            "known_status_n": 84,
+            "mean_absolute_measured_slippage": 7.10534875,
+            "measured_slippage_decision_n": 20,
+            "measured_slippage_eligible_n": 28,
+            "median_absolute_measured_slippage": 0.00309,
+            "primary_sufficient": false,
+            "rejection_decision_n": 28,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.666666666667,
+              "lower": 0.573333333333,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.047619047619,
+              "upper": 0.76,
+              "z": 1.96
+            },
+            "rejection_sufficient": true,
+            "retcode_distribution": {
+              "-1": 36,
+              "10009": 28,
+              "10016": 8,
+              "10030": 12
+            },
+            "successes": 28,
+            "total_joined_execution_results": 84,
+            "unknown_status_n": 0
+          },
+          "NY": {
+            "distinct_correlation_id_decisions": 34,
+            "failure_rate": 0.897959183673,
+            "failures": 88,
+            "known_status_n": 98,
+            "mean_absolute_measured_slippage": 2.8409975,
+            "measured_slippage_decision_n": 7,
+            "measured_slippage_eligible_n": 8,
+            "median_absolute_measured_slippage": 0.0020725,
+            "primary_sufficient": false,
+            "rejection_decision_n": 34,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.862745098039,
+              "lower": 0.772134845918,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.04622972047,
+              "upper": 0.953355350161,
+              "z": 1.96
+            },
+            "rejection_sufficient": true,
+            "retcode_distribution": {
+              "-1": 51,
+              "10009": 10,
+              "10016": 27,
+              "10030": 10
+            },
+            "successes": 10,
+            "total_joined_execution_results": 98,
+            "unknown_status_n": 0
+          },
+          "OFF_SESSION": {
+            "distinct_correlation_id_decisions": 6,
+            "failure_rate": 0.5,
+            "failures": 9,
+            "known_status_n": 18,
+            "mean_absolute_measured_slippage": 15.580455555556,
+            "measured_slippage_decision_n": 5,
+            "measured_slippage_eligible_n": 9,
+            "median_absolute_measured_slippage": 0.005475,
+            "primary_sufficient": false,
+            "rejection_decision_n": 6,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.5,
+              "lower": 0.296287542276,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.10393492741,
+              "upper": 0.703712457724,
+              "z": 1.96
+            },
+            "rejection_sufficient": false,
+            "retcode_distribution": {
+              "-1": 8,
+              "10009": 9,
+              "10016": 1
+            },
+            "successes": 9,
+            "total_joined_execution_results": 18,
+            "unknown_status_n": 0
+          }
+        },
+        "classification": "INSUFFICIENT_DIMENSION_EVIDENCE",
+        "comparatively_sufficient": false,
+        "dimension": "session",
+        "dimension_state": "INSUFFICIENT",
+        "insufficiency_reason": "only 1 cell(s) meet the 30-result/10-decision cell gates",
+        "missing_or_invalid_unclassified_results": 0,
+        "sufficient_cell_count": 0,
+        "sufficient_primary_cells": [],
+        "supported_degradation_contrasts": []
+      },
+      "spread_band": {
+        "analytical_account_results": 0,
+        "analytical_distinct_decisions": 0,
+        "analytical_provenance": {
+          "components": [
+            {
+              "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "digest_algorithm": "sha256",
+              "epoch_counts": {
+                "CURRENT": 22429,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 135,
+                "TRANSITIONAL": 0
+              },
+              "input_records": 22564,
+              "records_excluded": 22564,
+              "records_used": 0,
+              "schema": "decision_trace_v1",
+              "selection": "CURRENT_SUBSET",
+              "source": "decision_trace_v1",
+              "state": "CURRENT",
+              "used_epoch_counts": {
+                "CURRENT": 0,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              }
+            },
+            {
+              "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "digest_algorithm": "sha256",
+              "epoch_counts": {
+                "CURRENT": 32784,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              },
+              "input_records": 32784,
+              "records_excluded": 32784,
+              "records_used": 0,
+              "schema": "execution_context_v1",
+              "selection": "CURRENT_SUBSET",
+              "source": "execution_context",
+              "state": "CURRENT",
+              "used_epoch_counts": {
+                "CURRENT": 0,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              }
+            },
+            {
+              "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "digest_algorithm": "sha256",
+              "epoch_counts": {
+                "CURRENT": 434,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              },
+              "input_records": 434,
+              "records_excluded": 434,
+              "records_used": 0,
+              "schema": "execution_results_v1",
+              "selection": "CURRENT_SUBSET",
+              "source": "execution_results_v1",
+              "state": "CURRENT",
+              "used_epoch_counts": {
+                "CURRENT": 0,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              }
+            }
+          ],
+          "digest": "bc7924f1d15cb9074b81d9bc846091505eb1a789b743a57dc789cc68d7b06f4d",
+          "digest_algorithm": "sha256",
+          "epoch": "CURRENT",
+          "input_records": 55782,
+          "records_excluded": 55782,
+          "records_used": 0,
+          "state": "CURRENT",
+          "version": "evidence_provenance_v1"
+        },
+        "authority": "execution_context.market_access.spread_atr_ratio (frozen bands)",
+        "cells": {
+          "LOW": {
+            "distinct_correlation_id_decisions": 123,
+            "failure_rate": 0.780821917808,
+            "failures": 285,
+            "known_status_n": 365,
+            "mean_absolute_measured_slippage": 4.649844423077,
+            "measured_slippage_decision_n": 56,
+            "measured_slippage_eligible_n": 78,
+            "median_absolute_measured_slippage": 0.0020875,
+            "primary_sufficient": true,
+            "rejection_decision_n": 123,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.772357723577,
+              "lower": 0.72407303022,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.024635047631,
+              "upper": 0.820642416935,
+              "z": 1.96
+            },
+            "rejection_sufficient": true,
+            "retcode_distribution": {
+              "-1": 173,
+              "10009": 80,
+              "10016": 64,
+              "10030": 48
+            },
+            "successes": 80,
+            "total_joined_execution_results": 365,
+            "unknown_status_n": 0
+          }
+        },
+        "classification": "INSUFFICIENT_DIMENSION_EVIDENCE",
+        "comparatively_sufficient": false,
+        "dimension": "spread_band",
+        "dimension_state": "INSUFFICIENT",
+        "insufficiency_reason": "only 1 cell(s) meet the 30-result/10-decision cell gates",
+        "missing_or_invalid_unclassified_results": 0,
+        "sufficient_cell_count": 0,
+        "sufficient_primary_cells": [],
+        "supported_degradation_contrasts": []
+      },
+      "symbol": {
+        "analytical_account_results": 0,
+        "analytical_distinct_decisions": 0,
+        "analytical_provenance": {
+          "components": [
+            {
+              "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "digest_algorithm": "sha256",
+              "epoch_counts": {
+                "CURRENT": 22429,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 135,
+                "TRANSITIONAL": 0
+              },
+              "input_records": 22564,
+              "records_excluded": 22564,
+              "records_used": 0,
+              "schema": "decision_trace_v1",
+              "selection": "CURRENT_SUBSET",
+              "source": "decision_trace_v1",
+              "state": "CURRENT",
+              "used_epoch_counts": {
+                "CURRENT": 0,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              }
+            },
+            {
+              "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "digest_algorithm": "sha256",
+              "epoch_counts": {
+                "CURRENT": 32784,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              },
+              "input_records": 32784,
+              "records_excluded": 32784,
+              "records_used": 0,
+              "schema": "execution_context_v1",
+              "selection": "CURRENT_SUBSET",
+              "source": "execution_context",
+              "state": "CURRENT",
+              "used_epoch_counts": {
+                "CURRENT": 0,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              }
+            },
+            {
+              "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "digest_algorithm": "sha256",
+              "epoch_counts": {
+                "CURRENT": 434,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              },
+              "input_records": 434,
+              "records_excluded": 434,
+              "records_used": 0,
+              "schema": "execution_results_v1",
+              "selection": "CURRENT_SUBSET",
+              "source": "execution_results_v1",
+              "state": "CURRENT",
+              "used_epoch_counts": {
+                "CURRENT": 0,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              }
+            }
+          ],
+          "digest": "bc7924f1d15cb9074b81d9bc846091505eb1a789b743a57dc789cc68d7b06f4d",
+          "digest_algorithm": "sha256",
+          "epoch": "CURRENT",
+          "input_records": 55782,
+          "records_excluded": 55782,
+          "records_used": 0,
+          "state": "CURRENT",
+          "version": "evidence_provenance_v1"
+        },
+        "authority": "canonical symbol from the governed strict execution identity/context consistency check; broker aliases are never separate research symbols",
+        "cells": {
+          "AUDUSD": {
+            "distinct_correlation_id_decisions": 13,
+            "failure_rate": 0.871794871795,
+            "failures": 34,
+            "known_status_n": 39,
+            "mean_absolute_measured_slippage": 0.000785,
+            "measured_slippage_decision_n": 4,
+            "measured_slippage_eligible_n": 5,
+            "median_absolute_measured_slippage": 0.000825,
+            "primary_sufficient": false,
+            "rejection_decision_n": 13,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.871794871795,
+              "lower": 0.758556985045,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.057774432015,
+              "upper": 0.985032758545,
+              "z": 1.96
+            },
+            "rejection_sufficient": true,
+            "retcode_distribution": {
+              "-1": 17,
+              "10009": 5,
+              "10016": 12,
+              "10030": 5
+            },
+            "successes": 5,
+            "total_joined_execution_results": 39,
+            "unknown_status_n": 0
+          },
+          "EURUSD": {
+            "distinct_correlation_id_decisions": 7,
+            "failure_rate": 0.714285714286,
+            "failures": 15,
+            "known_status_n": 21,
+            "mean_absolute_measured_slippage": 0.001505,
+            "measured_slippage_decision_n": 5,
+            "measured_slippage_eligible_n": 6,
+            "median_absolute_measured_slippage": 0.0015,
+            "primary_sufficient": false,
+            "rejection_decision_n": 7,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.714285714286,
+              "lower": 0.556523586736,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.080490881403,
+              "upper": 0.872047841835,
+              "z": 1.96
+            },
+            "rejection_sufficient": false,
+            "retcode_distribution": {
+              "-1": 15,
+              "10009": 6
+            },
+            "successes": 6,
+            "total_joined_execution_results": 21,
+            "unknown_status_n": 0
+          },
+          "GBPUSD": {
+            "distinct_correlation_id_decisions": 19,
+            "failure_rate": 0.736842105263,
+            "failures": 42,
+            "known_status_n": 57,
+            "mean_absolute_measured_slippage": 0.002339666667,
+            "measured_slippage_decision_n": 12,
+            "measured_slippage_eligible_n": 15,
+            "median_absolute_measured_slippage": 0.00223,
+            "primary_sufficient": false,
+            "rejection_decision_n": 19,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.736842105263,
+              "lower": 0.632783251108,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.05309125212,
+              "upper": 0.840900959418,
+              "z": 1.96
+            },
+            "rejection_sufficient": true,
+            "retcode_distribution": {
+              "-1": 31,
+              "10009": 15,
+              "10016": 2,
+              "10030": 9
+            },
+            "successes": 15,
+            "total_joined_execution_results": 57,
+            "unknown_status_n": 0
+          },
+          "NZDUSD": {
+            "distinct_correlation_id_decisions": 6,
+            "failure_rate": 0.3125,
+            "failures": 5,
+            "known_status_n": 16,
+            "mean_absolute_measured_slippage": 0.001714,
+            "measured_slippage_decision_n": 5,
+            "measured_slippage_eligible_n": 10,
+            "median_absolute_measured_slippage": 0.0018,
+            "primary_sufficient": false,
+            "rejection_decision_n": 6,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.277777777778,
+              "lower": 0.178376276601,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.050715051621,
+              "upper": 0.377179278955,
+              "z": 1.96
+            },
+            "rejection_sufficient": false,
+            "retcode_distribution": {
+              "-1": 5,
+              "10009": 11
+            },
+            "successes": 11,
+            "total_joined_execution_results": 16,
+            "unknown_status_n": 0
+          },
+          "USDCAD": {
+            "distinct_correlation_id_decisions": 38,
+            "failure_rate": 0.842105263158,
+            "failures": 96,
+            "known_status_n": 114,
+            "mean_absolute_measured_slippage": 0.001695,
+            "measured_slippage_decision_n": 13,
+            "measured_slippage_eligible_n": 18,
+            "median_absolute_measured_slippage": 0.00109,
+            "primary_sufficient": false,
+            "rejection_decision_n": 38,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.842105263158,
+              "lower": 0.766234355162,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.038709646937,
+              "upper": 0.917976171154,
+              "z": 1.96
+            },
+            "rejection_sufficient": true,
+            "retcode_distribution": {
+              "-1": 61,
+              "10009": 18,
+              "10016": 23,
+              "10030": 12
+            },
+            "successes": 18,
+            "total_joined_execution_results": 114,
+            "unknown_status_n": 0
+          },
+          "USDCHF": {
+            "distinct_correlation_id_decisions": 19,
+            "failure_rate": 0.929824561404,
+            "failures": 53,
+            "known_status_n": 57,
+            "mean_absolute_measured_slippage": 0.00079125,
+            "measured_slippage_decision_n": 4,
+            "measured_slippage_eligible_n": 4,
+            "median_absolute_measured_slippage": 0.00083,
+            "primary_sufficient": false,
+            "rejection_decision_n": 19,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.929824561404,
+              "lower": 0.868719098224,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.031176256724,
+              "upper": 0.990930024583,
+              "z": 1.96
+            },
+            "rejection_sufficient": true,
+            "retcode_distribution": {
+              "-1": 19,
+              "10009": 4,
+              "10016": 16,
+              "10030": 18
+            },
+            "successes": 4,
+            "total_joined_execution_results": 57,
+            "unknown_status_n": 0
+          },
+          "USDJPY": {
+            "distinct_correlation_id_decisions": 10,
+            "failure_rate": 0.666666666667,
+            "failures": 20,
+            "known_status_n": 30,
+            "mean_absolute_measured_slippage": 0.3094,
+            "measured_slippage_decision_n": 7,
+            "measured_slippage_eligible_n": 10,
+            "median_absolute_measured_slippage": 0.293,
+            "primary_sufficient": false,
+            "rejection_decision_n": 10,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.666666666667,
+              "lower": 0.506633336805,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.081649658093,
+              "upper": 0.826699996529,
+              "z": 1.96
+            },
+            "rejection_sufficient": true,
+            "retcode_distribution": {
+              "-1": 14,
+              "10009": 10,
+              "10016": 2,
+              "10030": 4
+            },
+            "successes": 10,
+            "total_joined_execution_results": 30,
+            "unknown_status_n": 0
+          },
+          "XAUUSD": {
+            "distinct_correlation_id_decisions": 11,
+            "failure_rate": 0.645161290323,
+            "failures": 20,
+            "known_status_n": 31,
+            "mean_absolute_measured_slippage": 35.9495,
+            "measured_slippage_decision_n": 6,
+            "measured_slippage_eligible_n": 10,
+            "median_absolute_measured_slippage": 43.1,
+            "primary_sufficient": false,
+            "rejection_decision_n": 11,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.606060606061,
+              "lower": 0.403455319245,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.103370044294,
+              "upper": 0.808665892876,
+              "z": 1.96
+            },
+            "rejection_sufficient": true,
+            "retcode_distribution": {
+              "-1": 11,
+              "10009": 11,
+              "10016": 9
+            },
+            "successes": 11,
+            "total_joined_execution_results": 31,
+            "unknown_status_n": 0
+          }
+        },
+        "classification": "INSUFFICIENT_DIMENSION_EVIDENCE",
+        "comparatively_sufficient": false,
+        "dimension": "symbol",
+        "dimension_state": "INSUFFICIENT",
+        "insufficiency_reason": "only 0 cell(s) meet the 30-result/10-decision cell gates",
+        "missing_or_invalid_unclassified_results": 0,
+        "sufficient_cell_count": 0,
+        "sufficient_primary_cells": [],
+        "supported_degradation_contrasts": []
+      },
+      "volatility": {
+        "analytical_account_results": 0,
+        "analytical_distinct_decisions": 0,
+        "analytical_provenance": {
+          "components": [
+            {
+              "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "digest_algorithm": "sha256",
+              "epoch_counts": {
+                "CURRENT": 22429,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 135,
+                "TRANSITIONAL": 0
+              },
+              "input_records": 22564,
+              "records_excluded": 22564,
+              "records_used": 0,
+              "schema": "decision_trace_v1",
+              "selection": "CURRENT_SUBSET",
+              "source": "decision_trace_v1",
+              "state": "CURRENT",
+              "used_epoch_counts": {
+                "CURRENT": 0,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              }
+            },
+            {
+              "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "digest_algorithm": "sha256",
+              "epoch_counts": {
+                "CURRENT": 32784,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              },
+              "input_records": 32784,
+              "records_excluded": 32784,
+              "records_used": 0,
+              "schema": "execution_context_v1",
+              "selection": "CURRENT_SUBSET",
+              "source": "execution_context",
+              "state": "CURRENT",
+              "used_epoch_counts": {
+                "CURRENT": 0,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              }
+            },
+            {
+              "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "digest_algorithm": "sha256",
+              "epoch_counts": {
+                "CURRENT": 434,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              },
+              "input_records": 434,
+              "records_excluded": 434,
+              "records_used": 0,
+              "schema": "execution_results_v1",
+              "selection": "CURRENT_SUBSET",
+              "source": "execution_results_v1",
+              "state": "CURRENT",
+              "used_epoch_counts": {
+                "CURRENT": 0,
+                "INCOMPATIBLE": 0,
+                "LEGACY": 0,
+                "TRANSITIONAL": 0
+              }
+            }
+          ],
+          "digest": "bc7924f1d15cb9074b81d9bc846091505eb1a789b743a57dc789cc68d7b06f4d",
+          "digest_algorithm": "sha256",
+          "epoch": "CURRENT",
+          "input_records": 55782,
+          "records_excluded": 55782,
+          "records_used": 0,
+          "state": "CURRENT",
+          "version": "evidence_provenance_v1"
+        },
+        "authority": "decision_trace_v1.v10_market_state.regime.volatility_state",
+        "cells": {
+          "NEUTRAL": {
+            "distinct_correlation_id_decisions": 123,
+            "failure_rate": 0.780821917808,
+            "failures": 285,
+            "known_status_n": 365,
+            "mean_absolute_measured_slippage": 4.649844423077,
+            "measured_slippage_decision_n": 56,
+            "measured_slippage_eligible_n": 78,
+            "median_absolute_measured_slippage": 0.0020875,
+            "primary_sufficient": true,
+            "rejection_decision_n": 123,
+            "rejection_interval_95": {
+              "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+              "estimate": 0.772357723577,
+              "lower": 0.72407303022,
+              "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+              "standard_error": 0.024635047631,
+              "upper": 0.820642416935,
+              "z": 1.96
+            },
+            "rejection_sufficient": true,
+            "retcode_distribution": {
+              "-1": 173,
+              "10009": 80,
+              "10016": 64,
+              "10030": 48
+            },
+            "successes": 80,
+            "total_joined_execution_results": 365,
+            "unknown_status_n": 0
+          }
+        },
+        "classification": "INSUFFICIENT_DIMENSION_EVIDENCE",
+        "comparatively_sufficient": false,
+        "dimension": "volatility",
+        "dimension_state": "INSUFFICIENT",
+        "insufficiency_reason": "only 1 cell(s) meet the 30-result/10-decision cell gates",
+        "missing_or_invalid_unclassified_results": 0,
+        "sufficient_cell_count": 0,
+        "sufficient_primary_cells": [],
+        "supported_degradation_contrasts": []
+      }
+    },
+    "estimand": "CONDITION_CONDITIONED_ABSOLUTE_MEASURED_EXECUTION_SLIPPAGE",
+    "evidence_accounting": {
+      "components": {
+        "decision_trace_v1": {
+          "accepted_current_records": 22429,
+          "digest": "145aea67271ca0681d9814bc2cb6e6dfbe1a2c61db2e79181e57235722ffadad",
+          "input_records": 22564,
+          "input_records_including_malformed": 22564,
+          "malformed_invalid_records_excluded": 0,
+          "records_excluded": 135,
+          "schema_incompatible_records_excluded": 0,
+          "stale_records_excluded": 135,
+          "state": "CURRENT"
+        },
+        "execution_context": {
+          "accepted_current_records": 32784,
+          "digest": "b7ee0146f4ba3441e14ad61efde6ee742daf004332ef8689d6859fa1333161e0",
+          "input_records": 32784,
+          "input_records_including_malformed": 32784,
+          "malformed_invalid_records_excluded": 0,
+          "records_excluded": 0,
+          "schema_incompatible_records_excluded": 0,
+          "stale_records_excluded": 0,
+          "state": "CURRENT"
+        },
+        "execution_results_v1": {
+          "accepted_current_records": 434,
+          "digest": "c2ed38f1833c158df1a1ed4610579e94858e5f96307db51f372270977b8e909c",
+          "input_records": 434,
+          "input_records_including_malformed": 434,
+          "malformed_invalid_records_excluded": 0,
+          "records_excluded": 0,
+          "schema_incompatible_records_excluded": 0,
+          "stale_records_excluded": 0,
+          "state": "CURRENT"
+        }
+      },
+      "join_and_identity_exclusions": {
+        "ambiguous_conflicting_context": 10,
+        "ambiguous_conflicting_decision_trace": 2,
+        "missing_account_execution_identity": 10,
+        "missing_context": 12,
+        "supplemental_non_observation": 47
+      }
+    },
+    "finding": "Insufficient evidence for governed execution-stability inference",
+    "limitations": [
+      "Failed executions reveal nothing about what those trades would have earned.",
+      "Broker rejections lacking a persisted account-result record are invisible to this population and are never fabricated.",
+      "Dimensions are analysed individually; no unrestricted interaction discovery is performed.",
+      "MISSING_INVALID condition cells are reported but never used as comparable analytical cells."
+    ],
+    "missing_invalid_condition_accounting": {
+      "session": {
+        "unclassified_results": 0
+      },
+      "spread_band": {
+        "unclassified_results": 0
+      },
+      "symbol": {
+        "unclassified_results": 0
+      },
+      "volatility": {
+        "unclassified_results": 0
+      }
+    },
+    "n": 365,
+    "overall_classification": "INSUFFICIENT_EVIDENCE",
+    "overall_sufficiency": {
+      "all_dimensions_explicitly_evaluated": true,
+      "at_least_one_comparatively_sufficient_dimension": false,
+      "dimensions_with_comparative_model": 0,
+      "evaluated_dimension_count": 4,
+      "minimum_distinct_correlation_id_decisions": 30,
+      "minimum_governed_matched_account_results": 100,
+      "overall_sufficient": true
+    },
+    "primary_endpoint": {
+      "absolute_value_used": true,
+      "name": "producer-measured absolute execution slippage",
+      "reconstructed_slippage_used": false,
+      "semantic_required": "measured_execution_slippage",
+      "spread_substitution_used": false
+    },
+    "secondary_rejection_endpoint": {
+      "can_override_primary_classification": false,
+      "composite_score_used": false,
+      "failure": "result_ok is explicitly False",
+      "pairwise_hypothesis_tests_performed": false,
+      "retcode_role": "descriptive only",
+      "role": "descriptive only with cluster-aware uncertainty",
+      "success": "result_ok is explicitly True",
+      "unknown": "excluded from denominator and counted"
+    },
+    "supported_degradation_conditions": []
+  },
+  "provenance": {
+    "adjudicated_contract": "X6_HD08_ADJUDICATED_CONTRACT",
+    "definition_version": 1,
+    "experiment_module": "research_engine.experiments.execution_stability",
+    "registry_id": "X6",
+    "report_identity": "x6_execution_stability.json",
+    "scientific_owner": "X6",
+    "shared_evidence_foundation": "research_engine.control_plane.execution_evidence"
+  },
+  "question_id": "X6",
+  "recommendation": "WAIT_FOR_EVIDENCE",
+  "scientific_state": "INSUFFICIENT_DATA",
+  "status": "INSUFFICIENT_DATA",
+  "warnings": [
+    "Claims are bounded to the listed sufficient cells and CURRENT evidence population.",
+    "Execution quality is not strategy profitability."
+  ]
+}

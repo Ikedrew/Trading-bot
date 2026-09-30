@@ -1,0 +1,266 @@
+{
+  "assumptions": [
+    "The analysis is associative, not causal.",
+    "Each correlation_id contributes total estimator weight one.",
+    "Otherwise-valid means authoritative pre-execution action exactly EXECUTE."
+  ],
+  "confidence": "HIGH",
+  "dataset": {
+    "analysed_row_count": 365,
+    "records_loaded": 55782,
+    "sample_size": 365,
+    "source": "execution_results_v1 + execution_context + decision_trace_v1"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_3ecc4c129492ccd0",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "0d959954662b08a94e59863667b99d8d06b758a5b77a800ec8ccb78bb39cd2d6",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 22429,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 135,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 22564,
+          "records_excluded": 22441,
+          "records_used": 123,
+          "schema": "decision_trace_v1",
+          "selection": "CURRENT_SUBSET",
+          "source": "decision_trace_v1",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 123,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        },
+        {
+          "digest": "066ce123d6bb377535aefd9cff1dce1acd1667cca6327d6a00948e7e834fdfb5",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 32784,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 32784,
+          "records_excluded": 32661,
+          "records_used": 123,
+          "schema": "execution_context_v1",
+          "selection": "CURRENT_SUBSET",
+          "source": "execution_context",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 123,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        },
+        {
+          "digest": "f76afbd004a0a77f096dfddfc3f70a2974de4274c8fed8b9dbaacd40fce8a585",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 434,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 434,
+          "records_excluded": 69,
+          "records_used": 365,
+          "schema": "execution_results_v1",
+          "selection": "CURRENT_SUBSET",
+          "source": "execution_results_v1",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 365,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "3ecc4c129492ccd04fe07dc50ea33e649f2370822e7deb916d627c96b7d1d2e9",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 55782,
+      "records_excluded": 55171,
+      "records_used": 611,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 55782,
+    "governed_usable_records": 365,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 55171,
+    "records_used": 611,
+    "source": "MULTI_SOURCE",
+    "sources": [
+      "decision_trace_v1",
+      "execution_context",
+      "execution_results_v1"
+    ],
+    "validation_score": "CURRENT_GOVERNED_EXEC1"
+  },
+  "generated": "2026-09-28T19:14:31Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 55782,
+    "excluded_records": 55417,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_exec1",
+    "runner_module": "research_engine.experiments.execution_protection_research",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 365
+  },
+  "overall": {
+    "claim_boundary": "Associative within the evaluated CURRENT EXECUTE population only; no causal, counterfactual-profit, or strategy-expectancy claim.",
+    "classification": "INSUFFICIENT_EVIDENCE",
+    "descriptive_execution_reliability": {
+      "failure_rate": 0.780821917808,
+      "failures": 285,
+      "inferential_exposure": false,
+      "known_status_n": 365,
+      "retcode_distribution": {
+        "-1": 173,
+        "10009": 80,
+        "10016": 64,
+        "10030": 48
+      },
+      "successes": 80,
+      "successful_realization_rate": 0.219178082192,
+      "unknown_status": 0
+    },
+    "evidence_accounting": {
+      "components": {
+        "decision_trace_v1": {
+          "accepted_current_records": 22429,
+          "digest": "145aea67271ca0681d9814bc2cb6e6dfbe1a2c61db2e79181e57235722ffadad",
+          "input_records": 22564,
+          "input_records_including_malformed": 22564,
+          "malformed_invalid_records_excluded": 0,
+          "records_excluded": 135,
+          "schema_incompatible_records_excluded": 0,
+          "stale_records_excluded": 135,
+          "state": "CURRENT"
+        },
+        "execution_context": {
+          "accepted_current_records": 32784,
+          "digest": "b7ee0146f4ba3441e14ad61efde6ee742daf004332ef8689d6859fa1333161e0",
+          "input_records": 32784,
+          "input_records_including_malformed": 32784,
+          "malformed_invalid_records_excluded": 0,
+          "records_excluded": 0,
+          "schema_incompatible_records_excluded": 0,
+          "stale_records_excluded": 0,
+          "state": "CURRENT"
+        },
+        "execution_results_v1": {
+          "accepted_current_records": 434,
+          "digest": "c2ed38f1833c158df1a1ed4610579e94858e5f96307db51f372270977b8e909c",
+          "input_records": 434,
+          "input_records_including_malformed": 434,
+          "malformed_invalid_records_excluded": 0,
+          "records_excluded": 0,
+          "schema_incompatible_records_excluded": 0,
+          "stale_records_excluded": 0,
+          "state": "CURRENT"
+        }
+      },
+      "join_and_identity_exclusions": {
+        "ambiguous_conflicting_context": 10,
+        "ambiguous_conflicting_decision_trace": 2,
+        "missing_account_execution_identity": 10,
+        "missing_context": 12,
+        "supplemental_non_observation": 47
+      }
+    },
+    "finding": "Insufficient evidence for the governed EXEC1 spread-realization association",
+    "measured_slippage": {
+      "reconstructed": false,
+      "role": "not used as the primary result_ok exposure"
+    },
+    "n": 365,
+    "optional_successful_execution_trade_truth_secondary": {
+      "completion_dependency": false,
+      "reason": "No secondary inferential model is frozen; failed executions receive no synthetic outcome.",
+      "status": "NOT_EVALUATED"
+    },
+    "otherwise_valid_population": {
+      "distinct_execute_decisions": 123,
+      "excluded_missing_action": 0,
+      "excluded_non_execute": 0,
+      "execute_account_results": 365,
+      "governed_joined_account_results": 365
+    },
+    "primary_analytical_population": {
+      "account_result_n": 365,
+      "distinct_correlation_id_decisions": 123,
+      "distinct_spread_atr_ratio_values": 1,
+      "excluded_invalid_spread_atr_ratio": 0,
+      "excluded_unknown_status": 0,
+      "failures": 285,
+      "successes": 80
+    },
+    "primary_association": {
+      "alpha": 0.05,
+      "beta_intercept": null,
+      "beta_spread": null,
+      "cluster": "correlation_id",
+      "cluster_robust_standard_error": null,
+      "cluster_total_weights": {},
+      "covariance": "A^-1 (sum_d s_d s_d') A^-1",
+      "effect_per_0_10": null,
+      "exposure": "execution_context.market_access.spread_atr_ratio",
+      "exposure_treatment": "continuous; no bins, fallback, reconstruction, or standardization",
+      "interval_95": null,
+      "model": "successful_execution ~ intercept + spread_atr_ratio",
+      "model_family": "cluster-weighted linear probability model",
+      "naive_row_independent_covariance_used": false,
+      "null": "beta_spread = 0",
+      "outcome": "explicit result_ok True=1, False=0; UNKNOWN excluded",
+      "result": "INSUFFICIENT_EVIDENCE",
+      "two_sided_p_value": null,
+      "weights": "w_di = 1/k_d within the final primary analytical population"
+    },
+    "sufficiency": {
+      "exposure_variation": false,
+      "full_rank_design_and_valid_cluster_inference": false,
+      "minimum_distinct_decisions": true,
+      "minimum_distinct_decisions_required": 10,
+      "minimum_distinct_exposure_values_required": 2,
+      "minimum_eligible_rows": true,
+      "minimum_eligible_rows_required": 30,
+      "outcome_variation": true
+    }
+  },
+  "provenance": {
+    "experiment_module": "research_engine.experiments.execution_protection_research",
+    "registry_id": "EXEC1",
+    "report_identity": "w4_exec1_execution_failures.json",
+    "scientific_owner": "EXEC1",
+    "shared_evidence_foundation": "research_engine.control_plane.execution_evidence"
+  },
+  "question_id": "EXEC1",
+  "recommendation": "WAIT_FOR_EVIDENCE",
+  "scientific_state": "INSUFFICIENT_DATA",
+  "status": "INSUFFICIENT_DATA",
+  "warnings": [
+    "A failed execution is not a losing trade and receives no synthetic R.",
+    "Measured slippage is not used to predict result_ok."
+  ]
+}

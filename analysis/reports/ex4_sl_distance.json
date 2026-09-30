@@ -1,0 +1,140 @@
+{
+  "assumptions": [
+    "MAE is the peak adverse excursion in R (negative or zero) over the lifecycle",
+    "Adverse profile = fraction of trades whose MAE <= threshold",
+    "This is an ADVERSE-EXCURSION PROFILE, not an optimal-SL claim",
+    "No path-ordering assumption \u2014 MAE may have occurred before or after MFE",
+    "An MAE of -1R does NOT prove a 1R SL would have been hit (MFE may have occurred first)"
+  ],
+  "confidence": "HIGH",
+  "dataset": {
+    "sample_size": 14046,
+    "source": "shadow_runtime_v1(ingested)"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_6d9331f6a20011a2",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "4c043c670920efdc1c9c53eb0b8e4d3942b5dda07b5551951e5ea4ce1b9d84b5",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 31,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 14077,
+          "records_excluded": 31,
+          "records_used": 14046,
+          "schema": "shadow_trades_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "shadow_trades",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "6d9331f6a20011a24fa4e7c72dd6b6af7d868d6f2fd9809b98488f74ff79e1c6",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 14077,
+      "records_excluded": 31,
+      "records_used": 14046,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 14077,
+    "governed_usable_records": 14046,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 31,
+    "records_used": 14046,
+    "source": "shadow_trades",
+    "sources": [
+      "shadow_trades"
+    ],
+    "validation_score": "UNKNOWN"
+  },
+  "generated": "2026-09-28T19:12:54Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 14077,
+    "excluded_records": 31,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_ex4",
+    "runner_module": "research_engine.experiments.exit_management",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 14046
+  },
+  "overall": {
+    "adverse_excursion_profile": {
+      "<=-0.25R": 0.0,
+      "<=-0.5R": 0.0,
+      "<=-0.75R": 0.0,
+      "<=-1.0R": 0.0
+    },
+    "finding": "MAE distribution: median=1.000R, p25=0.500R. Winners (n=5218): mean MAE=0.432R, deep MAE (<=-0.5R) rate=0%. Losers (n=8828): mean MAE=63.500R, shallow MAE (>-0.25R) rate=100%.",
+    "losers": {
+      "mae_stats": {
+        "max": 68500.0005,
+        "mean": 63.5003,
+        "median": 1.2174,
+        "min": 0.0857,
+        "n": 8828,
+        "p25": 1.037,
+        "p75": 1.6
+      },
+      "n": 8828,
+      "shallow_mae_rate": 1.0
+    },
+    "mae_distribution": {
+      "max": 68500.0005,
+      "mean": 40.071,
+      "median": 1.0,
+      "min": 0.0,
+      "n": 14046,
+      "p25": 0.5,
+      "p75": 1.333
+    },
+    "methodology": "SL_DISTANCE_EVIDENCE (observed adverse excursion profile)",
+    "sample_size": 14046,
+    "winners": {
+      "deep_mae_rate": 0.0,
+      "mae_stats": {
+        "max": 1.0,
+        "mean": 0.4323,
+        "median": 0.4061,
+        "min": 0.0,
+        "n": 5218,
+        "p25": 0.2143,
+        "p75": 0.6296
+      },
+      "n": 5218
+    }
+  },
+  "provenance": {
+    "experiment_module": "research_engine.experiments.exit_management",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
+    "registry_id": "EX4"
+  },
+  "question_id": "EX4",
+  "recommendation": "FINDING: adverse-excursion profile computed",
+  "scientific_state": "COMPLETE",
+  "status": "COMPLETE",
+  "warnings": [
+    "Multiple SL thresholds examined (-0.25R through -1.0R) \u2014 this is a distribution analysis, not a single-threshold optimisation"
+  ]
+}

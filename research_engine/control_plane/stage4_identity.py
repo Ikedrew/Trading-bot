@@ -27,6 +27,20 @@ _OR_PATTERN = re.compile(r"^OR-[0-9]{2}$")
 _EVIDENCE_SET_PATTERN = re.compile(r"^ESET-[A-Z0-9][A-Z0-9._:-]{0,127}$")
 _LEGACY_TRANSITION_PATTERN = re.compile(r"^OG-(EX2|L7)-[A-Za-z0-9]+$")
 
+#: Canonical shape of an immutable dataset POPULATION identity.
+#:
+#: A dataset snapshot identity is deliberately a DIFFERENT namespace from a
+#: schema identity: ``shadow_runtime_v1`` is an interpretation contract, never a
+#: population.  ``DSNAP-...`` is the population.
+_DATASET_SNAPSHOT_PATTERN = re.compile(r"^DSNAP-[A-Z0-9][A-Z0-9._:-]{0,127}$")
+
+#: Namespace prefix that makes a population identity visually unmistakable.
+DATASET_SNAPSHOT_ID_PREFIX = "DSNAP-"
+
+#: What a schema/dataset-version identifier looks like in this repository
+#: (``shadow_runtime_v1``, ``decision_trace_v1``, ``opportunities_v1``, ...).
+_SCHEMA_IDENTIFIER_PATTERN = re.compile(r"^[a-z][a-z0-9_.-]*_v[0-9]+$")
+
 
 class Stage4IdentityError(RuntimeError):
     """A canonical Stage 4 identity invariant was violated."""
@@ -146,30 +160,158 @@ def requirement_id_for_question(question_id: str) -> str:
         raise Stage4IdentityError("NO_CANONICAL_REQUIREMENT_FOR_QUESTION:" + qid) from None
 
 
+# ---------------------------------------------------------------------------
+# SCHEMA IDENTITY vs DATASET POPULATION IDENTITY (Stage 4 Refinement 2)
+#
+# These two namespaces must never be substituted for one another:
+#
+#   schema_version / schema_generation  -> how records are INTERPRETED
+#   dataset_snapshot_id                 -> WHICH exact records were consumed
+#
+# A schema identity does not identify a population: the same schema describes a
+# dataset whose contents keep growing.  ``shadow_runtime_v1`` therefore fails
+# closed the moment it is used as a dataset snapshot identity.
+# ---------------------------------------------------------------------------
+
+def is_schema_identifier(value: str) -> bool:
+    """True when ``value`` names a governed schema (``*_v<N>``), not a population."""
+    return bool(_SCHEMA_IDENTIFIER_PATTERN.fullmatch(str(value or "").strip()))
+
+
+def validate_dataset_snapshot_id(
+    value: str | None, *, allow_none: bool = True,
+) -> str | None:
+    """Validate an immutable dataset POPULATION identity.
+
+    Fail closed.  A missing value is only tolerated for historical records when
+    the caller explicitly opts in; a schema-registry string is ALWAYS rejected,
+    because a schema identity can never stand in for a record population.
+    """
+    if value is None or not str(value).strip():
+        if allow_none:
+            return None
+        raise Stage4IdentityError("MISSING_DATASET_SNAPSHOT_ID")
+    resolved = str(value).strip()
+    if resolved.startswith("DSNAP-") or not is_schema_identifier(resolved):
+        if _DATASET_SNAPSHOT_PATTERN.fullmatch(resolved):
+            return resolved
+        raise Stage4IdentityError("MALFORMED_DATASET_SNAPSHOT_ID:" + resolved)
+    raise Stage4IdentityError(
+        "SCHEMA_IDENTIFIER_USED_AS_DATASET_SNAPSHOT_ID:" + resolved)
+
+
+def validate_dataset_identity_separation(
+    *, dataset_name: str, schema_version: str | None = None,
+    dataset_snapshot_id: str | None = None,
+) -> tuple[str, str | None, str | None]:
+    """Reject any accidental conflation of name / schema / population identity.
+
+    Returns the validated ``(dataset_name, schema_version, snapshot_id)`` tuple
+    so callers can use it as a normalisation step.
+    """
+    name = str(dataset_name or "").strip()
+    if not name:
+        raise Stage4IdentityError("MISSING_DATASET_NAME")
+    schema = (None if schema_version is None
+              else str(schema_version).strip() or None)
+    snapshot = validate_dataset_snapshot_id(dataset_snapshot_id)
+    if schema is not None:
+        if is_schema_identifier(name):
+            # A registry string was passed where a dataset FAMILY belongs.
+            raise Stage4IdentityError(
+                "SCHEMA_IDENTIFIER_USED_AS_DATASET_NAME:" + name)
+        if schema == name:
+            raise Stage4IdentityError(
+                "DATASET_NAME_SCHEMA_CONFLATION:" + name)
+        if snapshot is not None and snapshot in (schema, name):
+            raise Stage4IdentityError(
+                "SCHEMA_SNAPSHOT_CONFLATION:" + snapshot)
+    elif snapshot is not None and snapshot == name:
+        raise Stage4IdentityError("DATASET_NAME_SNAPSHOT_CONFLATION:" + name)
+    return name, schema, snapshot
+
+
+#: Legacy classification for records that only ever carried a schema string.
+LEGACY_UNRESOLVED_SNAPSHOT_IDENTITY = "LEGACY_UNRESOLVED_SNAPSHOT_IDENTITY"
+
+#: Shared epoch/evidence-set snapshot identity states.  They live here because
+#: both the versioning overlay and the snapshot authority import this module,
+#: and neither may import the other.
+SNAPSHOT_IDENTITY_BOUND = "BOUND_TO_DATASET_SNAPSHOT"
+SNAPSHOT_IDENTITY_UNRESOLVED_LIVE = "UNRESOLVED_POPULATION_NOT_FROZEN"
+SNAPSHOT_IDENTITY_UNRESOLVED_HISTORICAL = "UNRESOLVED_HISTORICAL_WINDOW"
+SNAPSHOT_IDENTITY_UNRESOLVED_NEVER_PERSISTED = "UNRESOLVED_NEVER_PERSISTED"
+SNAPSHOT_IDENTITY_STATES = frozenset({
+    SNAPSHOT_IDENTITY_BOUND, SNAPSHOT_IDENTITY_UNRESOLVED_LIVE,
+    SNAPSHOT_IDENTITY_UNRESOLVED_HISTORICAL,
+    SNAPSHOT_IDENTITY_UNRESOLVED_NEVER_PERSISTED,
+})
+
+
+def normalize_legacy_dataset_reference(value: str) -> dict[str, Any]:
+    """Classify a historical dataset reference WITHOUT inventing a population.
+
+    Older Stage 4 records carry only something like
+    ``dataset_version = shadow_runtime_v1``.  That value is a SCHEMA identity.
+    It is never reinterpreted as a dataset snapshot: the honest answer is that
+    the exact historical population is unresolved.
+    """
+    resolved = str(value or "").strip()
+    if not resolved:
+        raise Stage4IdentityError("MISSING_LEGACY_DATASET_REFERENCE")
+    if not is_schema_identifier(resolved):
+        raise Stage4IdentityError("NOT_A_LEGACY_SCHEMA_REFERENCE:" + resolved)
+    return {
+        "legacy_dataset_version": resolved,
+        "interpretation": "SCHEMA_IDENTIFIER",
+        "is_dataset_snapshot_id": False,
+        "compatibility_class": LEGACY_UNRESOLVED_SNAPSHOT_IDENTITY,
+        "dataset_snapshot_id": None,
+        "reason": (
+            "A schema identity does not identify an immutable record "
+            "population. The exact historical population cannot be "
+            "reconstructed, so no dataset_snapshot_id is synthesized."
+        ),
+    }
+
+
 @dataclass(frozen=True, order=True)
 class EvidenceMemberReference:
-    """Stable reference to one exact member of a governed evidence set."""
+    """Stable reference to one exact member of a governed evidence set.
+
+    ``dataset`` names the dataset FAMILY.  ``dataset_snapshot_id`` names the
+    exact immutable POPULATION the member belongs to and is validated by shape
+    here (registry resolution happens on the governed read side).  The two are
+    never interchangeable.
+    """
 
     reference_type: str
     reference_id: str
     dataset: str | None = None
     locator: str | None = None
     content_fingerprint: str | None = None
+    dataset_snapshot_id: str | None = None
 
     def __post_init__(self) -> None:
         if not str(self.reference_type or "").strip():
             raise Stage4IdentityError("EVIDENCE_MEMBER_MISSING_TYPE")
         if not str(self.reference_id or "").strip():
             raise Stage4IdentityError("EVIDENCE_MEMBER_MISSING_ID")
+        validate_dataset_snapshot_id(self.dataset_snapshot_id)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        value = {
             "reference_type": self.reference_type,
             "reference_id": self.reference_id,
             "dataset": self.dataset,
             "locator": self.locator,
             "content_fingerprint": self.content_fingerprint,
         }
+        # Preserve the byte-level identity of Refinement-1-era members.  The
+        # population field is additive and only serialised when it is bound.
+        if self.dataset_snapshot_id is not None:
+            value["dataset_snapshot_id"] = self.dataset_snapshot_id
+        return value
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> "EvidenceMemberReference":
@@ -180,16 +322,32 @@ class EvidenceMemberReference:
             locator=(None if value.get("locator") is None else str(value["locator"])),
             content_fingerprint=(None if value.get("content_fingerprint") is None
                                  else str(value["content_fingerprint"])),
+            dataset_snapshot_id=(
+                None if value.get("dataset_snapshot_id") is None
+                else str(value["dataset_snapshot_id"])),
         )
 
 
 @dataclass(frozen=True)
 class EvidenceSet:
-    """An immutable, many-to-many governed collection of evidence references."""
+    """An immutable, many-to-many governed collection of evidence references.
+
+    The evidence set is the governed COLLECTION identity.  The immutable
+    dataset POPULATION(S) underneath it are named by ``dataset_snapshot_ids``
+    (Stage 4 Refinement 2).  The two are never collapsed into one identifier:
+    an evidence set may combine several governed snapshots, and one snapshot
+    may back several evidence sets.
+
+    ``dataset_snapshot_ids`` stays optional so that Refinement-1-era collections
+    and not-yet-frozen live populations remain readable; a governed consumer
+    must call :meth:`require_dataset_snapshots` (or the read-side validator)
+    before treating the set as population-resolved evidence.
+    """
 
     evidence_set_id: str
     observation_requirement_ids: tuple[str, ...]
     members: tuple[EvidenceMemberReference, ...]
+    dataset_snapshot_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         evidence_id = str(self.evidence_set_id or "").strip()
@@ -202,43 +360,95 @@ class EvidenceSet:
             raise Stage4IdentityError("EVIDENCE_SET_WITHOUT_REQUIREMENTS")
         for rid in requirements:
             validate_requirement_id(rid)
+        snapshots = tuple(sorted({
+            str(validate_dataset_snapshot_id(item, allow_none=False))
+            for item in self.dataset_snapshot_ids}))
         members = tuple(sorted(set(self.members), key=lambda item: canonical_json(
             item.to_dict())))
         if not members:
             raise Stage4IdentityError("EVIDENCE_SET_WITHOUT_MEMBERS")
+        if snapshots:
+            # A population-bound evidence set may not contain a member whose
+            # population is unknown: that would be unverifiable evidence.
+            declared = set(snapshots)
+            for member in members:
+                if member.dataset_snapshot_id is None:
+                    raise Stage4IdentityError(
+                        "EVIDENCE_MEMBER_WITHOUT_DATASET_SNAPSHOT:"
+                        + member.reference_id)
+                if member.dataset_snapshot_id not in declared:
+                    raise Stage4IdentityError(
+                        "EVIDENCE_MEMBER_SNAPSHOT_NOT_IN_SET:"
+                        + member.reference_id)
+            represented = {
+                str(member.dataset_snapshot_id) for member in members}
+            missing_membership = sorted(declared - represented)
+            if missing_membership:
+                raise Stage4IdentityError(
+                    "DATASET_SNAPSHOT_WITHOUT_EVIDENCE_MEMBER:"
+                    + ",".join(missing_membership))
         object.__setattr__(self, "evidence_set_id", evidence_id)
         object.__setattr__(self, "observation_requirement_ids", requirements)
         object.__setattr__(self, "members", members)
+        object.__setattr__(self, "dataset_snapshot_ids", snapshots)
 
     @classmethod
     def deterministic(
         cls, *, observation_requirement_ids: Iterable[str],
         members: Iterable[EvidenceMemberReference],
+        dataset_snapshot_ids: Iterable[str] = (),
     ) -> "EvidenceSet":
         requirements = tuple(sorted(set(observation_requirement_ids)))
         evidence_members = tuple(sorted(set(members), key=lambda item: canonical_json(
             item.to_dict())))
+        snapshots = tuple(sorted(set(dataset_snapshot_ids)))
         material = {
             "observation_requirement_ids": requirements,
             "members": [member.to_dict() for member in evidence_members],
         }
+        if snapshots:
+            material["dataset_snapshot_ids"] = list(snapshots)
         return cls("ESET-" + fingerprint(material)[:24].upper(),
-                   requirements, evidence_members)
+                   requirements, evidence_members, snapshots)
 
     @property
     def content_fingerprint(self) -> str:
-        return fingerprint({
+        material = {
             "observation_requirement_ids": self.observation_requirement_ids,
             "members": [member.to_dict() for member in self.members],
-        })
+        }
+        if self.dataset_snapshot_ids:
+            material["dataset_snapshot_ids"] = list(self.dataset_snapshot_ids)
+        return fingerprint(material)
+
+    @property
+    def dataset_snapshot_id(self) -> str | None:
+        """The single bound snapshot, or ``None`` when 0 or >1 are bound."""
+        return (self.dataset_snapshot_ids[0]
+                if len(self.dataset_snapshot_ids) == 1 else None)
+
+    def require_dataset_snapshots(self) -> tuple[str, ...]:
+        """Fail closed unless this governed set resolves to a population."""
+        if not self.dataset_snapshot_ids:
+            raise Stage4IdentityError(
+                "EVIDENCE_SET_WITHOUT_DATASET_SNAPSHOT:" + self.evidence_set_id)
+        return self.dataset_snapshot_ids
+
+    def dataset_names(self) -> tuple[str, ...]:
+        """Dataset FAMILIES the members belong to (never snapshot identities)."""
+        return tuple(sorted({str(member.dataset) for member in self.members
+                             if member.dataset}))
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        value = {
             "evidence_set_id": self.evidence_set_id,
             "observation_requirement_ids": list(self.observation_requirement_ids),
             "evidence_member_references": [m.to_dict() for m in self.members],
             "content_fingerprint": self.content_fingerprint,
         }
+        if self.dataset_snapshot_ids:
+            value["dataset_snapshot_ids"] = list(self.dataset_snapshot_ids)
+        return value
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> "EvidenceSet":
@@ -248,6 +458,8 @@ class EvidenceSet:
                 str(item) for item in value.get("observation_requirement_ids", ())),
             members=tuple(EvidenceMemberReference.from_dict(item) for item in
                           value.get("evidence_member_references", ())),
+            dataset_snapshot_ids=tuple(
+                str(item) for item in value.get("dataset_snapshot_ids", ())),
         )
         claimed = value.get("content_fingerprint")
         if claimed is not None and str(claimed) != item.content_fingerprint:
@@ -321,9 +533,13 @@ class EvidenceSetRegistry:
 
 
 __all__ = [
-    "CANONICAL_REQUIREMENT_IDS", "EvidenceMemberReference", "EvidenceSet",
+    "CANONICAL_REQUIREMENT_IDS", "DATASET_SNAPSHOT_ID_PREFIX",
+    "EvidenceMemberReference", "EvidenceSet",
     "EvidenceSetRegistry", "LEGACY_QUESTION_REQUIREMENTS",
+    "LEGACY_UNRESOLVED_SNAPSHOT_IDENTITY",
     "REQUIREMENT_MATRIX_PATH", "RequirementAuthority", "Stage4IdentityError",
+    "is_schema_identifier", "normalize_legacy_dataset_reference",
     "requirement_authority", "requirement_id_for_question",
-    "resolve_legacy_transition_id", "validate_requirement_id",
+    "resolve_legacy_transition_id", "validate_dataset_identity_separation",
+    "validate_dataset_snapshot_id", "validate_requirement_id",
 ]

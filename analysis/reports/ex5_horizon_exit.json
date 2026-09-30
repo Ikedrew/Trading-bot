@@ -11,10 +11,28 @@
   "fingerprint": {
     "analytical_digest": "b9ca0f8cdc93756011b406ac8f0ae4714e8224909927bf7339dc12bfea1d7da6",
     "epoch": "CURRENT",
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 14077,
+    "governed_usable_records": 14046,
     "records_used": 86409,
     "source": "MULTI_SOURCE"
   },
   "generated": "2026-09-23T06:32:05Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 14077,
+    "excluded_records": 31,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_ex5",
+    "runner_module": "research_engine.experiments.exit_policy_heterogeneity",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 14046
+  },
   "overall": {
     "baseline": "SHADOW_BASELINE_V1",
     "cell_effects": [],
@@ -279,7 +297,7 @@
       "required_sufficient_levels": 2,
       "state": "WAITING_DATA"
     },
-    "report_digest": "5a4611baafdeb7c8231f92253252e7ff3a00d132c3da1f696bcf4dfbb43a7847",
+    "report_digest": "8e0ed7017728e713b49d2cec60b7d95136e9b6c9dbd0ea95e4e5114e61a4d38a",
     "scientific_contract": {
       "candidates": "all nine CANDIDATE_POLICIES_V1",
       "covariance": "A^-1 (sum_o s_o s_o') A^-1",
@@ -361,6 +379,7 @@
   "question_id": "EX5",
   "recommendation": "WAIT",
   "report_schema_version": "hd09_governed_exit_heterogeneity_v1",
+  "scientific_state": "WAITING_DATA",
   "status": "WAITING_DATA",
   "warnings": [
     "Research-only simulated policy effects; no production application authority."

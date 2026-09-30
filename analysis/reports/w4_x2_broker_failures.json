@@ -1,0 +1,138 @@
+{
+  "assumptions": [
+    "QUESTION -> PRIMARY EVIDENCE: X2 -> execution_results retcode/result_ok; execution_attempts secondary (per-attempt retcodes/retries) \u2014 no proximity joins."
+  ],
+  "confidence": "HIGH",
+  "dataset": {
+    "sample_size": 434,
+    "source": "execution_results_v1 (+ execution_attempts_v1 when populated)"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_c89b2d83f38883b2",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "e216814bd75db6252c6988192c5f4295b4972b31b33a89ffc6954d847fcdeb07",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 434,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 434,
+          "records_excluded": 0,
+          "records_used": 434,
+          "schema": "execution_results_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "execution_results_v1",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 434,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "c89b2d83f38883b2f434012f5c247944bfb328e2e9faaffebdcac3cad1f4ac0b",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 434,
+      "records_excluded": 0,
+      "records_used": 434,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 548,
+    "governed_usable_records": 434,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 0,
+    "records_used": 434,
+    "source": "execution_results_v1",
+    "sources": [
+      "execution_results_v1"
+    ],
+    "validation_score": "UNKNOWN"
+  },
+  "generated": "2026-09-28T20:07:03Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 548,
+    "excluded_records": 114,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_x2",
+    "runner_module": "research_engine.experiments.execution_protection_research",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 434
+  },
+  "overall": {
+    "attempts_total": 0,
+    "evidence_limitation": "Broker rejections/failed attempts are currently emitted only to the runtime log (execution_trace.log_order_failed) \u2014 NOT persisted to any canonical dataset. The execution_attempts_v1 writer exists but has no production caller. Failure-rate analysis reports its denominator honestly and never fabricates rejection counts.",
+    "per_symbol": {
+      "AUDUSD": {
+        "n": 50,
+        "not_ok_rate": 0.76
+      },
+      "EURUSD": {
+        "n": 26,
+        "not_ok_rate": 0.5769
+      },
+      "GBPUSD": {
+        "n": 61,
+        "not_ok_rate": 0.6885
+      },
+      "NZDUSD": {
+        "n": 27,
+        "not_ok_rate": 0.2222
+      },
+      "USDCAD": {
+        "n": 120,
+        "not_ok_rate": 0.8
+      },
+      "USDCHF": {
+        "n": 68,
+        "not_ok_rate": 0.7794
+      },
+      "USDJPY": {
+        "n": 36,
+        "not_ok_rate": 0.6111
+      },
+      "XAUUSD": {
+        "n": 40,
+        "not_ok_rate": 0.575
+      }
+    },
+    "result_ok_rate": 0.3203,
+    "results_total": 434,
+    "retcode_distribution": {
+      "-1": 173,
+      "10009": 139,
+      "10016": 74,
+      "10030": 48
+    }
+  },
+  "provenance": {
+    "experiment_module": "research_engine.experiments.execution_protection_research",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
+    "registry_id": "X2"
+  },
+  "question_id": "X2",
+  "recommendation": "BROKER_EXECUTION_PROFILE_REPORTED",
+  "scientific_state": "COMPLETE",
+  "status": "COMPLETE",
+  "warnings": [
+    "Broker rejections/failed attempts are currently emitted only to the runtime log (execution_trace.log_order_failed) \u2014 NOT persisted to any canonical dataset. The execution_attempts_v1 writer exists but has no production caller. Failure-rate analysis reports its denominator honestly and never fabricates rejection counts.",
+    "Execution reliability is NOT strategy profitability \u2014 these profiles describe broker behaviour, not edge.",
+    "Per-symbol cells with N < 10 are excluded from the per-symbol view."
+  ]
+}

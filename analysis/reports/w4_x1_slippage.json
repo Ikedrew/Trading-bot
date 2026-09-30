@@ -1,0 +1,129 @@
+{
+  "assumptions": [
+    "QUESTION -> PRIMARY EVIDENCE: X1 -> execution_results measured slippage; execution_context session joined by correlation_id (deterministic, no proximity fallback)."
+  ],
+  "confidence": "LOW",
+  "dataset": {
+    "measured_slippage": 23,
+    "sample_size": 23,
+    "source": "execution_results_v1 (+ execution_context_v1)"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_1f5561c6adc120ed",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "fde52c6c379ff6af60afeda87a9515e19b1553cdab53f41112e7c3ab0f86401b",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 23,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 23,
+          "records_excluded": 0,
+          "records_used": 23,
+          "schema": "execution_context_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "execution_context",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 23,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        },
+        {
+          "digest": "207dcba60e7528e91b71254d54b44db2e1e21829d87fd141187992c5faa440a2",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 23,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 23,
+          "records_excluded": 0,
+          "records_used": 23,
+          "schema": "execution_results_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "execution_results_v1",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 23,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "1f5561c6adc120ed954e79cf1d9c1cf9532d3f24d44a006691a593a8c7d33dc4",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 46,
+      "records_excluded": 0,
+      "records_used": 46,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 33218,
+    "governed_usable_records": 23,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 0,
+    "records_used": 46,
+    "source": "MULTI_SOURCE",
+    "sources": [
+      "execution_context",
+      "execution_results_v1"
+    ],
+    "validation_score": "UNKNOWN"
+  },
+  "generated": "2026-09-28T20:10:51Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 33218,
+    "excluded_records": 33195,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_x1",
+    "runner_module": "research_engine.experiments.execution_protection_research",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 23
+  },
+  "overall": {
+    "evidence_limitation": "Slippage reported only when fill price differs measurably from requested price. Orders filled at requested price produce no slippage record.",
+    "measured_slippage_count": 23,
+    "n": 23,
+    "slippage_basic": {
+      "max": 23.23,
+      "mean": 1.064747,
+      "median": 0.00203,
+      "min": 0.00051,
+      "n": 23,
+      "p75": 0.00232
+    },
+    "slippage_semantic": "measured_execution_slippage"
+  },
+  "provenance": {
+    "experiment_module": "research_engine.experiments.execution_protection_research",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
+    "registry_id": "X1"
+  },
+  "question_id": "X1",
+  "recommendation": "INSUFFICIENT_DATA",
+  "scientific_state": "INSUFFICIENT_DATA",
+  "status": "INSUFFICIENT_DATA",
+  "warnings": [
+    "Requires >=30 measured-slippage records with matched execution_context for session analysis."
+  ]
+}

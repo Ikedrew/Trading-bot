@@ -1,0 +1,173 @@
+{
+  "assumptions": [
+    "PROT-1 is audit/research only \u2014 never places/modifies SL/TP.",
+    "SL/TP match uses tolerance of 0.0001 price units.",
+    "Broker-confirmed SL/TP differing from requested values may indicate broker rounding, not necessarily a defect."
+  ],
+  "confidence": "MEDIUM",
+  "dataset": {
+    "sample_size": 125,
+    "source": "protection_audit_v1"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_849351e5d33aebde",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "21cf863c3bd5170fdd35f0b39b4d0fe42f54c953d7f4beb8e8ba51ba9a19e247",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 125,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 125,
+          "records_excluded": 0,
+          "records_used": 125,
+          "schema": "protection_audit_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "protection_audit_v1",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 125,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "849351e5d33aebde64ebe60884a7f459c43a766f4252b79fa3b65ba05a6bb2a4",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 125,
+      "records_excluded": 0,
+      "records_used": 125,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 125,
+    "governed_usable_records": 125,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 0,
+    "records_used": 125,
+    "source": "protection_audit_v1",
+    "sources": [
+      "protection_audit_v1"
+    ],
+    "validation_score": "UNKNOWN"
+  },
+  "generated": "2026-09-28T19:57:12Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 125,
+    "excluded_records": 0,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_prot1",
+    "runner_module": "research_engine.experiments.execution_protection_research",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 125
+  },
+  "overall": {
+    "correction_attempted": 110,
+    "correction_success_count": 0,
+    "failure_reasons": {
+      "Position ticket=58438409065 not found on broker after 4 attempts": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=0.5701610714285714 broker_sl=0.57016 requested_tp=0.56942 broker_tp=0.56942": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=0.5799057142857142 broker_sl=0.57991 requested_tp=0.57861 broker_tp=0.57861": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=0.5799060714285714 broker_sl=0.57991 requested_tp=0.57861 broker_tp=0.57861": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=0.5824585714285715 broker_sl=0.58246 requested_tp=0.58332 broker_tp=0.58332": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=0.5828985714285715 broker_sl=0.5829 requested_tp=0.58392 broker_tp=0.58392": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=0.5851721428571429 broker_sl=0.58517 requested_tp=0.58377 broker_tp=0.58377": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=0.5892978571428572 broker_sl=0.5893 requested_tp=0.5901 broker_tp=0.5901": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=0.7014253571428571 broker_sl=0.70143 requested_tp=0.70057 broker_tp=0.70057": 2,
+      "SL/TP mismatch AND correction failed. requested_sl=0.7099278571428571 broker_sl=0.70993 requested_tp=0.70923 broker_tp=0.70923": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=0.7107864285714286 broker_sl=0.71079 requested_tp=0.71016 broker_tp=0.71016": 2,
+      "SL/TP mismatch AND correction failed. requested_sl=0.7143814285714286 broker_sl=0.71438 requested_tp=0.71354 broker_tp=0.71354": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=0.7199085714285715 broker_sl=0.71991 requested_tp=0.72068 broker_tp=0.72068": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=0.7199457142857143 broker_sl=0.71995 requested_tp=0.72068 broker_tp=0.72068": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=0.8088046428571428 broker_sl=0.8088 requested_tp=0.80937 broker_tp=0.80937": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=0.8088125 broker_sl=0.80881 requested_tp=0.80937 broker_tp=0.80937": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=0.8088125 broker_sl=0.80881 requested_tp=0.80966 broker_tp=0.80966": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=0.8088135714285715 broker_sl=0.80881 requested_tp=0.80966 broker_tp=0.80966": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=0.8169535714285715 broker_sl=0.81695 requested_tp=0.81769 broker_tp=0.81769": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=0.8181439285714286 broker_sl=0.81814 requested_tp=0.8244271428571424 broker_tp=0.82443": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=0.8290675 broker_sl=0.82907 requested_tp=0.82965 broker_tp=0.82965": 2,
+      "SL/TP mismatch AND correction failed. requested_sl=1.143962142857143 broker_sl=1.14396 requested_tp=1.14306 broker_tp=1.14306": 2,
+      "SL/TP mismatch AND correction failed. requested_sl=1.1439635714285714 broker_sl=1.14396 requested_tp=1.14293 broker_tp=1.14293": 2,
+      "SL/TP mismatch AND correction failed. requested_sl=1.1439675 broker_sl=1.14397 requested_tp=1.14306 broker_tp=1.14306": 2,
+      "SL/TP mismatch AND correction failed. requested_sl=1.1439853571428573 broker_sl=1.14399 requested_tp=1.14338 broker_tp=1.14338": 2,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3236353571428572 broker_sl=1.32364 requested_tp=1.32499 broker_tp=1.3249900000000001": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=1.324495 broker_sl=1.3245 requested_tp=1.32571 broker_tp=1.32571": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3332035714285715 broker_sl=1.3332 requested_tp=1.33154 broker_tp=1.33154": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3484217857142857 broker_sl=1.34842 requested_tp=1.34649 broker_tp=1.34649": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3484242857142856 broker_sl=1.34842 requested_tp=1.34649 broker_tp=1.34649": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3507928571428571 broker_sl=1.35079 requested_tp=1.35018 broker_tp=1.35018": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3508053571428573 broker_sl=1.35081 requested_tp=1.34812 broker_tp=1.34812": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3508067857142858 broker_sl=1.35081 requested_tp=1.34812 broker_tp=1.34812": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3508232142857144 broker_sl=1.3508200000000001 requested_tp=1.34812 broker_tp=1.34812": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3508335714285715 broker_sl=1.35083 requested_tp=1.34912 broker_tp=1.34912": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3508714285714285 broker_sl=1.35087 requested_tp=1.34912 broker_tp=1.34912": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3841260714285712 broker_sl=1.38413 requested_tp=1.3946328571428563 broker_tp=1.39463": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3841685714285714 broker_sl=1.3841700000000001 requested_tp=1.391572857142857 broker_tp=1.39157": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3852842857142855 broker_sl=1.38528 requested_tp=1.4041214285714283 broker_tp=1.40412": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3899785714285715 broker_sl=1.38998 requested_tp=1.4076028571428585 broker_tp=1.4076": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3907364285714285 broker_sl=1.39074 requested_tp=1.4055971428571408 broker_tp=1.4056": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3907524999999998 broker_sl=1.39075 requested_tp=1.404439999999998 broker_tp=1.4044400000000001": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3914457142857144 broker_sl=1.39145 requested_tp=1.39298 broker_tp=1.39298": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=1.3938892857142857 broker_sl=1.39389 requested_tp=1.4304414285714266 broker_tp=1.43044": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=1.4063517857142858 broker_sl=1.40635 requested_tp=1.40789 broker_tp=1.40789": 2,
+      "SL/TP mismatch AND correction failed. requested_sl=1.4146175 broker_sl=1.41462 requested_tp=1.4257499999999994 broker_tp=1.42575": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=1.4146660714285715 broker_sl=1.41467 requested_tp=1.4222528571428572 broker_tp=1.42225": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=154.33425 broker_sl=154.334 requested_tp=154.499 broker_tp=154.499": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=154.33435714285716 broker_sl=154.334 requested_tp=154.533 broker_tp=154.533": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=154.4217857142857 broker_sl=154.422 requested_tp=154.508 broker_tp=154.508": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=155.12328571428571 broker_sl=155.123 requested_tp=157.36542857142854 broker_tp=157.365": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=157.72714285714287 broker_sl=157.727 requested_tp=158.96271428571427 broker_tp=158.963": 2,
+      "SL/TP mismatch AND correction failed. requested_sl=157.7274285714286 broker_sl=157.727 requested_tp=158.9421428571428 broker_tp=158.942": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=158.30314285714286 broker_sl=158.303 requested_tp=158.249 broker_tp=158.249": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=29535.314285714285 broker_sl=29535.3 requested_tp=29921.171428571437 broker_tp=29921.2": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=29535.492857142857 broker_sl=29535.5 requested_tp=29908.314285714274 broker_tp=29908.3": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=29566.12142857143 broker_sl=29566.1 requested_tp=29942.257142857125 broker_tp=29942.3": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=4306.157857142857 broker_sl=4306.16 requested_tp=4315.83 broker_tp=4315.83": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=4322.765 broker_sl=4322.77 requested_tp=4285.91 broker_tp=4285.91": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=4323.2225 broker_sl=4323.22 requested_tp=4285.91 broker_tp=4285.91": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=4323.931071428571 broker_sl=4323.93 requested_tp=4285.91 broker_tp=4285.91": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=4325.948571428572 broker_sl=4325.95 requested_tp=4315.02 broker_tp=4315.02": 1,
+      "SL/TP mismatch AND correction failed. requested_sl=4353.868928571428 broker_sl=4353.87 requested_tp=4313.68 broker_tp=4313.68": 3,
+      "SL/TP mismatch AND correction failed. requested_sl=4411.323928571428 broker_sl=4411.32 requested_tp=4417.24 broker_tp=4417.24": 1
+    },
+    "failures": 111,
+    "n": 125,
+    "protection_status_distribution": {
+      "FAILED_MISMATCH": 110,
+      "POSITION_NOT_FOUND": 1,
+      "VERIFIED": 14
+    },
+    "sl_match_count": 92,
+    "sl_present": 125,
+    "tp_match_count": 113,
+    "tp_present": 125
+  },
+  "provenance": {
+    "experiment_module": "research_engine.experiments.execution_protection_research",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
+    "registry_id": "PROT1"
+  },
+  "question_id": "PROT1",
+  "recommendation": "PROTECTION_INTEGRITY_REPORTED",
+  "scientific_state": "COMPLETE",
+  "status": "COMPLETE",
+  "warnings": [
+    "Protection integrity is NOT trade quality."
+  ]
+}

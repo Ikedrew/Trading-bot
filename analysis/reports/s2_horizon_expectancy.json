@@ -1,0 +1,94 @@
+{
+  "assumptions": [
+    "Requires >=30 outcome records across >=2 horizons."
+  ],
+  "confidence": "LOW",
+  "dataset": {
+    "sample_size": 14046,
+    "source": "shadow_runtime_v1 (simulation population)"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_6d9331f6a20011a2",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "4c043c670920efdc1c9c53eb0b8e4d3942b5dda07b5551951e5ea4ce1b9d84b5",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 31,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 14077,
+          "records_excluded": 31,
+          "records_used": 14046,
+          "schema": "shadow_trades_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "shadow_trades",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "6d9331f6a20011a24fa4e7c72dd6b6af7d868d6f2fd9809b98488f74ff79e1c6",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 14077,
+      "records_excluded": 31,
+      "records_used": 14046,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 14077,
+    "governed_usable_records": 14046,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 31,
+    "records_used": 14046,
+    "source": "shadow_trades",
+    "sources": [
+      "shadow_trades"
+    ],
+    "validation_score": "UNKNOWN"
+  },
+  "generated": "2026-09-28T18:43:30Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 14077,
+    "excluded_records": 31,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_s2",
+    "runner_module": "research_engine.experiments.selection_research",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 14046
+  },
+  "overall": {
+    "horizons_with_outcomes": [
+      "SCALP"
+    ],
+    "sample_size": 14046
+  },
+  "provenance": {
+    "experiment_module": "research_engine.experiments.selection_research",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
+    "registry_id": "S2"
+  },
+  "question_id": "S2",
+  "recommendation": "INSUFFICIENT_DATA",
+  "scientific_state": "INSUFFICIENT_DATA",
+  "status": "INSUFFICIENT_DATA",
+  "warnings": []
+}

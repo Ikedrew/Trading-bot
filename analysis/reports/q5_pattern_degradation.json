@@ -1,69 +1,102 @@
 {
-  "question_id": "Q5",
-  "question_name": "Pattern Degradation",
-  "timestamp": "2026-07-21T22:40:43Z",
+  "assumptions": [],
+  "confidence": "MEDIUM",
   "dataset": {
-    "source": "shadow_trades",
-    "sample_size": 1220
+    "sample_size": 1852,
+    "source": "shadow_trades"
   },
-  "metrics": {
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_61189caf62f4ace0",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "efcafab169ee8d0a68b8f9dd4524fcf25c4cd28c87cf30fa3625cc52eae8f120",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 1852,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 1852,
+          "records_excluded": 0,
+          "records_used": 1852,
+          "schema": "shadow_trades_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "shadow_trades",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 1852,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "61189caf62f4ace08903494a41719719e11ccb814562f0b56ec257def1e2346b",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 1852,
+      "records_excluded": 0,
+      "records_used": 1852,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 14077,
+    "governed_usable_records": 1852,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 0,
+    "records_used": 1852,
+    "source": "shadow_trades",
+    "sources": [
+      "shadow_trades"
+    ],
+    "validation_score": "UNKNOWN"
+  },
+  "generated": "2026-09-28T19:25:37Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 14077,
+    "excluded_records": 12225,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_q05",
+    "runner_module": "research_engine.experiments.legacy_canonical",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 1852
+  },
+  "overall": {
+    "finding": "2 patterns analysed from 1852 trades",
     "pattern_performance": {
-      "TWEEZER_TOP": {
-        "n": 254,
-        "wr": 0.5433,
-        "avg_r": 0.1401
+      "MEAN_REVERSION": {
+        "avg_r": -0.1193,
+        "n": 1081,
+        "wr": 0.3451
       },
-      "THREE_WHITE_SOLDIERS": {
-        "n": 126,
-        "wr": 0.0079,
-        "avg_r": -0.9673
-      },
-      "THREE_BLACK_CROWS": {
-        "n": 205,
-        "wr": 0.0195,
-        "avg_r": -0.9451
-      },
-      "TWEEZER_BOTTOM": {
-        "n": 168,
-        "wr": 0.3571,
-        "avg_r": -0.1478
-      },
-      "MORNING_STAR": {
-        "n": 63,
-        "wr": 0.3968,
-        "avg_r": 0.0249
-      },
-      "THREE_INSIDE_DOWN": {
-        "n": 29,
-        "wr": 0.4828,
-        "avg_r": -0.1037
-      },
-      "EVENING_STAR": {
-        "n": 27,
-        "wr": 0.4444,
-        "avg_r": -0.0578
-      },
-      "BEARISH_ENGULFING": {
-        "n": 6,
-        "wr": 0.0,
-        "avg_r": -1.0
-      },
-      "BULLISH_ENGULFING": {
-        "n": 8,
-        "wr": 0.0,
-        "avg_r": -1.0
-      },
-      "HAMMER": {
-        "n": 5,
-        "wr": 0.6,
-        "avg_r": -0.1646
+      "TREND_CONTINUATION": {
+        "avg_r": -0.104,
+        "n": 767,
+        "wr": 0.3494
       }
     }
   },
-  "finding": "10 patterns analysed from 1220 trades",
-  "recommendation": {
-    "status": "COMPLETE",
-    "target": "pattern_weights"
+  "provenance": {
+    "experiment_module": "research_engine.experiments.legacy_canonical",
+    "function": "run_q05",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
+    "registry_id": "Q5"
   },
-  "data": {}
+  "question_id": "E2",
+  "recommendation": "COMPLETE",
+  "scientific_state": "COMPLETE",
+  "status": "COMPLETE",
+  "warnings": []
 }

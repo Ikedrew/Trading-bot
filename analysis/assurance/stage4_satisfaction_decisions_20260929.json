@@ -1,0 +1,5376 @@
+{
+  "authority": {
+    "description": "Persisted governed Stage 4 satisfaction decisions",
+    "historical_compatibility": "No legacy satisfaction boolean was converted into a governed decision. Missing metrics and unresolved lineage remain INDETERMINATE; invalid identity remains INVALID.",
+    "reentry_behavior_changed": false
+  },
+  "current_by_requirement": {
+    "OR-01": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+    "OR-02": "SDEC-D9F42558669430A9C7DEC991E7A6CC75",
+    "OR-03": "SDEC-6B90F3AEDAACFDB5817AF4EAE74A16E9",
+    "OR-04": "SDEC-ACDE71515D18BFBB4CC44025D999F62F",
+    "OR-05": "SDEC-87D5729A487C595C309BB04420EBF99B",
+    "OR-06": "SDEC-A7517E76F09D44D94BDA47C2EE2E0D9C",
+    "OR-07": "SDEC-A696CCA46F6FD396933E07123709E706",
+    "OR-08": "SDEC-4AA4159C7AE6A6F83BD612EF48F767CC",
+    "OR-09": "SDEC-6764A989D42FAF6392A9FA482FA42B81",
+    "OR-10": "SDEC-E2600923113F2E06C2DFB37B2ED22EEA",
+    "OR-11": "SDEC-3D4F8485648A4E4AA8A5AC32CE7431B4",
+    "OR-12": "SDEC-2FF62161BA27EB74F447494CA24113AC",
+    "OR-13": "SDEC-A6CDFFF1FE8F03C138A0706CF5C3AC13",
+    "OR-14": "SDEC-A0613460B465949EA7892911B7AD5625",
+    "OR-15": "SDEC-44519662E78601764C12CF7107BCB3C0"
+  },
+  "decisions": [
+    {
+      "dataset_snapshot_ids": [
+        "DSNAP-5815AEDBC8947B483BC609F7",
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "a0992d6cd1700fa98f7f23612fe8748882e27848570bf9a0d9acebe21f69d7bc",
+      "decision_reason": "Historical evidence population is unresolved.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [
+        "d395ed853ec4db5c52b17f5ed8eb2f5a64a5604821ab281ca78541334f9e5433",
+        "8a498b5f47c3406486de003247b342f83e7f3e26ac01027b49b87a05dbb7ae79",
+        "4c47328fe7774a56f075671b65b97f74d664a0b93ca8279cbc138c758477babd"
+      ],
+      "evidence_set_ids": [
+        "ESET-OR-01-POPULATION",
+        "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+        "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+      ],
+      "evidence_validation_state": "LEGACY_UNRESOLVED",
+      "future_only_historical_evidence": false,
+      "observation_requirement_id": "OR-01",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [
+        [
+          "shadow_runtime",
+          "shadow_runtime_producer_v1",
+          "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d"
+        ],
+        [
+          "decision_trace",
+          "decision_trace_producer_v1",
+          "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20"
+        ],
+        [
+          "opportunities",
+          "opportunities_producer_v1",
+          "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214"
+        ],
+        [
+          "market_context",
+          null,
+          null
+        ],
+        [
+          "shadow_runtime",
+          "shadow_runtime_producer_v1",
+          "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d"
+        ]
+      ],
+      "requirement_fingerprint": "b247c4225c25e2e4f1937eec5148b74c830a0b1e00f1d2c034d23d6ac1388ec0",
+      "satisfaction_decision_id": "SDEC-B5A273046E168C0F39960E00CCFC1330",
+      "schema_generations": [
+        1,
+        1,
+        1,
+        null,
+        1
+      ],
+      "schema_versions": [
+        "shadow_runtime_v1",
+        "decision_trace_v1",
+        "opportunities_v1",
+        "market_context_v1",
+        "shadow_runtime_v1"
+      ],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "D2-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "D2-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "D2-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "D4-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "D4-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "D4-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "D5-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "D5-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "D5-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "E5-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "E5-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 30,
+          "result_state": "MISSING",
+          "threshold_id": "HORIZON-1-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "pattern_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 200,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "L4-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "L4-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "pattern_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "L5-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "L5-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "L5-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M10-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "M10-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M10-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-004"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 120,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-005"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M3-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M3-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M3-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 90,
+          "result_state": "MISSING",
+          "threshold_id": "M3-TH-004"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M4-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M4-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "M4-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M4-TH-004"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M5-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M5-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M6-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M6-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M7-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M7-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M7-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 90,
+          "result_state": "MISSING",
+          "threshold_id": "M7-TH-004"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M8-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M8-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 60,
+          "result_state": "MISSING",
+          "threshold_id": "M8-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M9-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M9-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "P1-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "P1-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "P1-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "ranking_cycles",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 5,
+          "result_state": "MISSING",
+          "threshold_id": "PORT-1-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "S4-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "S4-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "S4-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 30,
+          "result_state": "MISSING",
+          "threshold_id": "STRAT-1-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "X5-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "X5-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-OR-01-POPULATION",
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "X5-TH-003"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "f863e871682d67c636373fa4c9071d70f76cc63c05d02325468396db604e3f63",
+      "decision_reason": "Historical evidence population is unresolved.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [
+        "8a498b5f47c3406486de003247b342f83e7f3e26ac01027b49b87a05dbb7ae79",
+        "4c47328fe7774a56f075671b65b97f74d664a0b93ca8279cbc138c758477babd"
+      ],
+      "evidence_set_ids": [
+        "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+        "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+      ],
+      "evidence_validation_state": "LEGACY_UNRESOLVED",
+      "future_only_historical_evidence": false,
+      "observation_requirement_id": "OR-02",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [
+        [
+          "decision_trace",
+          "decision_trace_producer_v1",
+          "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20"
+        ],
+        [
+          "opportunities",
+          "opportunities_producer_v1",
+          "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214"
+        ],
+        [
+          "market_context",
+          null,
+          null
+        ],
+        [
+          "shadow_runtime",
+          "shadow_runtime_producer_v1",
+          "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d"
+        ]
+      ],
+      "requirement_fingerprint": "9a2a6b92609f9fbce4b33a1f69ac6116911798d1662c69519050ffc33ed37ab5",
+      "satisfaction_decision_id": "SDEC-D9F42558669430A9C7DEC991E7A6CC75",
+      "schema_generations": [
+        1,
+        1,
+        null,
+        1
+      ],
+      "schema_versions": [
+        "decision_trace_v1",
+        "opportunities_v1",
+        "market_context_v1",
+        "shadow_runtime_v1"
+      ],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-F2417F4914A3DD8FC34997D5",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "pattern_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 200,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "L4-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "L4-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M10-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "M10-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M10-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M3-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M3-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M3-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 90,
+          "result_state": "MISSING",
+          "threshold_id": "M3-TH-004"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M4-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M4-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "M4-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M4-TH-004"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M5-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M5-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M6-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M6-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M7-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M7-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M7-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 90,
+          "result_state": "MISSING",
+          "threshold_id": "M7-TH-004"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M8-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M8-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 60,
+          "result_state": "MISSING",
+          "threshold_id": "M8-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M9-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M9-TH-002"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "14cb4ce32fadcb1a0773063838ff4f095e1833f68a991b6c61e46a8eef4f21d2",
+      "decision_reason": "Historical evidence population is unresolved.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [
+        "8a498b5f47c3406486de003247b342f83e7f3e26ac01027b49b87a05dbb7ae79",
+        "4c47328fe7774a56f075671b65b97f74d664a0b93ca8279cbc138c758477babd"
+      ],
+      "evidence_set_ids": [
+        "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+        "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+      ],
+      "evidence_validation_state": "LEGACY_UNRESOLVED",
+      "future_only_historical_evidence": false,
+      "observation_requirement_id": "OR-03",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [
+        [
+          "decision_trace",
+          "decision_trace_producer_v1",
+          "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20"
+        ],
+        [
+          "opportunities",
+          "opportunities_producer_v1",
+          "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214"
+        ],
+        [
+          "market_context",
+          null,
+          null
+        ],
+        [
+          "shadow_runtime",
+          "shadow_runtime_producer_v1",
+          "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d"
+        ]
+      ],
+      "requirement_fingerprint": "86e2f82b1d457dc38805fe0556c06a345aa25668b8c9aec39a61c84d8bbeaa6a",
+      "satisfaction_decision_id": "SDEC-6B90F3AEDAACFDB5817AF4EAE74A16E9",
+      "schema_generations": [
+        1,
+        1,
+        null,
+        1
+      ],
+      "schema_versions": [
+        "decision_trace_v1",
+        "opportunities_v1",
+        "market_context_v1",
+        "shadow_runtime_v1"
+      ],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-51BFECF43C1E54968EC3EF3E",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-004"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 120,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-005"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M3-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M3-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M3-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 90,
+          "result_state": "MISSING",
+          "threshold_id": "M3-TH-004"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M7-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M7-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M7-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 90,
+          "result_state": "MISSING",
+          "threshold_id": "M7-TH-004"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "27c96dac9455d7e3337c007894307f3bc9dfdc631fc88f3a565f22d4418cbf80",
+      "decision_reason": "Historical evidence population is unresolved.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [
+        "8a498b5f47c3406486de003247b342f83e7f3e26ac01027b49b87a05dbb7ae79",
+        "4c47328fe7774a56f075671b65b97f74d664a0b93ca8279cbc138c758477babd"
+      ],
+      "evidence_set_ids": [
+        "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+        "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+      ],
+      "evidence_validation_state": "LEGACY_UNRESOLVED",
+      "future_only_historical_evidence": false,
+      "observation_requirement_id": "OR-04",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [
+        [
+          "decision_trace",
+          "decision_trace_producer_v1",
+          "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20"
+        ],
+        [
+          "opportunities",
+          "opportunities_producer_v1",
+          "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214"
+        ],
+        [
+          "market_context",
+          null,
+          null
+        ],
+        [
+          "shadow_runtime",
+          "shadow_runtime_producer_v1",
+          "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d"
+        ]
+      ],
+      "requirement_fingerprint": "9dc0ce1b671941fb8d802e5828d45baf8330e5eeef0d126925e50a8f794f6811",
+      "satisfaction_decision_id": "SDEC-ACDE71515D18BFBB4CC44025D999F62F",
+      "schema_generations": [
+        1,
+        1,
+        null,
+        1
+      ],
+      "schema_versions": [
+        "decision_trace_v1",
+        "opportunities_v1",
+        "market_context_v1",
+        "shadow_runtime_v1"
+      ],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-8BF58E09CC8689AC21FE7461",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M10-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "M10-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M10-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-004"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 120,
+          "result_state": "MISSING",
+          "threshold_id": "M11-TH-005"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M9-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M9-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "P1-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "P1-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "P1-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "S4-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "S4-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "S4-TH-003"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "cd421b8453751f34cb847400e129adcc36cb5cfac186b5ebca110cc5f44cb762",
+      "decision_reason": "Historical evidence population is unresolved.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [
+        "8a498b5f47c3406486de003247b342f83e7f3e26ac01027b49b87a05dbb7ae79",
+        "4c47328fe7774a56f075671b65b97f74d664a0b93ca8279cbc138c758477babd"
+      ],
+      "evidence_set_ids": [
+        "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+        "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+      ],
+      "evidence_validation_state": "LEGACY_UNRESOLVED",
+      "future_only_historical_evidence": false,
+      "observation_requirement_id": "OR-05",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [
+        [
+          "decision_trace",
+          "decision_trace_producer_v1",
+          "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20"
+        ],
+        [
+          "opportunities",
+          "opportunities_producer_v1",
+          "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214"
+        ],
+        [
+          "market_context",
+          null,
+          null
+        ],
+        [
+          "shadow_runtime",
+          "shadow_runtime_producer_v1",
+          "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d"
+        ]
+      ],
+      "requirement_fingerprint": "c2f49adc9bfe5ab41d87c41c8a9dd9b30f559660e94c3d79bb84cf7f4ef92982",
+      "satisfaction_decision_id": "SDEC-87D5729A487C595C309BB04420EBF99B",
+      "schema_generations": [
+        1,
+        1,
+        null,
+        1
+      ],
+      "schema_versions": [
+        "decision_trace_v1",
+        "opportunities_v1",
+        "market_context_v1",
+        "shadow_runtime_v1"
+      ],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-18049C0A71CC0DEB32EC7B1D",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "pattern_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 200,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "pattern_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "L5-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "L5-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "L5-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M4-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "M4-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "M4-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "M4-TH-004"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "10c0089662bbd83b2e23dce8eda59b4fe4422c787852acafb24d810edb8cc95f",
+      "decision_reason": "Historical evidence population is unresolved.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [
+        "8a498b5f47c3406486de003247b342f83e7f3e26ac01027b49b87a05dbb7ae79",
+        "4c47328fe7774a56f075671b65b97f74d664a0b93ca8279cbc138c758477babd"
+      ],
+      "evidence_set_ids": [
+        "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+        "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+      ],
+      "evidence_validation_state": "LEGACY_UNRESOLVED",
+      "future_only_historical_evidence": false,
+      "observation_requirement_id": "OR-06",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [
+        [
+          "decision_trace",
+          "decision_trace_producer_v1",
+          "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20"
+        ],
+        [
+          "opportunities",
+          "opportunities_producer_v1",
+          "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214"
+        ],
+        [
+          "market_context",
+          null,
+          null
+        ],
+        [
+          "shadow_runtime",
+          "shadow_runtime_producer_v1",
+          "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d"
+        ]
+      ],
+      "requirement_fingerprint": "ce4a4f13ddcde3ef920aef499e974ed91580c48ad9c6406a5b4c48028429e5ef",
+      "satisfaction_decision_id": "SDEC-A7517E76F09D44D94BDA47C2EE2E0D9C",
+      "schema_generations": [
+        1,
+        1,
+        null,
+        1
+      ],
+      "schema_versions": [
+        "decision_trace_v1",
+        "opportunities_v1",
+        "market_context_v1",
+        "shadow_runtime_v1"
+      ],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-808C0F2A07106334E9204706",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "EX10-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 200,
+          "result_state": "MISSING",
+          "threshold_id": "EX10-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 30,
+          "result_state": "MISSING",
+          "threshold_id": "HORIZON-1-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "pattern_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 200,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "pre",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "L2-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "post",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "L2-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "cell",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 30,
+          "result_state": "MISSING",
+          "threshold_id": "L2-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "L4-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "L4-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "pattern_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "L5-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "L5-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "L5-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "R3-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "R3-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "R4-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "R5-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "S4-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "market_phase_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "S4-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "S4-TH-003"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "4bf6c467789eff46eb947622a66aee4826092fc904cd8547e7da257aa01db778",
+      "decision_reason": "Historical evidence population is unresolved.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [
+        "8a498b5f47c3406486de003247b342f83e7f3e26ac01027b49b87a05dbb7ae79",
+        "4c47328fe7774a56f075671b65b97f74d664a0b93ca8279cbc138c758477babd"
+      ],
+      "evidence_set_ids": [
+        "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+        "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+      ],
+      "evidence_validation_state": "LEGACY_UNRESOLVED",
+      "future_only_historical_evidence": false,
+      "observation_requirement_id": "OR-07",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [
+        [
+          "decision_trace",
+          "decision_trace_producer_v1",
+          "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20"
+        ],
+        [
+          "opportunities",
+          "opportunities_producer_v1",
+          "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214"
+        ],
+        [
+          "market_context",
+          null,
+          null
+        ],
+        [
+          "shadow_runtime",
+          "shadow_runtime_producer_v1",
+          "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d"
+        ]
+      ],
+      "requirement_fingerprint": "6a35366928390f2200acee9adb02d896111ebd2fc927f66d8a6d91abf82d6c69",
+      "satisfaction_decision_id": "SDEC-A696CCA46F6FD396933E07123709E706",
+      "schema_generations": [
+        1,
+        1,
+        null,
+        1
+      ],
+      "schema_versions": [
+        "decision_trace_v1",
+        "opportunities_v1",
+        "market_context_v1",
+        "shadow_runtime_v1"
+      ],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-6AF188A103A4E82B29CA1CB9",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "EX10-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 200,
+          "result_state": "MISSING",
+          "threshold_id": "EX10-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "pattern_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 200,
+          "result_state": "MISSING",
+          "threshold_id": "L1-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "pre",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "L2-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "post",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "L2-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "cell",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 30,
+          "result_state": "MISSING",
+          "threshold_id": "L2-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "h4_regime_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "L4-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "L4-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "pattern_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "L5-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "strategy_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.5,
+          "result_state": "MISSING",
+          "threshold_id": "L5-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "L5-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "R4-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "R5-TH-001"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "e66bf66fc37e9a31077227c966404c83f78490b36c446c51f6d6481714080776",
+      "decision_reason": "Historical evidence population is unresolved.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [
+        "4c47328fe7774a56f075671b65b97f74d664a0b93ca8279cbc138c758477babd"
+      ],
+      "evidence_set_ids": [
+        "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+      ],
+      "evidence_validation_state": "LEGACY_UNRESOLVED",
+      "future_only_historical_evidence": true,
+      "observation_requirement_id": "OR-08",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [
+        [
+          "decision_trace",
+          "decision_trace_producer_v1",
+          "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20"
+        ],
+        [
+          "opportunities",
+          "opportunities_producer_v1",
+          "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214"
+        ],
+        [
+          "market_context",
+          null,
+          null
+        ],
+        [
+          "shadow_runtime",
+          "shadow_runtime_producer_v1",
+          "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d"
+        ]
+      ],
+      "requirement_fingerprint": "d5368b18c4a272adcdff94a34779541b56789176ce2813817db88dd3d29b38d3",
+      "satisfaction_decision_id": "SDEC-4AA4159C7AE6A6F83BD612EF48F767CC",
+      "schema_generations": [
+        1,
+        1,
+        null,
+        1
+      ],
+      "schema_versions": [
+        "decision_trace_v1",
+        "opportunities_v1",
+        "market_context_v1",
+        "shadow_runtime_v1"
+      ],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-E860B787146A504561FE808E",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "D3-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "D3-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "D3-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "X5-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "X5-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "X5-TH-003"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "6786afda380c0f26b32f2552e12000649b2f3a65fb9f134bf823ab4992dee3c4",
+      "decision_reason": "Historical evidence population is unresolved.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [
+        "4c47328fe7774a56f075671b65b97f74d664a0b93ca8279cbc138c758477babd"
+      ],
+      "evidence_set_ids": [
+        "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+      ],
+      "evidence_validation_state": "LEGACY_UNRESOLVED",
+      "future_only_historical_evidence": false,
+      "observation_requirement_id": "OR-09",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [
+        [
+          "decision_trace",
+          "decision_trace_producer_v1",
+          "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20"
+        ],
+        [
+          "opportunities",
+          "opportunities_producer_v1",
+          "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214"
+        ],
+        [
+          "market_context",
+          null,
+          null
+        ],
+        [
+          "shadow_runtime",
+          "shadow_runtime_producer_v1",
+          "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d"
+        ]
+      ],
+      "requirement_fingerprint": "e54a35179468d2726e3cfd16cbf38cbf95062800bd508ebea4f84f4a044f9a86",
+      "satisfaction_decision_id": "SDEC-6764A989D42FAF6392A9FA482FA42B81",
+      "schema_generations": [
+        1,
+        1,
+        null,
+        1
+      ],
+      "schema_versions": [
+        "decision_trace_v1",
+        "opportunities_v1",
+        "market_context_v1",
+        "shadow_runtime_v1"
+      ],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-97515AE86CBB9691011C352B",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "D3-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "D3-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "D3-TH-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lineage_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.8,
+          "result_state": "MISSING",
+          "threshold_id": "X5-TH-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "outcome_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 0.95,
+          "result_state": "MISSING",
+          "threshold_id": "X5-TH-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "X5-TH-003"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "e5ef95e4803a5eaf8579d9fbf0bb2073bfb9b681f1dc1ba6152f3a4022c7a32c",
+      "decision_reason": "Required governed evidence is missing.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [],
+      "evidence_set_ids": [],
+      "evidence_validation_state": "MISSING",
+      "future_only_historical_evidence": false,
+      "observation_requirement_id": "OR-10",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [],
+      "requirement_fingerprint": "4eb85a26ba5842e557fee7c47a06f4d4b66662e4cc747e51490b28a27e53aa25",
+      "satisfaction_decision_id": "SDEC-E2600923113F2E06C2DFB37B2ED22EEA",
+      "schema_generations": [],
+      "schema_versions": [],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-EFB578268AF578A11FBB8176",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 30,
+          "result_state": "MISSING",
+          "threshold_id": "HORIZON-1-TH-001"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "c3709c6c1e804fe92b5c019302241001abcf920aa7b56702d72ed2b3c2bb73f5",
+      "decision_reason": "Required governed evidence is missing.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [],
+      "evidence_set_ids": [],
+      "evidence_validation_state": "MISSING",
+      "future_only_historical_evidence": false,
+      "observation_requirement_id": "OR-11",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [],
+      "requirement_fingerprint": "8a3160322adc6eb4badcb6278c634d02c6322a0e2978cb58bb385af82b98e937",
+      "satisfaction_decision_id": "SDEC-3D4F8485648A4E4AA8A5AC32CE7431B4",
+      "schema_generations": [],
+      "schema_versions": [],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-B9869CEEDB388C8D757E1ACB",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [],
+          "metric_key": "sample_size",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 30,
+          "result_state": "MISSING",
+          "threshold_id": "STRAT-1-TH-001"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "e0cf05c8f89ada1a4a4f4d13c9dd5473cbad861f7fd2e85cd3dea21540e6f5c0",
+      "decision_reason": "Required governed evidence is missing.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [],
+      "evidence_set_ids": [],
+      "evidence_validation_state": "MISSING",
+      "future_only_historical_evidence": false,
+      "observation_requirement_id": "OR-12",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [],
+      "requirement_fingerprint": "75e7ea7500987b601d0b91bb76ded248a3e1169e81efeca481970332225f6ca8",
+      "satisfaction_decision_id": "SDEC-2FF62161BA27EB74F447494CA24113AC",
+      "schema_generations": [],
+      "schema_versions": [],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-206632E2C7FC805ADB4CE50E",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [],
+          "metric_key": "ranking_cycles",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 5,
+          "result_state": "MISSING",
+          "threshold_id": "PORT-1-TH-001"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "979069ce1f36e8b2a7b32a877bf56e199681325db5d8d4e0628e2f2fef6fa0bd",
+      "decision_reason": "Historical evidence population is unresolved.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [
+        "4c47328fe7774a56f075671b65b97f74d664a0b93ca8279cbc138c758477babd"
+      ],
+      "evidence_set_ids": [
+        "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+      ],
+      "evidence_validation_state": "LEGACY_UNRESOLVED",
+      "future_only_historical_evidence": true,
+      "observation_requirement_id": "OR-13",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [
+        [
+          "decision_trace",
+          "decision_trace_producer_v1",
+          "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20"
+        ],
+        [
+          "opportunities",
+          "opportunities_producer_v1",
+          "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214"
+        ],
+        [
+          "market_context",
+          null,
+          null
+        ],
+        [
+          "shadow_runtime",
+          "shadow_runtime_producer_v1",
+          "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d"
+        ]
+      ],
+      "requirement_fingerprint": "05d250617e0c469dcf4ce2be5516afe3e043d41c2aae0675de5139c959f1b17a",
+      "satisfaction_decision_id": "SDEC-A6CDFFF1FE8F03C138A0706CF5C3AC13",
+      "schema_generations": [
+        1,
+        1,
+        null,
+        1
+      ],
+      "schema_versions": [
+        "decision_trace_v1",
+        "opportunities_v1",
+        "market_context_v1",
+        "shadow_runtime_v1"
+      ],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-9E4B147CCB91FA15857F24EF",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "assessed_opportunities",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 10,
+          "result_state": "MISSING",
+          "threshold_id": "OPP-1-TH-001"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "5d3fefd8598ca005908ab1dfaa9ef5dae11b00c435a4d4401844a62c2e103b7b",
+      "decision_reason": "Historical evidence population is unresolved.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [
+        "8a498b5f47c3406486de003247b342f83e7f3e26ac01027b49b87a05dbb7ae79",
+        "4c47328fe7774a56f075671b65b97f74d664a0b93ca8279cbc138c758477babd"
+      ],
+      "evidence_set_ids": [
+        "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+        "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+      ],
+      "evidence_validation_state": "LEGACY_UNRESOLVED",
+      "future_only_historical_evidence": true,
+      "observation_requirement_id": "OR-14",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [
+        [
+          "decision_trace",
+          "decision_trace_producer_v1",
+          "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20"
+        ],
+        [
+          "opportunities",
+          "opportunities_producer_v1",
+          "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214"
+        ],
+        [
+          "market_context",
+          null,
+          null
+        ],
+        [
+          "shadow_runtime",
+          "shadow_runtime_producer_v1",
+          "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d"
+        ]
+      ],
+      "requirement_fingerprint": "b0d7fb16ea5a5d60653ace7fc3ba1f2d8b053ac80d326660b9274dff63d46a07",
+      "satisfaction_decision_id": "SDEC-A0613460B465949EA7892911B7AD5625",
+      "schema_generations": [
+        1,
+        1,
+        null,
+        1
+      ],
+      "schema_versions": [
+        "decision_trace_v1",
+        "opportunities_v1",
+        "market_context_v1",
+        "shadow_runtime_v1"
+      ],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-864A89C657C5E624589BA1B2",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": "==",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "path_state",
+          "observed_value": null,
+          "passed": null,
+          "required_value": "COMPLETE",
+          "result_state": "MISSING",
+          "threshold_id": "OR-14-CONTRACT-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "lifecycle_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 1.0,
+          "result_state": "MISSING",
+          "threshold_id": "OR-14-CONTRACT-002"
+        }
+      ]
+    },
+    {
+      "dataset_snapshot_ids": [
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "decision": "INDETERMINATE",
+      "decision_fingerprint": "0e2cd1f77c4123d691f28eba46cde3476941045eaeaf9470bfd3b264d8725c86",
+      "decision_reason": "Historical evidence population is unresolved.",
+      "evaluated_at": "2026-09-29T00:00:00Z",
+      "evaluation_metrics": {},
+      "evaluator_version": "stage4_satisfaction_evaluator_v1",
+      "evidence_set_fingerprints": [
+        "8a498b5f47c3406486de003247b342f83e7f3e26ac01027b49b87a05dbb7ae79",
+        "4c47328fe7774a56f075671b65b97f74d664a0b93ca8279cbc138c758477babd"
+      ],
+      "evidence_set_ids": [
+        "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+        "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+      ],
+      "evidence_validation_state": "LEGACY_UNRESOLVED",
+      "future_only_historical_evidence": true,
+      "observation_requirement_id": "OR-15",
+      "policy_classification": "THRESHOLD_GOVERNED",
+      "producer_identities": [
+        [
+          "decision_trace",
+          "decision_trace_producer_v1",
+          "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20"
+        ],
+        [
+          "opportunities",
+          "opportunities_producer_v1",
+          "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214"
+        ],
+        [
+          "market_context",
+          null,
+          null
+        ],
+        [
+          "shadow_runtime",
+          "shadow_runtime_producer_v1",
+          "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d"
+        ]
+      ],
+      "requirement_fingerprint": "12aa45dcb765d2f40979a5cf5f341da5e82ef19388bdfaf389b73043b1be8eb7",
+      "satisfaction_decision_id": "SDEC-44519662E78601764C12CF7107BCB3C0",
+      "schema_generations": [
+        1,
+        1,
+        null,
+        1
+      ],
+      "schema_versions": [
+        "decision_trace_v1",
+        "opportunities_v1",
+        "market_context_v1",
+        "shadow_runtime_v1"
+      ],
+      "supersedes_satisfaction_decision_id": null,
+      "threshold_policy_id": "TPOL-F3E1B2605632A329EAC89613",
+      "threshold_policy_version": "1",
+      "threshold_results": [
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "control",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "OR-15-CONTRACT-001"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "candidate",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 100,
+          "result_state": "MISSING",
+          "threshold_id": "OR-15-CONTRACT-002"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "cell",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 30,
+          "result_state": "MISSING",
+          "threshold_id": "OR-15-CONTRACT-003"
+        },
+        {
+          "comparator": ">=",
+          "evidence_reference": [
+            "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+            "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS"
+          ],
+          "metric_key": "assignment_coverage",
+          "observed_value": null,
+          "passed": null,
+          "required_value": 1.0,
+          "result_state": "MISSING",
+          "threshold_id": "OR-15-CONTRACT-004"
+        }
+      ]
+    }
+  ],
+  "schema": 1,
+  "store_fingerprint": "190ad088b4321d79534113f6c054e9fae02047e3e43f6f0c04181eb3e91045d8",
+  "threshold_policies": [
+    {
+      "authority": "research_engine.registry.research_question_registry",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-05",
+      "requirement_fingerprint": "c2f49adc9bfe5ab41d87c41c8a9dd9b30f559660e94c3d79bb84cf7f4ef92982",
+      "rules": [
+        {
+          "description": "Pattern required",
+          "field": "pattern_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "pattern_coverage",
+          "threshold_id": "L1-TH-001",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "L1-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "HD11 overall canonical-opportunity minimum",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "sample_size",
+          "threshold_id": "L1-TH-003",
+          "value": 200
+        },
+        {
+          "description": "Pattern required",
+          "field": "pattern_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L5",
+          "registry_field": "pattern_coverage",
+          "threshold_id": "L5-TH-001",
+          "value": 0.5
+        },
+        {
+          "description": "Strategy required",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L5",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "L5-TH-002",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "L5",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "L5-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "H4 regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M4",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "M4-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M4",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M4-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Clean strategy required",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M4",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "M4-TH-003",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M4",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M4-TH-004",
+          "value": 0.95
+        }
+      ],
+      "source": "QUESTION_REGISTRY_VALIDATION_RULES",
+      "threshold_policy_id": "TPOL-18049C0A71CC0DEB32EC7B1D",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "research_engine.registry.research_question_registry",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-12",
+      "requirement_fingerprint": "75e7ea7500987b601d0b91bb76ded248a3e1169e81efeca481970332225f6ca8",
+      "rules": [
+        {
+          "description": "Need cycles with rankings for selection analysis",
+          "field": "ranking_cycles",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "PORT-1",
+          "registry_field": "ranking_cycles",
+          "threshold_id": "PORT-1-TH-001",
+          "value": 5
+        }
+      ],
+      "source": "QUESTION_REGISTRY_VALIDATION_RULES",
+      "threshold_policy_id": "TPOL-206632E2C7FC805ADB4CE50E",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "research_engine.registry.research_question_registry",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-03",
+      "requirement_fingerprint": "86e2f82b1d457dc38805fe0556c06a345aa25668b8c9aec39a61c84d8bbeaa6a",
+      "rules": [
+        {
+          "description": "Regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "M11-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M11-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M11-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Need decision context linked to outcomes",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "M11-TH-004",
+          "value": 0.8
+        },
+        {
+          "description": "Distinct joined canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "sample_size",
+          "threshold_id": "M11-TH-005",
+          "value": 120
+        },
+        {
+          "description": "H4 regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M3",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "M3-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Phase must be populated",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M3",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M3-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M3",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M3-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "M3",
+          "registry_field": "sample_size",
+          "threshold_id": "M3-TH-004",
+          "value": 90
+        },
+        {
+          "description": "H4 regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M7",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "M7-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M7",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M7-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M7",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M7-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "M7",
+          "registry_field": "sample_size",
+          "threshold_id": "M7-TH-004",
+          "value": 90
+        }
+      ],
+      "source": "QUESTION_REGISTRY_VALIDATION_RULES",
+      "threshold_policy_id": "TPOL-51BFECF43C1E54968EC3EF3E",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "research_engine.registry.learning_adaptation_adjudication.L2_MIN + research_engine.registry.research_question_registry",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-07",
+      "requirement_fingerprint": "6a35366928390f2200acee9adb02d896111ebd2fc927f66d8a6d91abf82d6c69",
+      "rules": [
+        {
+          "description": "Need outcomes for train/test split",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "EX10",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "EX10-TH-001",
+          "value": 0.95
+        },
+        {
+          "description": "Need sufficient sample for temporal split",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "EX10",
+          "registry_field": "sample_size",
+          "threshold_id": "EX10-TH-002",
+          "value": 200
+        },
+        {
+          "description": "Pattern required",
+          "field": "pattern_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "pattern_coverage",
+          "threshold_id": "L1-TH-001",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "L1-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "HD11 overall canonical-opportunity minimum",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "sample_size",
+          "threshold_id": "L1-TH-003",
+          "value": 200
+        },
+        {
+          "description": "Pre-change governed observations required.",
+          "field": "pre",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "L2",
+          "threshold_id": "L2-TH-001",
+          "value": 100
+        },
+        {
+          "description": "Post-change governed observations required.",
+          "field": "post",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "L2",
+          "threshold_id": "L2-TH-002",
+          "value": 100
+        },
+        {
+          "description": "Minimum observations per comparison cell.",
+          "field": "cell",
+          "kind": "minimum_per_class_or_cell_count",
+          "operator": ">=",
+          "question_id": "L2",
+          "threshold_id": "L2-TH-003",
+          "value": 30
+        },
+        {
+          "description": "Regime history required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L4",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "L4-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "L4",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "L4-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Pattern required",
+          "field": "pattern_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L5",
+          "registry_field": "pattern_coverage",
+          "threshold_id": "L5-TH-001",
+          "value": 0.5
+        },
+        {
+          "description": "Strategy required",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L5",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "L5-TH-002",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "L5",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "L5-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Full outcome history required for drawdown modelling",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "R4",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "R4-TH-001",
+          "value": 0.95
+        },
+        {
+          "description": "Full outcome distribution required for Kelly calculation",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "R5",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "R5-TH-001",
+          "value": 0.95
+        }
+      ],
+      "source": "ADJUDICATION_MIN_CONSTANT + QUESTION_REGISTRY_VALIDATION_RULES",
+      "threshold_policy_id": "TPOL-6AF188A103A4E82B29CA1CB9",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "research_engine.registry.learning_adaptation_adjudication.L2_MIN + research_engine.registry.research_question_registry",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-06",
+      "requirement_fingerprint": "ce4a4f13ddcde3ef920aef499e974ed91580c48ad9c6406a5b4c48028429e5ef",
+      "rules": [
+        {
+          "description": "Need outcomes for train/test split",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "EX10",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "EX10-TH-001",
+          "value": 0.95
+        },
+        {
+          "description": "Need sufficient sample for temporal split",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "EX10",
+          "registry_field": "sample_size",
+          "threshold_id": "EX10-TH-002",
+          "value": 200
+        },
+        {
+          "description": "Minimum comparable opportunities",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "HORIZON-1",
+          "registry_field": "sample_size",
+          "threshold_id": "HORIZON-1-TH-001",
+          "value": 30
+        },
+        {
+          "description": "Pattern required",
+          "field": "pattern_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "pattern_coverage",
+          "threshold_id": "L1-TH-001",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "L1-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "HD11 overall canonical-opportunity minimum",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "sample_size",
+          "threshold_id": "L1-TH-003",
+          "value": 200
+        },
+        {
+          "description": "Pre-change governed observations required.",
+          "field": "pre",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "L2",
+          "threshold_id": "L2-TH-001",
+          "value": 100
+        },
+        {
+          "description": "Post-change governed observations required.",
+          "field": "post",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "L2",
+          "threshold_id": "L2-TH-002",
+          "value": 100
+        },
+        {
+          "description": "Minimum observations per comparison cell.",
+          "field": "cell",
+          "kind": "minimum_per_class_or_cell_count",
+          "operator": ">=",
+          "question_id": "L2",
+          "threshold_id": "L2-TH-003",
+          "value": 30
+        },
+        {
+          "description": "Regime history required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L4",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "L4-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "L4",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "L4-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Pattern required",
+          "field": "pattern_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L5",
+          "registry_field": "pattern_coverage",
+          "threshold_id": "L5-TH-001",
+          "value": 0.5
+        },
+        {
+          "description": "Strategy required",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L5",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "L5-TH-002",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "L5",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "L5-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Nearly all records must have R-multiple for variance estimation",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "R3",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "R3-TH-001",
+          "value": 0.95
+        },
+        {
+          "description": "Need full lifecycle for accurate win rate",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "R3",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "R3-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Full outcome history required for drawdown modelling",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "R4",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "R4-TH-001",
+          "value": 0.95
+        },
+        {
+          "description": "Full outcome distribution required for Kelly calculation",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "R5",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "R5-TH-001",
+          "value": 0.95
+        },
+        {
+          "description": "Clean strategy required",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "S4",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "S4-TH-001",
+          "value": 0.5
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "S4",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "S4-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "S4",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "S4-TH-003",
+          "value": 0.95
+        }
+      ],
+      "source": "ADJUDICATION_MIN_CONSTANT + QUESTION_REGISTRY_VALIDATION_RULES",
+      "threshold_policy_id": "TPOL-808C0F2A07106334E9204706",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "stage4_ex2_l7_blocker_adjudication (governed EX2 roster) + core.shadow.observability.EX2_REQUIRED_CONTRACT_FIELDS",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-14",
+      "requirement_fingerprint": "b0d7fb16ea5a5d60653ace7fc3ba1f2d8b053ac80d326660b9274dff63d46a07",
+      "rules": [
+        {
+          "description": "100% of governed lifecycles must carry a COMPLETE ordered M5 OHLC path bound to the lifecycle identity.",
+          "field": "path_state",
+          "kind": "minimum_complete_observations",
+          "operator": "==",
+          "threshold_id": "OR-14-CONTRACT-001",
+          "value": "COMPLETE"
+        },
+        {
+          "description": "Every governed lifecycle, no exclusions.",
+          "field": "lifecycle_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "threshold_id": "OR-14-CONTRACT-002",
+          "value": 1.0
+        }
+      ],
+      "source": "OBSERVATION_REQUIREMENT_CONTRACT",
+      "threshold_policy_id": "TPOL-864A89C657C5E624589BA1B2",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "research_engine.registry.research_question_registry",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-01",
+      "requirement_fingerprint": "b247c4225c25e2e4f1937eec5148b74c830a0b1e00f1d2c034d23d6ac1388ec0",
+      "rules": [
+        {
+          "description": "Need trace\u2192outcome join",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "D2",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "D2-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "D2",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "D2-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct paired canonical opportunities required for chronological calibration",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "D2",
+          "registry_field": "sample_size",
+          "threshold_id": "D2-TH-003",
+          "value": 100
+        },
+        {
+          "description": "Need trace\u2192outcome join",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "D4",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "D4-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "D4",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "D4-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct paired canonical opportunities required for chronological score-threshold validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "D4",
+          "registry_field": "sample_size",
+          "threshold_id": "D4-TH-003",
+          "value": 100
+        },
+        {
+          "description": "Need rejection trace\u2192shadow counterfactual join",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "D5",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "D5-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Counterfactual shadow outcomes for rejected opportunities",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "D5",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "D5-TH-002",
+          "value": 0.5
+        },
+        {
+          "description": "Distinct rejected canonical opportunities with paired outcomes required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "D5",
+          "registry_field": "sample_size",
+          "threshold_id": "D5-TH-003",
+          "value": 100
+        },
+        {
+          "description": "Full outcomes needed for walk-forward split",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "E5",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "E5-TH-001",
+          "value": 0.95
+        },
+        {
+          "description": "Need decision context to prevent lookahead",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "E5",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "E5-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Minimum comparable opportunities",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "HORIZON-1",
+          "registry_field": "sample_size",
+          "threshold_id": "HORIZON-1-TH-001",
+          "value": 30
+        },
+        {
+          "description": "Pattern required",
+          "field": "pattern_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "pattern_coverage",
+          "threshold_id": "L1-TH-001",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "L1-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "HD11 overall canonical-opportunity minimum",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "sample_size",
+          "threshold_id": "L1-TH-003",
+          "value": 200
+        },
+        {
+          "description": "Regime history required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L4",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "L4-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "L4",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "L4-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Pattern required",
+          "field": "pattern_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L5",
+          "registry_field": "pattern_coverage",
+          "threshold_id": "L5-TH-001",
+          "value": 0.5
+        },
+        {
+          "description": "Strategy required",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L5",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "L5-TH-002",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "L5",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "L5-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Phase required for stratification",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M10",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M10-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Clean strategy labels needed",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M10",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "M10-TH-002",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M10",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M10-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "M11-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M11-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M11-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Need decision context linked to outcomes",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "M11-TH-004",
+          "value": 0.8
+        },
+        {
+          "description": "Distinct joined canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "sample_size",
+          "threshold_id": "M11-TH-005",
+          "value": 120
+        },
+        {
+          "description": "H4 regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M3",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "M3-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Phase must be populated",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M3",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M3-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M3",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M3-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "M3",
+          "registry_field": "sample_size",
+          "threshold_id": "M3-TH-004",
+          "value": 90
+        },
+        {
+          "description": "H4 regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M4",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "M4-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M4",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M4-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Clean strategy required",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M4",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "M4-TH-003",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M4",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M4-TH-004",
+          "value": 0.95
+        },
+        {
+          "description": "Phase history required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M5",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M5-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Closed outcome R required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M5",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M5-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Phase must be populated",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M6",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M6-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M6",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M6-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "H4 regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M7",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "M7-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M7",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M7-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M7",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M7-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "M7",
+          "registry_field": "sample_size",
+          "threshold_id": "M7-TH-004",
+          "value": 90
+        },
+        {
+          "description": "Phase history required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M8",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M8-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M8",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M8-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct joined canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "M8",
+          "registry_field": "sample_size",
+          "threshold_id": "M8-TH-003",
+          "value": 60
+        },
+        {
+          "description": "Phase must be populated to stratify by phase",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M9",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M9-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M9",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M9-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Full outcomes needed for impact estimation",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "P1",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "P1-TH-001",
+          "value": 0.95
+        },
+        {
+          "description": "Need decision context for change modelling",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "P1",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "P1-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Clean strategy required for segmentation",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "P1",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "P1-TH-003",
+          "value": 0.5
+        },
+        {
+          "description": "Need cycles with rankings for selection analysis",
+          "field": "ranking_cycles",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "PORT-1",
+          "registry_field": "ranking_cycles",
+          "threshold_id": "PORT-1-TH-001",
+          "value": 5
+        },
+        {
+          "description": "Clean strategy required",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "S4",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "S4-TH-001",
+          "value": 0.5
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "S4",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "S4-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "S4",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "S4-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Minimum matched confidence/outcome pairs",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "STRAT-1",
+          "registry_field": "sample_size",
+          "threshold_id": "STRAT-1-TH-001",
+          "value": 30
+        },
+        {
+          "description": "Need trace\u2192outcome join",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "X5",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "X5-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "X5",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "X5-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct paired canonical opportunities required for chronological predicted-EV-vs-realised-R validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "X5",
+          "registry_field": "sample_size",
+          "threshold_id": "X5-TH-003",
+          "value": 100
+        }
+      ],
+      "source": "QUESTION_REGISTRY_VALIDATION_RULES",
+      "threshold_policy_id": "TPOL-8BEAA4023373390554845E51",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "research_engine.registry.research_question_registry",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-04",
+      "requirement_fingerprint": "9dc0ce1b671941fb8d802e5828d45baf8330e5eeef0d126925e50a8f794f6811",
+      "rules": [
+        {
+          "description": "Phase required for stratification",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M10",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M10-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Clean strategy labels needed",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M10",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "M10-TH-002",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M10",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M10-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "M11-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M11-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M11-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Need decision context linked to outcomes",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "M11-TH-004",
+          "value": 0.8
+        },
+        {
+          "description": "Distinct joined canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "M11",
+          "registry_field": "sample_size",
+          "threshold_id": "M11-TH-005",
+          "value": 120
+        },
+        {
+          "description": "Phase must be populated to stratify by phase",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M9",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M9-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M9",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M9-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Full outcomes needed for impact estimation",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "P1",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "P1-TH-001",
+          "value": 0.95
+        },
+        {
+          "description": "Need decision context for change modelling",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "P1",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "P1-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Clean strategy required for segmentation",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "P1",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "P1-TH-003",
+          "value": 0.5
+        },
+        {
+          "description": "Clean strategy required",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "S4",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "S4-TH-001",
+          "value": 0.5
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "S4",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "S4-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "S4",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "S4-TH-003",
+          "value": 0.95
+        }
+      ],
+      "source": "QUESTION_REGISTRY_VALIDATION_RULES",
+      "threshold_policy_id": "TPOL-8BF58E09CC8689AC21FE7461",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "research_engine.registry.research_question_registry",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-09",
+      "requirement_fingerprint": "e54a35179468d2726e3cfd16cbf38cbf95062800bd508ebea4f84f4a044f9a86",
+      "rules": [
+        {
+          "description": "Need trace\u2192outcome join",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "D3",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "D3-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "D3",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "D3-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct paired canonical opportunities required for chronological EV-gate validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "D3",
+          "registry_field": "sample_size",
+          "threshold_id": "D3-TH-003",
+          "value": 100
+        },
+        {
+          "description": "Need trace\u2192outcome join",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "X5",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "X5-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "X5",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "X5-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct paired canonical opportunities required for chronological predicted-EV-vs-realised-R validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "X5",
+          "registry_field": "sample_size",
+          "threshold_id": "X5-TH-003",
+          "value": 100
+        }
+      ],
+      "source": "QUESTION_REGISTRY_VALIDATION_RULES",
+      "threshold_policy_id": "TPOL-97515AE86CBB9691011C352B",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "research_engine.registry.research_question_registry",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-13",
+      "requirement_fingerprint": "05d250617e0c469dcf4ce2be5516afe3e043d41c2aae0675de5139c959f1b17a",
+      "rules": [
+        {
+          "description": "Need opportunities with shadow outcomes",
+          "field": "assessed_opportunities",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "OPP-1",
+          "registry_field": "assessed_opportunities",
+          "threshold_id": "OPP-1-TH-001",
+          "value": 10
+        }
+      ],
+      "source": "QUESTION_REGISTRY_VALIDATION_RULES",
+      "threshold_policy_id": "TPOL-9E4B147CCB91FA15857F24EF",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "research_engine.registry.research_question_registry",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-11",
+      "requirement_fingerprint": "8a3160322adc6eb4badcb6278c634d02c6322a0e2978cb58bb385af82b98e937",
+      "rules": [
+        {
+          "description": "Minimum matched confidence/outcome pairs",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "STRAT-1",
+          "registry_field": "sample_size",
+          "threshold_id": "STRAT-1-TH-001",
+          "value": 30
+        }
+      ],
+      "source": "QUESTION_REGISTRY_VALIDATION_RULES",
+      "threshold_policy_id": "TPOL-B9869CEEDB388C8D757E1ACB",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "research_engine.registry.research_question_registry",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-08",
+      "requirement_fingerprint": "d5368b18c4a272adcdff94a34779541b56789176ce2813817db88dd3d29b38d3",
+      "rules": [
+        {
+          "description": "Need trace\u2192outcome join",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "D3",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "D3-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "D3",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "D3-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct paired canonical opportunities required for chronological EV-gate validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "D3",
+          "registry_field": "sample_size",
+          "threshold_id": "D3-TH-003",
+          "value": 100
+        },
+        {
+          "description": "Need trace\u2192outcome join",
+          "field": "lineage_coverage",
+          "kind": "minimum_lineage_valid_coverage",
+          "operator": ">=",
+          "question_id": "X5",
+          "registry_field": "lineage_coverage",
+          "threshold_id": "X5-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "X5",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "X5-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct paired canonical opportunities required for chronological predicted-EV-vs-realised-R validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "X5",
+          "registry_field": "sample_size",
+          "threshold_id": "X5-TH-003",
+          "value": 100
+        }
+      ],
+      "source": "QUESTION_REGISTRY_VALIDATION_RULES",
+      "threshold_policy_id": "TPOL-E860B787146A504561FE808E",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "research_engine.registry.research_question_registry",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-10",
+      "requirement_fingerprint": "4eb85a26ba5842e557fee7c47a06f4d4b66662e4cc747e51490b28a27e53aa25",
+      "rules": [
+        {
+          "description": "Minimum comparable opportunities",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "HORIZON-1",
+          "registry_field": "sample_size",
+          "threshold_id": "HORIZON-1-TH-001",
+          "value": 30
+        }
+      ],
+      "source": "QUESTION_REGISTRY_VALIDATION_RULES",
+      "threshold_policy_id": "TPOL-EFB578268AF578A11FBB8176",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "research_engine.registry.research_question_registry",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-02",
+      "requirement_fingerprint": "9a2a6b92609f9fbce4b33a1f69ac6116911798d1662c69519050ffc33ed37ab5",
+      "rules": [
+        {
+          "description": "Pattern required",
+          "field": "pattern_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "pattern_coverage",
+          "threshold_id": "L1-TH-001",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "L1-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "HD11 overall canonical-opportunity minimum",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "L1",
+          "registry_field": "sample_size",
+          "threshold_id": "L1-TH-003",
+          "value": 200
+        },
+        {
+          "description": "Regime history required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "L4",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "L4-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "L4",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "L4-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Phase required for stratification",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M10",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M10-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Clean strategy labels needed",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M10",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "M10-TH-002",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M10",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M10-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "H4 regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M3",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "M3-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Phase must be populated",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M3",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M3-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M3",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M3-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "M3",
+          "registry_field": "sample_size",
+          "threshold_id": "M3-TH-004",
+          "value": 90
+        },
+        {
+          "description": "H4 regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M4",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "M4-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M4",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M4-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Clean strategy required",
+          "field": "strategy_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M4",
+          "registry_field": "strategy_coverage",
+          "threshold_id": "M4-TH-003",
+          "value": 0.5
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M4",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M4-TH-004",
+          "value": 0.95
+        },
+        {
+          "description": "Phase history required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M5",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M5-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Closed outcome R required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M5",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M5-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Phase must be populated",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M6",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M6-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M6",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M6-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "H4 regime required",
+          "field": "h4_regime_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M7",
+          "registry_field": "h4_regime_coverage",
+          "threshold_id": "M7-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Phase required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M7",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M7-TH-002",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M7",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M7-TH-003",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "M7",
+          "registry_field": "sample_size",
+          "threshold_id": "M7-TH-004",
+          "value": 90
+        },
+        {
+          "description": "Phase history required",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M8",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M8-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M8",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M8-TH-002",
+          "value": 0.95
+        },
+        {
+          "description": "Distinct joined canonical opportunities required for chronological validation",
+          "field": "sample_size",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "question_id": "M8",
+          "registry_field": "sample_size",
+          "threshold_id": "M8-TH-003",
+          "value": 60
+        },
+        {
+          "description": "Phase must be populated to stratify by phase",
+          "field": "market_phase_coverage",
+          "kind": "minimum_non_null_ratio",
+          "operator": ">=",
+          "question_id": "M9",
+          "registry_field": "market_phase_coverage",
+          "threshold_id": "M9-TH-001",
+          "value": 0.8
+        },
+        {
+          "description": "Outcome required",
+          "field": "outcome_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "question_id": "M9",
+          "registry_field": "outcome_coverage",
+          "threshold_id": "M9-TH-002",
+          "value": 0.95
+        }
+      ],
+      "source": "QUESTION_REGISTRY_VALIDATION_RULES",
+      "threshold_policy_id": "TPOL-F2417F4914A3DD8FC34997D5",
+      "threshold_policy_version": "1"
+    },
+    {
+      "authority": "research_engine.registry.learning_adaptation_adjudication.L7_MIN",
+      "classification": "THRESHOLD_GOVERNED",
+      "observation_requirement_id": "OR-15",
+      "requirement_fingerprint": "12aa45dcb765d2f40979a5cf5f341da5e82ef19388bdfaf389b73043b1be8eb7",
+      "rules": [
+        {
+          "description": "Minimum CONTROL-arm assigned lifecycles.",
+          "field": "control",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "threshold_id": "OR-15-CONTRACT-001",
+          "value": 100
+        },
+        {
+          "description": "Minimum CANDIDATE-arm assigned lifecycles.",
+          "field": "candidate",
+          "kind": "minimum_eligible_sample_count",
+          "operator": ">=",
+          "threshold_id": "OR-15-CONTRACT-002",
+          "value": 100
+        },
+        {
+          "description": "Minimum observations per comparison cell.",
+          "field": "cell",
+          "kind": "minimum_per_class_or_cell_count",
+          "operator": ">=",
+          "threshold_id": "OR-15-CONTRACT-003",
+          "value": 30
+        },
+        {
+          "description": "100% of the governed population must be producer-assigned; unassigned rows fail closed.",
+          "field": "assignment_coverage",
+          "kind": "minimum_event_coverage",
+          "operator": ">=",
+          "threshold_id": "OR-15-CONTRACT-004",
+          "value": 1.0
+        }
+      ],
+      "source": "OBSERVATION_REQUIREMENT_CONTRACT",
+      "threshold_policy_id": "TPOL-F3E1B2605632A329EAC89613",
+      "threshold_policy_version": "1"
+    }
+  ]
+}

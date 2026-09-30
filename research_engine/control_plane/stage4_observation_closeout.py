@@ -18,13 +18,16 @@ mutation, no research re-entry and never starts Q71+.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from research_engine.control_plane import stage4_data_versioning as V
+from research_engine.control_plane import stage4_dataset_snapshot as D
 from research_engine.control_plane import stage4_observation_state as S
 from research_engine.control_plane import stage4_observation_thresholds as TH
+from research_engine.control_plane import stage4_satisfaction as SD
 from research_engine.control_plane import stage4_identity as I
 from core.shadow import observability as OBS
 
@@ -355,8 +358,17 @@ def _opportunities_generations(collection_start: str,
             "ors": ors}
 
 
-def build_version_registry(matrix: Mapping[str, Any]) -> V.VersionRegistry:
-    """Build the governed version authority for the Stage 4 datasets."""
+def build_version_registry(
+        matrix: Mapping[str, Any],
+        snapshots: D.DatasetSnapshotRegistry | None = None,
+) -> V.VersionRegistry:
+    """Build the governed version authority for the Stage 4 datasets.
+
+    Each epoch is bound to the exact immutable dataset population(s) its
+    governed window is drawn from.  An epoch whose population is still
+    collecting stays deliberately unbound: a growing population is not an
+    immutable evidence snapshot.
+    """
     authority = I.RequirementAuthority(matrix["observation_requirements"])
     if authority.ids != I.CANONICAL_REQUIREMENT_IDS:
         raise CloseoutError("CANONICAL_REQUIREMENT_AUTHORITY_DRIFT")
@@ -367,11 +379,34 @@ def build_version_registry(matrix: Mapping[str, Any]) -> V.VersionRegistry:
         _decision_trace_generations(collection_start, requirements),
         _opportunities_generations(collection_start, requirements),
     )
-    return V.VersionRegistry(
+    registry_snapshots = (snapshots if snapshots is not None
+                          else D.bootstrap_registry())
+    bindings = D.epoch_population_bindings(registry_snapshots)
+    epochs = [
+        dataclasses.replace(epoch,
+                            dataset_snapshot_ids=tuple(
+                                bindings.get(epoch.epoch_id, ())))
+        for block in blocks for epoch in block["epochs"]]
+    registry = V.VersionRegistry(
         generations=[g for b in blocks for g in b["generations"]],
         producer_versions=[p for b in blocks for p in b["producers"]],
-        epochs=[e for b in blocks for e in b["epochs"]],
+        epochs=epochs,
     )
+    _assert_population_binding(registry, registry_snapshots)
+    return registry
+
+
+def _assert_population_binding(
+    registry: V.VersionRegistry,
+    snapshots: D.DatasetSnapshotRegistry,
+) -> None:
+    """Every FROZEN epoch must resolve to a governed immutable population."""
+    for epoch in registry.epochs():
+        validation = D.validate_epoch_evidence_identity(
+            epoch, registry=snapshots, require_dataset_snapshots=False)
+        if epoch.status in D.FROZEN_EPOCH_STATUSES and not validation.valid:
+            raise CloseoutError(
+                "FROZEN_EPOCH_POPULATION_IDENTITY_UNRESOLVED:" + epoch.epoch_id)
 
 
 
@@ -531,7 +566,8 @@ def _requirement_threshold(requirement: Mapping[str, Any],
 
 def _requirement_state(
         requirement: Mapping[str, Any],
-        threshold: Mapping[str, Any]) -> tuple[str, list[str]]:
+        threshold: Mapping[str, Any],
+        decision: SD.GovernedSatisfactionDecision) -> tuple[str, list[str]]:
     """Derive the requirement state-machine verdict and its unmet gates."""
     rid = str(requirement["id"])
     backfill = str(requirement.get("backfill", ""))
@@ -550,7 +586,11 @@ def _requirement_state(
         completeness_met=True,
         threshold_rule_present=(
             threshold["classification"] == TH.THRESHOLD_GOVERNED),
-        threshold_met=False, lineage_valid=True,
+        threshold_met=(decision.decision == SD.SATISFIED), lineage_valid=True,
+        satisfaction_decision_id=decision.satisfaction_decision_id,
+        satisfaction_decision_state=decision.decision,
+        satisfaction_decision_verified=True,
+        reentry_eligibility_state="NOT_ELIGIBLE",
     )
     satisfied, missing = S.can_satisfy(evidence)
     if satisfied:
@@ -603,11 +643,17 @@ def _authority_for(requirement: Mapping[str, Any],
         if V.VersionRegistry.is_declared_dataset(key):
             return {
                 "dataset": key,
+                "dataset_name": key,
                 "dataset_version": V.VersionRegistry.base_dataset_version(key),
+                "schema_version": V.VersionRegistry.base_dataset_version(key),
                 "schema_generation": 1,
                 "producer_version": "PRE_EXISTING_PRODUCER",
                 "evidence_epoch": None,
                 "evidence_set_id": None,
+                "dataset_snapshot_ids": [],
+                "dataset_snapshot_id": None,
+                "snapshot_identity_state":
+                    I.SNAPSHOT_IDENTITY_UNRESOLVED_HISTORICAL,
                 "predecessor": None,
                 "schema_fingerprint": None,
                 "producer_fingerprint": None,
@@ -615,11 +661,17 @@ def _authority_for(requirement: Mapping[str, Any],
                 "compatibility_class": V.ADDITIVE_SCHEMA_EVOLUTION,
             }
         return {
-            "dataset": key, "dataset_version": "AUDITED_NON_REGISTRY_DATASET",
+            "dataset": key, "dataset_name": key,
+            "dataset_version": "AUDITED_NON_REGISTRY_DATASET",
+            "schema_version": "AUDITED_NON_REGISTRY_DATASET",
             "schema_generation": 1,
             "producer_version": "PRE_EXISTING_PRODUCER",
             "evidence_epoch": None, "predecessor": None,
             "evidence_set_id": None,
+            "dataset_snapshot_ids": [],
+            "dataset_snapshot_id": None,
+            "snapshot_identity_state":
+                I.SNAPSHOT_IDENTITY_UNRESOLVED_HISTORICAL,
             "schema_fingerprint": None, "producer_fingerprint": None,
             "collection_start": _iso_day(STAMP),
             "compatibility_class": V.ADDITIVE_SCHEMA_EVOLUTION,
@@ -629,8 +681,13 @@ def _authority_for(requirement: Mapping[str, Any],
 
 def reconcile_gaps(
         matrix: Mapping[str, Any],
-        registry: V.VersionRegistry) -> dict[str, Any]:
+        registry: V.VersionRegistry,
+        satisfaction_registry: SD.SatisfactionDecisionRegistry | None = None,
+        ) -> dict[str, Any]:
     """Reconcile all 31 governed gaps into exactly one truthful state each."""
+    decisions = satisfaction_registry or SD.build_registry()
+    decision_snapshots = D.bootstrap_registry()
+    decision_evidence = SD.governed_evidence_map(decision_snapshots)
     requirements = {r["id"]: r for r in matrix["observation_requirements"]}
     gap_to_or = matrix["gap_to_observation_requirement"]
     gaps = list(matrix["governed_gaps"])
@@ -651,9 +708,24 @@ def reconcile_gaps(
         question_id = _gap_question_id(gap)
         threshold = _requirement_threshold(requirement, question_id)
         authority = _authority_for(requirement, registry)
+        decision = decisions.current_for_requirement(rid)
+        if decision is None:
+            raise CloseoutError("MISSING_SATISFACTION_DECISION:" + rid)
+        try:
+            decisions.verify(
+                decision.satisfaction_decision_id,
+                evidence_sets=decision_evidence,
+                snapshot_registry=decision_snapshots)
+        except SD.SatisfactionDecisionError as exc:
+            raise CloseoutError(
+                "INVALID_SATISFACTION_DECISION:" + rid) from exc
 
-        state, unmet = _requirement_state(requirement, threshold)
+        state, unmet = _requirement_state(requirement, threshold, decision)
         closeout_state = _STATE_TO_CLOSEOUT.get(state, CONTRACT_BLOCKED)
+        if (closeout_state == SATISFIED_OBSERVATION
+                and decision.decision != SD.SATISFIED):
+            raise CloseoutError(
+                "SATISFIED_CLOSEOUT_WITHOUT_GOVERNED_DECISION:" + rid)
 
         # Re-entry eligibility (TASK I): NEVER granted in this pass.  It needs a
         # satisfied requirement AND a met threshold AND a frozen evidence
@@ -664,11 +736,16 @@ def reconcile_gaps(
             "observation_requirement_id": rid,
             "observation_requirements_served": served,
             "dataset": authority["dataset"],
+            "dataset_name": authority["dataset_name"],
             "dataset_version": authority["dataset_version"],
+            "schema_version": authority["schema_version"],
             "schema_generation": authority["schema_generation"],
             "producer_version": authority["producer_version"],
             "evidence_epoch": authority["evidence_epoch"],
             "evidence_set_id": authority["evidence_set_id"],
+            "dataset_snapshot_ids": authority["dataset_snapshot_ids"],
+            "dataset_snapshot_id": authority["dataset_snapshot_id"],
+            "snapshot_identity_state": authority["snapshot_identity_state"],
             "predecessor": authority["predecessor"],
             "schema_fingerprint": authority["schema_fingerprint"],
             "producer_fingerprint": authority["producer_fingerprint"],
@@ -677,10 +754,16 @@ def reconcile_gaps(
             "threshold_classification": threshold["classification"],
             "threshold_source": threshold.get("threshold_source"),
             "threshold_rules": threshold.get("rules", []),
+            "satisfaction_decision_id": decision.satisfaction_decision_id,
+            "satisfaction_decision_state": decision.decision,
+            "satisfaction_decision_fingerprint": decision.decision_fingerprint,
+            "threshold_policy_id": decision.threshold_policy_id,
+            "threshold_policy_version": decision.threshold_policy_version,
             "requirement_state": state,
             "unmet_satisfied_gates": unmet,
             "closeout_state": closeout_state,
             "reentry_eligibility": REENTRY_INELIGIBLE,
+            "reentry_eligibility_state": "NOT_ELIGIBLE",
             "reentry_reason": (
                 "Observation requirement is not SATISFIED: the generation-2 "
                 "evidence epoch has not yet produced usable evidence. Re-entry "
@@ -791,8 +874,13 @@ def assert_conservation(closeout: Mapping[str, Any]) -> None:
 # ARTIFACTS
 # ═══════════════════════════════════════════════════════════════════════════
 
-def build_policy_document(registry: V.VersionRegistry) -> dict[str, Any]:
+def build_policy_document(
+    registry: V.VersionRegistry,
+    snapshot_registry: D.DatasetSnapshotRegistry | None = None,
+) -> dict[str, Any]:
     """The canonical data-versioning policy as applied to Stage 4."""
+    snapshot_registry = (snapshot_registry if snapshot_registry is not None
+                         else D.bootstrap_registry())
     assessment = assess_shadow_runtime_evolution()
     return {
         "policy_id": V.POLICY_ID,
@@ -859,6 +947,27 @@ def build_policy_document(registry: V.VersionRegistry) -> dict[str, Any]:
             "fields_added": list(SHADOW_RUNTIME_GEN2_ADDED_FIELDS),
         },
         "version_registry": registry.to_dict(),
+        "dataset_snapshot_identity": {
+            "policy_id": D.SNAPSHOT_POLICY_ID,
+            "authority_state": (
+                "research_engine/control_plane/"
+                "stage4_dataset_snapshot_state.json"),
+            "registry_fingerprint": snapshot_registry.registry_fingerprint(),
+            "dataset_snapshot_count": len(snapshot_registry),
+            "epoch_snapshot_bindings": {
+                epoch_id: list(ids) for epoch_id, ids
+                in sorted(D.epoch_population_bindings(
+                    snapshot_registry).items())},
+            "epoch_snapshot_identity_states": {
+                epoch.epoch_id: epoch.snapshot_identity_state
+                for epoch in registry.epochs()},
+            "note": (
+                "schema_version / schema_generation describe HOW the records "
+                "of a dataset_snapshot_id are interpreted; the snapshot "
+                "identity describes WHICH exact population was used. The "
+                "historical 'dataset_version' field holds a schema-registry "
+                "string and is never a population identity."),
+        },
         "mutation_ledger": {
             "s3_writes": 0,
             "historical_mutations": 0,
@@ -1199,11 +1308,13 @@ def render_markdown(document: Mapping[str, Any]) -> str:
 def build_all() -> dict[str, Any]:
     """Build every governed Stage 4 closeout artifact."""
     matrix = _load(MATRIX_PATH)
-    registry = build_version_registry(matrix)
-    closeout = reconcile_gaps(matrix, registry)
+    snapshot_registry = D.bootstrap_registry()
+    registry = build_version_registry(matrix, snapshot_registry)
+    satisfaction_registry = SD.persist_authority(snapshot_registry)
+    closeout = reconcile_gaps(matrix, registry, satisfaction_registry)
     assert_conservation(closeout)
 
-    policy_doc = build_policy_document(registry)
+    policy_doc = build_policy_document(registry, snapshot_registry)
     threshold_doc = build_threshold_document(closeout)
     closeout_doc = build_closeout_document(matrix, registry, closeout)
     epoch_doc = {
@@ -1227,9 +1338,11 @@ def build_all() -> dict[str, Any]:
         "epochs": epoch_doc,
         "thresholds": threshold_doc,
         "closeout": closeout_doc,
+        "satisfaction_decisions": satisfaction_registry.to_dict(),
         "artifacts": [str(POLICY_JSON_PATH), str(EPOCH_JSON_PATH),
                       str(THRESHOLD_JSON_PATH), str(CLOSEOUT_JSON_PATH),
-                      str(CLOSEOUT_MD_PATH)],
+                      str(CLOSEOUT_MD_PATH), str(SD.STATE_PATH),
+                      str(SD.ASSURANCE_JSON_PATH), str(SD.ASSURANCE_MD_PATH)],
     }
 
 

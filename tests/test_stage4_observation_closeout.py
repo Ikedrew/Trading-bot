@@ -572,7 +572,7 @@ def test_threshold_state_controls_reentry_eligibility():
 # ═══════════════════════════════════════════════════════════════════════════
 
 def test_state_machine_states_and_gates_are_complete():
-    assert len(S.SATISFIED_GATES) == 6
+    assert len(S.SATISFIED_GATES) == 7
     for state in S.STATES:
         assert state in S.LEGAL_TRANSITIONS
 
@@ -597,16 +597,24 @@ _GATE_TO_FIELD = {
 }
 
 
-def test_satisfied_requires_all_six_gates():
+def test_satisfied_requires_all_input_gates_and_governed_decision():
     base = dict(observation_requirement_id="OR-01", schema_ready=True,
                 producer_ready=True, evidence_valid=True, completeness_met=True,
                 threshold_rule_present=True, threshold_met=True,
-                lineage_valid=True)
+                lineage_valid=True,
+                satisfaction_decision_id="SDEC-" + "A" * 32,
+                satisfaction_decision_state=S.SATISFIED,
+                satisfaction_decision_verified=True)
     assert S.next_state(S.COLLECTING, S.RequirementEvidence(**base)) == (
         S.SATISFIED)
     for gate in S.SATISFIED_GATES:
         broken = dict(base)
-        broken[_GATE_TO_FIELD[gate]] = False
+        if gate == "governed_satisfaction_decision":
+            broken["satisfaction_decision_id"] = None
+            broken["satisfaction_decision_state"] = None
+            broken["satisfaction_decision_verified"] = False
+        else:
+            broken[_GATE_TO_FIELD[gate]] = False
         evidence = S.RequirementEvidence(**broken)
         assert S.can_satisfy(evidence)[0] is False, gate
         assert gate in S.unmet_satisfied_gates(evidence), gate
@@ -706,4 +714,3 @@ def test_required_artifacts_exist_and_are_deterministic():
     assert first["closeout"] == second["closeout"]
     assert first["thresholds"] == second["thresholds"]
     assert C.CLOSEOUT_MD_PATH.exists()
-

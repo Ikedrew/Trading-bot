@@ -73,7 +73,9 @@ LEGAL_TRANSITIONS: dict[str, frozenset[str]] = {
     BLOCKED_UPSTREAM: frozenset({PRODUCER_READY, COLLECTING, FUTURE_ONLY}),
 }
 
-#: The six independent gates that must ALL hold before SATISFIED.  They are
+#: The independent gates that must ALL hold before SATISFIED.  The final gate
+#: is the persisted governed decision; the preceding booleans are inputs to
+#: that decision and can never establish final satisfaction by themselves.
 #: named so a failure is reported as a specific unmet gate, never as a blanket
 #: "not ready".
 SATISFIED_GATES = (
@@ -83,6 +85,7 @@ SATISFIED_GATES = (
     "completeness_requirement_met",
     "threshold_met_where_applicable",
     "lineage_valid",
+    "governed_satisfaction_decision",
 )
 
 
@@ -107,15 +110,23 @@ class RequirementEvidence:
     backfill_eligible: bool = False
     backfill_complete: bool = False
     collecting: bool = False
+    satisfaction_decision_id: str | None = None
+    satisfaction_decision_state: str | None = None
+    satisfaction_decision_verified: bool = False
+    reentry_eligibility_state: str = "NOT_ELIGIBLE"
 
     def __post_init__(self) -> None:
         try:
             validate_requirement_id(self.observation_requirement_id)
         except Stage4IdentityError as exc:
             raise ObservationStateError(str(exc)) from exc
+        if self.satisfaction_decision_state == SATISFIED and not (
+                self.satisfaction_decision_id or "").startswith("SDEC-"):
+            raise ObservationStateError(
+                "SATISFIED_WITHOUT_GOVERNED_DECISION_ID")
 
     def satisfied_gates(self) -> tuple[str, ...]:
-        """Which of the six SATISFIED gates this evidence supports."""
+        """Which SATISFIED gates this evidence supports."""
         return tuple(
             gate for gate, ok in (
                 ("correct_schema_and_version", self.schema_ready),
@@ -124,6 +135,10 @@ class RequirementEvidence:
                 ("completeness_requirement_met", self.completeness_met),
                 ("threshold_met_where_applicable", self.threshold_met),
                 ("lineage_valid", self.lineage_valid),
+                ("governed_satisfaction_decision",
+                 bool(self.satisfaction_decision_id)
+                 and self.satisfaction_decision_state == SATISFIED
+                 and self.satisfaction_decision_verified),
             ) if ok
         )
 

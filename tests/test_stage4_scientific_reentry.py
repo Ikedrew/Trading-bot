@@ -30,6 +30,7 @@ FROZEN_ARTIFACTS = (
     Path("analysis/assurance/historical_research_pass_20260928.json"),
 )
 NOW = "2026-09-29T00:00:00Z"
+_AUTHORITY_CONTEXTS = {}
 
 
 @pytest.fixture(scope="module")
@@ -56,26 +57,42 @@ def _ready_gap_store(question_id, reentry_id, gap_type=G.GAP_TYPE_IMPL):
 def _request(state, question_id, *, reentry_id, trigger, gap_store,
              evidence_fingerprint=None, **overrides):
     item = G.work_item_for_question(gap_store, question_id)
+    satisfaction, evidence, snapshots, epochs, decision = (
+        S._fixture_reentry_authorities(fixture_id=reentry_id))
+    epoch = next(iter(epochs.values()))
+    _AUTHORITY_CONTEXTS[reentry_id] = {
+        "satisfaction_registry": satisfaction,
+        "evidence_sets": evidence,
+        "snapshot_registry": snapshots,
+        "evidence_epochs": epochs,
+    }
     request = S.build_reentry_request(
         reentry_id=reentry_id,
         question_id=question_id,
         reason="focused re-entry test",
         trigger_type=trigger,
-        evidence_epoch="CURRENT",
+        evidence_epoch=epoch.epoch_id,
         evidence_fingerprint=evidence_fingerprint
-        or S._fingerprint({"test": reentry_id}),
+        or S.evidence_epoch_fingerprint(epoch),
+        observation_requirement_id=decision.observation_requirement_id,
+        satisfaction_decision_id=decision.satisfaction_decision_id,
         gap_work_item_id=item["gap_work_item_id"],
         requested_at=NOW,
         state=state)
     return replace(request, **overrides) if overrides else request
 
 
+def _authorize_call(state, request, **kwargs):
+    return S.authorize_reentry(
+        state, request, **kwargs, **_AUTHORITY_CONTEXTS[request.reentry_id])
+
+
 def _authorized(state, question_id, reentry_id, trigger, gap_type):
     gap_store, _ = _ready_gap_store(question_id, reentry_id, gap_type)
     request = _request(state, question_id, reentry_id=reentry_id,
                        trigger=trigger, gap_store=gap_store)
-    return S.authorize_reentry(state, request, now=NOW,
-                               gap_store=gap_store), gap_store
+    return _authorize_call(state, request, now=NOW,
+                           gap_store=gap_store), gap_store
 
 
 # --- 1-3: bootstrap ---------------------------------------------------------
@@ -195,7 +212,7 @@ def test_09_missing_governed_trigger_fails_closed(state):
     request = _request(state, "R1", reentry_id="RE-T09",
                        trigger="BECAUSE_I_SAID_SO", gap_store=gap_store)
     with pytest.raises(S.ReentryError, match="TRIGGER_NOT_GOVERNED"):
-        S.authorize_reentry(state, request, now=NOW, gap_store=gap_store)
+        _authorize_call(state, request, now=NOW, gap_store=gap_store)
     assert state["counts"]["reentry_events"] == 0
 
 
@@ -205,7 +222,7 @@ def test_10_unresolved_gap_cannot_authorize_reentry(state):
                        trigger=S.TRIGGER_IMPLEMENTATION_REPAIR,
                        gap_store=unresolved)
     with pytest.raises(S.ReentryError, match="GAP_NOT_REENTRY_READY"):
-        S.authorize_reentry(state, request, now=NOW, gap_store=unresolved)
+        _authorize_call(state, request, now=NOW, gap_store=unresolved)
     assert G.get_work_item(unresolved, "GWI-R1-IMPL")["status"] == "OPEN"
 
 
@@ -216,7 +233,7 @@ def test_11_unresolved_dependency_fails_closed(state):
                        gap_store=gap_store)
     assert S.dependency_state_for(state, "G3")["L6"]["satisfied"] is False
     with pytest.raises(S.ReentryError, match="DEPENDENCY_UNRESOLVED:L6"):
-        S.authorize_reentry(state, request, now=NOW, gap_store=gap_store)
+        _authorize_call(state, request, now=NOW, gap_store=gap_store)
 
 
 def _to_assurance(state, reentry_id, question_id, gap_type=G.GAP_TYPE_IMPL,
@@ -429,10 +446,10 @@ def test_26_stale_certification_cannot_overwrite_newer_certification(state):
     stale = replace(fresh, previous_certification_fingerprint=(
         state["question_certifications"]["R1"][0]["certification_fingerprint"]))
     with pytest.raises(S.ReentryError, match="PREVIOUS_CERTIFICATION"):
-        S.authorize_reentry(published, stale, now=NOW, gap_store=gap_store)
+        _authorize_call(published, stale, now=NOW, gap_store=gap_store)
     # A correctly pinned second re-entry still works and yields V3.
-    authorized = S.authorize_reentry(published, fresh, now=NOW,
-                                     gap_store=gap_store)
+    authorized = _authorize_call(published, fresh, now=NOW,
+                                 gap_store=gap_store)
     executed = S.execute_scoped_run(
         authorized, "RE-T26B", runner=S._fixture_runner(["R1"]), now=NOW)
     certification = S._fixture_assurance(
@@ -485,10 +502,9 @@ def test_29_different_evidence_epoch_creates_new_version_not_mutation(state):
     gap_store, _ = _ready_gap_store("R1", "RE-T29B", G.GAP_TYPE_IMPL)
     request = _request(published, "R1", reentry_id="RE-T29B",
                        trigger=S.TRIGGER_NEW_EVIDENCE_EPOCH,
-                       gap_store=gap_store,
-                       evidence_fingerprint=S._fingerprint({"epoch": 2}))
-    authorized = S.authorize_reentry(published, request, now=NOW,
-                                     gap_store=gap_store)
+                       gap_store=gap_store)
+    authorized = _authorize_call(published, request, now=NOW,
+                                 gap_store=gap_store)
     executed = S.execute_scoped_run(
         authorized, "RE-T29B", runner=S._fixture_runner(["R1"]), now=NOW)
     certification = S._fixture_assurance(
@@ -558,7 +574,7 @@ def test_33_g3_cannot_reenter_before_required_l6_state(state):
                        trigger=S.TRIGGER_IMPLEMENTATION_REPAIR,
                        gap_store=gap_store)
     with pytest.raises(S.ReentryError, match="DEPENDENCY_UNRESOLVED:L6"):
-        S.authorize_reentry(state, request, now=NOW, gap_store=gap_store)
+        _authorize_call(state, request, now=NOW, gap_store=gap_store)
     # G3 is never executed automatically as a side effect.
     assert state["counts"]["reentry_events"] == 0
     # Once L6 holds a non-blocked CURRENT certification the gate re-opens.
@@ -666,6 +682,8 @@ def test_39_q71_plus_remains_not_started(state):
                 reentry_id="RE-T39", question_id="Q71", reason="n/a",
                 trigger_type=S.TRIGGER_IMPLEMENTATION_REPAIR,
                 evidence_epoch="CURRENT", evidence_fingerprint="0" * 64,
+                observation_requirement_id="OR-01",
+                satisfaction_decision_id="SDEC-" + "A" * 32,
                 gap_work_item_id="GWI-Q71-IMPL", requested_at=NOW,
                 state=state),
             now=NOW, gap_store=G.build_store())
@@ -687,10 +705,9 @@ def test_40_truth_consumption_uses_latest_current_finding_only(state):
     assert A.decide("R1", "VERIFIED", "COMPLETE").scientific_truth_consumable
     history = S.scientific_result_history(published, "R1")
     assert [v["finding_version"] for v in history["versions"]] == [1, 2]
-    # The evidence epoch is unchanged; the new knowledge is the new state and
-    # the new result fingerprint.
+    # R4 binds the new result to its exact governed synthetic evidence epoch.
     assert history["changes"][0]["changed_fields"] == [
-        "evidence_fingerprint", "scientific_result_fingerprint",
+        "evidence_epoch", "evidence_fingerprint", "scientific_result_fingerprint",
         "scientific_state"]
 
 
@@ -732,12 +749,12 @@ def test_43_contract_evolution_requires_explicit_record():
                        gap_store=gap_store,
                        question_contract_fingerprint="0" * 64)
     with pytest.raises(S.ReentryError, match="QUESTION_CONTRACT_FINGERPRINT"):
-        S.authorize_reentry(base, request, now=NOW, gap_store=gap_store)
+        _authorize_call(base, request, now=NOW, gap_store=gap_store)
     evolved = replace(request, contract_evolution={
         "from_version": 1, "to_version": 2, "semantic_change": False,
         "governance_ref": "STAGE4-L3-L6-L7-REGISTRY-AMENDMENT"})
-    authorized = S.authorize_reentry(base, evolved, now=NOW,
-                                     gap_store=gap_store)
+    authorized = _authorize_call(base, evolved, now=NOW,
+                                 gap_store=gap_store)
     assert authorized["reentry_events"][0]["contract_evolution"][
         "to_version"] == 2
 
@@ -762,27 +779,24 @@ def test_44_result_history_explains_what_changed_and_why(state):
 def test_45_pure_noop_reentry_cannot_publish_a_version(state):
     recorded, _, _ = _to_assurance(state, "RE-T45", "R1")
     published = S.publish_new_version(recorded, "RE-T45", now=NOW)
-    v2 = S.finding_history(published, "R1")[1]
-    # Re-enter once more and reproduce exactly the same certified knowledge:
-    # same scientific state, same result fingerprint, same evidence epoch.
+    # The same governed satisfaction decision is one-shot: it cannot issue a
+    # second authorization, even under a different caller reentry_id.
     gap_store, _ = _ready_gap_store("R1", "RE-T45B", G.GAP_TYPE_IMPL)
     request = _request(
         published, "R1", reentry_id="RE-T45B",
-        trigger=S.TRIGGER_IMPLEMENTATION_REPAIR, gap_store=gap_store,
-        evidence_fingerprint=v2["evidence_fingerprint"])
-    authorized = S.authorize_reentry(published, request, now=NOW,
-                                     gap_store=gap_store)
-    executed = S.execute_scoped_run(
-        authorized, "RE-T45B", runner=S._fixture_runner(["R1"]), now=NOW)
-    assert (executed["reentry_events"][0]["scientific_result"]["rows"]["R1"][
-        "result_fingerprint"] == v2["scientific_result_fingerprint"])
-    certification = S._fixture_assurance(
-        ["R1"], executed, "RE-T45B",
-        scientific_state=v2["scientific_state"])
-    recorded = S.record_assurance(
-        executed, "RE-T45B", certification=certification, now=NOW)
-    with pytest.raises(S.ReentryError, match="WITHOUT_NEW_EVIDENCE_OR_STATE"):
-        S.publish_new_version(recorded, "RE-T45B", now=NOW)
+        trigger=S.TRIGGER_IMPLEMENTATION_REPAIR, gap_store=gap_store)
+    prior = next(event for event in published["reentry_events"]
+                 if event["reentry_id"] == "RE-T45")
+    request = replace(
+        request,
+        observation_requirement_id=prior["observation_requirement_id"],
+        satisfaction_decision_id=prior["satisfaction_decision_id"],
+        evidence_epoch=prior["evidence_epoch"],
+        evidence_fingerprint=prior["evidence_fingerprint"])
+    _AUTHORITY_CONTEXTS["RE-T45B"] = _AUTHORITY_CONTEXTS["RE-T45"]
+    with pytest.raises(S.ReentryError,
+                       match="SATISFACTION_DECISION_ALREADY_AUTHORIZED"):
+        _authorize_call(published, request, now=NOW, gap_store=gap_store)
     assert S.current_finding(published, "R1")["finding_version"] == 2
 
 

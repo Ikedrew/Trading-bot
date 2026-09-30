@@ -44,7 +44,9 @@ from core.production_data_contract import PRODUCTION_SCHEMA_REGISTRY
 from research_engine.control_plane.assured_epistemic_findings import (
     EXPECTED_CERTIFICATION_FINGERPRINT,
 )
+from research_engine.control_plane import stage4_dataset_snapshot as D
 from research_engine.control_plane import stage4_identity as I
+from research_engine.control_plane import stage4_satisfaction as SD
 
 # ---------------------------------------------------------------------------
 # Authorities consumed (read-only).  The completed Stage 4 observation/dataset
@@ -343,6 +345,113 @@ REQUIREMENT_BLOCKED_BY_ROOT: dict[str, str] = {
 # TASK 1 -- identify the affected gaps EXACTLY (derived, never hard-coded).
 # ---------------------------------------------------------------------------
 
+
+# ---------------------------------------------------------------------------
+# SEPARATED EVIDENCE IDENTITY (Stage 4 Refinement 2)
+#
+# The corrected authority answers four DIFFERENT questions and each has its own
+# field.  In particular the historical ``dataset_version`` field carries a
+# SCHEMA string (``shadow_runtime_v1``): it is not a population identity, and a
+# population identity is now named explicitly by ``dataset_snapshot_id``.
+# ---------------------------------------------------------------------------
+
+def snapshot_registry() -> D.DatasetSnapshotRegistry:
+    """The governed population registry (single population-identity source)."""
+    return D.bootstrap_registry()
+
+
+def requirement_evidence_identity(requirement_id: str) -> dict[str, Any]:
+    """Separated evidence identity for ONE governed observation requirement."""
+    registry = snapshot_registry()
+    rid = I.validate_requirement_id(requirement_id)
+    snapshots = registry.snapshots_for_requirement(rid)
+    if not snapshots:
+        raise DatasetAuthorityError(
+            "REQUIREMENT_WITHOUT_DATASET_SNAPSHOT:" + rid)
+    evidence_set_ids = sorted(
+        item.evidence_set_id for item in D.governed_evidence_sets(registry)
+        if rid in item.observation_requirement_ids)
+    if not evidence_set_ids:
+        raise DatasetAuthorityError(
+            "REQUIREMENT_WITHOUT_EVIDENCE_SET:" + rid)
+    schema_versions = sorted({item.schema_version for item in snapshots})
+    if len(schema_versions) != 1:
+        raise DatasetAuthorityError("REQUIREMENT_SCHEMA_AMBIGUOUS:" + rid)
+    dataset_names = sorted({item.dataset_name for item in snapshots})
+    if dataset_names != [SHADOW_RUNTIME]:
+        raise DatasetAuthorityError(
+            "REQUIREMENT_SNAPSHOT_DATASET_MISMATCH:" + rid)
+    generations = sorted({item.schema_generation for item in snapshots
+                          if item.schema_generation is not None})
+    return {
+        "dataset_name": SHADOW_RUNTIME,
+        "schema_version": schema_versions[0],
+        "schema_generation": generations[-1] if generations else None,
+        "schema_generation_state": (D.GENERATION_CONFIRMED if generations
+                                    else D.GENERATION_UNASSERTED),
+        "dataset_snapshot_ids": [item.dataset_snapshot_id for item in snapshots],
+        "producer_versions": sorted({item.producer_version for item in snapshots
+                                     if item.producer_version}),
+        "producer_lineage_state": (
+            D.PRODUCER_BOUND if all(item.producer_version for item in snapshots)
+            else D.PRODUCER_UNASSERTED),
+        "evidence_set_ids": evidence_set_ids,
+        "snapshot_identity_state": I.SNAPSHOT_IDENTITY_BOUND,
+        "legacy_dataset_version_field_meaning": (
+            "corrected_dataset_version holds the SCHEMA identifier, not a "
+            "population identity; the population is named by "
+            "dataset_snapshot_ids."),
+    }
+
+
+def dataset_identity_block() -> dict[str, Any]:
+    """Separated dataset identity for the corrected authority."""
+    registry = snapshot_registry()
+    snapshots = registry.snapshots_for_dataset(SHADOW_RUNTIME)
+    if not snapshots:
+        raise DatasetAuthorityError("AUTHORITY_WITHOUT_DATASET_SNAPSHOT")
+    epochs = _versioning_epochs_for(SHADOW_RUNTIME)
+    generations = sorted({
+        int(row["schema_generation"]) for row in _versioning_generations(
+            SHADOW_RUNTIME)})
+    return {
+        "dataset_name": SHADOW_RUNTIME,
+        "schema_version": SHADOW_RUNTIME_SCHEMA,
+        "schema_generations": generations,
+        "current_schema_generation": generations[-1] if generations else None,
+        "dataset_snapshot_ids": [item.dataset_snapshot_id for item in snapshots],
+        "producer_versions": sorted({item.producer_version for item in snapshots
+                                     if item.producer_version}),
+        "evidence_set_ids": sorted(
+            epoch["evidence_set_id"] for epoch in epochs),
+        "epoch_snapshot_identity_states": {
+            epoch["epoch_id"]: epoch.get("snapshot_identity_state")
+            for epoch in epochs},
+        "legacy_dataset_version_field": I.normalize_legacy_dataset_reference(
+            SHADOW_RUNTIME_SCHEMA),
+    }
+
+
+def _versioning_policy() -> dict[str, Any]:
+    return _read_json(Path(
+        "analysis/assurance/stage4_data_versioning_policy_20260929.json"))
+
+
+def _versioning_generations(dataset: str) -> list[dict[str, Any]]:
+    rows = (list(_versioning_policy().get("version_registry", {})
+                 .get("schema_generations", ()))
+            + list(_versioning_policy().get("version_registry", {})
+                   .get("evidence_epochs", ())))
+    return [row for row in rows if str(row.get("dataset")) == str(dataset)
+            and row.get("schema_generation") is not None]
+
+
+def _versioning_epochs_for(dataset: str) -> list[dict[str, Any]]:
+    rows = list(_versioning_policy().get("version_registry", {})
+                .get("evidence_epochs", ()))
+    return [row for row in rows if str(row.get("dataset")) == str(dataset)]
+
+
 def load_audit() -> dict[str, Any]:
     """Load the persisted audit authorities (read-only)."""
     audit = _read_json(AUDIT_PATH)
@@ -434,6 +543,7 @@ def canonical_dataset_authority(loaded: Mapping[str, Any]) -> dict[str, Any]:
         "canonical_observation_source": SHADOW_RUNTIME,
         "dataset": SHADOW_RUNTIME,
         "dataset_version": SHADOW_RUNTIME_SCHEMA,
+        "dataset_identity": dataset_identity_block(),
         "producer": SHADOW_RUNTIME_PRODUCER,
         "semantic_owner": runtime_schema.semantic_owner,
         "status": "PERSISTED_CURRENT",
@@ -473,7 +583,9 @@ def canonical_dataset_authority(loaded: Mapping[str, Any]) -> dict[str, Any]:
 
 def requirement_transition(
         loaded: Mapping[str, Any], requirement: Mapping[str, Any],
-        authority: Mapping[str, Any]) -> dict[str, Any]:
+        authority: Mapping[str, Any],
+        satisfaction_registry: SD.SatisfactionDecisionRegistry | None = None,
+        ) -> dict[str, Any]:
     """Record the source-authority transition for one requirement.
 
     Requirement identity, requesting question identity, scientific history,
@@ -482,6 +594,10 @@ def requirement_transition(
     scientific-result version is incremented.
     """
     rid = str(requirement.get("id"))
+    decisions = satisfaction_registry or SD.build_registry()
+    decision = decisions.current_for_requirement(rid)
+    if decision is None:
+        raise DatasetAuthorityError("MISSING_SATISFACTION_DECISION:" + rid)
     classification = classify_requirement(rid)
     satisfied = classification == FULLY_SATISFIED
     blocked_by = REQUIREMENT_BLOCKED_BY_ROOT.get(rid)
@@ -513,6 +629,7 @@ def requirement_transition(
         "corrected_dataset": str(authority["dataset"]),
         "corrected_dataset_version": str(authority["dataset_version"]),
         "corrected_producer": str(authority["producer"]),
+        "evidence_identity": requirement_evidence_identity(rid),
         "reason_corrected": ("persisted producer-authoritative source "
                              "confirmed by the Stage 4 observation/dataset "
                              "audit (66258 rows, 200 objects)"),
@@ -534,7 +651,17 @@ def requirement_transition(
         "failing_gates": failing,
         "gate_failure_reasons": reasons,
         "shadow_runtime_classification": classification,
+        # This legacy field is the seven-gate DATASET-CONTRACT verdict.  It is
+        # retained for compatibility, but is explicitly not final scientific
+        # satisfaction authority.
         "satisfies_current_contract": satisfied,
+        "dataset_contract_sufficient": satisfied,
+        "final_satisfaction_authority":
+            "GOVERNED_SATISFACTION_DECISION_ONLY",
+        "satisfaction_decision_id": decision.satisfaction_decision_id,
+        "satisfaction_decision_state": decision.decision,
+        "satisfaction_decision_fingerprint": decision.decision_fingerprint,
+        "governed_satisfied": decision.decision == SD.SATISFIED,
         "gap_disposition_after_correction": (
             DISPOSITION_SATISFIED if satisfied else DISPOSITION_UNRESOLVED),
         "blocked_by_root_change": blocked_by,
@@ -711,6 +838,23 @@ def _validate_authority(authority: Mapping[str, Any]) -> None:
                  "schema_changed_by_this_pass"):
         if authority.get(flag) is not False:
             raise DatasetAuthorityError("PRODUCER_OR_SCHEMA_MUTATION:" + flag)
+    identity = authority.get("dataset_identity")
+    if not isinstance(identity, Mapping):
+        raise DatasetAuthorityError("DATASET_IDENTITY_BLOCK_MISSING")
+    if str(identity.get("dataset_name")) != SHADOW_RUNTIME:
+        raise DatasetAuthorityError("DATASET_IDENTITY_NAME_MISMATCH")
+    if str(identity.get("schema_version")) != SHADOW_RUNTIME_SCHEMA:
+        raise DatasetAuthorityError("DATASET_IDENTITY_SCHEMA_MISMATCH")
+    legacy = identity.get("legacy_dataset_version_field") or {}
+    if legacy.get("is_dataset_snapshot_id") is not False:
+        raise DatasetAuthorityError("SCHEMA_STRING_PRESENTED_AS_POPULATION")
+    if legacy.get("dataset_snapshot_id") is not None:
+        raise DatasetAuthorityError("LEGACY_SNAPSHOT_IDENTITY_SYNTHESIZED")
+    resolved = snapshot_registry()
+    for snapshot_id in identity.get("dataset_snapshot_ids", ()):
+        if resolved.require(str(snapshot_id)).dataset_name != SHADOW_RUNTIME:
+            raise DatasetAuthorityError(
+                "DATASET_IDENTITY_SNAPSHOT_MISMATCH:" + str(snapshot_id))
 
 
 def _validate_ledger(ledger: Mapping[str, Any]) -> None:
@@ -723,7 +867,12 @@ def _validate_ledger(ledger: Mapping[str, Any]) -> None:
         raise DatasetAuthorityError("Q71_STARTED")
 
 
-def _validate_transition(transition: Mapping[str, Any]) -> None:
+def _validate_transition(
+        transition: Mapping[str, Any], *,
+        satisfaction_registry: SD.SatisfactionDecisionRegistry | None = None,
+        satisfaction_evidence: Mapping[str, I.EvidenceSet] | None = None,
+        satisfaction_snapshots: D.DatasetSnapshotRegistry | None = None,
+        ) -> None:
     rid = str(transition.get("observation_requirement_id", ""))
     gates = transition.get("satisfaction_gates", {})
     missing = sorted(set(SATISFACTION_GATES) - set(gates))
@@ -739,6 +888,35 @@ def _validate_transition(transition: Mapping[str, Any]) -> None:
     satisfied = all(gates[g] for g in SATISFACTION_GATES)
     if bool(transition.get("satisfies_current_contract")) != satisfied:
         raise DatasetAuthorityError("SATISFACTION_NOT_GATE_DERIVED:" + rid)
+    if transition.get("final_satisfaction_authority") != (
+            "GOVERNED_SATISFACTION_DECISION_ONLY"):
+        raise DatasetAuthorityError("FINAL_SATISFACTION_AUTHORITY_MISSING:" + rid)
+    if not str(transition.get("satisfaction_decision_id") or "").startswith(
+            "SDEC-"):
+        raise DatasetAuthorityError("SATISFACTION_DECISION_ID_MISSING:" + rid)
+    governed_state = str(transition.get("satisfaction_decision_state") or "")
+    if governed_state not in SD.DECISION_STATES:
+        raise DatasetAuthorityError("SATISFACTION_DECISION_STATE_INVALID:" + rid)
+    if bool(transition.get("governed_satisfied")) != (
+            governed_state == SD.SATISFIED):
+        raise DatasetAuthorityError("GOVERNED_SATISFACTION_NOT_DERIVED:" + rid)
+    if satisfaction_registry is not None:
+        decision_id = str(transition.get("satisfaction_decision_id"))
+        try:
+            verified = satisfaction_registry.verify(
+                decision_id,
+                evidence_sets=dict(satisfaction_evidence or {}),
+                snapshot_registry=(satisfaction_snapshots
+                                   or D.bootstrap_registry()))
+        except SD.SatisfactionDecisionError as exc:
+            raise DatasetAuthorityError(
+                "SATISFACTION_DECISION_VERIFICATION_FAILED:" + rid) from exc
+        if (verified.observation_requirement_id != rid
+                or verified.decision != governed_state
+                or verified.decision_fingerprint != transition.get(
+                    "satisfaction_decision_fingerprint")):
+            raise DatasetAuthorityError(
+                "SATISFACTION_DECISION_REFERENCE_MISMATCH:" + rid)
     if satisfied and failing:
         raise DatasetAuthorityError("SATISFIED_WITH_FAILING_GATES:" + rid)
     if not satisfied and not failing:
@@ -771,6 +949,40 @@ def _validate_transition(transition: Mapping[str, Any]) -> None:
     if str(transition.get("corrected_dataset_version")) != (
             SHADOW_RUNTIME_SCHEMA):
         raise DatasetAuthorityError("AUTHORITY_VERSION_NOT_CORRECTED:" + rid)
+    _validate_evidence_identity(transition.get("evidence_identity"), rid)
+
+
+def _validate_evidence_identity(
+        identity: Any, rid: str,
+        registry: D.DatasetSnapshotRegistry | None = None) -> None:
+    """Every governed transition names population, schema and evidence set."""
+    if not isinstance(identity, Mapping):
+        raise DatasetAuthorityError(
+            "EVIDENCE_IDENTITY_MISSING:" + rid)
+    resolved = registry if registry is not None else snapshot_registry()
+    snapshot_ids = list(identity.get("dataset_snapshot_ids") or ())
+    if not snapshot_ids:
+        raise DatasetAuthorityError(
+            "DATASET_SNAPSHOT_IDENTITY_MISSING:" + rid)
+    if not list(identity.get("evidence_set_ids") or ()):
+        raise DatasetAuthorityError("EVIDENCE_SET_IDENTITY_MISSING:" + rid)
+    if str(identity.get("dataset_name")) != SHADOW_RUNTIME:
+        raise DatasetAuthorityError("EVIDENCE_DATASET_NAME_MISMATCH:" + rid)
+    if str(identity.get("schema_version")) != SHADOW_RUNTIME_SCHEMA:
+        raise DatasetAuthorityError("EVIDENCE_SCHEMA_IDENTITY_MISMATCH:" + rid)
+    if identity.get("snapshot_identity_state") != I.SNAPSHOT_IDENTITY_BOUND:
+        raise DatasetAuthorityError("SNAPSHOT_IDENTITY_NOT_BOUND:" + rid)
+    for snapshot_id in snapshot_ids:
+        # Population identity must be a registered DSNAP- identity, never the
+        # schema string that the historical dataset_version field carries.
+        I.validate_dataset_snapshot_id(snapshot_id, allow_none=False)
+        snapshot = resolved.require(snapshot_id)
+        if snapshot.dataset_name != SHADOW_RUNTIME:
+            raise DatasetAuthorityError("SNAPSHOT_DATASET_MISMATCH:" + rid)
+        if snapshot.schema_version != str(identity.get("schema_version")):
+            raise DatasetAuthorityError("SNAPSHOT_SCHEMA_MISMATCH:" + rid)
+    if not list(identity.get("producer_versions") or ()):
+        raise DatasetAuthorityError("PRODUCER_LINEAGE_MISSING:" + rid)
 
 
 def _validate_gap(gap: Mapping[str, Any]) -> None:
@@ -819,6 +1031,14 @@ def validate_store(store: Mapping[str, Any]) -> None:
         raise DatasetAuthorityError("STORE_EMPTY")
 
     seen_requirements: set[str] = set()
+    satisfaction_snapshots = D.bootstrap_registry()
+    satisfaction_evidence = SD.governed_evidence_map(satisfaction_snapshots)
+    try:
+        satisfaction_registry = SD.SatisfactionDecisionRegistry.load(
+            SD.STATE_PATH)
+    except SD.SatisfactionDecisionError as exc:
+        raise DatasetAuthorityError(
+            "SATISFACTION_AUTHORITY_UNREADABLE") from exc
     for transition in transitions:
         rid = str(transition.get("observation_requirement_id", ""))
         try:
@@ -828,7 +1048,10 @@ def validate_store(store: Mapping[str, Any]) -> None:
         if not rid or rid in seen_requirements:
             raise DatasetAuthorityError("DUPLICATE_REQUIREMENT_TRANSITION")
         seen_requirements.add(rid)
-        _validate_transition(transition)
+        _validate_transition(
+            transition, satisfaction_registry=satisfaction_registry,
+            satisfaction_evidence=satisfaction_evidence,
+            satisfaction_snapshots=satisfaction_snapshots)
     if set(store.get("affected_observation_requirements", ())) != (
             seen_requirements):
         raise DatasetAuthorityError("REQUIREMENT_SET_MISMATCH")
@@ -947,7 +1170,10 @@ def build_store() -> dict[str, Any]:
         raise DatasetAuthorityError("ROOT1_REQUIREMENT_UNKNOWN:"
                                     + ",".join(unknown))
 
-    transitions = [requirement_transition(loaded, matrix_by_id[rid], authority)
+    satisfaction_registry = SD.build_registry()
+    transitions = [requirement_transition(
+                       loaded, matrix_by_id[rid], authority,
+                       satisfaction_registry)
                    for rid in requirements]
     affected = affected_gap_ids(loaded, requirements)
     gaps = gap_dispositions(loaded, transitions, affected)
@@ -976,6 +1202,11 @@ def build_store() -> dict[str, Any]:
         "upstream_audit_fingerprint": str(
             loaded["audit"].get("audit_fingerprint", "")),
         "dataset_authority": authority,
+        "satisfaction_authority": {
+            "state_path": str(SD.STATE_PATH),
+            "role": "FINAL_GOVERNED_SATISFACTION_ONLY",
+            "dataset_authority_role": "STRUCTURAL_EVIDENCE_AUTHORITY_ONLY",
+        },
         "affected_observation_requirements": list(requirements),
         "observation_requirement_transitions": transitions,
         "audited_observation_requirements": sorted(matrix_by_id),

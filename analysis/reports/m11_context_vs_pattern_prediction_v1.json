@@ -1,0 +1,50 @@
+{
+  "confidence": "HIGH",
+  "dataset": {
+    "sample_size": 0,
+    "source": "shadow_trades+decision_trace"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "dataset_id": "frozen_stage4_2f53c4a2c9c25cf1",
+    "epoch": "CURRENT",
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 36641,
+    "governed_usable_records": 0,
+    "records_excluded": 36641,
+    "records_used": 0
+  },
+  "generated": "2026-09-28T00:00:00Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 36641,
+    "excluded_records": 36641,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_m11",
+    "runner_module": "research_engine.experiments.market_prediction_rw2",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 0
+  },
+  "overall": {
+    "finding": "Historical governed population has no analytically usable rows; absent/unresolved: canonical_opportunity_join, h4_regime, market_phase, h1_bias, pattern, r_multiple",
+    "historical_exhaustion": "EXHAUSTED",
+    "sample_size": 0
+  },
+  "provenance": {
+    "authority": "GATE1_GOVERNED_HISTORICAL_ACCOUNTING",
+    "candidate_records": 36641,
+    "runner_function": "run_m11",
+    "runner_module": "research_engine.experiments.market_prediction_rw2",
+    "unexplained_records": 0,
+    "usable_records": 0
+  },
+  "question_id": "M11",
+  "recommendation": "NO_RETROSPECTIVE_ANALYSIS_AVAILABLE",
+  "scientific_state": "HISTORICALLY_UNANSWERABLE",
+  "status": "INSUFFICIENT_DATA"
+}

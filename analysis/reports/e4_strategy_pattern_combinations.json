@@ -1,0 +1,167 @@
+{
+  "assumptions": [],
+  "confidence": "INSUFFICIENT_DATA",
+  "dataset": {
+    "sample_size": 4,
+    "source": "shadow_trades",
+    "total_loaded": 1852
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_61189caf62f4ace0",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "efcafab169ee8d0a68b8f9dd4524fcf25c4cd28c87cf30fa3625cc52eae8f120",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 1852,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 1852,
+          "records_excluded": 0,
+          "records_used": 1852,
+          "schema": "shadow_trades_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "shadow_trades",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 1852,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "61189caf62f4ace08903494a41719719e11ccb814562f0b56ec257def1e2346b",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 1852,
+      "records_excluded": 0,
+      "records_used": 1852,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 14077,
+    "governed_usable_records": 1852,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 0,
+    "records_used": 1852,
+    "source": "shadow_trades",
+    "sources": [
+      "shadow_trades"
+    ],
+    "validation_score": "INSUFFICIENT_DATA"
+  },
+  "generated": "2026-09-28T19:25:55Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 14077,
+    "excluded_records": 12225,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_e4",
+    "runner_module": "research_engine.experiments.edge_depth",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 1852
+  },
+  "overall": {
+    "distinct_from": {
+      "E2": "E2 asks pattern-only expectancy (ignores strategy)",
+      "E3": "E3 asks strategy-only expectancy (ignores pattern)"
+    },
+    "edge_assessment": "MARGINAL_EDGE",
+    "interaction_analysis": {
+      "combined_dispersion": 0.0,
+      "interaction_detected": false,
+      "note": "Interaction detected means strategy\u00d7pattern segmentation produces wider R-multiple dispersion than either strategy or pattern alone \u2014 suggesting the combo matters"
+    },
+    "pattern_only": {
+      "dispersion": 0.0978,
+      "segments": {
+        "FALSE_BREAK": {
+          "count": 4,
+          "losses": 2,
+          "mean_r": -0.3189,
+          "win_rate": 0.5,
+          "wins": 2
+        },
+        "MEAN_REVERSION": {
+          "count": 1076,
+          "losses": 703,
+          "mean_r": -0.1199,
+          "win_rate": 0.3467,
+          "wins": 373
+        },
+        "TREND_CONTINUATION": {
+          "count": 767,
+          "losses": 499,
+          "mean_r": -0.104,
+          "win_rate": 0.3494,
+          "wins": 268
+        }
+      },
+      "total_analysed": 1847
+    },
+    "question": "Which strategy \u00d7 pattern combinations produce edge? (e.g. REVERSAL + TWEEZER_TOP) \u2014 interaction effect between strategy family and pattern identity",
+    "segmentation": "strategy \u00d7 pattern",
+    "segments": {
+      "FALSE_BREAK | FALSE_BREAK": {
+        "count": 4,
+        "losses": 2,
+        "mean_r": -0.3189,
+        "win_rate": 0.5,
+        "wins": 2
+      }
+    },
+    "strategy_only": {
+      "dispersion": 0.0978,
+      "segments": {
+        "FALSE_BREAK": {
+          "count": 4,
+          "losses": 2,
+          "mean_r": -0.3189,
+          "win_rate": 0.5,
+          "wins": 2
+        },
+        "MEAN_REVERSION": {
+          "count": 1076,
+          "losses": 703,
+          "mean_r": -0.1199,
+          "win_rate": 0.3467,
+          "wins": 373
+        },
+        "TREND_CONTINUATION": {
+          "count": 767,
+          "losses": 499,
+          "mean_r": -0.104,
+          "win_rate": 0.3494,
+          "wins": 268
+        }
+      },
+      "total_analysed": 1847
+    },
+    "total_combinations": 1
+  },
+  "provenance": {
+    "analysis_type": "strategy \u00d7 pattern interaction segmentation",
+    "canonical_intent": "Which strategy \u00d7 pattern combinations produce edge? (e.g. REVERSAL + TWEEZER_TOP) \u2014 interaction effect between strategy family and pattern identity",
+    "evidence_classification": "historical association (not causal proof)",
+    "experiment_module": "research_engine.experiments.edge_depth",
+    "registry_id": "E4"
+  },
+  "question_id": "E4",
+  "recommendation": "MARGINAL_EDGE",
+  "scientific_state": "INSUFFICIENT_DATA",
+  "status": "INSUFFICIENT_DATA",
+  "warnings": []
+}

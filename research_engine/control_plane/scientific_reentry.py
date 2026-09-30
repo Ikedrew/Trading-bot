@@ -33,10 +33,15 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 from typing import Any, Callable, Mapping, Sequence
 
 from research_engine.control_plane import assured_epistemic_findings as A
 from research_engine.control_plane import gap_governance as G
+from research_engine.control_plane import stage4_data_versioning as V
+from research_engine.control_plane import stage4_dataset_snapshot as D
+from research_engine.control_plane import stage4_identity as I
+from research_engine.control_plane import stage4_satisfaction as SD
 from research_engine.control_plane.evidence_resolver import (
     authoritative_evidence_schema,
 )
@@ -50,7 +55,7 @@ from research_engine.registry.research_question_registry import (
     REGISTRY_BY_ID,
 )
 
-REENTRY_SCHEMA = 1
+REENTRY_SCHEMA = 2
 STAGE = "STAGE4_SCIENTIFIC_REENTRY"
 STATE_PATH = Path("research_engine/control_plane/scientific_reentry_state.json")
 AUDIT_STAMP = "20260929"
@@ -77,6 +82,16 @@ AUTH_PUBLISHED = "PUBLISHED"
 ALLOWED_AUTHORIZATION_STATES = frozenset({
     AUTH_REQUESTED, AUTH_AUTHORIZED, AUTH_RESULT_RECORDED,
     AUTH_ASSURANCE_RECORDED, AUTH_PUBLISHED})
+
+ELIGIBLE = "ELIGIBLE"
+NOT_ELIGIBLE = "NOT_ELIGIBLE"
+ELIGIBILITY_INVALID = "INVALID"
+ELIGIBILITY_STATES = frozenset({ELIGIBLE, NOT_ELIGIBLE, ELIGIBILITY_INVALID})
+ELIGIBILITY_EVALUATOR_VERSION = "stage4_reentry_eligibility_v1"
+AUTHORIZATION_EVALUATOR_VERSION = "stage4_reentry_authorization_v1"
+LEGACY_UNGOVERNED = "LEGACY_UNGOVERNED"
+_SDEC_PATTERN = re.compile(r"^SDEC-[A-F0-9]{32}$")
+_SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
 TRIGGER_IMPLEMENTATION_REPAIR = "IMPLEMENTATION_REPAIR"
 TRIGGER_DATA_THRESHOLD_REACHED = "DATA_THRESHOLD_REACHED"
 TRIGGER_SCHEMA_COLLECTION_RECOVERED = "SCHEMA_COLLECTION_RECOVERED"
@@ -267,8 +282,202 @@ def population_fingerprint(material: Mapping[str, Any]) -> str:
     return _fingerprint({key: material.get(key) for key in keys})
 
 
+def evidence_epoch_fingerprint(epoch: V.EvidenceEpoch) -> str:
+    """Canonical content hash for a registered evidence epoch."""
+    return _fingerprint(epoch.to_dict())
+
+
 def certification_identity(question_id: str, version: int) -> str:
     return f"{str(question_id).strip().upper()}:c{int(version)}"
+
+
+@dataclass(frozen=True)
+class ReentryEligibility:
+    """Derived permission to request re-entry; never caller-declared."""
+
+    reentry_eligibility_id: str
+    observation_requirement_id: str
+    satisfaction_decision_id: str
+    evidence_set_ids: tuple[str, ...]
+    dataset_snapshot_ids: tuple[str, ...]
+    evidence_epoch: str | None
+    eligibility_state: str
+    eligibility_reason: str
+    evaluated_at: str
+    evaluator_version: str
+    eligibility_fingerprint: str
+
+    def material(self) -> dict[str, Any]:
+        return {
+            "observation_requirement_id": self.observation_requirement_id,
+            "satisfaction_decision_id": self.satisfaction_decision_id,
+            "evidence_set_ids": list(self.evidence_set_ids),
+            "dataset_snapshot_ids": list(self.dataset_snapshot_ids),
+            "evidence_epoch": self.evidence_epoch,
+            "eligibility_state": self.eligibility_state,
+            "eligibility_reason": self.eligibility_reason,
+            "evaluator_version": self.evaluator_version,
+        }
+
+    def derived_id(self) -> str:
+        return "REEL-" + _fingerprint(self.material())[:32].upper()
+
+    def fingerprint_material(self) -> dict[str, Any]:
+        return {"reentry_eligibility_id": self.reentry_eligibility_id,
+                "evaluated_at": self.evaluated_at, **self.material()}
+
+    def derived_fingerprint(self) -> str:
+        return _fingerprint(self.fingerprint_material())
+
+    def verify(self) -> "ReentryEligibility":
+        if self.eligibility_state not in ELIGIBILITY_STATES:
+            raise ReentryError("ELIGIBILITY_STATE_UNKNOWN")
+        if self.reentry_eligibility_id != self.derived_id():
+            raise ReentryError("REENTRY_ELIGIBILITY_ID_MISMATCH")
+        if self.eligibility_fingerprint != self.derived_fingerprint():
+            raise ReentryError("REENTRY_ELIGIBILITY_FINGERPRINT_MISMATCH")
+        return self
+
+    def to_dict(self) -> dict[str, Any]:
+        return {**self.fingerprint_material(),
+                "eligibility_fingerprint": self.eligibility_fingerprint}
+
+    @classmethod
+    def create(
+        cls, *, observation_requirement_id: str,
+        satisfaction_decision_id: str, evidence_set_ids: Sequence[str],
+        dataset_snapshot_ids: Sequence[str], evidence_epoch: str | None,
+        eligibility_state: str, eligibility_reason: str, evaluated_at: str,
+    ) -> "ReentryEligibility":
+        values = dict(
+            observation_requirement_id=observation_requirement_id,
+            satisfaction_decision_id=satisfaction_decision_id,
+            evidence_set_ids=tuple(evidence_set_ids),
+            dataset_snapshot_ids=tuple(dataset_snapshot_ids),
+            evidence_epoch=evidence_epoch,
+            eligibility_state=eligibility_state,
+            eligibility_reason=eligibility_reason,
+            evaluated_at=evaluated_at,
+            evaluator_version=ELIGIBILITY_EVALUATOR_VERSION,
+        )
+        shell = object.__new__(cls)
+        for key, value in values.items():
+            object.__setattr__(shell, key, value)
+        object.__setattr__(shell, "reentry_eligibility_id", "")
+        object.__setattr__(shell, "eligibility_fingerprint", "")
+        object.__setattr__(shell, "reentry_eligibility_id", shell.derived_id())
+        object.__setattr__(shell, "eligibility_fingerprint",
+                           shell.derived_fingerprint())
+        return shell.verify()
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> "ReentryEligibility":
+        return cls(
+            reentry_eligibility_id=str(value.get("reentry_eligibility_id") or ""),
+            observation_requirement_id=str(
+                value.get("observation_requirement_id") or ""),
+            satisfaction_decision_id=str(
+                value.get("satisfaction_decision_id") or ""),
+            evidence_set_ids=tuple(value.get("evidence_set_ids") or ()),
+            dataset_snapshot_ids=tuple(value.get("dataset_snapshot_ids") or ()),
+            evidence_epoch=(None if value.get("evidence_epoch") is None else
+                            str(value.get("evidence_epoch"))),
+            eligibility_state=str(value.get("eligibility_state") or ""),
+            eligibility_reason=str(value.get("eligibility_reason") or ""),
+            evaluated_at=str(value.get("evaluated_at") or ""),
+            evaluator_version=str(value.get("evaluator_version") or ""),
+            eligibility_fingerprint=str(
+                value.get("eligibility_fingerprint") or ""),
+        ).verify()
+
+
+@dataclass(frozen=True)
+class ReentryAuthorization:
+    """Immutable issuance record bound to one eligible decision."""
+
+    reentry_authorization_id: str
+    reentry_eligibility_id: str
+    satisfaction_decision_id: str
+    observation_requirement_id: str
+    reentry_id: str
+    authorization_state: str
+    authorized_at: str
+    evaluator_version: str
+    authorization_fingerprint: str
+
+    def material(self) -> dict[str, Any]:
+        return {
+            "reentry_eligibility_id": self.reentry_eligibility_id,
+            "satisfaction_decision_id": self.satisfaction_decision_id,
+            "observation_requirement_id": self.observation_requirement_id,
+            "reentry_id": self.reentry_id,
+            "authorization_state": self.authorization_state,
+            "evaluator_version": self.evaluator_version,
+        }
+
+    def derived_id(self) -> str:
+        return "REAUTH-" + _fingerprint(self.material())[:32].upper()
+
+    def derived_fingerprint(self) -> str:
+        return _fingerprint({"reentry_authorization_id":
+                             self.reentry_authorization_id,
+                             "authorized_at": self.authorized_at,
+                             **self.material()})
+
+    def verify(self) -> "ReentryAuthorization":
+        if self.authorization_state != AUTH_AUTHORIZED:
+            raise ReentryError("AUTHORIZATION_RECORD_STATE_INVALID")
+        if self.reentry_authorization_id != self.derived_id():
+            raise ReentryError("REENTRY_AUTHORIZATION_ID_MISMATCH")
+        if self.authorization_fingerprint != self.derived_fingerprint():
+            raise ReentryError("REENTRY_AUTHORIZATION_FINGERPRINT_MISMATCH")
+        return self
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"reentry_authorization_id": self.reentry_authorization_id,
+                "authorized_at": self.authorized_at,
+                **self.material(),
+                "authorization_fingerprint": self.authorization_fingerprint}
+
+    @classmethod
+    def create(cls, *, eligibility: ReentryEligibility, reentry_id: str,
+               authorized_at: str) -> "ReentryAuthorization":
+        values = dict(
+            reentry_eligibility_id=eligibility.reentry_eligibility_id,
+            satisfaction_decision_id=eligibility.satisfaction_decision_id,
+            observation_requirement_id=eligibility.observation_requirement_id,
+            reentry_id=str(reentry_id), authorization_state=AUTH_AUTHORIZED,
+            authorized_at=authorized_at,
+            evaluator_version=AUTHORIZATION_EVALUATOR_VERSION,
+        )
+        shell = object.__new__(cls)
+        for key, value in values.items():
+            object.__setattr__(shell, key, value)
+        object.__setattr__(shell, "reentry_authorization_id", "")
+        object.__setattr__(shell, "authorization_fingerprint", "")
+        object.__setattr__(shell, "reentry_authorization_id", shell.derived_id())
+        object.__setattr__(shell, "authorization_fingerprint",
+                           shell.derived_fingerprint())
+        return shell.verify()
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> "ReentryAuthorization":
+        return cls(
+            reentry_authorization_id=str(
+                value.get("reentry_authorization_id") or ""),
+            reentry_eligibility_id=str(
+                value.get("reentry_eligibility_id") or ""),
+            satisfaction_decision_id=str(
+                value.get("satisfaction_decision_id") or ""),
+            observation_requirement_id=str(
+                value.get("observation_requirement_id") or ""),
+            reentry_id=str(value.get("reentry_id") or ""),
+            authorization_state=str(value.get("authorization_state") or ""),
+            authorized_at=str(value.get("authorized_at") or ""),
+            evaluator_version=str(value.get("evaluator_version") or ""),
+            authorization_fingerprint=str(
+                value.get("authorization_fingerprint") or ""),
+        ).verify()
 
 
 @dataclass(frozen=True)
@@ -297,6 +506,8 @@ class ReentryRequest:
     runner_contract_fingerprint: str
     evidence_epoch: str
     evidence_fingerprint: str
+    observation_requirement_id: str
+    satisfaction_decision_id: str
     registry_version: str
     registry_fingerprint: str
     gap_work_item_id: str | None
@@ -319,7 +530,10 @@ def build_reentry_request(
         reason: str,
         trigger_type: str,
         evidence_epoch: str,
-        evidence_fingerprint: str,
+        observation_requirement_id: str,
+        satisfaction_decision_id: str,
+        evidence_fingerprint: str | None = None,
+        evidence_epochs: Mapping[str, V.EvidenceEpoch] | None = None,
         gap_work_item_id: str | None = None,
         contract_evolution: dict[str, Any] | None = None,
         registry_version: str = REGISTRY_VERSION,
@@ -338,6 +552,15 @@ def build_reentry_request(
         previous_finding_id = str(finding["finding_id"])
         previous_certification_fingerprint = str(
             certification["certification_fingerprint"])
+    resolved_evidence_fingerprint = evidence_fingerprint
+    if resolved_evidence_fingerprint is None:
+        epochs = evidence_epochs
+        if epochs is None:
+            epochs = canonical_reentry_authorities()[3]
+        epoch = epochs.get(str(evidence_epoch))
+        if epoch is None:
+            raise ReentryError("EVIDENCE_EPOCH_UNREGISTERED")
+        resolved_evidence_fingerprint = evidence_epoch_fingerprint(epoch)
     return ReentryRequest(
         reentry_id=str(reentry_id),
         question_id=qid,
@@ -355,7 +578,9 @@ def build_reentry_request(
         runner_id=pins["runner_id"],
         runner_contract_fingerprint=pins["runner_contract_fingerprint"],
         evidence_epoch=str(evidence_epoch),
-        evidence_fingerprint=str(evidence_fingerprint),
+        evidence_fingerprint=str(resolved_evidence_fingerprint),
+        observation_requirement_id=str(observation_requirement_id),
+        satisfaction_decision_id=str(satisfaction_decision_id),
         registry_version=pins["registry_version"],
         registry_fingerprint=pins["registry_fingerprint"],
         gap_work_item_id=gap_work_item_id,
@@ -448,6 +673,8 @@ def bootstrap_state(
         "assured_findings": finding_history,
         "scientific_results": scientific_results,
         "reentry_events": [],
+        "reentry_eligibilities": [],
+        "reentry_authorizations": [],
         "supersession_events": [],
         "governed_work_items": [],
         "dependency_edges": G.gap_dependency_edges(G.build_store()),
@@ -511,6 +738,20 @@ def _refresh_fingerprints(state: dict[str, Any]) -> dict[str, Any]:
         "scientific_result_versions": sum(
             len(v) for v in state.get("scientific_results", {}).values()),
         "reentry_events": len(state["reentry_events"]),
+        "reentry_eligibilities": len(state.get("reentry_eligibilities", ())),
+        "reentry_eligible": sum(
+            1 for row in state.get("reentry_eligibilities", ())
+            if row.get("eligibility_state") == ELIGIBLE),
+        "reentry_authorizations": len(
+            state.get("reentry_authorizations", ())),
+        "governed_reentry_executions": sum(
+            1 for event in state.get("reentry_events", ())
+            if event.get("reentry_authorization_id")
+            and event.get("authorization_state") in {
+                AUTH_RESULT_RECORDED, AUTH_ASSURANCE_RECORDED, AUTH_PUBLISHED}),
+        "legacy_ungoverned_reentry_events": sum(
+            1 for event in state.get("reentry_events", ())
+            if event.get("governance_classification") == LEGACY_UNGOVERNED),
         "supersession_events": len(state["supersession_events"]),
     }
     projection = effective_current_state(state)
@@ -571,10 +812,208 @@ def finding_history(state: Mapping[str, Any],
                    key=lambda item: int(item["finding_version"]))]
 
 
+def canonical_reentry_authorities() -> tuple[
+        SD.SatisfactionDecisionRegistry, dict[str, I.EvidenceSet],
+        D.DatasetSnapshotRegistry, dict[str, V.EvidenceEpoch]]:
+    """Resolve every persisted authority used by live re-entry."""
+    snapshots = D.bootstrap_registry()
+    evidence_sets = SD.governed_evidence_map(snapshots)
+    satisfaction = SD.SatisfactionDecisionRegistry.load(SD.STATE_PATH)
+    # Import lazily: closeout constructs the governed epoch overlay and does
+    # not import scientific re-entry itself.
+    from research_engine.control_plane import stage4_observation_closeout as C
+    matrix = json.loads(C.MATRIX_PATH.read_text(encoding="utf-8"))
+    versions = C.build_version_registry(matrix, snapshots)
+    epochs = {epoch.epoch_id: epoch for epoch in versions.epochs()}
+    return satisfaction, evidence_sets, snapshots, epochs
+
+
+def _eligibility(
+        request: ReentryRequest, *,
+        satisfaction_registry: SD.SatisfactionDecisionRegistry,
+        evidence_sets: Mapping[str, I.EvidenceSet],
+        snapshot_registry: D.DatasetSnapshotRegistry,
+        evidence_epochs: Mapping[str, V.EvidenceEpoch],
+        evaluated_at: str) -> ReentryEligibility:
+    rid = str(request.observation_requirement_id or "")
+    decision_id = str(request.satisfaction_decision_id or "")
+
+    def result(state: str, reason: str,
+               decision: SD.GovernedSatisfactionDecision | None = None,
+               epoch: str | None = None) -> ReentryEligibility:
+        return ReentryEligibility.create(
+            observation_requirement_id=rid,
+            satisfaction_decision_id=decision_id,
+            evidence_set_ids=(() if decision is None else
+                              decision.evidence_set_ids),
+            dataset_snapshot_ids=(() if decision is None else
+                                  decision.dataset_snapshot_ids),
+            evidence_epoch=epoch, eligibility_state=state,
+            eligibility_reason=reason, evaluated_at=evaluated_at)
+
+    try:
+        I.validate_requirement_id(rid)
+    except I.Stage4IdentityError as exc:
+        return result(ELIGIBILITY_INVALID, "INVALID_REQUIREMENT_ID:" + str(exc))
+    if not _SDEC_PATTERN.fullmatch(decision_id):
+        return result(ELIGIBILITY_INVALID, "MALFORMED_SATISFACTION_DECISION_ID")
+    try:
+        decision = satisfaction_registry.get(decision_id)
+    except SD.SatisfactionDecisionError:
+        return result(ELIGIBILITY_INVALID, "UNKNOWN_SATISFACTION_DECISION_ID")
+    if decision.observation_requirement_id != rid:
+        return result(ELIGIBILITY_INVALID, "SATISFACTION_REQUIREMENT_MISMATCH",
+                      decision)
+    current = satisfaction_registry.current_for_requirement(rid)
+    if current is None or current.satisfaction_decision_id != decision_id:
+        return result(NOT_ELIGIBLE, "SATISFACTION_DECISION_SUPERSEDED", decision)
+    try:
+        satisfaction_registry.verify(
+            decision_id, evidence_sets=evidence_sets,
+            snapshot_registry=snapshot_registry)
+    except (SD.SatisfactionDecisionError, D.DatasetSnapshotError,
+            I.Stage4IdentityError) as exc:
+        return result(ELIGIBILITY_INVALID,
+                      "SATISFACTION_DECISION_VERIFICATION_FAILED:" + str(exc),
+                      decision)
+    if decision.decision != SD.SATISFIED:
+        return result(
+            NOT_ELIGIBLE, "SATISFACTION_DECISION_NOT_SATISFIED:"
+            + decision.decision, decision)
+
+    epoch_id = str(request.evidence_epoch or "")
+    epoch = evidence_epochs.get(epoch_id)
+    if epoch is None:
+        return result(ELIGIBILITY_INVALID, "EVIDENCE_EPOCH_UNREGISTERED",
+                      decision, epoch_id)
+    if epoch.status != V.EvidenceEpoch.STATUS_FROZEN:
+        return result(ELIGIBILITY_INVALID, "EVIDENCE_EPOCH_NOT_FROZEN",
+                      decision, epoch_id)
+    if rid not in epoch.observation_requirements:
+        return result(ELIGIBILITY_INVALID, "EVIDENCE_EPOCH_REQUIREMENT_MISMATCH",
+                      decision, epoch_id)
+    if tuple(decision.evidence_set_ids) != (epoch.evidence_set.evidence_set_id,):
+        return result(ELIGIBILITY_INVALID, "EVIDENCE_EPOCH_SET_MISMATCH",
+                      decision, epoch_id)
+    if tuple(decision.dataset_snapshot_ids) != tuple(epoch.dataset_snapshot_ids):
+        return result(ELIGIBILITY_INVALID, "EVIDENCE_EPOCH_SNAPSHOT_MISMATCH",
+                      decision, epoch_id)
+    for snapshot_id in epoch.dataset_snapshot_ids:
+        snapshot = snapshot_registry.require(snapshot_id)
+        if (snapshot.dataset_name != epoch.dataset
+                or snapshot.schema_version != epoch.schema_version
+                or snapshot.schema_generation != epoch.schema_generation
+                or snapshot.producer_version != epoch.producer_version
+                or snapshot.producer_fingerprint != epoch.producer_fingerprint):
+            return result(ELIGIBILITY_INVALID,
+                          "EVIDENCE_EPOCH_LINEAGE_MISMATCH", decision, epoch_id)
+    submitted_fingerprint = str(request.evidence_fingerprint or "")
+    if not _SHA256_PATTERN.fullmatch(submitted_fingerprint):
+        return result(ELIGIBILITY_INVALID, "EVIDENCE_FINGERPRINT_MALFORMED",
+                      decision, epoch_id)
+    expected_fingerprint = _fingerprint(epoch.to_dict())
+    if submitted_fingerprint != expected_fingerprint:
+        return result(ELIGIBILITY_INVALID, "EVIDENCE_FINGERPRINT_MISMATCH",
+                      decision, epoch_id)
+    return result(ELIGIBLE, "CURRENT_VERIFIED_SATISFIED_DECISION",
+                  decision, epoch_id)
+
+
+def evaluate_reentry_eligibility(
+        request: ReentryRequest, *, evaluated_at: str | None = None,
+        satisfaction_registry: SD.SatisfactionDecisionRegistry | None = None,
+        evidence_sets: Mapping[str, I.EvidenceSet] | None = None,
+        snapshot_registry: D.DatasetSnapshotRegistry | None = None,
+        evidence_epochs: Mapping[str, V.EvidenceEpoch] | None = None,
+        ) -> ReentryEligibility:
+    """Derive eligibility from canonical authorities, never caller labels."""
+    if any(value is None for value in (
+            satisfaction_registry, evidence_sets, snapshot_registry,
+            evidence_epochs)):
+        canonical = canonical_reentry_authorities()
+        if satisfaction_registry is None:
+            satisfaction_registry = canonical[0]
+        if evidence_sets is None:
+            evidence_sets = canonical[1]
+        if snapshot_registry is None:
+            snapshot_registry = canonical[2]
+        if evidence_epochs is None:
+            evidence_epochs = canonical[3]
+    return _eligibility(
+        request, satisfaction_registry=satisfaction_registry,
+        evidence_sets=dict(evidence_sets), snapshot_registry=snapshot_registry,
+        evidence_epochs=dict(evidence_epochs),
+        evaluated_at=_utc_now(evaluated_at))
+
+
+def _fixture_reentry_authorities(
+        *, requirement_id: str = "OR-01", fixture_id: str = "FIXTURE",
+        observed: int = 1, required: int = 1,
+        supersedes: str | None = None,
+        ) -> tuple[SD.SatisfactionDecisionRegistry,
+                   dict[str, I.EvidenceSet], D.DatasetSnapshotRegistry,
+                   dict[str, V.EvidenceEpoch],
+                   SD.GovernedSatisfactionDecision]:
+    """Isolated positive-path authority used only by tests/demonstrations."""
+    marker = _fingerprint({"fixture_id": fixture_id})[:16]
+    producer_fingerprint = _fingerprint({"producer": fixture_id})
+    snapshot = D.freeze_population(
+        dataset_name="shadow_runtime", schema_version="shadow_runtime_v1",
+        schema_generation=1, generation_state=D.GENERATION_CONFIRMED,
+        generation_evidence="isolated re-entry fixture",
+        identity_grain="one synthetic governed event",
+        identity_grain_evidence="isolated re-entry fixture",
+        producer_version="fixture-producer-v1",
+        producer_fingerprint=producer_fingerprint,
+        source_boundaries=("fixture=" + marker,),
+        population_filters=("scope=isolated-test-only",),
+        population_class=D.GOVERNED_REQUIREMENT_POPULATION,
+        observation_requirements=(requirement_id,),
+        records=({"fixture": marker},),
+        frozen_at="2026-09-30T00:00:00Z")
+    epoch = V.EvidenceEpoch(
+        epoch_id="FIXTURE-EPOCH-" + marker.upper(),
+        dataset="shadow_runtime", dataset_version="shadow_runtime_v1",
+        schema_generation=1, producer_version="fixture-producer-v1",
+        producer_fingerprint=producer_fingerprint,
+        collection_start="2026-09-30T00:00:00Z",
+        observation_requirements=(requirement_id,), questions=(),
+        canonical_identities=("fixture_id",),
+        evidence_contract_versions={requirement_id: "fixture-v1"},
+        predecessor_epoch_id=None, status=V.EvidenceEpoch.STATUS_FROZEN,
+        dataset_snapshot_ids=(snapshot.dataset_snapshot_id,))
+    evidence = epoch.evidence_set
+    snapshots = D.DatasetSnapshotRegistry((snapshot,))
+    policy = SD.ThresholdPolicy.create(
+        observation_requirement_id=requirement_id,
+        rules=({"threshold_id": requirement_id + "-FIXTURE-COUNT",
+                "field": "sample_count", "operator": ">=",
+                "value": required},),
+        authority="isolated test fixture", source="isolated test fixture")
+    decision = SD.evaluate(
+        observation_requirement_id=requirement_id,
+        evidence_set_ids=(evidence.evidence_set_id,),
+        threshold_policy=policy,
+        evaluation_metrics={"sample_count": observed},
+        evidence_sets={evidence.evidence_set_id: evidence},
+        snapshot_registry=snapshots,
+        evaluated_at="2026-09-30T00:00:00Z",
+        supersedes_satisfaction_decision_id=supersedes)
+    registry = SD.SatisfactionDecisionRegistry(policies=(policy,))
+    registry.register(decision)
+    return (registry, {evidence.evidence_set_id: evidence}, snapshots,
+            {epoch.epoch_id: epoch}, decision)
+
+
 def authorize_reentry(
         state: Mapping[str, Any], request: ReentryRequest, *,
         now: str | None = None,
-        gap_store: Mapping[str, Any] | None = None) -> dict[str, Any]:
+        gap_store: Mapping[str, Any] | None = None,
+        satisfaction_registry: SD.SatisfactionDecisionRegistry | None = None,
+        evidence_sets: Mapping[str, I.EvidenceSet] | None = None,
+        snapshot_registry: D.DatasetSnapshotRegistry | None = None,
+        evidence_epochs: Mapping[str, V.EvidenceEpoch] | None = None,
+        ) -> dict[str, Any]:
     """Authorize one governed re-entry, or fail closed with no partial state.
 
     Execution authority exists only after a governed trigger, a re-entry-ready
@@ -584,6 +1023,15 @@ def authorize_reentry(
     """
     validate_state(state)
     _validate_request_against_state(state, request)
+    eligibility = evaluate_reentry_eligibility(
+        request, evaluated_at=now,
+        satisfaction_registry=satisfaction_registry,
+        evidence_sets=evidence_sets, snapshot_registry=snapshot_registry,
+        evidence_epochs=evidence_epochs)
+    if eligibility.eligibility_state != ELIGIBLE:
+        raise ReentryError(
+            "REENTRY_NOT_ELIGIBLE:" + eligibility.eligibility_state + ":"
+            + eligibility.eligibility_reason)
     work_item_id, work_item = _resolve_work_item(request, state, gap_store)
     dependencies = dependency_state_for(state, request.question_id)
     if request.dependency_state and request.dependency_state != dependencies:
@@ -593,15 +1041,41 @@ def authorize_reentry(
     if unmet:
         raise ReentryError(
             f"{request.question_id}:DEPENDENCY_UNRESOLVED:{','.join(unmet)}")
+    existing_authorization = next((row for row in state.get(
+        "reentry_authorizations", ()) if row.get("satisfaction_decision_id") ==
+        request.satisfaction_decision_id), None)
+    if existing_authorization is not None:
+        if (str(existing_authorization.get("reentry_id")) == request.reentry_id
+                and any(str(event.get("reentry_id")) == request.reentry_id
+                        for event in state.get("reentry_events", ()))):
+            return deepcopy(dict(state))
+        raise ReentryError("SATISFACTION_DECISION_ALREADY_AUTHORIZED")
+    # A re-entry id is a permanent audit identity.  Refuse to reuse one that
+    # already exists - in particular a legacy pre-Refinement-4 id, whose
+    # event is auditable history and must never be shadowed by new work.
+    if any(str(event.get("reentry_id")) == request.reentry_id
+           for event in state.get("reentry_events", ())):
+        raise ReentryError(f"REENTRY_ID_ALREADY_USED:{request.reentry_id}")
+    authorized_at = _utc_now(now)
+    authorization = ReentryAuthorization.create(
+        eligibility=eligibility, reentry_id=request.reentry_id,
+        authorized_at=authorized_at)
     nxt = deepcopy(dict(state))
+    nxt.setdefault("reentry_eligibilities", []).append(eligibility.to_dict())
+    nxt.setdefault("reentry_authorizations", []).append(authorization.to_dict())
     nxt["reentry_events"].append({
         "reentry_id": str(request.reentry_id),
         "question_id": str(request.question_id),
         "reason": str(request.reason),
         "trigger_type": str(request.trigger_type),
         "requested_at": str(request.requested_at),
-        "authorized_at": _utc_now(now),
+        "authorized_at": authorized_at,
         "authorization_state": AUTH_AUTHORIZED,
+        "governance_classification": "GOVERNED_DECISION_AUTHORIZED",
+        "observation_requirement_id": eligibility.observation_requirement_id,
+        "satisfaction_decision_id": eligibility.satisfaction_decision_id,
+        "reentry_eligibility_id": eligibility.reentry_eligibility_id,
+        "reentry_authorization_id": authorization.reentry_authorization_id,
         "work_item_id": work_item_id,
         "work_item_status": str(work_item.get("status")),
         "gap_type": str(work_item.get("gap_type")),
@@ -642,6 +1116,8 @@ def plan_scoped_run(state: Mapping[str, Any], reentry_id: str, *,
     event = _event(state, reentry_id)
     if str(event.get("authorization_state")) != AUTH_AUTHORIZED:
         raise ReentryError(f"{reentry_id}:NOT_AUTHORIZED")
+    if not str(event.get("reentry_authorization_id") or ""):
+        raise ReentryError(f"{reentry_id}:LEGACY_UNGOVERNED_NOT_EXECUTABLE")
     requested = [str(event["question_id"])]
     for qid in additional_question_ids:
         qid = str(qid).strip().upper()
@@ -775,6 +1251,12 @@ def _validate_request_against_state(
         raise ReentryError(f"{qid}:TRIGGER_NOT_GOVERNED:{request.trigger_type}")
     if str(request.authorization_state) != AUTH_REQUESTED:
         raise ReentryError(f"{qid}:REQUEST_ALREADY_AUTHORIZED")
+    try:
+        I.validate_requirement_id(request.observation_requirement_id)
+    except I.Stage4IdentityError as exc:
+        raise ReentryError(str(exc)) from exc
+    if not str(request.satisfaction_decision_id or ""):
+        raise ReentryError(f"{qid}:SATISFACTION_DECISION_ID_REQUIRED")
     if str(state.get("baseline", {}).get("certification_fingerprint")
            ) != BASELINE_CERTIFICATION_FINGERPRINT:
         raise ReentryError("BASELINE_CERTIFICATION_FINGERPRINT_CHANGED")
@@ -899,6 +1381,8 @@ def _resolve_work_item(
 
 def validate_state(state: Mapping[str, Any]) -> dict[str, Any]:
     """Fail closed on every certification/finding history invariant."""
+    if state.get("schema") != REENTRY_SCHEMA:
+        raise ReentryError("REENTRY_STATE_SCHEMA_MISMATCH")
     for qid in QUESTION_IDS:
         if qid not in state.get("question_certifications", {}):
             raise ReentryError(f"{qid}:MISSING_CERTIFICATION_HISTORY")
@@ -945,10 +1429,48 @@ def validate_state(state: Mapping[str, Any]) -> dict[str, Any]:
             if len(current_results) != 1 or result_versions[-1] != int(
                     current_results[0]["scientific_result_version"]):
                 raise ReentryError(f"{qid}:DUPLICATE_OR_MISSING_CURRENT_SCIENTIFIC_RESULT")
+    eligibilities: dict[str, ReentryEligibility] = {}
+    for row in state.get("reentry_eligibilities", ()):
+        record = ReentryEligibility.from_dict(row)
+        if record.reentry_eligibility_id in eligibilities:
+            raise ReentryError("DUPLICATE_REENTRY_ELIGIBILITY_ID")
+        eligibilities[record.reentry_eligibility_id] = record
+    authorizations: dict[str, ReentryAuthorization] = {}
+    authorized_decisions: set[str] = set()
+    for row in state.get("reentry_authorizations", ()):
+        record = ReentryAuthorization.from_dict(row)
+        if record.reentry_authorization_id in authorizations:
+            raise ReentryError("DUPLICATE_REENTRY_AUTHORIZATION_ID")
+        if record.satisfaction_decision_id in authorized_decisions:
+            raise ReentryError("DUPLICATE_DECISION_AUTHORIZATION")
+        eligibility = eligibilities.get(record.reentry_eligibility_id)
+        if eligibility is None or eligibility.eligibility_state != ELIGIBLE:
+            raise ReentryError("AUTHORIZATION_WITHOUT_ELIGIBILITY")
+        if (eligibility.satisfaction_decision_id !=
+                record.satisfaction_decision_id):
+            raise ReentryError("AUTHORIZATION_ELIGIBILITY_MISMATCH")
+        authorizations[record.reentry_authorization_id] = record
+        authorized_decisions.add(record.satisfaction_decision_id)
+    seen_reentry_ids: set[str] = set()
     for event in state.get("reentry_events", ()):
+        reentry_id = str(event.get("reentry_id") or "")
+        if not reentry_id or reentry_id in seen_reentry_ids:
+            raise ReentryError("DUPLICATE_OR_MISSING_REENTRY_ID")
+        seen_reentry_ids.add(reentry_id)
         if str(event.get("authorization_state")) not in ALLOWED_AUTHORIZATION_STATES:
             raise ReentryError(
                 f"{event.get('reentry_id')}:AUTHORIZATION_STATE_UNKNOWN")
+        authorization_id = str(event.get("reentry_authorization_id") or "")
+        if authorization_id:
+            authorization = authorizations.get(authorization_id)
+            if authorization is None:
+                raise ReentryError(reentry_id + ":AUTHORIZATION_RECORD_MISSING")
+            if (authorization.reentry_id != reentry_id
+                    or authorization.satisfaction_decision_id != str(
+                        event.get("satisfaction_decision_id"))):
+                raise ReentryError(reentry_id + ":AUTHORIZATION_EVENT_MISMATCH")
+        elif event.get("governance_classification") != LEGACY_UNGOVERNED:
+            raise ReentryError(reentry_id + ":UNCLASSIFIED_LEGACY_REENTRY")
     if state.get("q71_started") is not False:
         raise ReentryError("Q71_MUST_NOT_BE_STARTED")
     if state.get("live_or_s3_reads") is not False:
@@ -960,8 +1482,54 @@ def validate_state(state: Mapping[str, Any]) -> dict[str, Any]:
     return dict(state)
 
 
+def migrate_legacy_state(state: Mapping[str, Any]) -> dict[str, Any]:
+    """Add R4 authority without inventing lineage for historical events."""
+    if state.get("schema") == REENTRY_SCHEMA:
+        return dict(state)
+    if state.get("schema") != 1:
+        raise ReentryError("REENTRY_STATE_SCHEMA_MISMATCH")
+    nxt = deepcopy(dict(state))
+    nxt["schema"] = REENTRY_SCHEMA
+    nxt["reentry_authorizations"] = []
+    for event in nxt.get("reentry_events", ()):
+        event["governance_classification"] = LEGACY_UNGOVERNED
+        event["legacy_resolution_state"] = "LEGACY_UNRESOLVED"
+        # Deliberately no satisfaction/eligibility/authorization identity:
+        # the exact historical decision material did not exist.
+
+    satisfaction, evidence, snapshots, _epochs = canonical_reentry_authorities()
+    eligibility_rows: list[dict[str, Any]] = []
+    for rid in I.CANONICAL_REQUIREMENT_IDS:
+        decision = satisfaction.current_for_requirement(rid)
+        if decision is None:
+            continue
+        try:
+            satisfaction.verify(
+                decision.satisfaction_decision_id,
+                evidence_sets=evidence, snapshot_registry=snapshots)
+            reason = ("SATISFACTION_DECISION_NOT_SATISFIED:"
+                      + decision.decision if decision.decision != SD.SATISFIED
+                      else "EVIDENCE_EPOCH_CONTEXT_REQUIRED")
+            state_name = NOT_ELIGIBLE
+        except SD.SatisfactionDecisionError as exc:
+            reason = "SATISFACTION_DECISION_VERIFICATION_FAILED:" + str(exc)
+            state_name = ELIGIBILITY_INVALID
+        eligibility_rows.append(ReentryEligibility.create(
+            observation_requirement_id=rid,
+            satisfaction_decision_id=decision.satisfaction_decision_id,
+            evidence_set_ids=decision.evidence_set_ids,
+            dataset_snapshot_ids=decision.dataset_snapshot_ids,
+            evidence_epoch=None, eligibility_state=state_name,
+            eligibility_reason=reason,
+            evaluated_at="2026-09-30T00:00:00Z").to_dict())
+    nxt["reentry_eligibilities"] = eligibility_rows
+    return _refresh_fingerprints(nxt)
+
+
 def load_state(path: Path | str = STATE_PATH) -> dict[str, Any]:
     state = _read_json(Path(path))
+    if state.get("schema") == 1:
+        state = migrate_legacy_state(state)
     return validate_state(state)
 
 
@@ -1667,17 +2235,26 @@ def run_reentry_demo(*, question_id: str = "R1",
         sorted(G.PRE_RERUN_EVIDENCE[G.GAP_TYPE_IMPL]))
     gap_store = G.mark_reentry_ready(gap_store, work_item_id, reentry_id)
 
+    satisfaction, evidence_sets, snapshots, epochs, decision = (
+        _fixture_reentry_authorities(fixture_id=reentry_id))
+    epoch = next(iter(epochs.values()))
+
     request = build_reentry_request(
         reentry_id=reentry_id,
         question_id=question_id,
         reason="Synthetic demonstration of the governed re-entry authority",
         trigger_type=trigger_type,
-        evidence_epoch="CURRENT",
-        evidence_fingerprint=_fingerprint({"demo_evidence": reentry_id}),
+        evidence_epoch=epoch.epoch_id,
+        evidence_fingerprint=evidence_epoch_fingerprint(epoch),
+        observation_requirement_id=decision.observation_requirement_id,
+        satisfaction_decision_id=decision.satisfaction_decision_id,
         gap_work_item_id=work_item_id,
         requested_at=now,
         state=state)
-    state = authorize_reentry(state, request, now=now, gap_store=gap_store)
+    state = authorize_reentry(
+        state, request, now=now, gap_store=gap_store,
+        satisfaction_registry=satisfaction, evidence_sets=evidence_sets,
+        snapshot_registry=snapshots, evidence_epochs=epochs)
     state = execute_scoped_run(
         state, reentry_id, runner=_fixture_runner([question_id]), now=now)
     state = record_assurance(
@@ -1777,7 +2354,9 @@ __all__ = [
     "ALLOWED_TRIGGERS", "AUTH_ASSURANCE_RECORDED", "AUTH_AUTHORIZED",
     "AUTH_PUBLISHED", "AUTH_REQUESTED", "AUTH_RESULT_RECORDED",
     "AUDIT_JSON", "AUDIT_MD", "BASELINE_CERTIFICATION_FINGERPRINT",
-    "DEPENDENCY_REQUIREMENT", "GAP_COUPLED_TRIGGERS", "ReentryError",
+    "DEPENDENCY_REQUIREMENT", "ELIGIBLE", "ELIGIBILITY_INVALID",
+    "GAP_COUPLED_TRIGGERS", "LEGACY_UNGOVERNED", "NOT_ELIGIBLE",
+    "ReentryAuthorization", "ReentryEligibility", "ReentryError",
     "ReentryRequest", "STATE_PATH", "STAGE", "TRIGGER_DATA_THRESHOLD_REACHED",
     "TRIGGER_DEPENDENCY_RESOLVED", "TRIGGER_GOVERNED_METHOD_REPAIR",
     "TRIGGER_IMPLEMENTATION_REPAIR", "TRIGGER_NEW_EVIDENCE_EPOCH",
@@ -1785,9 +2364,11 @@ __all__ = [
     "bootstrap_state", "build_reentry_request", "certification_history",
     "certification_identity", "certify_scoped_questions",
     "consume_scientific_truth", "current_certification", "current_finding",
-    "dependency_state_for", "effective_current_state", "ensure_bootstrapped",
+    "dependency_state_for", "effective_current_state",
+    "ensure_bootstrapped", "evaluate_reentry_eligibility",
+    "evidence_epoch_fingerprint",
     "execute_scoped_run", "finding_history", "gap_resolution_linkage",
-    "load_state", "plan_scoped_run", "population_fingerprint",
+    "load_state", "migrate_legacy_state", "plan_scoped_run", "population_fingerprint",
     "publish_new_version", "question_contract_pins", "record_assurance",
     "registry_fingerprint", "resolve_gap_via_reentry", "run_reentry_demo",
     "save_state", "scientific_result_history", "validate_state",

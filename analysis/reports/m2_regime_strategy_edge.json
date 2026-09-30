@@ -1,0 +1,117 @@
+{
+  "assumptions": [],
+  "confidence": "INSUFFICIENT_DATA",
+  "dataset": {
+    "sample_size": 4,
+    "source": "shadow_trades",
+    "total_loaded": 14046
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_3f67e80fa52146bf",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "4dad77f74d57f3e342f138258d4af74b1ac103ac64f3bec94ab6b3da6ac0e393",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 14046,
+          "records_excluded": 0,
+          "records_used": 14046,
+          "schema": "shadow_trades_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "shadow_trades",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "3f67e80fa52146bfc3ef312484e844ca215131600e535fdc21c5da7ac44bc782",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 14046,
+      "records_excluded": 0,
+      "records_used": 14046,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 14077,
+    "governed_usable_records": 14046,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 0,
+    "records_used": 14046,
+    "source": "shadow_trades",
+    "sources": [
+      "shadow_trades"
+    ],
+    "validation_score": "INSUFFICIENT_DATA"
+  },
+  "generated": "2026-09-28T19:26:19Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 14077,
+    "excluded_records": 31,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_m2",
+    "runner_module": "research_engine.experiments.market_research",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 14046
+  },
+  "overall": {
+    "current_epoch_records": 14046,
+    "edge_assessment": "MIXED_EDGE",
+    "question": "Which H4 regimes produce edge for each strategy type?",
+    "records_with_regime_and_strategy": 4,
+    "regimes_found": [
+      "RANGING",
+      "TRENDING"
+    ],
+    "segmentation": "h4_regime \u00d7 strategy",
+    "segments": {
+      "RANGING | FALSE_BREAK": {
+        "count": 3,
+        "losses": 2,
+        "mean_r": -0.6559,
+        "win_rate": 0.3333,
+        "wins": 1
+      },
+      "TRENDING | FALSE_BREAK": {
+        "count": 1,
+        "losses": 0,
+        "mean_r": 0.6923,
+        "win_rate": 1.0,
+        "wins": 1
+      }
+    },
+    "total_records": 14046,
+    "total_regime_strategy_combos": 2
+  },
+  "provenance": {
+    "canonical_intent": "Which H4 regimes produce edge for each strategy type?",
+    "data_classification": "market_observation_with_outcome",
+    "experiment_module": "research_engine.experiments.market_research",
+    "registry_id": "M2"
+  },
+  "question_id": "M2",
+  "recommendation": "MIXED_EDGE",
+  "scientific_state": "INSUFFICIENT_DATA",
+  "status": "INSUFFICIENT_DATA",
+  "warnings": []
+}

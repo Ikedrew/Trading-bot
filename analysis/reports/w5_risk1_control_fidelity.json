@@ -1,0 +1,157 @@
+{
+  "assumptions": [
+    "risk_deviation_v1 is a POST-OUTCOME diagnostic projection: it compares the realised loss magnitude to the 1-R definition AFTER the outcome is known.",
+    "Denominator = recorded classification population (closed-trade diagnostic records). It is NOT 'all risk observations' and NOT 'deviations only'.",
+    "planned_risk_R is always -1.0 by definition (one unit of risk); the dataset does NOT capture a pre-trade intended-risk plan.",
+    "Deviation is a measure of realised loss magnitude \u2014 it does NOT prove that a deviation 'caused' a loss.",
+    "NO_RISK_DATA records are counted but excluded from deviation rates."
+  ],
+  "confidence": "MEDIUM",
+  "dataset": {
+    "sample_size": 84,
+    "source": "risk_deviation_v1"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_b3cbe173b3e926ee",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "65a6d90992e5a7bc0b396d53826a71a77f4cc14c5d5f3c1b41bbcc880f8ed757",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 84,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 84,
+          "records_excluded": 0,
+          "records_used": 84,
+          "schema": "risk_deviation_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "risk_deviation_v1",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 84,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "b3cbe173b3e926eea0fe6ae493ac08b8d74750a64c7f675605cbabef4666b06a",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 84,
+      "records_excluded": 0,
+      "records_used": 84,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 84,
+    "governed_usable_records": 84,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 0,
+    "records_used": 84,
+    "source": "risk_deviation_v1",
+    "sources": [
+      "risk_deviation_v1"
+    ],
+    "validation_score": "UNKNOWN"
+  },
+  "generated": "2026-09-28T19:57:12Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 84,
+    "excluded_records": 0,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_risk1",
+    "runner_module": "research_engine.experiments.risk_research",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 84
+  },
+  "overall": {
+    "classification_distribution": {
+      "ELEVATED": 1,
+      "NORMAL": 29,
+      "WIN": 54
+    },
+    "critical_loss_rate": {
+      "denominator": 30,
+      "numerator": 0,
+      "rate": 0.0
+    },
+    "deviation_rate_over_plan": {
+      "denominator": 30,
+      "numerator": 1,
+      "rate": 0.0333
+    },
+    "excluded_invalid_class": 0,
+    "excluded_no_trade_id": 0,
+    "loss_actual_r_stats": {
+      "max": -0.0056,
+      "mean": -0.93597,
+      "median": -1.01665,
+      "min": -1.6544,
+      "n": 30,
+      "p75": -1.0076,
+      "stdev": 0.381221
+    },
+    "loss_deviation_stats": {
+      "max": 1.6544,
+      "mean": 0.93597,
+      "median": 1.01665,
+      "min": 0.0056,
+      "n": 30,
+      "p75": 1.026,
+      "stdev": 0.381221
+    },
+    "loss_records": 30,
+    "n": 84,
+    "per_symbol": {
+      "GBPUSD": {
+        "elevated_or_critical": 0,
+        "loss_count": 2,
+        "n": 15,
+        "over_plan_rate": 0.0
+      },
+      "NZDUSD": {
+        "elevated_or_critical": 0,
+        "loss_count": 4,
+        "n": 13,
+        "over_plan_rate": 0.0
+      },
+      "USDCAD": {
+        "elevated_or_critical": 0,
+        "loss_count": 10,
+        "n": 13,
+        "over_plan_rate": 0.0
+      }
+    },
+    "win_records": 54
+  },
+  "provenance": {
+    "experiment_module": "research_engine.experiments.risk_research",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
+    "registry_id": "RISK-1"
+  },
+  "question_id": "RISK-1",
+  "recommendation": "LOSSES_WITHIN_PLANNED_RISK",
+  "scientific_state": "COMPLETE",
+  "status": "COMPLETE",
+  "warnings": [
+    "A WIN record only records profitability \u2014 it does not prove risk-control perfection.",
+    "ELEVATED/CRITICAL loss records indicate realised loss exceeded the 1-R plan, which may reflect market gap, slippage, or protection failure \u2014 this dataset alone cannot distinguish the cause.",
+    "The true pre-trade chain (intended -> requested -> broker-executed risk) is NOT represented anywhere in current V1 canonical evidence; this question measures loss fidelity, not pre-trade risk planning.",
+    "Per-symbol cells with N < 10 are excluded."
+  ]
+}

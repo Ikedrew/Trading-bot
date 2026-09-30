@@ -1,0 +1,354 @@
+{
+  "assumptions": [
+    "CURRENT execution results and contexts are selected before strict correlation_id joining.",
+    "Account fan-out children remain observations but each shared decision has total estimator weight one.",
+    "The rejection endpoint is descriptive and cannot alter the primary slippage inference."
+  ],
+  "confidence": "INSUFFICIENT_DATA",
+  "dataset": {
+    "analysed_row_count": 0,
+    "records_loaded": 33218,
+    "sample_size": 365,
+    "source": "execution_results_v1 + execution_context"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_13f34c0cbeb1a1c9",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 32784,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 32784,
+          "records_excluded": 32784,
+          "records_used": 0,
+          "schema": "execution_context_v1",
+          "selection": "CURRENT_SUBSET",
+          "source": "execution_context",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 0,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        },
+        {
+          "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 434,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 434,
+          "records_excluded": 434,
+          "records_used": 0,
+          "schema": "execution_results_v1",
+          "selection": "CURRENT_SUBSET",
+          "source": "execution_results_v1",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 0,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "13f34c0cbeb1a1c98b0a150cdeb98d32a01031c1e54e398379cf6577c23a50b6",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 33218,
+      "records_excluded": 33218,
+      "records_used": 0,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 33218,
+    "governed_usable_records": 23,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 33218,
+    "records_used": 0,
+    "source": "MULTI_SOURCE",
+    "sources": [
+      "execution_context",
+      "execution_results_v1"
+    ],
+    "validation_score": "CURRENT_GOVERNED_X3"
+  },
+  "generated": "2026-09-28T18:44:38Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 33218,
+    "excluded_records": 33195,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_x3",
+    "runner_module": "research_engine.experiments.execution_protection_research",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 23
+  },
+  "overall": {
+    "analytical_population": {
+      "analytical_account_results": 0,
+      "analytical_distinct_decisions": 0,
+      "cluster": "correlation_id",
+      "distinct_correlation_id_decisions": 123,
+      "governed_matched_account_results": 365,
+      "known_session_unmeasured_slippage_results": 287,
+      "observation_grain": "one distinct account/broker execution result",
+      "unknown_execution_status_results": 0,
+      "unknown_or_missing_session_results": 0
+    },
+    "claim_boundary": "CURRENT evidence and the listed primary-sufficient sessions only; measured execution slippage does not establish strategy expectancy or profitability",
+    "classification": "INSUFFICIENT_EVIDENCE",
+    "estimand": "SESSION_CONDITIONED_ABSOLUTE_MEASURED_EXECUTION_SLIPPAGE",
+    "estimator": {
+      "cluster": "correlation_id",
+      "cluster_score": "sum_i w_di * x_di * residual_di within correlation_id",
+      "cluster_total_weights": {},
+      "coding": "deterministic reference coding",
+      "covariance": "A^-1 (sum_d s_d s_d') A^-1",
+      "fitted_session_means": {},
+      "model": "absolute_measured_slippage ~ categorical session",
+      "naive_row_independent_covariance_used": false,
+      "reference_session": "ASIA",
+      "weights": "w_di = 1/k_d within the evaluated primary-session population"
+    },
+    "evaluated_primary_sessions": [
+      "ASIA"
+    ],
+    "evidence_accounting": {
+      "components": {
+        "execution_context": {
+          "accepted_current_records": 32784,
+          "digest": "b7ee0146f4ba3441e14ad61efde6ee742daf004332ef8689d6859fa1333161e0",
+          "input_records": 32784,
+          "input_records_including_malformed": 32784,
+          "malformed_invalid_records_excluded": 0,
+          "records_excluded": 0,
+          "schema_incompatible_records_excluded": 0,
+          "stale_records_excluded": 0,
+          "state": "CURRENT"
+        },
+        "execution_results_v1": {
+          "accepted_current_records": 434,
+          "digest": "c2ed38f1833c158df1a1ed4610579e94858e5f96307db51f372270977b8e909c",
+          "input_records": 434,
+          "input_records_including_malformed": 434,
+          "malformed_invalid_records_excluded": 0,
+          "records_excluded": 0,
+          "schema_incompatible_records_excluded": 0,
+          "stale_records_excluded": 0,
+          "state": "CURRENT"
+        }
+      },
+      "join_and_identity_exclusions": {
+        "ambiguous_conflicting_context": 10,
+        "missing_account_execution_identity": 10,
+        "missing_context": 12,
+        "supplemental_non_observation": 47
+      },
+      "primary_rows_outside_sufficient_sessions": 78
+    },
+    "finding": "Insufficient evidence for governed session execution-quality inference",
+    "global_primary_test": {
+      "alpha": 0.05,
+      "degrees_of_freedom": null,
+      "method": "cluster-robust Wald joint session-coefficient test",
+      "null": "all sufficient evaluated sessions have equal mean absolute measured slippage",
+      "p_value": null,
+      "reliable_session_slippage_difference": null,
+      "statistic": null
+    },
+    "n": 365,
+    "pairwise_primary_contrasts": {
+      "alpha": 0.05,
+      "declared_count": 0,
+      "family": "all pairs among primary-sufficient sessions",
+      "multiplicity": "one global Holm step-down family",
+      "omnibus_in_holm_family": false,
+      "omnibus_rejection_required": true,
+      "results": []
+    },
+    "secondary_rejection_endpoint": {
+      "can_override_primary_classification": false,
+      "composite_score_used": false,
+      "failure": "result_ok is explicitly False",
+      "pairwise_hypothesis_tests_performed": false,
+      "role": "descriptive only with cluster-aware uncertainty",
+      "success": "result_ok is explicitly True",
+      "unknown": "excluded from denominator and counted"
+    },
+    "sessions": {
+      "ASIA": {
+        "distinct_correlation_id_decisions": 55,
+        "endpoint_state": "BOTH",
+        "failure_rate": 0.8,
+        "failures": 132,
+        "known_status_n": 165,
+        "mean_absolute_measured_slippage": 0.023818787879,
+        "measured_slippage_decision_n": 24,
+        "measured_slippage_eligible_n": 33,
+        "median_absolute_measured_slippage": 0.0015,
+        "primary_sufficient": true,
+        "rejection_decision_n": 55,
+        "rejection_interval_95": {
+          "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+          "estimate": 0.8,
+          "lower": 0.733648701853,
+          "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+          "standard_error": 0.033852703136,
+          "upper": 0.866351298147,
+          "z": 1.96
+        },
+        "rejection_sufficient": true,
+        "retcode_distribution": {
+          "-1": 78,
+          "10009": 33,
+          "10016": 28,
+          "10030": 26
+        },
+        "successes": 33,
+        "total_joined_execution_results": 165,
+        "unknown_status_n": 0
+      },
+      "LONDON": {
+        "distinct_correlation_id_decisions": 28,
+        "endpoint_state": "REJECTION_SUFFICIENT",
+        "failure_rate": 0.666666666667,
+        "failures": 56,
+        "known_status_n": 84,
+        "mean_absolute_measured_slippage": 7.10534875,
+        "measured_slippage_decision_n": 20,
+        "measured_slippage_eligible_n": 28,
+        "median_absolute_measured_slippage": 0.00309,
+        "primary_sufficient": false,
+        "rejection_decision_n": 28,
+        "rejection_interval_95": {
+          "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+          "estimate": 0.666666666667,
+          "lower": 0.573333333333,
+          "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+          "standard_error": 0.047619047619,
+          "upper": 0.76,
+          "z": 1.96
+        },
+        "rejection_sufficient": true,
+        "retcode_distribution": {
+          "-1": 36,
+          "10009": 28,
+          "10016": 8,
+          "10030": 12
+        },
+        "successes": 28,
+        "total_joined_execution_results": 84,
+        "unknown_status_n": 0
+      },
+      "NY": {
+        "distinct_correlation_id_decisions": 34,
+        "endpoint_state": "REJECTION_SUFFICIENT",
+        "failure_rate": 0.897959183673,
+        "failures": 88,
+        "known_status_n": 98,
+        "mean_absolute_measured_slippage": 2.8409975,
+        "measured_slippage_decision_n": 7,
+        "measured_slippage_eligible_n": 8,
+        "median_absolute_measured_slippage": 0.0020725,
+        "primary_sufficient": false,
+        "rejection_decision_n": 34,
+        "rejection_interval_95": {
+          "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+          "estimate": 0.862745098039,
+          "lower": 0.772134845918,
+          "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+          "standard_error": 0.04622972047,
+          "upper": 0.953355350161,
+          "z": 1.96
+        },
+        "rejection_sufficient": true,
+        "retcode_distribution": {
+          "-1": 51,
+          "10009": 10,
+          "10016": 27,
+          "10030": 10
+        },
+        "successes": 10,
+        "total_joined_execution_results": 98,
+        "unknown_status_n": 0
+      },
+      "OFF_SESSION": {
+        "distinct_correlation_id_decisions": 6,
+        "endpoint_state": "INSUFFICIENT",
+        "failure_rate": 0.5,
+        "failures": 9,
+        "known_status_n": 18,
+        "mean_absolute_measured_slippage": 15.580455555556,
+        "measured_slippage_decision_n": 5,
+        "measured_slippage_eligible_n": 9,
+        "median_absolute_measured_slippage": 0.005475,
+        "primary_sufficient": false,
+        "rejection_decision_n": 6,
+        "rejection_interval_95": {
+          "cluster_normalized_weighting": "w_di = 1/k_d within session known-status rows",
+          "estimate": 0.5,
+          "lower": 0.296287542276,
+          "method": "correlation_id_clustered_sandwich_for_weighted_proportion",
+          "standard_error": 0.10393492741,
+          "upper": 0.703712457724,
+          "z": 1.96
+        },
+        "rejection_sufficient": false,
+        "retcode_distribution": {
+          "-1": 8,
+          "10009": 9,
+          "10016": 1
+        },
+        "successes": 9,
+        "total_joined_execution_results": 18,
+        "unknown_status_n": 0
+      }
+    },
+    "sufficiency": {
+      "at_least_two_primary_sufficient_sessions": false,
+      "minimum_distinct_decisions_per_primary_session": 10,
+      "minimum_governed_matched_account_results": 30,
+      "minimum_measured_results_per_primary_session": 30,
+      "minimum_primary_sufficient_sessions": 2,
+      "model_and_cluster_covariance_estimable": false,
+      "overall_sufficient": true,
+      "primary_sufficient_session_count": 1
+    },
+    "unique_best_session": "NO_UNIQUE_SUPPORTED_BEST"
+  },
+  "provenance": {
+    "experiment_module": "research_engine.experiments.execution_protection_research",
+    "registry_id": "X3",
+    "report_identity": "w4_x3_session_quality.json",
+    "scientific_owner": "X3",
+    "shared_evidence_foundation": "research_engine.control_plane.execution_evidence"
+  },
+  "question_id": "X3",
+  "recommendation": "WAIT_FOR_EVIDENCE",
+  "scientific_state": "INSUFFICIENT_DATA",
+  "status": "INSUFFICIENT_DATA",
+  "warnings": [
+    "Claims are bounded to the listed sufficient sessions and CURRENT evidence population.",
+    "Execution quality is not strategy profitability."
+  ]
+}

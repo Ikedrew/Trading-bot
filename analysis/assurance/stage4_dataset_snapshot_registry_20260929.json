@@ -1,0 +1,685 @@
+{
+  "authority_conservation": {
+    "counts": {
+      "DATASETS_INSPECTED": 11,
+      "DECLARED_BUT_UNPERSISTED_DATASETS": 2,
+      "GAP_COUNT_RAW": 31,
+      "PERSISTED_S3_DATASETS_INSPECTED": 9,
+      "PRODUCERS_INSPECTED": 14,
+      "UNIQUE_OBSERVATION_REQUIREMENTS": 15
+    },
+    "governed_gaps": 31,
+    "observation_requirements": 15
+  },
+  "base_authority": {
+    "module": "core.production_data_contract",
+    "registry": "PRODUCTION_SCHEMA_REGISTRY",
+    "role": "Canonical dataset identity and schema version. This authority adds POPULATION (content-bound) identity; it never duplicates the base contract."
+  },
+  "dataset_snapshot_count": 5,
+  "dataset_snapshots": [
+    {
+      "audit_authority_fingerprint": "aeb8dc9b6d9a9c92b61cc5847ab6b814f9f4d90a2d051e24519270d7b362bd04",
+      "content_digest": "b389c7ed3c0b91a27c0950975a68b1363689bf0892aa46eb2dd048163e0516b4",
+      "content_digest_scope": "GOVERNED_POPULATION_DESCRIPTOR",
+      "created_at": "2026-09-29",
+      "dataset_name": "shadow_runtime",
+      "dataset_snapshot_id": "DSNAP-5815AEDBC8947B483BC609F7",
+      "evidence_citations": [
+        "audit persisted_dataset_universe.shadow_runtime.rows",
+        "audit fingerprint aeb8dc9b6d9a9c92b61cc5847ab6b814f9f4d90a2d051e24519270d7b362bd04",
+        "matrix OR-01.required_grain 'one row per (shadow_trade_id, canonical_opportunity_id, trade_horizon)'; audit observed_coverage '20421/66258 (all 20421 CLOSE lifecycles)'",
+        "outcome is a generation-1 governed field (core/shadow observability generation-1 field inventory) and the generation-2 blocks are absent from the audited population.",
+        "The exact CLOSE-lifecycle population that carries the OR-01 outcome R-multiple at the governed grain."
+      ],
+      "frozen_at": "2026-09-29",
+      "generation_evidence": "outcome is a generation-1 governed field (core/shadow observability generation-1 field inventory) and the generation-2 blocks are absent from the audited population.",
+      "generation_state": "SINGLE_GENERATION_CONFIRMED",
+      "identity_grain": "one row per CLOSE lifecycle event keyed by (shadow_trade_id, canonical_opportunity_id, trade_horizon)",
+      "identity_grain_evidence": "matrix OR-01.required_grain 'one row per (shadow_trade_id, canonical_opportunity_id, trade_horizon)'; audit observed_coverage '20421/66258 (all 20421 CLOSE lifecycles)'",
+      "observation_requirements": [
+        "OR-01"
+      ],
+      "population_class": "GOVERNED_REQUIREMENT_POPULATION",
+      "population_descriptor_digest": "54d4395b0a278d3225bb16150b62b54db04239c549bc2893ce0dd02a1087bee3",
+      "population_filters": [
+        "event_type=CLOSE",
+        "outcome.pnl_r_multiple IS NOT NULL"
+      ],
+      "population_state": "FROZEN",
+      "producer_fingerprint": "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d",
+      "producer_identity_state": "PRODUCER_BOUND",
+      "producer_version": "shadow_runtime_producer_v1",
+      "record_count": 20421,
+      "schema_generation": 1,
+      "schema_version": "shadow_runtime_v1",
+      "source_boundaries": [
+        "s3_prefix=supporting/shadow_runtime/schema_version=shadow_runtime_v1/",
+        "objects=200",
+        "date_range=2026-09-07..2026-09-29"
+      ],
+      "temporal_bounds": [
+        "2026-09-07",
+        "2026-09-29"
+      ]
+    },
+    {
+      "audit_authority_fingerprint": "aeb8dc9b6d9a9c92b61cc5847ab6b814f9f4d90a2d051e24519270d7b362bd04",
+      "content_digest": "1a857c5420914a7b2c271ac6cd5893825bdc5cb46df25f0893a210459daa1804",
+      "content_digest_scope": "GOVERNED_POPULATION_DESCRIPTOR",
+      "created_at": "2026-09-29",
+      "dataset_name": "decision_trace",
+      "dataset_snapshot_id": "DSNAP-A3C4ED868DDBABFCCF6AF586",
+      "evidence_citations": [
+        "audit persisted_dataset_universe.decision_trace.rows",
+        "audit fingerprint aeb8dc9b6d9a9c92b61cc5847ab6b814f9f4d90a2d051e24519270d7b362bd04",
+        "audit persisted_dataset_universe.decision_trace.coverage: canonical_opportunity_id 25516/25516, schema_version 25516/25516, timestamp_utc 25516/25516; the governed field inventory carries observation_id/decision_id/correlation_id",
+        "decision_trace generation 2 adds only the predicted_success block, which is absent/unusable on 25516/25516 audited rows; every audited row is therefore generation-1 content.",
+        "The exact population the Stage 4 observation audit counted for decision_trace at the audit boundary (generation-1 content)."
+      ],
+      "frozen_at": "2026-09-29",
+      "generation_evidence": "decision_trace generation 2 adds only the predicted_success block, which is absent/unusable on 25516/25516 audited rows; every audited row is therefore generation-1 content.",
+      "generation_state": "SINGLE_GENERATION_CONFIRMED",
+      "identity_grain": "one row per decision-trace event keyed by (observation_id, canonical_opportunity_id, decision_id)",
+      "identity_grain_evidence": "audit persisted_dataset_universe.decision_trace.coverage: canonical_opportunity_id 25516/25516, schema_version 25516/25516, timestamp_utc 25516/25516; the governed field inventory carries observation_id/decision_id/correlation_id",
+      "observation_requirements": [
+        "OR-08",
+        "OR-09"
+      ],
+      "population_class": "AUDIT_BOUNDARY_PERSISTED_POPULATION",
+      "population_descriptor_digest": "092f37870209f46759ab82ae97e8a1701fdd3b15809a98c01c1f5aa268659b22",
+      "population_filters": [
+        "event_stream=ALL_PERSISTED_ROWS_AT_AUDIT_BOUNDARY"
+      ],
+      "population_state": "FROZEN",
+      "producer_fingerprint": "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20",
+      "producer_identity_state": "PRODUCER_BOUND",
+      "producer_version": "decision_trace_producer_v1",
+      "record_count": 25516,
+      "schema_generation": 1,
+      "schema_version": "decision_trace_v1",
+      "source_boundaries": [
+        "s3_prefix=supporting/decision_trace/schema_version=decision_trace_v1/",
+        "objects=200",
+        "date_range=2026-09-07..2026-09-29"
+      ],
+      "temporal_bounds": [
+        "2026-09-07",
+        "2026-09-29"
+      ]
+    },
+    {
+      "audit_authority_fingerprint": "aeb8dc9b6d9a9c92b61cc5847ab6b814f9f4d90a2d051e24519270d7b362bd04",
+      "content_digest": "77fb441aa127735fc000724f8533d7bca696e8f148e85e3438e55b6f41a495bf",
+      "content_digest_scope": "GOVERNED_POPULATION_DESCRIPTOR",
+      "created_at": "2026-09-29",
+      "dataset_name": "opportunities",
+      "dataset_snapshot_id": "DSNAP-B40B23A919D48CD2B12555A0",
+      "evidence_citations": [
+        "audit persisted_dataset_universe.opportunities.rows",
+        "audit fingerprint aeb8dc9b6d9a9c92b61cc5847ab6b814f9f4d90a2d051e24519270d7b362bd04",
+        "audit persisted_dataset_universe.opportunities.coverage: canonical_opportunity_id 100850/100850, symbol 100850/100850, opportunity_id 50521/100850",
+        "opportunities has exactly one governed generation in the Stage 4 authority (generation 1, epoch STAGE4-EPOCH-OPPORTUNITIES-G1, RETIRED); no generation-2 boundary exists for this dataset.",
+        "The exact population the Stage 4 observation audit counted for opportunities at the audit boundary."
+      ],
+      "frozen_at": "2026-09-29",
+      "generation_evidence": "opportunities has exactly one governed generation in the Stage 4 authority (generation 1, epoch STAGE4-EPOCH-OPPORTUNITIES-G1, RETIRED); no generation-2 boundary exists for this dataset.",
+      "generation_state": "SINGLE_GENERATION_CONFIRMED",
+      "identity_grain": "one row per opportunity record keyed by canonical_opportunity_id, with opportunity_id where the record carries one",
+      "identity_grain_evidence": "audit persisted_dataset_universe.opportunities.coverage: canonical_opportunity_id 100850/100850, symbol 100850/100850, opportunity_id 50521/100850",
+      "observation_requirements": [
+        "OR-13"
+      ],
+      "population_class": "AUDIT_BOUNDARY_PERSISTED_POPULATION",
+      "population_descriptor_digest": "52b2b6211db43fe664345ae6c4fe55b916b0e0b97c6c6a3c7c225d0fb527a0dd",
+      "population_filters": [
+        "event_stream=ALL_PERSISTED_ROWS_AT_AUDIT_BOUNDARY"
+      ],
+      "population_state": "FROZEN",
+      "producer_fingerprint": "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214",
+      "producer_identity_state": "PRODUCER_BOUND",
+      "producer_version": "opportunities_producer_v1",
+      "record_count": 100850,
+      "schema_generation": 1,
+      "schema_version": "opportunities_v1",
+      "source_boundaries": [
+        "s3_prefix=core/opportunities/schema_version=opportunities_v1/",
+        "objects=200",
+        "date_range=2026-09-07..2026-09-29"
+      ],
+      "temporal_bounds": [
+        "2026-09-07",
+        "2026-09-29"
+      ]
+    },
+    {
+      "audit_authority_fingerprint": "aeb8dc9b6d9a9c92b61cc5847ab6b814f9f4d90a2d051e24519270d7b362bd04",
+      "content_digest": "0d635456cdd131095aa9a725284b4a912cc574f25e22e653a93ef6d6d4b85b72",
+      "content_digest_scope": "GOVERNED_POPULATION_DESCRIPTOR",
+      "created_at": "2026-09-29",
+      "dataset_name": "market_context",
+      "dataset_snapshot_id": "DSNAP-BD89F20DB3073C46B861A97C",
+      "evidence_citations": [
+        "audit persisted_dataset_universe.market_context.rows",
+        "audit fingerprint aeb8dc9b6d9a9c92b61cc5847ab6b814f9f4d90a2d051e24519270d7b362bd04",
+        "audit persisted_dataset_universe.market_context.coverage: bar_time 1754/1754, symbol 1754/1754, regime 1754/1754, h4.regime 1754/1754",
+        "market_context is outside the Stage 4 governed generation overlay: the version authority declares no schema generation for it, so the population's generation is recorded as UNASSERTED rather than invented.",
+        "Consulted as governed evidence for the lifecycle decision snapshot (OR-02..OR-05); no producer version is declared for it in the Stage 4 producer overlay, so its producer lineage is UNASSERTED."
+      ],
+      "frozen_at": "2026-09-29",
+      "generation_evidence": "market_context is outside the Stage 4 governed generation overlay: the version authority declares no schema generation for it, so the population's generation is recorded as UNASSERTED rather than invented.",
+      "generation_state": "MIXED_OR_UNASSERTED_GENERATION",
+      "identity_grain": "one row per (symbol, market bar) market-context observation",
+      "identity_grain_evidence": "audit persisted_dataset_universe.market_context.coverage: bar_time 1754/1754, symbol 1754/1754, regime 1754/1754, h4.regime 1754/1754",
+      "observation_requirements": [],
+      "population_class": "AUDIT_BOUNDARY_PERSISTED_POPULATION",
+      "population_descriptor_digest": "ae807f6f6fd0f27c7bc9ebefaa5828099bef607bbf1956eba3d61de8a093dabe",
+      "population_filters": [
+        "event_stream=ALL_PERSISTED_ROWS_AT_AUDIT_BOUNDARY"
+      ],
+      "population_state": "FROZEN",
+      "producer_fingerprint": null,
+      "producer_identity_state": "PRODUCER_UNASSERTED",
+      "producer_version": null,
+      "record_count": 1754,
+      "schema_generation": null,
+      "schema_version": "market_context_v1",
+      "source_boundaries": [
+        "s3_prefix=core/market_context/schema_version=market_context_v1/",
+        "objects=230",
+        "date_range=2026-09-03..2026-09-29"
+      ],
+      "temporal_bounds": [
+        "2026-09-03",
+        "2026-09-29"
+      ]
+    },
+    {
+      "audit_authority_fingerprint": "aeb8dc9b6d9a9c92b61cc5847ab6b814f9f4d90a2d051e24519270d7b362bd04",
+      "content_digest": "71e3fe2e111f20424603f4bc6353010816e4157aba9415aa8fe94b490cfb1480",
+      "content_digest_scope": "GOVERNED_POPULATION_DESCRIPTOR",
+      "created_at": "2026-09-29",
+      "dataset_name": "shadow_runtime",
+      "dataset_snapshot_id": "DSNAP-E2FCEE7D922C0AE59114C917",
+      "evidence_citations": [
+        "audit persisted_dataset_universe.shadow_runtime.rows",
+        "audit fingerprint aeb8dc9b6d9a9c92b61cc5847ab6b814f9f4d90a2d051e24519270d7b362bd04",
+        "audit persisted_dataset_universe.shadow_runtime.coverage: canonical_opportunity_id 66258/66258 (top-level), symbol 66258/66258, shadow_trade_id 66258/66258 (25028 nullish); the identity block is carried by the 20460 OPEN rows",
+        "No generation-2-only governed block is attested in the audited population: the generation-2 experiment-arm block is 0/66258 (experiment_arm, arm_assigned_at, arm_schema_version) and the audited shadow_runtime field inventory carries no decision_snapshot or lifecycle_m5_path path. Absence evidence, not a per-record generation stamp.",
+        "The exact population the Stage 4 observation audit counted for shadow_runtime at the audit boundary."
+      ],
+      "frozen_at": "2026-09-29",
+      "generation_evidence": "No generation-2-only governed block is attested in the audited population: the generation-2 experiment-arm block is 0/66258 (experiment_arm, arm_assigned_at, arm_schema_version) and the audited shadow_runtime field inventory carries no decision_snapshot or lifecycle_m5_path path. Absence evidence, not a per-record generation stamp.",
+      "generation_state": "SINGLE_GENERATION_CONFIRMED",
+      "identity_grain": "one appended row per shadow lifecycle event; top-level canonical_opportunity_id, symbol and shadow_trade_id on all rows",
+      "identity_grain_evidence": "audit persisted_dataset_universe.shadow_runtime.coverage: canonical_opportunity_id 66258/66258 (top-level), symbol 66258/66258, shadow_trade_id 66258/66258 (25028 nullish); the identity block is carried by the 20460 OPEN rows",
+      "observation_requirements": [
+        "OR-01",
+        "OR-02",
+        "OR-03",
+        "OR-04",
+        "OR-05",
+        "OR-06",
+        "OR-07",
+        "OR-14",
+        "OR-15"
+      ],
+      "population_class": "AUDIT_BOUNDARY_PERSISTED_POPULATION",
+      "population_descriptor_digest": "5c5a41c2615308a895f621448148365d0e9f45fc5eb3733477c08fca5ebe8f72",
+      "population_filters": [
+        "event_stream=ALL_PERSISTED_ROWS_AT_AUDIT_BOUNDARY"
+      ],
+      "population_state": "FROZEN",
+      "producer_fingerprint": "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d",
+      "producer_identity_state": "PRODUCER_BOUND",
+      "producer_version": "shadow_runtime_producer_v1",
+      "record_count": 66258,
+      "schema_generation": 1,
+      "schema_version": "shadow_runtime_v1",
+      "source_boundaries": [
+        "s3_prefix=supporting/shadow_runtime/schema_version=shadow_runtime_v1/",
+        "objects=200",
+        "date_range=2026-09-07..2026-09-29"
+      ],
+      "temporal_bounds": [
+        "2026-09-07",
+        "2026-09-29"
+      ]
+    }
+  ],
+  "epoch_snapshot_bindings": {
+    "STAGE4-EPOCH-DECISION-TRACE-G1": [
+      "DSNAP-A3C4ED868DDBABFCCF6AF586"
+    ],
+    "STAGE4-EPOCH-DECISION-TRACE-G2": [],
+    "STAGE4-EPOCH-OPPORTUNITIES-G1": [
+      "DSNAP-B40B23A919D48CD2B12555A0"
+    ],
+    "STAGE4-EPOCH-SHADOW-RUNTIME-G1": [
+      "DSNAP-E2FCEE7D922C0AE59114C917"
+    ],
+    "STAGE4-EPOCH-SHADOW-RUNTIME-G2": []
+  },
+  "epoch_snapshot_identity_states": {
+    "STAGE4-EPOCH-DECISION-TRACE-G1": "BOUND_TO_DATASET_SNAPSHOT",
+    "STAGE4-EPOCH-DECISION-TRACE-G2": "UNRESOLVED_POPULATION_NOT_FROZEN",
+    "STAGE4-EPOCH-OPPORTUNITIES-G1": "BOUND_TO_DATASET_SNAPSHOT",
+    "STAGE4-EPOCH-SHADOW-RUNTIME-G1": "BOUND_TO_DATASET_SNAPSHOT",
+    "STAGE4-EPOCH-SHADOW-RUNTIME-G2": "UNRESOLVED_POPULATION_NOT_FROZEN"
+  },
+  "evidence_sets": [
+    {
+      "content_fingerprint": "d395ed853ec4db5c52b17f5ed8eb2f5a64a5604821ab281ca78541334f9e5433",
+      "dataset_snapshot_ids": [
+        "DSNAP-5815AEDBC8947B483BC609F7"
+      ],
+      "evidence_member_references": [
+        {
+          "content_fingerprint": "b389c7ed3c0b91a27c0950975a68b1363689bf0892aa46eb2dd048163e0516b4",
+          "dataset": "shadow_runtime",
+          "dataset_snapshot_id": "DSNAP-5815AEDBC8947B483BC609F7",
+          "locator": "schema_version=shadow_runtime_v1;schema_generation=1;producer_version=shadow_runtime_producer_v1",
+          "reference_id": "DSNAP-5815AEDBC8947B483BC609F7",
+          "reference_type": "dataset_snapshot"
+        }
+      ],
+      "evidence_set_id": "ESET-OR-01-POPULATION",
+      "observation_requirement_ids": [
+        "OR-01"
+      ]
+    },
+    {
+      "content_fingerprint": "8a498b5f47c3406486de003247b342f83e7f3e26ac01027b49b87a05dbb7ae79",
+      "dataset_snapshot_ids": [
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "evidence_member_references": [
+        {
+          "content_fingerprint": "71e3fe2e111f20424603f4bc6353010816e4157aba9415aa8fe94b490cfb1480",
+          "dataset": "shadow_runtime",
+          "dataset_snapshot_id": "DSNAP-E2FCEE7D922C0AE59114C917",
+          "locator": "schema_version=shadow_runtime_v1;schema_generation=1;producer_version=shadow_runtime_producer_v1",
+          "reference_id": "DSNAP-E2FCEE7D922C0AE59114C917",
+          "reference_type": "dataset_snapshot"
+        }
+      ],
+      "evidence_set_id": "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+      "observation_requirement_ids": [
+        "OR-01",
+        "OR-02",
+        "OR-03",
+        "OR-04",
+        "OR-05",
+        "OR-06",
+        "OR-07",
+        "OR-14",
+        "OR-15"
+      ]
+    },
+    {
+      "content_fingerprint": "4c47328fe7774a56f075671b65b97f74d664a0b93ca8279cbc138c758477babd",
+      "dataset_snapshot_ids": [
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "evidence_member_references": [
+        {
+          "content_fingerprint": "0d635456cdd131095aa9a725284b4a912cc574f25e22e653a93ef6d6d4b85b72",
+          "dataset": "market_context",
+          "dataset_snapshot_id": "DSNAP-BD89F20DB3073C46B861A97C",
+          "locator": "schema_version=market_context_v1;schema_generation=UNASSERTED;producer_version=UNASSERTED",
+          "reference_id": "DSNAP-BD89F20DB3073C46B861A97C",
+          "reference_type": "dataset_snapshot"
+        },
+        {
+          "content_fingerprint": "1a857c5420914a7b2c271ac6cd5893825bdc5cb46df25f0893a210459daa1804",
+          "dataset": "decision_trace",
+          "dataset_snapshot_id": "DSNAP-A3C4ED868DDBABFCCF6AF586",
+          "locator": "schema_version=decision_trace_v1;schema_generation=1;producer_version=decision_trace_producer_v1",
+          "reference_id": "DSNAP-A3C4ED868DDBABFCCF6AF586",
+          "reference_type": "dataset_snapshot"
+        },
+        {
+          "content_fingerprint": "71e3fe2e111f20424603f4bc6353010816e4157aba9415aa8fe94b490cfb1480",
+          "dataset": "shadow_runtime",
+          "dataset_snapshot_id": "DSNAP-E2FCEE7D922C0AE59114C917",
+          "locator": "schema_version=shadow_runtime_v1;schema_generation=1;producer_version=shadow_runtime_producer_v1",
+          "reference_id": "DSNAP-E2FCEE7D922C0AE59114C917",
+          "reference_type": "dataset_snapshot"
+        },
+        {
+          "content_fingerprint": "77fb441aa127735fc000724f8533d7bca696e8f148e85e3438e55b6f41a495bf",
+          "dataset": "opportunities",
+          "dataset_snapshot_id": "DSNAP-B40B23A919D48CD2B12555A0",
+          "locator": "schema_version=opportunities_v1;schema_generation=1;producer_version=opportunities_producer_v1",
+          "reference_id": "DSNAP-B40B23A919D48CD2B12555A0",
+          "reference_type": "dataset_snapshot"
+        }
+      ],
+      "evidence_set_id": "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS",
+      "observation_requirement_ids": [
+        "OR-01",
+        "OR-02",
+        "OR-03",
+        "OR-04",
+        "OR-05",
+        "OR-06",
+        "OR-07",
+        "OR-08",
+        "OR-09",
+        "OR-13",
+        "OR-14",
+        "OR-15"
+      ]
+    }
+  ],
+  "frozen_epoch_membership": {
+    "STAGE4-EPOCH-DECISION-TRACE-G1": [
+      "DSNAP-A3C4ED868DDBABFCCF6AF586"
+    ],
+    "STAGE4-EPOCH-OPPORTUNITIES-G1": [
+      "DSNAP-B40B23A919D48CD2B12555A0"
+    ],
+    "STAGE4-EPOCH-SHADOW-RUNTIME-G1": [
+      "DSNAP-E2FCEE7D922C0AE59114C917"
+    ]
+  },
+  "governed_populations": [
+    {
+      "dataset_name": "shadow_runtime",
+      "dataset_snapshot_id": "DSNAP-E2FCEE7D922C0AE59114C917",
+      "generation_state": "SINGLE_GENERATION_CONFIRMED",
+      "population_class": "AUDIT_BOUNDARY_PERSISTED_POPULATION",
+      "population_filters": [
+        "event_stream=ALL_PERSISTED_ROWS_AT_AUDIT_BOUNDARY"
+      ],
+      "population_key": "shadow_runtime:audit_boundary",
+      "population_note": "The exact population the Stage 4 observation audit counted for shadow_runtime at the audit boundary.",
+      "producer_version": "shadow_runtime_producer_v1",
+      "record_count": 66258,
+      "schema_generation": 1,
+      "schema_version": "shadow_runtime_v1"
+    },
+    {
+      "dataset_name": "shadow_runtime",
+      "dataset_snapshot_id": "DSNAP-5815AEDBC8947B483BC609F7",
+      "generation_state": "SINGLE_GENERATION_CONFIRMED",
+      "population_class": "GOVERNED_REQUIREMENT_POPULATION",
+      "population_filters": [
+        "event_type=CLOSE",
+        "outcome.pnl_r_multiple IS NOT NULL"
+      ],
+      "population_key": "shadow_runtime:close_lifecycle_outcome",
+      "population_note": "The exact CLOSE-lifecycle population that carries the OR-01 outcome R-multiple at the governed grain.",
+      "producer_version": "shadow_runtime_producer_v1",
+      "record_count": 20421,
+      "schema_generation": 1,
+      "schema_version": "shadow_runtime_v1"
+    },
+    {
+      "dataset_name": "decision_trace",
+      "dataset_snapshot_id": "DSNAP-A3C4ED868DDBABFCCF6AF586",
+      "generation_state": "SINGLE_GENERATION_CONFIRMED",
+      "population_class": "AUDIT_BOUNDARY_PERSISTED_POPULATION",
+      "population_filters": [
+        "event_stream=ALL_PERSISTED_ROWS_AT_AUDIT_BOUNDARY"
+      ],
+      "population_key": "decision_trace:audit_boundary",
+      "population_note": "The exact population the Stage 4 observation audit counted for decision_trace at the audit boundary (generation-1 content).",
+      "producer_version": "decision_trace_producer_v1",
+      "record_count": 25516,
+      "schema_generation": 1,
+      "schema_version": "decision_trace_v1"
+    },
+    {
+      "dataset_name": "opportunities",
+      "dataset_snapshot_id": "DSNAP-B40B23A919D48CD2B12555A0",
+      "generation_state": "SINGLE_GENERATION_CONFIRMED",
+      "population_class": "AUDIT_BOUNDARY_PERSISTED_POPULATION",
+      "population_filters": [
+        "event_stream=ALL_PERSISTED_ROWS_AT_AUDIT_BOUNDARY"
+      ],
+      "population_key": "opportunities:audit_boundary",
+      "population_note": "The exact population the Stage 4 observation audit counted for opportunities at the audit boundary.",
+      "producer_version": "opportunities_producer_v1",
+      "record_count": 100850,
+      "schema_generation": 1,
+      "schema_version": "opportunities_v1"
+    },
+    {
+      "dataset_name": "market_context",
+      "dataset_snapshot_id": "DSNAP-BD89F20DB3073C46B861A97C",
+      "generation_state": "MIXED_OR_UNASSERTED_GENERATION",
+      "population_class": "AUDIT_BOUNDARY_PERSISTED_POPULATION",
+      "population_filters": [
+        "event_stream=ALL_PERSISTED_ROWS_AT_AUDIT_BOUNDARY"
+      ],
+      "population_key": "market_context:audit_boundary",
+      "population_note": "Consulted as governed evidence for the lifecycle decision snapshot (OR-02..OR-05); no producer version is declared for it in the Stage 4 producer overlay, so its producer lineage is UNASSERTED.",
+      "producer_version": null,
+      "record_count": 1754,
+      "schema_generation": null,
+      "schema_version": "market_context_v1"
+    }
+  ],
+  "identity_separation": {
+    "conflation_guards": [
+      "SCHEMA_IDENTIFIER_USED_AS_DATASET_SNAPSHOT_ID",
+      "SCHEMA_IDENTIFIER_USED_AS_DATASET_NAME",
+      "DATASET_NAME_SCHEMA_CONFLATION",
+      "SCHEMA_SNAPSHOT_CONFLATION",
+      "DATASET_NAME_SNAPSHOT_CONFLATION",
+      "MUTABLE_POPULATION_CANNOT_BE_DATASET_SNAPSHOT",
+      "DATASET_SNAPSHOT_ID_NOT_DERIVED_FROM_POPULATION",
+      "CONFLICTING_DATASET_SNAPSHOT_CONTENT"
+    ],
+    "dataset_identity": {
+      "example": "shadow_runtime",
+      "fields": [
+        "dataset_name"
+      ],
+      "question": "Which growing dataset family does this population come from?"
+    },
+    "legacy_dataset_version_field": {
+      "compatibility_class": "LEGACY_UNRESOLVED_SNAPSHOT_IDENTITY",
+      "field": "dataset_version",
+      "meaning": "Historical Stage 4 field. Its VALUE is a schema-registry string and is therefore a SCHEMA identity, not a population identity. It is preserved verbatim for historical compatibility and is never used as, derived into, or compared against a dataset_snapshot_id."
+    },
+    "population_identity": {
+      "classification": "DATASET_POPULATION_IDENTIFIER",
+      "derived_from": [
+        "dataset_name",
+        "schema_version",
+        "schema_generation",
+        "content_digest",
+        "content_digest_scope",
+        "record_count",
+        "identity_grain",
+        "source_boundaries",
+        "population_filters",
+        "temporal_bounds"
+      ],
+      "example": "DSNAP-<24 hex>",
+      "fields": [
+        "dataset_snapshot_id"
+      ],
+      "prefix": "DSNAP-",
+      "question": "Which exact immutable population of records was used?"
+    },
+    "producer_identity": {
+      "fields": [
+        "producer_version",
+        "producer_fingerprint"
+      ],
+      "note": "Lineage only. It never substitutes for population or schema identity.",
+      "question": "Which emitting code produced these records?"
+    },
+    "schema_identity": {
+      "classification": "SCHEMA_IDENTIFIER",
+      "derived_from": "core.production_data_contract.PRODUCTION_SCHEMA_REGISTRY plus the Stage 4 generation overlay",
+      "example": "shadow_runtime_v1",
+      "fields": [
+        "schema_version",
+        "schema_generation"
+      ],
+      "question": "Under which structural/semantic contract is this record interpreted?"
+    }
+  },
+  "limitations": [
+    "market_context carries no producer version in the Stage 4 producer overlay, so its producer lineage is recorded as UNASSERTED rather than invented.",
+    "Epochs whose population is still collecting (COLLECTING/OPEN) have no dataset snapshot identity: a growing population is not an immutable evidence snapshot.",
+    "Descriptor digests mark GOVERNED_POPULATION_DESCRIPTOR scope for populations whose exact rows cannot be re-read; they are never presented as record-byte digests."
+  ],
+  "mutation_ledger": {
+    "backfills_performed": 0,
+    "historical_mutations": 0,
+    "invalidation_events": 0,
+    "reentry_authorizations": 0,
+    "research_reentry_events": 0,
+    "s3_writes": 0,
+    "satisfaction_decisions": 0,
+    "scientific_result_versions": 0
+  },
+  "policy_id": "stage4_dataset_snapshot_policy_v1",
+  "read_side_validation": {
+    "ESET-OR-01-POPULATION": {
+      "dataset_snapshot_ids": [
+        "DSNAP-5815AEDBC8947B483BC609F7"
+      ],
+      "evidence_set_id": "ESET-OR-01-POPULATION",
+      "reason": "Every member belongs to a registered immutable population whose schema identity, generation and producer lineage are declared.",
+      "resolved_snapshots": [
+        {
+          "content_digest": "b389c7ed3c0b91a27c0950975a68b1363689bf0892aa46eb2dd048163e0516b4",
+          "content_digest_scope": "GOVERNED_POPULATION_DESCRIPTOR",
+          "dataset_name": "shadow_runtime",
+          "dataset_snapshot_id": "DSNAP-5815AEDBC8947B483BC609F7",
+          "frozen_at": "2026-09-29",
+          "generation_state": "SINGLE_GENERATION_CONFIRMED",
+          "identity_grain": "one row per CLOSE lifecycle event keyed by (shadow_trade_id, canonical_opportunity_id, trade_horizon)",
+          "population_class": "GOVERNED_REQUIREMENT_POPULATION",
+          "producer_fingerprint": "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d",
+          "producer_identity_state": "PRODUCER_BOUND",
+          "producer_version": "shadow_runtime_producer_v1",
+          "record_count": 20421,
+          "schema_generation": 1,
+          "schema_version": "shadow_runtime_v1"
+        }
+      ],
+      "valid": true,
+      "validation_state": "VERIFIED"
+    },
+    "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY": {
+      "dataset_snapshot_ids": [
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "evidence_set_id": "ESET-SHADOW-RUNTIME-AUDIT-BOUNDARY",
+      "reason": "Every member belongs to a registered immutable population whose schema identity, generation and producer lineage are declared.",
+      "resolved_snapshots": [
+        {
+          "content_digest": "71e3fe2e111f20424603f4bc6353010816e4157aba9415aa8fe94b490cfb1480",
+          "content_digest_scope": "GOVERNED_POPULATION_DESCRIPTOR",
+          "dataset_name": "shadow_runtime",
+          "dataset_snapshot_id": "DSNAP-E2FCEE7D922C0AE59114C917",
+          "frozen_at": "2026-09-29",
+          "generation_state": "SINGLE_GENERATION_CONFIRMED",
+          "identity_grain": "one appended row per shadow lifecycle event; top-level canonical_opportunity_id, symbol and shadow_trade_id on all rows",
+          "population_class": "AUDIT_BOUNDARY_PERSISTED_POPULATION",
+          "producer_fingerprint": "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d",
+          "producer_identity_state": "PRODUCER_BOUND",
+          "producer_version": "shadow_runtime_producer_v1",
+          "record_count": 66258,
+          "schema_generation": 1,
+          "schema_version": "shadow_runtime_v1"
+        }
+      ],
+      "valid": true,
+      "validation_state": "VERIFIED"
+    },
+    "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS": {
+      "dataset_snapshot_ids": [
+        "DSNAP-A3C4ED868DDBABFCCF6AF586",
+        "DSNAP-B40B23A919D48CD2B12555A0",
+        "DSNAP-BD89F20DB3073C46B861A97C",
+        "DSNAP-E2FCEE7D922C0AE59114C917"
+      ],
+      "evidence_set_id": "ESET-STAGE4-AUDIT-BOUNDARY-POPULATIONS",
+      "reason": "Every member belongs to a registered immutable population whose schema identity, generation and producer lineage are declared.",
+      "resolved_snapshots": [
+        {
+          "content_digest": "1a857c5420914a7b2c271ac6cd5893825bdc5cb46df25f0893a210459daa1804",
+          "content_digest_scope": "GOVERNED_POPULATION_DESCRIPTOR",
+          "dataset_name": "decision_trace",
+          "dataset_snapshot_id": "DSNAP-A3C4ED868DDBABFCCF6AF586",
+          "frozen_at": "2026-09-29",
+          "generation_state": "SINGLE_GENERATION_CONFIRMED",
+          "identity_grain": "one row per decision-trace event keyed by (observation_id, canonical_opportunity_id, decision_id)",
+          "population_class": "AUDIT_BOUNDARY_PERSISTED_POPULATION",
+          "producer_fingerprint": "d27e0cf368aa3d3ed4491ea9b0afb9e63a04691cb9ffba4f2dd914bf0101af20",
+          "producer_identity_state": "PRODUCER_BOUND",
+          "producer_version": "decision_trace_producer_v1",
+          "record_count": 25516,
+          "schema_generation": 1,
+          "schema_version": "decision_trace_v1"
+        },
+        {
+          "content_digest": "77fb441aa127735fc000724f8533d7bca696e8f148e85e3438e55b6f41a495bf",
+          "content_digest_scope": "GOVERNED_POPULATION_DESCRIPTOR",
+          "dataset_name": "opportunities",
+          "dataset_snapshot_id": "DSNAP-B40B23A919D48CD2B12555A0",
+          "frozen_at": "2026-09-29",
+          "generation_state": "SINGLE_GENERATION_CONFIRMED",
+          "identity_grain": "one row per opportunity record keyed by canonical_opportunity_id, with opportunity_id where the record carries one",
+          "population_class": "AUDIT_BOUNDARY_PERSISTED_POPULATION",
+          "producer_fingerprint": "8ee76d10030660cb99a82d3653a1926720a657fb29662ac0de86f3c247fb0214",
+          "producer_identity_state": "PRODUCER_BOUND",
+          "producer_version": "opportunities_producer_v1",
+          "record_count": 100850,
+          "schema_generation": 1,
+          "schema_version": "opportunities_v1"
+        },
+        {
+          "content_digest": "0d635456cdd131095aa9a725284b4a912cc574f25e22e653a93ef6d6d4b85b72",
+          "content_digest_scope": "GOVERNED_POPULATION_DESCRIPTOR",
+          "dataset_name": "market_context",
+          "dataset_snapshot_id": "DSNAP-BD89F20DB3073C46B861A97C",
+          "frozen_at": "2026-09-29",
+          "generation_state": "MIXED_OR_UNASSERTED_GENERATION",
+          "identity_grain": "one row per (symbol, market bar) market-context observation",
+          "population_class": "AUDIT_BOUNDARY_PERSISTED_POPULATION",
+          "producer_fingerprint": null,
+          "producer_identity_state": "PRODUCER_UNASSERTED",
+          "producer_version": null,
+          "record_count": 1754,
+          "schema_generation": null,
+          "schema_version": "market_context_v1"
+        },
+        {
+          "content_digest": "71e3fe2e111f20424603f4bc6353010816e4157aba9415aa8fe94b490cfb1480",
+          "content_digest_scope": "GOVERNED_POPULATION_DESCRIPTOR",
+          "dataset_name": "shadow_runtime",
+          "dataset_snapshot_id": "DSNAP-E2FCEE7D922C0AE59114C917",
+          "frozen_at": "2026-09-29",
+          "generation_state": "SINGLE_GENERATION_CONFIRMED",
+          "identity_grain": "one appended row per shadow lifecycle event; top-level canonical_opportunity_id, symbol and shadow_trade_id on all rows",
+          "population_class": "AUDIT_BOUNDARY_PERSISTED_POPULATION",
+          "producer_fingerprint": "54269abb8fb4c0a9c1dd0f928470db72ec1906e0a5cdd7a05d3c8748d0df023d",
+          "producer_identity_state": "PRODUCER_BOUND",
+          "producer_version": "shadow_runtime_producer_v1",
+          "record_count": 66258,
+          "schema_generation": 1,
+          "schema_version": "shadow_runtime_v1"
+        }
+      ],
+      "valid": true,
+      "validation_state": "VERIFIED"
+    }
+  },
+  "registry_fingerprint": "a5206886142404e57c8be88dae51ccc410becc9c5aa1dc9c4c4d6a512e5e1478",
+  "registry_schema": 1,
+  "schema": 1,
+  "stamp": "20260929",
+  "store_fingerprint": "5755fa176e8d5520ca22b5686c91b2dbd1236b00b7fbe6449538a5df72843e29"
+}

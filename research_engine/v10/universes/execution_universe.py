@@ -32,6 +32,22 @@ _DATASET = "trade_truth"
 _EXEC_RESULTS_DATASET = "execution_results"
 
 
+def normalise_trade_truth_record(
+    raw: dict[str, Any], *, entity_id: str = ""
+) -> dict[str, Any] | None:
+    """Reuse the Execution universe's authoritative trade mapping.
+
+    Investigation views resolve execution lineage with stricter cardinality
+    checks than the universe compatibility lookup, then pass the governed
+    entity identity here.  No source data is mutated.
+    """
+    builder = object.__new__(ExecutionUniverseBuilder)
+    builder._entity_id_lookup = {
+        str((raw.get("identity") or {}).get("correlation_id") or ""): entity_id
+    }
+    return ExecutionUniverseBuilder._normalise(builder, raw)
+
+
 class ExecutionUniverseBuilder(UniverseBuilder):
     """
     Builds the Execution Universe from S3 dataset ``trade_truth``.

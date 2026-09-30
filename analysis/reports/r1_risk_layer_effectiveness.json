@@ -1,0 +1,366 @@
+{
+  "assumptions": [
+    "observational contrast on historical shadow evidence; it does not establish a randomised causal effect, future benefit, or production authority"
+  ],
+  "confidence": "INSUFFICIENT_DATA",
+  "dataset": {
+    "allowed_opportunities": 10540,
+    "blocked_counterfactual_opportunities": 263,
+    "independent_observations": 10803,
+    "sample_size": 10803,
+    "source": "RW9.1 governed risk-policy evidence"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "analytical_digest": "9d46c6d4d79a2e20889927597bc83d61c3e7f72c15b99037996bb4ccd5b05db9",
+    "analytical_observations": 10803,
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_5c9e38332e452372",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "145aea67271ca0681d9814bc2cb6e6dfbe1a2c61db2e79181e57235722ffadad",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 22429,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 135,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 22564,
+          "records_excluded": 135,
+          "records_used": 22429,
+          "schema": "decision_trace_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "decision_trace",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 22429,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        },
+        {
+          "digest": "4c043c670920efdc1c9c53eb0b8e4d3942b5dda07b5551951e5ea4ce1b9d84b5",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 14046,
+          "records_excluded": 0,
+          "records_used": 14046,
+          "schema": "shadow_trades_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "shadow_trades",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "5c9e38332e45237282287e9cf65f953e58f34e673dd2a154b57be6d21bc0b5ac",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 36610,
+      "records_excluded": 135,
+      "records_used": 36475,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 36641,
+    "governed_usable_records": 635,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 135,
+    "records_used": 36475,
+    "source": "MULTI_SOURCE",
+    "sources": [
+      "decision_trace",
+      "shadow_trades"
+    ],
+    "validation_score": "HD10_R1_GOVERNED"
+  },
+  "generated": "2026-09-28T19:32:37Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 36641,
+    "excluded_records": 36006,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_r1",
+    "runner_module": "research_engine.experiments.r1_risk_layer_effectiveness",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 635
+  },
+  "overall": {
+    "baseline": "RISK_POLICY_BASELINE_V1",
+    "experiment": "HD10 canonical global risk-layer effectiveness",
+    "finding": "R1 BLOCKED: NON_CURRENT_DECISION_AUTHORITY_PRESENT, NON_CURRENT_OR_INCOMPATIBLE_EVIDENCE.",
+    "finding_classification": "NO_AUTHORITATIVE_FINDING",
+    "supported_endpoints": [],
+    "tests": [
+      {
+        "allowed_mean_r": -0.08495920303605313,
+        "allowed_opportunities": 10540,
+        "blocked_counterfactual_mean_r": -0.15453269961977187,
+        "blocked_counterfactual_opportunities": 263,
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.07370412772636047,
+          0.21285112089379793
+        ],
+        "covariance": "none (CR0); do not apply HC/CR1 or row-independent covariance",
+        "estimand": "opportunity-weighted mean R-multiple difference: allowed-arm outcome mean minus risk-layer-blocked counterfactual outcome mean, with the pre-decision adjustment set declared before any outcome is inspected",
+        "estimate": 0.06957349658371874,
+        "holm_adjusted_p_value": 0.6824683273093217,
+        "interpretation": "NOT_SUPPORTED",
+        "raw_two_sided_p_value": 0.34123416365466086,
+        "standard_error": 0.07310217199919734,
+        "test_identity": "allowed_mean_r_minus_blocked_counterfactual_mean_r",
+        "weighting": "one total unit of weight per canonical opportunity"
+      },
+      {
+        "agreement_tolerance": 0.05,
+        "allowed_arm": {
+          "agreement_within_tolerance": true,
+          "analytical_ruin_probability": 1.0,
+          "monte_carlo": {
+            "model_version": "ruin_model_v1",
+            "risk_per_trade_pct": 0.01,
+            "ruin_probability": 1.0,
+            "ruin_threshold_pct": 0.5,
+            "seed_base": 20240101,
+            "seed_order": "seed_base + s for s=1..n_simulations",
+            "simulations": 10000,
+            "survival_probability": 0.0,
+            "trade_horizon": 5000,
+            "wilson_interval_95": [
+              0.9996160016293234,
+              1.0
+            ]
+          }
+        },
+        "blocked_counterfactual_arm": {
+          "agreement_within_tolerance": true,
+          "analytical_ruin_probability": 1.0,
+          "monte_carlo": {
+            "model_version": "ruin_model_v1",
+            "risk_per_trade_pct": 0.01,
+            "ruin_probability": 1.0,
+            "ruin_threshold_pct": 0.5,
+            "seed_base": 20240101,
+            "seed_order": "seed_base + s for s=1..n_simulations",
+            "simulations": 10000,
+            "survival_probability": 0.0,
+            "trade_horizon": 5000,
+            "wilson_interval_95": [
+              0.9996160016293234,
+              1.0
+            ]
+          }
+        },
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "covariance": "none (CR0); do not apply HC/CR1 or row-independent covariance",
+        "estimand": "survival contrast: difference in the probability of reaching the frozen RUIN_MODEL_V1 ruin threshold between the two arms over the frozen horizon",
+        "estimate": 0.0,
+        "estimate_order": "allowed ruin probability minus blocked-counterfactual ruin probability",
+        "holm_adjusted_p_value": 1.0,
+        "interpretation": "NOT_SUPPORTED",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "allowed_ruin_probability_minus_blocked_ruin_probability",
+        "weighting": "one total unit of weight per canonical opportunity"
+      }
+    ],
+    "variants": [
+      "ALLOWED",
+      "BLOCKED"
+    ]
+  },
+  "provenance": {
+    "adjustment_set_rule": "empty predeclared set; RW9.1 exposes no HD10-adjudicated adjustment covariates, and outcome-driven selection is forbidden",
+    "analytical_digest": "9d46c6d4d79a2e20889927597bc83d61c3e7f72c15b99037996bb4ccd5b05db9",
+    "analytical_population_digest": "7a66222c4d92b112498ccc66b45e927ca2c954e9429b88accab523aa155cccea",
+    "baseline_identity_hash": "969026c5e50a7e3c",
+    "baseline_policy_id": "RISK_POLICY_BASELINE_V1",
+    "baseline_policy_version": 1,
+    "exclusion_digest": "dc336a69137b98653c3fb81d75161bb00be0ce3166ac884c4b9216a401faf852",
+    "exclusions": {
+      "allowed_arm": 11233,
+      "blocked_counterfactual_arm": 240,
+      "by_reason": {
+        "MISSING_BLOCKED_COUNTERFACTUAL_OUTCOME": 240,
+        "MISSING_GOVERNED_OUTCOME": 11233,
+        "NON_CURRENT_DECISION_AUTHORITY_PRESENT": 135,
+        "OUTCOME_SCOPE_EXCLUDED": 3073,
+        "RISK_LAYER_VERDICT_MISSING": 110
+      },
+      "digest": "dc336a69137b98653c3fb81d75161bb00be0ce3166ac884c4b9216a401faf852",
+      "unassigned_authority_or_scope": 3318
+    },
+    "hd10_adjudication_version": "hd10_risk_policy_estimation_and_simulation_v1",
+    "holm_family_order": [
+      "allowed_mean_r_minus_blocked_counterfactual_mean_r",
+      "allowed_ruin_probability_minus_blocked_ruin_probability"
+    ],
+    "inference_configuration": {
+      "alpha": 0.05,
+      "cluster_identity": "canonical_opportunity_id",
+      "confidence_level": 0.95,
+      "critical_value": 1.959963984540054,
+      "finite_sample_correction": "none (CR0); do not apply HC/CR1 or row-independent covariance",
+      "minimum_clusters": 50,
+      "nonlinear_survival_covariance": "delete-one canonical-opportunity influence scores with CR0 outer product",
+      "reference_distribution": "asymptotic standard normal for scalar contrasts",
+      "schema_version": "hd10_r1_clustered_cr0_normal_v1",
+      "test_sidedness": "two-sided"
+    },
+    "pre_decision_adjustment_set": [],
+    "question_id": "R1",
+    "r1_contract": {
+      "adjustment_rule": "pre-decision covariate adjustment only; the adjustment set is frozen before estimation and outcome-driven covariate selection is forbidden",
+      "claim_boundary": "observational contrast on historical shadow evidence; it does not establish a randomised causal effect, future benefit, or production authority",
+      "counterfactual_arm": "canonical opportunity blocked by the risk layer, measured by its governed shadow outcome R-multiple; the blocked shadow outcome is the only admissible counterfactual",
+      "data_sources": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "estimand_kind": "observational treatment contrast on governed opportunities, reported as a weighted mean R-multiple difference",
+      "exclusion_rule": "opportunities without a governed outcome in either arm are excluded, with per-arm exclusion counts and diagnostics reported",
+      "forbidden_endpoints": [
+        "any count of RISK_BLOCK events, guard firings, ledger rows, or trades: a larger block count is never evidence of benefit",
+        "any endpoint read from the legacy q10_guard_efficacy.json artifact",
+        "win rate alone, or any endpoint that ignores the R-multiple magnitude of the blocked arm"
+      ],
+      "multiplicity": "one two-sided Holm family over the primary and secondary estimands",
+      "primary_estimand": "opportunity-weighted mean R-multiple difference: allowed-arm outcome mean minus risk-layer-blocked counterfactual outcome mean, with the pre-decision adjustment set declared before any outcome is inspected",
+      "question_id": "R1",
+      "scientific_intent": "Global risk-control effectiveness: does the whole risk layer change expectancy and survival?",
+      "secondary_estimand": "survival contrast: difference in the probability of reaching the frozen RUIN_MODEL_V1 ruin threshold between the two arms over the frozen horizon",
+      "treatment_arm": "canonical opportunity allowed by the risk layer, measured by its governed realised outcome R-multiple",
+      "unit_of_analysis": "canonical_opportunity_id",
+      "valid_null": "sufficient governed coverage with no reliable effect is COMPLETE"
+    },
+    "readiness": {
+      "allowed_opportunities": 10540,
+      "blocked_counterfactual_opportunities": 263,
+      "blockers": [
+        "NON_CURRENT_DECISION_AUTHORITY_PRESENT",
+        "NON_CURRENT_OR_INCOMPATIBLE_EVIDENCE"
+      ],
+      "distinct_canonical_opportunities": 10803,
+      "lineage_coverage": 0.4796856267483682,
+      "outcome_coverage": 0.4796856267483682,
+      "required_allowed_opportunities": 50,
+      "required_blocked_counterfactual_opportunities": 50,
+      "required_distinct_canonical_opportunities": 50,
+      "required_lineage_coverage": 0.8,
+      "required_outcome_coverage": 0.5,
+      "state": "BLOCKED"
+    },
+    "report_digest": "7d0e57feac7f39a4f8c81c1171fa674d1e67cdebbf760c56bc3bf43b2b08388a",
+    "rw91_evidence_provenance_digest": "74d6dbd372ad67c3060bf2dece78279029b4c4d3ddc0d2cff6f46636fdc12f1f",
+    "tests": [
+      {
+        "allowed_mean_r": -0.08495920303605313,
+        "allowed_opportunities": 10540,
+        "blocked_counterfactual_mean_r": -0.15453269961977187,
+        "blocked_counterfactual_opportunities": 263,
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          -0.07370412772636047,
+          0.21285112089379793
+        ],
+        "covariance": "none (CR0); do not apply HC/CR1 or row-independent covariance",
+        "estimand": "opportunity-weighted mean R-multiple difference: allowed-arm outcome mean minus risk-layer-blocked counterfactual outcome mean, with the pre-decision adjustment set declared before any outcome is inspected",
+        "estimate": 0.06957349658371874,
+        "holm_adjusted_p_value": 0.6824683273093217,
+        "interpretation": "NOT_SUPPORTED",
+        "raw_two_sided_p_value": 0.34123416365466086,
+        "standard_error": 0.07310217199919734,
+        "test_identity": "allowed_mean_r_minus_blocked_counterfactual_mean_r",
+        "weighting": "one total unit of weight per canonical opportunity"
+      },
+      {
+        "agreement_tolerance": 0.05,
+        "allowed_arm": {
+          "agreement_within_tolerance": true,
+          "analytical_ruin_probability": 1.0,
+          "monte_carlo": {
+            "model_version": "ruin_model_v1",
+            "risk_per_trade_pct": 0.01,
+            "ruin_probability": 1.0,
+            "ruin_threshold_pct": 0.5,
+            "seed_base": 20240101,
+            "seed_order": "seed_base + s for s=1..n_simulations",
+            "simulations": 10000,
+            "survival_probability": 0.0,
+            "trade_horizon": 5000,
+            "wilson_interval_95": [
+              0.9996160016293234,
+              1.0
+            ]
+          }
+        },
+        "blocked_counterfactual_arm": {
+          "agreement_within_tolerance": true,
+          "analytical_ruin_probability": 1.0,
+          "monte_carlo": {
+            "model_version": "ruin_model_v1",
+            "risk_per_trade_pct": 0.01,
+            "ruin_probability": 1.0,
+            "ruin_threshold_pct": 0.5,
+            "seed_base": 20240101,
+            "seed_order": "seed_base + s for s=1..n_simulations",
+            "simulations": 10000,
+            "survival_probability": 0.0,
+            "trade_horizon": 5000,
+            "wilson_interval_95": [
+              0.9996160016293234,
+              1.0
+            ]
+          }
+        },
+        "cluster_identity": "canonical_opportunity_id",
+        "confidence_interval_95": [
+          0.0,
+          0.0
+        ],
+        "covariance": "none (CR0); do not apply HC/CR1 or row-independent covariance",
+        "estimand": "survival contrast: difference in the probability of reaching the frozen RUIN_MODEL_V1 ruin threshold between the two arms over the frozen horizon",
+        "estimate": 0.0,
+        "estimate_order": "allowed ruin probability minus blocked-counterfactual ruin probability",
+        "holm_adjusted_p_value": 1.0,
+        "interpretation": "NOT_SUPPORTED",
+        "raw_two_sided_p_value": 1.0,
+        "standard_error": 0.0,
+        "test_identity": "allowed_ruin_probability_minus_blocked_ruin_probability",
+        "weighting": "one total unit of weight per canonical opportunity"
+      }
+    ]
+  },
+  "question_id": "R1",
+  "recommendation": "BLOCKED",
+  "report_schema_version": "r1_risk_layer_effectiveness_v1",
+  "scientific_state": "HISTORICALLY_UNANSWERABLE",
+  "status": "BLOCKED",
+  "warnings": [
+    "Research-only observational result; no production risk, sizing, halt, or guard directive."
+  ]
+}

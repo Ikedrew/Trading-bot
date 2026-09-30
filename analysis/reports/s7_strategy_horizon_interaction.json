@@ -1,0 +1,271 @@
+{
+  "assumptions": [
+    "CURRENT completed horizon simulations are selected before analysis.",
+    "Grid selection uses identity and distinct-opportunity counts only.",
+    "Repeated horizons are clustered by canonical_opportunity_id and total weight one.",
+    "Interaction claims are bounded to the selected sufficient grid."
+  ],
+  "confidence": "HIGH",
+  "dataset": {
+    "analysed_row_count": 0,
+    "records_loaded": 14077,
+    "sample_size": 1852,
+    "source": "shadow_trades_v1 normalized from shadow_runtime_v1"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_1afe0134156a3ba3",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 14046,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 31,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 14077,
+          "records_excluded": 14077,
+          "records_used": 0,
+          "schema": "shadow_trades_v1",
+          "selection": "CURRENT_SUBSET",
+          "source": "shadow_trades",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 0,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "1afe0134156a3ba394f2b6dbee33755c66556e67417b6e887094ee8731910e58",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 14077,
+      "records_excluded": 14077,
+      "records_used": 0,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 14077,
+    "governed_usable_records": 14046,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 14077,
+    "records_used": 0,
+    "source": "shadow_trades",
+    "sources": [
+      "shadow_trades"
+    ],
+    "validation_score": "CURRENT"
+  },
+  "generated": "2026-09-28T18:44:13Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 14077,
+    "excluded_records": 31,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_s7",
+    "runner_module": "research_engine.experiments.strategy_horizon_interaction",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 14046
+  },
+  "overall": {
+    "cells": {
+      "canonical_cell_count": 18,
+      "cell_n_distinct_canonical_opportunities": {
+        "BREAKOUT_EXPANSION|EXTENDED": 0,
+        "BREAKOUT_EXPANSION|INTRADAY": 0,
+        "BREAKOUT_EXPANSION|SCALP": 0,
+        "FALSE_BREAK|EXTENDED": 0,
+        "FALSE_BREAK|INTRADAY": 0,
+        "FALSE_BREAK|SCALP": 4,
+        "LIQUIDITY_SWEEP_REVERSAL|EXTENDED": 0,
+        "LIQUIDITY_SWEEP_REVERSAL|INTRADAY": 0,
+        "LIQUIDITY_SWEEP_REVERSAL|SCALP": 0,
+        "MEAN_REVERSION|EXTENDED": 0,
+        "MEAN_REVERSION|INTRADAY": 0,
+        "MEAN_REVERSION|SCALP": 1081,
+        "RANGE_REACTION|EXTENDED": 0,
+        "RANGE_REACTION|INTRADAY": 0,
+        "RANGE_REACTION|SCALP": 0,
+        "TREND_CONTINUATION|EXTENDED": 0,
+        "TREND_CONTINUATION|INTRADAY": 0,
+        "TREND_CONTINUATION|SCALP": 767
+      },
+      "descriptive_selected_cells": {},
+      "excluded_cell_reasons": {
+        "BREAKOUT_EXPANSION|EXTENDED": "below_30_distinct_opportunities",
+        "BREAKOUT_EXPANSION|INTRADAY": "below_30_distinct_opportunities",
+        "BREAKOUT_EXPANSION|SCALP": "below_30_distinct_opportunities",
+        "FALSE_BREAK|EXTENDED": "below_30_distinct_opportunities",
+        "FALSE_BREAK|INTRADAY": "below_30_distinct_opportunities",
+        "FALSE_BREAK|SCALP": "below_30_distinct_opportunities",
+        "LIQUIDITY_SWEEP_REVERSAL|EXTENDED": "below_30_distinct_opportunities",
+        "LIQUIDITY_SWEEP_REVERSAL|INTRADAY": "below_30_distinct_opportunities",
+        "LIQUIDITY_SWEEP_REVERSAL|SCALP": "below_30_distinct_opportunities",
+        "MEAN_REVERSION|EXTENDED": "below_30_distinct_opportunities",
+        "MEAN_REVERSION|INTRADAY": "below_30_distinct_opportunities",
+        "MEAN_REVERSION|SCALP": "outside_deterministic_maximal_grid",
+        "RANGE_REACTION|EXTENDED": "below_30_distinct_opportunities",
+        "RANGE_REACTION|INTRADAY": "below_30_distinct_opportunities",
+        "RANGE_REACTION|SCALP": "below_30_distinct_opportunities",
+        "TREND_CONTINUATION|EXTENDED": "below_30_distinct_opportunities",
+        "TREND_CONTINUATION|INTRADAY": "below_30_distinct_opportunities",
+        "TREND_CONTINUATION|SCALP": "outside_deterministic_maximal_grid"
+      },
+      "excluded_families": [
+        "LIQUIDITY_SWEEP_REVERSAL",
+        "FALSE_BREAK",
+        "TREND_CONTINUATION",
+        "BREAKOUT_EXPANSION",
+        "MEAN_REVERSION",
+        "RANGE_REACTION"
+      ],
+      "excluded_horizons": [
+        "SCALP",
+        "INTRADAY",
+        "EXTENDED"
+      ],
+      "excluded_sparse_cells": [
+        "LIQUIDITY_SWEEP_REVERSAL|SCALP",
+        "LIQUIDITY_SWEEP_REVERSAL|INTRADAY",
+        "LIQUIDITY_SWEEP_REVERSAL|EXTENDED",
+        "FALSE_BREAK|SCALP",
+        "FALSE_BREAK|INTRADAY",
+        "FALSE_BREAK|EXTENDED",
+        "TREND_CONTINUATION|INTRADAY",
+        "TREND_CONTINUATION|EXTENDED",
+        "BREAKOUT_EXPANSION|SCALP",
+        "BREAKOUT_EXPANSION|INTRADAY",
+        "BREAKOUT_EXPANSION|EXTENDED",
+        "MEAN_REVERSION|INTRADAY",
+        "MEAN_REVERSION|EXTENDED",
+        "RANGE_REACTION|SCALP",
+        "RANGE_REACTION|INTRADAY",
+        "RANGE_REACTION|EXTENDED"
+      ],
+      "included_cell_count": 0
+    },
+    "classification": "INSUFFICIENT_EVIDENCE",
+    "estimand": "STRATEGY_FAMILY_X_EVALUATED_HORIZON_INTERACTION",
+    "estimator": {
+      "cluster": "identity.canonical_opportunity_id",
+      "cluster_score_aggregation": "sum row scores within canonical opportunity before outer product",
+      "coding": "deterministic reference coding",
+      "covariance": "A^-1 (sum_o s_o s_o') A^-1",
+      "estimable": false,
+      "interaction_degrees_of_freedom": null,
+      "model": "pnl_r_multiple ~ StrategyFamily + Horizon + StrategyFamily:Horizon",
+      "naive_row_independent_covariance_used": false,
+      "opportunity_total_weights": {},
+      "weights": "w_oh = 1/k_o within the selected analytical grid"
+    },
+    "exclusions": {
+      "non_current_or_incompatible": 31,
+      "outside_selected_grid": 1852,
+      "strategy_family_none": 12194,
+      "total_not_analysed": 14077
+    },
+    "finding": "Insufficient evidence for the governed StrategyFamily by horizon interaction test",
+    "followup_contrasts": {
+      "alpha": 0.05,
+      "declared_count": 0,
+      "family": "within-strategy pairwise horizon contrasts only",
+      "multiplicity": "one global Holm step-down family",
+      "omnibus_in_holm_family": false,
+      "omnibus_rejection_required_for_inferential_claim": true,
+      "results": []
+    },
+    "horizon_taxonomy": {
+      "authority": "core.horizon.horizon_models.TradeHorizon",
+      "canonical_horizons": [
+        "SCALP",
+        "INTRADAY",
+        "EXTENDED"
+      ],
+      "unsupported_horizons_bucketed": false
+    },
+    "omnibus_test": {
+      "alpha": 0.05,
+      "degrees_of_freedom": null,
+      "method": "cluster-robust Wald joint interaction-block test",
+      "null": "all interaction terms in the selected sufficient grid are jointly zero",
+      "p_value": null,
+      "reliable_interaction": null,
+      "statistic": null
+    },
+    "population": {
+      "analytical_distinct_opportunities": 0,
+      "analytical_repeated_row_count": 0,
+      "total_distinct_eligible_opportunities": 1852
+    },
+    "selected_grid": {
+      "claim_boundary": "claims apply only to this selected sufficient evaluated grid",
+      "dimensions": [
+        0,
+        0
+      ],
+      "families": [],
+      "horizons": [],
+      "included_cell_count": 0,
+      "outcome_values_used_for_selection": false,
+      "selection_objective": "maximize valid cells, then families, then horizons, then canonical StrategyFamily order and canonical horizon order"
+    },
+    "sufficiency": {
+      "grid_selection": "maximize valid cells, then families, then horizons, then canonical StrategyFamily order and canonical horizon order",
+      "grid_selection_uses_outcomes": false,
+      "minimum_distinct_canonical_opportunities_overall": 150,
+      "minimum_distinct_canonical_opportunities_per_included_cell": 30,
+      "minimum_grid_families": 2,
+      "minimum_grid_horizons": 2,
+      "model_and_covariance_estimable": false,
+      "overall_sufficient": true,
+      "selected_cells_sufficient": false,
+      "valid_minimum_grid": false
+    },
+    "taxonomy": {
+      "active_families": [
+        "LIQUIDITY_SWEEP_REVERSAL",
+        "FALSE_BREAK",
+        "TREND_CONTINUATION",
+        "BREAKOUT_EXPANSION",
+        "MEAN_REVERSION",
+        "RANGE_REACTION"
+      ],
+      "authority": "core.v10.strategy_family.StrategyFamily",
+      "excluded_value": "NONE",
+      "legacy_compatibility_only": [
+        "REVERSAL",
+        "CONTINUATION",
+        "FALSE_BREAK"
+      ],
+      "legacy_mapping_inferred": false
+    }
+  },
+  "provenance": {
+    "estimand": "STRATEGY_FAMILY_X_EVALUATED_HORIZON_INTERACTION",
+    "experiment_module": "research_engine.experiments.strategy_horizon_interaction",
+    "hd07": "ADJUDICATED",
+    "registry_id": "S7",
+    "scientific_owner": "S7"
+  },
+  "question_id": "S7",
+  "recommendation": "WAIT_FOR_EVIDENCE",
+  "scientific_state": "INSUFFICIENT_DATA",
+  "status": "INSUFFICIENT_DATA",
+  "warnings": [
+    "Shadow outcomes are simulated research evidence, not realised live P&L.",
+    "Descriptive cell metrics are not additional hypothesis tests."
+  ]
+}

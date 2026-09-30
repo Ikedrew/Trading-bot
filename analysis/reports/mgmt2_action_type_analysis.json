@@ -1,0 +1,147 @@
+{
+  "assumptions": [
+    "OBSERVATIONAL ASSOCIATION ONLY \u2014 management actions are not randomly assigned",
+    "Selection confounding expected: SLTP_MODIFY occurs when the management layer decides to adjust levels",
+    "CLOSE actions classified by action_reason: lifecycle bookkeeping (TP/SL hit) vs discretionary",
+    "Multiple actions per trade deduplicated by (trade_id, action_type)",
+    "Broker acceptance/rejection of management actions lives in execution_attempts, not management_actions"
+  ],
+  "confidence": "MEDIUM",
+  "dataset": {
+    "sample_size": 95,
+    "source": "management_actions_v1 + trade_truth_v1"
+  },
+  "epoch": "CURRENT",
+  "fingerprint": {
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_865895b2c48a6778",
+    "epoch": "CURRENT",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "819f27b824df793d7434c5784750d7e016600f9659bc4b78e94021eb0b83292e",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 149,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 149,
+          "records_excluded": 0,
+          "records_used": 149,
+          "schema": "management_actions_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "management_actions_v1",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 149,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        },
+        {
+          "digest": "642787e21e2ac9cfb737ad5dc66cb5583d850f8931458c4db970dba473bf6875",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 84,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 84,
+          "records_excluded": 0,
+          "records_used": 84,
+          "schema": "trade_truth_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "trade_truth_v1",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 84,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "865895b2c48a67780a2750efd5a5f105c18e43053e8e79aefb18fa161339f1bf",
+      "digest_algorithm": "sha256",
+      "epoch": "CURRENT",
+      "input_records": 233,
+      "records_excluded": 0,
+      "records_used": 233,
+      "state": "CURRENT",
+      "version": "evidence_provenance_v1"
+    },
+    "frozen_evidence_snapshot_fingerprint": "2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+    "governed_candidate_records": 233,
+    "governed_usable_records": 95,
+    "provenance_validation": "Structured evidence provenance is CURRENT",
+    "records_excluded": 0,
+    "records_used": 233,
+    "source": "MULTI_SOURCE",
+    "sources": [
+      "management_actions_v1",
+      "trade_truth_v1"
+    ],
+    "validation_score": "UNKNOWN"
+  },
+  "generated": "2026-09-28T19:57:12Z",
+  "historical_pass": {
+    "analysis_time": "2026-09-28T00:00:00Z",
+    "candidate_records": 233,
+    "excluded_records": 138,
+    "historical_exhaustion": "EXHAUSTED",
+    "runner_function": "run_mgmt2",
+    "runner_module": "research_engine.experiments.management_research",
+    "schema": 1,
+    "source_evidence_references": [
+      "evidence-snapshot:2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "reconstruction:e02e904aa9bf8137b0b10691eb57db96ca395330709f4e53e7b030a3e3841f43"
+    ],
+    "unexplained_records": 0,
+    "usable_records": 95
+  },
+  "overall": {
+    "by_action_type": {
+      "CLOSE": {
+        "mean_r": -0.2108,
+        "median_r": 0.045,
+        "n": 84,
+        "semantics": "LIFECYCLE_BOOKKEEPING",
+        "sufficient_n": true,
+        "total_r": -17.71,
+        "win_rate": 0.631
+      },
+      "SLTP_MODIFY": {
+        "mean_r": 0.389,
+        "median_r": 0.0952,
+        "n": 11,
+        "semantics": "DISCRETIONARY_MANAGEMENT",
+        "sufficient_n": false,
+        "total_r": 4.28,
+        "win_rate": 1.0
+      }
+    },
+    "duplicate_trade_action_records_excluded": 52,
+    "finding": "Action-type outcome analysis: 2 types, 95 trades with outcomes. 1 types have sufficient N.",
+    "management_actions_total": 149,
+    "methodology": "observational per-action-type outcome association (not causal)",
+    "sample_size": 95,
+    "unmatched_actions_excluded": 2
+  },
+  "provenance": {
+    "experiment_module": "research_engine.experiments.exit_management",
+    "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
+    "registry_id": "MGMT-2"
+  },
+  "question_id": "MGMT-2",
+  "recommendation": "INSUFFICIENT_DISCRETIONARY_DATA",
+  "scientific_state": "COMPLETE",
+  "status": "COMPLETE",
+  "warnings": [
+    "OBSERVATIONAL \u2014 action types are not independent treatment conditions",
+    "Per-type sample sizes may be small; check sufficient_n before drawing conclusions"
+  ]
+}
