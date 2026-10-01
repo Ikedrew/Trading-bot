@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import tempfile
 from dataclasses import asdict, dataclass
@@ -464,6 +465,53 @@ def persist_trade(record: TradeRecord) -> bool:
     Never raises — returns False on failure.
     One file per day: logs/trade_journal/2026-06-04.jsonl
     """
+    _lifecycle_ledger = None
+    _close_obligations: tuple[Any, Any, Any] | None = None
+
+    def _record_close_outcome(
+        obligation: Any, *, succeeded: bool, record_id: str, failure_reason: str,
+    ) -> None:
+        if _lifecycle_ledger is None or obligation is None \
+                or obligation.current_status == "NOT_APPLICABLE":
+            return
+        try:
+            from core.lifecycle_evidence_obligations import record_producer_outcome
+            record_producer_outcome(
+                _lifecycle_ledger, obligation, succeeded=succeeded,
+                observed_record_id=record_id, failure_reason=failure_reason,
+                provenance={"local_path_authority": "LOCAL_ONLY"},
+            )
+        except Exception as _obligation_exc:
+            logger.warning("[LIFECYCLE_OBLIGATION] close outcome update failed: %s",
+                           _obligation_exc)
+
+    try:
+        from core.lifecycle_evidence_obligations import (
+            create_closed_trade_obligations, obligation_ledger,
+        )
+        _lifecycle_ledger = obligation_ledger()
+        _identity = {
+            "trade_id": record.trade_id,
+            "account_id": getattr(record, "account_id", ""),
+            "symbol": record.symbol,
+        }
+        _risk_geometry_valid = (
+            math.isfinite(record.entry_price) and math.isfinite(record.initial_sl)
+            and abs(record.entry_price - record.initial_sl) > 0
+        )
+        _timestamp = datetime.fromtimestamp(record.exit_time, tz=timezone.utc).isoformat()
+        _close_obligations = create_closed_trade_obligations(
+            _lifecycle_ledger,
+            event_id=f"trade-close:{_identity['account_id']}:{record.trade_id}",
+            identity=_identity, timestamp=_timestamp,
+            risk_geometry_valid=_risk_geometry_valid,
+        )
+    except Exception as _obligation_exc:
+        _lifecycle_ledger = None
+        _close_obligations = None
+        logger.warning("[LIFECYCLE_OBLIGATION] close obligations unavailable: %s",
+                       _obligation_exc)
+
     try:
         journal_dir = _get_journal_dir()
         journal_dir.mkdir(parents=True, exist_ok=True)
@@ -474,12 +522,25 @@ def persist_trade(record: TradeRecord) -> bool:
         line = json.dumps(_record_to_dict(record), separators=(",", ":")) + "\n"
 
         # Append with fsync for crash safety
-        fd = os.open(str(filepath), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         try:
-            os.write(fd, line.encode("utf-8"))
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+            fd = os.open(str(filepath), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+            try:
+                os.write(fd, line.encode("utf-8"))
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+        except Exception as _journal_exc:
+            if _close_obligations:
+                _record_close_outcome(
+                    _close_obligations[2], succeeded=False, record_id=record.trade_id,
+                    failure_reason=f"TRADE_JOURNAL_LOCAL_WRITE:{type(_journal_exc).__name__}",
+                )
+            raise
+        if _close_obligations:
+            _record_close_outcome(
+                _close_obligations[2], succeeded=True, record_id=record.trade_id,
+                failure_reason="",
+            )
 
         # ─── S3 MIRROR (Hive-partitioned, fire-and-forget) ───────────
         try:
@@ -658,9 +719,21 @@ def persist_trade(record: TradeRecord) -> bool:
                 },
             )
 
-            persist_trade_truth(_truth_record, local_dir=str(_get_trade_truth_dir()))
+            _truth_written = persist_trade_truth(
+                _truth_record, local_dir=str(_get_trade_truth_dir()))
+            if _close_obligations:
+                _record_close_outcome(
+                    _close_obligations[0], succeeded=_truth_written,
+                    record_id=record.trade_id,
+                    failure_reason="TRADE_TRUTH_LOCAL_WRITE_FAILED",
+                )
 
         except Exception as _tt_exc:
+            if _close_obligations:
+                _record_close_outcome(
+                    _close_obligations[0], succeeded=False, record_id=record.trade_id,
+                    failure_reason=f"TRADE_TRUTH_PRODUCER_EXCEPTION:{type(_tt_exc).__name__}",
+                )
             logger.warning("[TRADE_TRUTH] write_failed: %s", _tt_exc)
         # ─── END TRADE TRUTH v3 WRITE ─────────────────────────────────
 
@@ -680,9 +753,23 @@ def persist_trade(record: TradeRecord) -> bool:
                 # Phase 3 Step 5: risk deviation joins to the originating
                 # opportunity via the Position-owned immutable identity.
                 canonical_opportunity_id=getattr(record, "canonical_opportunity_id", ""),
+                account_id=getattr(record, "account_id", ""),
+                broker=getattr(record, "broker", ""),
+                broker_server=getattr(record, "broker_server", ""),
             )
-            persist_risk_deviation(_rd_result)
-        except Exception:
+            _risk_written = persist_risk_deviation(_rd_result)
+            if _close_obligations:
+                _record_close_outcome(
+                    _close_obligations[1], succeeded=_risk_written,
+                    record_id=record.trade_id,
+                    failure_reason="RISK_DEVIATION_LOCAL_WRITE_FAILED",
+                )
+        except Exception as _risk_exc:
+            if _close_obligations:
+                _record_close_outcome(
+                    _close_obligations[1], succeeded=False, record_id=record.trade_id,
+                    failure_reason=f"RISK_DEVIATION_PRODUCER_EXCEPTION:{type(_risk_exc).__name__}",
+                )
             pass  # Risk deviation failure must never block journal persistence
         # ─── END RISK DEVIATION TRACKING ──────────────────────────────
 

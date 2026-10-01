@@ -28,7 +28,7 @@ from research_engine.v10.runner.primitives.implementations import build_default_
 from research_engine.v10.runner.primitive_mapping import build_full_mapping
 from research_engine.v10.runner.question_runner import QuestionRunner, RunContext
 from research_engine.v10.universes.models import Universe, Population, QuestionStatus
-from research_engine.v10.universes.question_bank import QUESTION_BANK, get_question
+from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK, get_question
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

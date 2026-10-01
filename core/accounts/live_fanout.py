@@ -22,6 +22,7 @@ single-account path unchanged.
 from __future__ import annotations
 
 import os
+import logging
 from typing import Any, Callable
 
 from .fanout import CanonicalDecision, decision_from_intent
@@ -59,6 +60,7 @@ def execute_fanned_out(
     global_execution_enabled: bool = True,
     snapshot_provider: Callable | None = None,
     execute_one: Callable[[dict], dict] | None = None,
+    before_dispatch: Callable[[list[dict]], None] | None = None,
     timeout: float = 25.0,
 ) -> list[dict]:
     from .account_router import route_executions
@@ -70,6 +72,14 @@ def execute_fanned_out(
         broker_symbols=broker_symbols, strategy_family=strategy_family,
         horizon_type=horizon_type,
         global_execution_enabled=global_execution_enabled)
+    if before_dispatch is not None:
+        try:
+            before_dispatch(routes)
+        except Exception as exc:
+            logging.getLogger(__name__).critical(
+                "[FANOUT_OBLIGATION_HOOK_FAILED] error=%s", type(exc).__name__,
+                exc_info=True,
+            )
     if execute_one is None:
         return routes
     return route_executions(routed=routes, execute_one=execute_one, timeout=timeout)

@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT))
 from core.horizon.horizon_classifier import classify_horizons
 from core.horizon.horizon_models import HorizonAssessment
 import core.persistence.horizon_candidates_writer as hcw
+from core.lifecycle_evidence_obligations import ObligationStatus, obligation_ledger
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -112,6 +113,11 @@ class TestAllHorizonsPersisted:
         _persist_classification(**_trending_kwargs())
         records = _read_records()
         assert len(records) == 3
+        obligations = [item for item in obligation_ledger().obligations()
+                   if item.expected_dataset == "horizon_candidates"]
+        assert len(obligations) == 3
+        assert all(item.current_status == ObligationStatus.NOT_YET_DUE.value
+               for item in obligations)
 
     def test_one_record_per_horizon(self):
         """Each record is an INDEPENDENT record — not a collapsed list."""
@@ -154,6 +160,16 @@ class TestIneligiblePreserved:
         _persist_classification()
         records = _read_records()
         assert len(records) == 3
+
+    def test_empty_candidate_batch_marks_stage_not_applicable(self):
+        assert hcw.persist_horizon_candidates(
+            candidates=[],
+            stage_identity={"symbol": "TEST", "cycle_id": 7,
+                            "entity_id": "TEST_7"},
+        ) is False
+        obligation, = [item for item in obligation_ledger().obligations()
+                       if item.expected_dataset == "horizon_candidates"]
+        assert obligation.current_status == ObligationStatus.NOT_APPLICABLE.value
 
 
 # ═══════════════════════════════════════════════════════════════

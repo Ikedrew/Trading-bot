@@ -90,8 +90,8 @@ class ShadowEventWriter:
         symbol: str,
         market_time_utc: int,
         broker_offset_seconds: int,
-    ) -> None:
-        """Append one event to the local stream (+ gated S3 mirror). Never raises."""
+    ) -> bool:
+        """Append one event locally and report fsync success; never raises."""
         try:
             path = self.partition_path(symbol, market_time_utc, broker_offset_seconds)
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -105,8 +105,10 @@ class ShadowEventWriter:
                 os.close(fd)
 
             self._mirror_s3(symbol, market_time_utc, broker_offset_seconds, line)
+            return True
         except Exception as exc:  # persistence must never affect any caller
             logger.debug("[SHADOW_RUNTIME_PERSIST_FAIL] %s", exc)
+            return False
 
     def _mirror_s3(
         self,

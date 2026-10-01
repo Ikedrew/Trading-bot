@@ -351,7 +351,7 @@ class ResearchExecutionOrchestrator:
         return builders
 
     def _get_question_bank(self) -> tuple[NewEngineQuestion, ...]:
-        from research_engine.v10.universes.question_bank import QUESTION_BANK
+        from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK
         return QUESTION_BANK
 
     def _save_manifest(self, manifest: ResearchRunManifest) -> None:

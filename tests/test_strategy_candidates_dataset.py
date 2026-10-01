@@ -23,6 +23,7 @@ from core.v10.market_state import (
 from core.v10.opportunity_assessment import OpportunityAssessment, OpportunityQuality
 from core.v10.strategy_engine import select_strategy
 from core.identity.canonical import make_canonical_opportunity_id, mint_observation_id
+from core.lifecycle_evidence_obligations import ObligationStatus, obligation_ledger
 import core.persistence.strategy_candidates_writer as scw
 
 
@@ -103,6 +104,13 @@ class TestMultipleCandidates:
         result = select_strategy(state, opp)
         records = _read_records(None)
         assert len(records) == 2
+        obligations = [item for item in obligation_ledger().obligations()
+                   if item.expected_dataset == "strategy_candidates"]
+        assert len(obligations) == 2
+        assert all(item.current_status == ObligationStatus.NOT_YET_DUE.value
+               for item in obligations)
+        assert all(item.provenance["canonical_mirror_acknowledgement"] == "NOT_OBSERVED"
+               for item in obligations)
 
     def test_each_record_has_correct_family(self):
         state = _dual_candidate_state()
@@ -433,6 +441,9 @@ class TestNoRegression:
         result = select_strategy(state, _opp(state="INVALID"))
         assert result.strategy_family == "NONE"
         assert _read_records(None) == []
+        obligation, = [item for item in obligation_ledger().obligations()
+                   if item.expected_dataset == "strategy_candidates"]
+        assert obligation.current_status == ObligationStatus.NOT_APPLICABLE.value
 
     def test_no_candidates_no_records(self):
         """Empty market state produces no candidates — nothing persisted."""

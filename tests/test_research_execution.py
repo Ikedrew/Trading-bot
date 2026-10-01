@@ -32,7 +32,7 @@ from research_engine.v10.runner.orchestrator import (
 from research_engine.v10.runner.question_runner import RunContext, QuestionRunner
 from research_engine.v10.runner.primitive_mapping import build_full_mapping
 from research_engine.v10.runner.primitives.implementations import build_default_registry
-from research_engine.v10.universes.question_bank import QUESTION_BANK
+from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK
 from research_engine.v10.universes.models import (
     NewEngineQuestion,
     Population,
@@ -114,7 +114,7 @@ class TestFailureIsolation:
         ctx = RunContext(run_id="iso_test")
 
         # E-006 is BLOCKED
-        from research_engine.v10.universes.question_bank import E_006, E_001
+        from research_engine.v10.universes.legacy_question_bank import E_006, E_001
         results = runner.run_batch(
             [E_001, E_006],
             {"E-001": _synthetic_pop(), "E-006": _synthetic_pop()},
@@ -130,7 +130,7 @@ class TestFailureIsolation:
         runner = QuestionRunner(registry, mapping)
         ctx = RunContext()
 
-        from research_engine.v10.universes.question_bank import E_001
+        from research_engine.v10.universes.legacy_question_bank import E_001
         result = runner.run_question(E_001, [], ctx)
         assert result.success
         assert result.finding is not None

@@ -33,10 +33,11 @@ entry, not an architecture change.
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping, Sequence
 
 from core.config import NEW_RUNTIME_S3_BUCKET
 from core.production_data_contract import (
@@ -278,6 +279,7 @@ class S3ResearchDataSource:
         self._malformed: dict[str, MalformedReport] = {}
         self._listed_objects: dict[str, dict[str, Any]] = {}
         self._dataset_objects: dict[str, tuple[dict[str, Any], ...]] = {}
+        self._read_objects: dict[tuple[str, str], dict[str, Any]] = {}
 
     # ─── client ───────────────────────────────────────────────────────────────
 
@@ -430,15 +432,122 @@ class S3ResearchDataSource:
             return False
         return True
 
+    def discover_dataset_objects(
+        self,
+        dataset: str,
+        *,
+        symbol: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> tuple[dict[str, Any], ...]:
+        """Discover the exact canonical object set for one bounded dataset read."""
+        seen: set[str] = set()
+        for prefix in self._list_prefixes(
+                dataset, symbol=symbol, all_schemas=False):
+            for key in self._iter_keys(prefix):
+                if key in seen or not self._in_range(key, start_date, end_date):
+                    continue
+                seen.add(key)
+        return tuple(dict(self._listed_objects[key]) for key in sorted(seen))
+
+    def read_bound_objects(
+        self,
+        dataset: str,
+        objects: Sequence[Mapping[str, Any]],
+        *,
+        expected_schema_version: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        _verify_content: bool = True,
+    ) -> list[dict[str, Any]]:
+        """Read only explicitly bound canonical S3 objects and verify each digest.
+
+        This method deliberately performs no listing and has no latest/live
+        fallback. The caller supplies the complete object manifest captured at
+        freeze time. Repeated calls fetch those exact keys again, so a missing or
+        changed object fails closed instead of being replaced by newer data.
+        """
+        if expected_schema_version != current_schema(dataset):
+            raise ResearchDataSourceError(
+                f"SNAPSHOT_SCHEMA_MISMATCH:{dataset}:{expected_schema_version}"
+                f"!={current_schema(dataset)}")
+        prefixes = self._list_prefixes(
+            dataset, symbol=None, all_schemas=False)
+        keys: list[str] = []
+        for item in objects:
+            key = str(item.get("identifier") or "")
+            if not key or not any(key.startswith(prefix) for prefix in prefixes):
+                raise ResearchDataSourceError(
+                    f"SNAPSHOT_OBJECT_OUTSIDE_CANONICAL_DATASET:{dataset}:{key}")
+            if not self._in_range(key, start_date, end_date):
+                raise ResearchDataSourceError(
+                    f"SNAPSHOT_OBJECT_OUTSIDE_DATE_BOUNDS:{dataset}:{key}")
+            keys.append(key)
+        if len(set(keys)) != len(keys):
+            raise ResearchDataSourceError(
+                f"SNAPSHOT_DUPLICATE_OBJECT_KEY:{dataset}")
+
+        records: list[dict[str, Any]] = []
+        observed: list[dict[str, Any]] = []
+        for item, key in zip(objects, keys):
+            records.extend(self._read_object(dataset, key))
+            actual = dict(self._read_objects[(dataset, key)])
+            expected_digest = str(item.get("content_sha256") or "")
+            if _verify_content:
+                if not expected_digest or actual["content_sha256"] != expected_digest:
+                    raise ResearchDataSourceError(
+                        f"SNAPSHOT_OBJECT_DIGEST_MISMATCH:{dataset}:{key}")
+                if int(item.get("row_count", -1)) != actual["row_count"]:
+                    raise ResearchDataSourceError(
+                        f"SNAPSHOT_OBJECT_ROW_COUNT_MISMATCH:{dataset}:{key}")
+                if int(item.get("byte_size", -1)) != actual["byte_size"]:
+                    raise ResearchDataSourceError(
+                        f"SNAPSHOT_OBJECT_BYTE_SIZE_MISMATCH:{dataset}:{key}")
+                for field_name in ("etag", "size", "last_modified"):
+                    expected_value = item.get(field_name)
+                    if expected_value not in (None, "", 0) \
+                            and str(expected_value) != str(actual.get(field_name)):
+                        raise ResearchDataSourceError(
+                            f"SNAPSHOT_OBJECT_{field_name.upper()}_MISMATCH:{dataset}:{key}")
+                expected_version = item.get("version_id")
+                actual_version = actual.get("version_id")
+                if expected_version is not None and str(expected_version) != str(actual_version):
+                    raise ResearchDataSourceError(
+                        f"SNAPSHOT_OBJECT_VERSION_MISMATCH:{dataset}:{key}")
+            observed.append(actual)
+        order_keys = _ORDER_KEYS.get(dataset, _DEFAULT_ORDER_KEYS)
+        records.sort(key=lambda row: _order_value(row, order_keys))
+        self._dataset_objects[dataset] = tuple(observed)
+        return records
+
+    def read_objects_for_freeze(
+        self,
+        dataset: str,
+        objects: Sequence[Mapping[str, Any]],
+        *,
+        expected_schema_version: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Acquire exactly a just-discovered key set before its digest exists."""
+        return self.read_bound_objects(
+            dataset, objects,
+            expected_schema_version=expected_schema_version,
+            start_date=start_date, end_date=end_date,
+            _verify_content=False,
+        )
+
     # ─── object read + decode ─────────────────────────────────────────────────
 
     def _read_object(self, dataset: str, key: str) -> list[dict[str, Any]]:
         client = self._get_client()
+        response: Mapping[str, Any] = {}
         try:
             resp = client.get_object(Bucket=self._bucket, Key=key)
-            body = resp["Body"].read()
-            if isinstance(body, bytes):
-                body = body.decode("utf-8")
+            response = resp
+            raw_body = resp["Body"].read()
+            body_bytes = raw_body.encode("utf-8") if isinstance(raw_body, str) else bytes(raw_body)
+            body = body_bytes.decode("utf-8")
         except Exception as exc:
             raise self._diagnose(
                 exc, operation=f"get_object key='{key}'"
@@ -459,6 +568,24 @@ class S3ResearchDataSource:
                 continue
             if isinstance(rec, dict):
                 out.append(rec)
+        listed = dict(self._listed_objects.get(key, {"identifier": key}))
+        response_etag = str(response.get("ETag") or "").strip('"')
+        response_last_modified = response.get("LastModified")
+        response_last_modified_text = (
+            response_last_modified.isoformat()
+            if hasattr(response_last_modified, "isoformat")
+            else str(response_last_modified or "")
+        )
+        self._read_objects[(dataset, key)] = {
+            **listed,
+            "etag": response_etag or listed.get("etag", ""),
+            "size": int(response.get("ContentLength") or len(body_bytes)),
+            "last_modified": response_last_modified_text or listed.get("last_modified", ""),
+            "version_id": response.get("VersionId"),
+            "content_sha256": hashlib.sha256(body_bytes).hexdigest(),
+            "byte_size": len(body_bytes),
+            "row_count": len(out),
+        }
         return out
 
     # ─── public API ─────────────────────────────────────────────────────────
@@ -523,7 +650,8 @@ class S3ResearchDataSource:
         order_keys = _ORDER_KEYS.get(dataset, _DEFAULT_ORDER_KEYS)
         records.sort(key=lambda r: _order_value(r, order_keys))
         self._dataset_objects[dataset] = tuple(
-            dict(self._listed_objects.get(key, {"identifier": key}))
+            dict(self._read_objects.get(
+                (dataset, key), self._listed_objects.get(key, {"identifier": key})))
             for key in sorted(seen_keys)
         )
 
@@ -554,6 +682,7 @@ class S3ResearchDataSource:
         self._cache.clear()
         self._dataset_objects.clear()
         self._listed_objects.clear()
+        self._read_objects.clear()
 
 
 # ─── Run-scoped default source ────────────────────────────────────────────────

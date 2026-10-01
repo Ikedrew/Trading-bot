@@ -22,6 +22,30 @@ from core.v10.strategy_family import (
     StrategyDecision, StrategyFamily, STRATEGY_PRIORITY,
 )
 
+def _record_strategy_candidates_not_applicable(
+    state: V10MarketState, opportunity: OpportunityAssessment,
+    lineage: dict[str, Any] | None, trigger: str,
+) -> None:
+    try:
+        from core.lifecycle_evidence_obligations import (
+            create_dataset_obligation, obligation_ledger,
+        )
+        lin = lineage or {}
+        _root = str(lin.get("canonical_opportunity_id") or opportunity.observation_id or "")
+        _cycle = int(lin.get("cycle_id", 0) or 0)
+        create_dataset_obligation(
+            obligation_ledger(),
+            event_id=f"strategy-candidate-stage:{state.symbol}:{_root}:{_cycle}",
+            lifecycle_stage="STRATEGY_CANDIDATE",
+            dataset="strategy_candidates",
+            identity={"candidate_id": "", "symbol": state.symbol},
+            timestamp=str(state.timestamp_utc),
+            producer="core.v10.strategy_engine.select_strategy",
+            trigger=trigger, applicable=False,
+        )
+    except Exception:
+        pass
+
 
 def select_strategy(
     state: V10MarketState,
@@ -43,6 +67,8 @@ def select_strategy(
             evaluation, sorting, or winner selection in any way.
     """
     if opportunity.opportunity_state == "INVALID":
+        _record_strategy_candidates_not_applicable(
+            state, opportunity, lineage, "INVALID_OPPORTUNITY_NO_CANDIDATE_STAGE")
         return StrategyDecision(
             opportunity_id=opportunity.observation_id,
             symbol=state.symbol,
@@ -88,6 +114,8 @@ def select_strategy(
 
     # Select winner by priority (if tied on confidence, priority wins)
     if not candidates:
+        _record_strategy_candidates_not_applicable(
+            state, opportunity, lineage, "STRATEGY_EVALUATION_NO_CANDIDATES")
         return StrategyDecision(
             opportunity_id=opportunity.observation_id,
             symbol=state.symbol,

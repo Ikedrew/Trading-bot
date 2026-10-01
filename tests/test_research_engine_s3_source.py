@@ -22,6 +22,7 @@ Covered (mirrors the migration spec):
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -209,6 +210,29 @@ def test_malformed_line_skipped_and_reported():
     assert len(recs) == 1
     rep = s3mod.get_default_source().malformed_report("trade_truth")
     assert rep is not None and rep.malformed_lines == 1
+
+
+def test_object_metadata_includes_raw_content_digest_and_row_count():
+    key = _key("trade_truth", "EURUSD", "2026-07-01")
+    records = [{"identity": {"trade_id": "one", "symbol": "EURUSD"}},
+               {"identity": {"trade_id": "two", "symbol": "EURUSD"}}]
+    body = _jsonl(records)
+    source = S3ResearchDataSource(
+        bucket="test-bucket", client=FakeS3({key: body}))
+
+    assert len(source.read_dataset("trade_truth", symbol="EURUSD")) == 2
+    metadata = source.object_metadata("trade_truth")
+
+    assert metadata == ({
+        "identifier": key,
+        "etag": "",
+        "size": len(body.encode("utf-8")),
+        "last_modified": "",
+        "version_id": None,
+        "content_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+        "byte_size": len(body.encode("utf-8")),
+        "row_count": 2,
+    },)
 
 
 # ─── S3-vs-local equivalence ──────────────────────────────────────────────────

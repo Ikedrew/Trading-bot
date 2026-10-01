@@ -26,6 +26,8 @@ from research_engine.v10.universes.execution_universe import (
     normalise_trade_truth_record,
 )
 
+INVESTIGATION_TRANSFORMATION_VERSION = "investigation_views_v2"
+
 
 class DatasetReader(Protocol):
     def read_dataset(self, dataset: str, **kwargs: Any) -> list[dict[str, Any]]: ...
@@ -69,11 +71,33 @@ class InvestigationResult:
     join_contracts: tuple[JoinContract, ...] = ()
     limitations: tuple[str, ...] = ()
     population_state: str = "LIVE_MUTABLE_UNBOUND"
-    dataset_snapshot_id: None = None
-    evidence_epoch_id: None = None
+    dataset_snapshot_id: str | None = None
+    evidence_epoch_id: str | None = None
+    snapshot_id: str | None = None
+    evidence_epoch: str | None = None
+    snapshot_fingerprint: str | None = None
+    dataset_fingerprints: Mapping[str, str] = field(default_factory=dict)
+    source_object_boundaries: Mapping[str, Any] = field(default_factory=dict)
+    snapshot_source_row_counts: Mapping[str, int] = field(default_factory=dict)
+    snapshot_schema_versions: Mapping[str, str] = field(default_factory=dict)
+    date_bounds: Mapping[str, str] = field(default_factory=dict)
+    dataset_coverage: tuple[Mapping[str, str], ...] = ()
+    snapshot_manifest: Mapping[str, Any] = field(default_factory=dict)
+    immutable: bool = False
+    source_state: str = "LIVE_MUTABLE_UNBOUND"
+    view_configuration: Mapping[str, Any] = field(default_factory=dict)
+    transformation_version: str = INVESTIGATION_TRANSFORMATION_VERSION
     fingerprint: str = field(init=False)
 
     def __post_init__(self) -> None:
+        if self.immutable:
+            if not self.snapshot_id or not self.snapshot_fingerprint \
+                    or not self.evidence_epoch or self.source_state != "FROZEN":
+                raise ValueError("frozen investigation result lacks snapshot identity")
+            if self.population_state != "FROZEN":
+                raise ValueError("frozen investigation result has mutable population state")
+        elif self.snapshot_id is not None or self.source_state != "LIVE_MUTABLE_UNBOUND":
+            raise ValueError("live investigation result claims frozen snapshot state")
         payload = {
             "view": self.view,
             "records": self.records,
@@ -82,6 +106,20 @@ class InvestigationResult:
             "join_contracts": [asdict(item) for item in self.join_contracts],
             "limitations": self.limitations,
             "population_state": self.population_state,
+            "snapshot_id": self.snapshot_id,
+            "evidence_epoch": self.evidence_epoch,
+            "snapshot_fingerprint": self.snapshot_fingerprint,
+            "dataset_fingerprints": self.dataset_fingerprints,
+            "source_object_boundaries": self.source_object_boundaries,
+            "snapshot_source_row_counts": self.snapshot_source_row_counts,
+            "snapshot_schema_versions": self.snapshot_schema_versions,
+            "date_bounds": self.date_bounds,
+            "dataset_coverage": self.dataset_coverage,
+            "snapshot_manifest": self.snapshot_manifest,
+            "immutable": self.immutable,
+            "source_state": self.source_state,
+            "view_configuration": self.view_configuration,
+            "transformation_version": self.transformation_version,
         }
         object.__setattr__(self, "fingerprint", _hash(payload))
 
@@ -173,6 +211,8 @@ def _provenance(
     *,
     missing: Sequence[str] = (),
     issues: Sequence[str] = (),
+    missing_fields: Sequence[str] = (),
+    ambiguous_fields: Sequence[str] = (),
 ) -> dict[str, Any]:
     return {
         "sources": [
@@ -189,7 +229,43 @@ def _provenance(
         "evidence_epoch_id": None,
         "missing_optional_evidence": sorted(set(missing)),
         "join_issues": sorted(set(issues)),
+        "missing_evidence_fields": sorted(set(missing_fields)),
+        "ambiguous_evidence_fields": sorted(set(ambiguous_fields)),
     }
+
+
+def _evidence_gap_accounting(
+    records: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    missing_rows = ambiguous_rows = 0
+    missing_fields: dict[str, int] = defaultdict(int)
+    ambiguous_fields: dict[str, int] = defaultdict(int)
+    for row in records:
+        provenance = row.get("_provenance") or {}
+        missing = set(provenance.get("missing_evidence_fields") or ())
+        ambiguous = set(provenance.get("ambiguous_evidence_fields") or ())
+        missing_rows += bool(missing)
+        ambiguous_rows += bool(ambiguous)
+        for field_name in missing:
+            missing_fields[str(field_name)] += 1
+        for field_name in ambiguous:
+            ambiguous_fields[str(field_name)] += 1
+    return {
+        "rows_missing_optional_context": missing_rows,
+        "rows_with_ambiguous_optional_context": ambiguous_rows,
+        "missing_evidence_by_source_field": dict(sorted(missing_fields.items())),
+        "ambiguous_evidence_by_source_field": dict(sorted(ambiguous_fields.items())),
+    }
+
+
+def _apply_evidence_gap_accounting(
+    accounting: dict[str, Any], records: Sequence[Mapping[str, Any]],
+) -> None:
+    accounting.update(_evidence_gap_accounting(records))
+
+
+def _identity_field(dataset: str, *fields: str) -> str:
+    return f"{dataset}.{'+'.join(fields)}"
 
 
 def _decision_fields(row: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -270,6 +346,78 @@ class InvestigationViews:
     def __init__(self, source: DatasetReader | None = None):
         self._source = source or get_default_source()
         self._cache: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+        self._snapshot = getattr(self._source, "snapshot_provenance", None)
+
+    @classmethod
+    def from_snapshot_id(
+        cls, snapshot_id: str, *, source: DatasetReader | None = None,
+        manifest_directory=None,
+    ) -> "InvestigationViews":
+        from research_engine.v10.investigation_snapshot import (
+            open_investigation_snapshot,
+        )
+        return cls(open_investigation_snapshot(
+            snapshot_id, source=source, manifest_directory=manifest_directory))
+
+    def _result_provenance(self, filters: InvestigationFilters) -> dict[str, Any]:
+        configuration = asdict(filters)
+        if not self._snapshot:
+            return {"view_configuration": configuration}
+        manifest = dict(self._snapshot)
+        dataset_rows = {
+            str(item["dataset"]): int(item["source_row_count"])
+            for item in manifest.get("datasets", ())
+        }
+        schemas = {
+            str(item["dataset"]): str(item["schema_version"])
+            for item in manifest.get("datasets", ())
+        }
+        boundaries = {
+            str(item["dataset"]): [
+                dict(obj) for obj in item.get("objects", ())
+            ]
+            for item in manifest.get("datasets", ())
+        }
+        return {
+            "population_state": "FROZEN",
+            "evidence_epoch_id": str(manifest["evidence_epoch"]),
+            "snapshot_id": str(manifest["snapshot_id"]),
+            "evidence_epoch": str(manifest["evidence_epoch"]),
+            "snapshot_fingerprint": str(manifest["snapshot_fingerprint"]),
+            "dataset_fingerprints": {
+                str(item["dataset"]): str(item["content_digest"])
+                for item in manifest.get("datasets", ())
+            },
+            "source_object_boundaries": boundaries,
+            "snapshot_source_row_counts": dataset_rows,
+            "snapshot_schema_versions": schemas,
+            "date_bounds": {
+                "start_date": str(manifest["start_date"]),
+                "end_date": str(manifest["end_date"]),
+            },
+            "dataset_coverage": tuple(manifest.get("dataset_coverage", ())),
+            "snapshot_manifest": manifest,
+            "immutable": True,
+            "source_state": "FROZEN",
+            "view_configuration": configuration,
+        }
+
+    def _bind_record_provenance(self, records: Sequence[dict[str, Any]]) -> None:
+        if not self._snapshot:
+            return
+        for record in records:
+            provenance = record.get("_provenance")
+            if not isinstance(provenance, dict):
+                continue
+            provenance.update({
+                "population_state": "FROZEN",
+                "dataset_snapshot_id": None,
+                "evidence_epoch_id": str(self._snapshot["evidence_epoch"]),
+                "snapshot_id": str(self._snapshot["snapshot_id"]),
+                "snapshot_fingerprint": str(self._snapshot["snapshot_fingerprint"]),
+                "immutable": True,
+                "source_state": "FROZEN",
+            })
 
     def _load(self, dataset: str, filters: InvestigationFilters) -> list[dict[str, Any]]:
         key = (dataset, filters.symbol, filters.start_date, filters.end_date)
@@ -297,21 +445,37 @@ class InvestigationViews:
         strategy_observations = self._load("strategy_observations", filters)
         protections = self._load("protection_audit", filters)
         deviations = self._load("risk_deviation", filters)
-        exec_by_corr = _index(executions, "correlation_id", "identity.correlation_id")
+        exec_by_identity = _compound_index(
+            executions, "correlation_id", "account_id"
+        )
         decision_by_corr = _index(decisions, "correlation_id")
         decision_by_entity = _index(decisions, "entity_id")
         market_by_symbol_cycle = _compound_index(market_context, "symbol", "cycle_id")
         strategy_by_entity = _index(strategy_observations, "entity_id")
-        protection_by_corr = _index(protections, "correlation_id")
-        deviation_by_corr = _index(deviations, "correlation_id")
+        protection_by_identity = _compound_index(
+            protections, "correlation_id", "account_id", "position_ticket"
+        )
+        deviation_by_trade_id = _index(deviations, "trade_id")
         truth_ids = _index(truths, "identity.trade_id")
         duplicate_ids = {key for key, values in truth_ids.items() if len(values) > 1}
+        duplicate_execution_ids = {
+            key for key, values in exec_by_identity.items() if len(values) > 1
+        }
         output: list[dict[str, Any]] = []
-        excluded_missing = excluded_ambiguous = filtered = missing_optional = joined = 0
+        excluded_missing = excluded_ambiguous = filtered = joined = 0
+        missing_required_fields: dict[str, int] = defaultdict(int)
         for truth in truths:
             trade_id = str(_first(truth, "identity.trade_id") or "")
             correlation_id = str(_first(truth, "identity.correlation_id") or "")
-            if not trade_id or _first(truth, "outcome.r_multiple_realised") is None:
+            account_id = str(_first(truth, "identity.account_id") or "")
+            position_ticket = str(_first(truth, "identity.position_ticket") or "")
+            missing_trade_id = not trade_id
+            missing_realised_r = _first(truth, "outcome.r_multiple_realised") is None
+            if missing_trade_id:
+                missing_required_fields["trade_truth.identity.trade_id"] += 1
+            if missing_realised_r:
+                missing_required_fields["trade_truth.outcome.r_multiple_realised"] += 1
+            if missing_trade_id or missing_realised_r:
                 excluded_missing += 1
                 continue
             if trade_id in duplicate_ids:
@@ -319,13 +483,27 @@ class InvestigationViews:
                 continue
             issues: list[str] = []
             missing: list[str] = []
+            missing_fields: list[str] = []
+            ambiguous_fields: list[str] = []
             sources: list[tuple[str, Mapping[str, Any]]] = [("trade_truth", truth)]
-            exec_matches = exec_by_corr.get(correlation_id, []) if correlation_id else []
+            exec_key = (correlation_id, account_id)
+            exec_matches = exec_by_identity.get(exec_key, []) if all(exec_key) else []
             execution = exec_matches[0] if len(exec_matches) == 1 else None
-            if len(exec_matches) > 1:
-                issues.append("execution_results:ambiguous_correlation_id")
+            if not all(exec_key):
+                missing.append("execution_results")
+                missing_fields.append(_identity_field(
+                    "execution_results", "correlation_id", "account_id"
+                ))
+            elif len(exec_matches) > 1:
+                issues.append("execution_results:ambiguous_exact_identity")
+                ambiguous_fields.append(_identity_field(
+                    "execution_results", "correlation_id", "account_id"
+                ))
             elif execution is None:
                 missing.append("execution_results")
+                missing_fields.append(_identity_field(
+                    "execution_results", "correlation_id", "account_id"
+                ))
             else:
                 sources.append(("execution_results", execution))
             entity_id = str(_first(execution or {}, "entity_id") or "")
@@ -335,8 +513,14 @@ class InvestigationViews:
             decision = decision_matches[0] if len(decision_matches) == 1 else None
             if len(decision_matches) > 1:
                 issues.append("decision_trace:ambiguous_identity")
+                ambiguous_fields.append(_identity_field(
+                    "decision_trace", "entity_id"
+                ))
             elif decision is None:
                 missing.append("decision_trace")
+                missing_fields.append(_identity_field(
+                    "decision_trace", "entity_id"
+                ))
             else:
                 sources.append(("decision_trace", decision))
             normalized = normalise_trade_truth_record(truth, entity_id=entity_id)
@@ -347,11 +531,9 @@ class InvestigationViews:
             normalized["canonical_opportunity_id"] = _first(
                 truth, "identity.canonical_opportunity_id"
             ) or _first(execution or {}, "canonical_opportunity_id")
-            normalized["account_id"] = _first(
-                truth, "identity.account_id"
-            ) or _first(execution or {}, "account_id")
-            normalized["broker"] = _first(execution or {}, "broker")
-            normalized["broker_server"] = _first(execution or {}, "broker_server")
+            normalized["account_id"] = account_id or None
+            normalized["broker"] = _first(truth, "identity.broker") or _first(execution or {}, "broker")
+            normalized["broker_server"] = _first(truth, "identity.broker_server") or _first(execution or {}, "broker_server")
             normalized["mfe_r"] = _first(truth, "outcome.mfe_r")
             normalized["mae_r"] = _first(truth, "outcome.mae_r")
             cycle_id = str(_first(decision or {}, "cycle_id") or "")
@@ -362,9 +544,15 @@ class InvestigationViews:
             elif len(market_matches) > 1:
                 normalized["market_context_evidence"] = None
                 issues.append("market_context:ambiguous_symbol_cycle_id")
+                ambiguous_fields.append(_identity_field(
+                    "market_context", "symbol", "cycle_id"
+                ))
             else:
                 normalized["market_context_evidence"] = None
                 missing.append("market_context")
+                missing_fields.append(_identity_field(
+                    "market_context", "symbol", "cycle_id"
+                ))
             strategy_matches = strategy_by_entity.get(entity_id, []) if entity_id else []
             if strategy_matches:
                 normalized["strategy_observation_evidence"] = [
@@ -375,34 +563,58 @@ class InvestigationViews:
             else:
                 normalized["strategy_observation_evidence"] = None
                 missing.append("strategy_observations")
+                missing_fields.append(_identity_field(
+                    "strategy_observations", "entity_id"
+                ))
             normalized["execution_result"] = (
                 normalise_evidence_record(execution, "execution_results_v1")
                 if execution else None
             )
-            for name, index, dataset in (
-                ("protection_evidence", protection_by_corr, "protection_audit"),
-                ("risk_deviation_evidence", deviation_by_corr, "risk_deviation"),
-            ):
-                matches = index.get(correlation_id, []) if correlation_id else []
-                if matches:
-                    # Audit/observation streams are governed one-to-many
-                    # histories. Preserve every exact match; do not collapse a
-                    # sequence into a fabricated single "current" state.
-                    normalized[name] = [normalise_evidence_record(item, dataset) for item in matches]
-                    sources.extend((dataset, item) for item in matches)
-                else:
-                    normalized[name] = None
-                    missing.append(dataset)
+            protection_key = (correlation_id, account_id, position_ticket)
+            protection_matches = (
+                protection_by_identity.get(protection_key, [])
+                if all(protection_key) else []
+            )
+            if protection_matches:
+                normalized["protection_evidence"] = [
+                    normalise_evidence_record(item, "protection_audit")
+                    for item in protection_matches
+                ]
+                sources.extend(("protection_audit", item) for item in protection_matches)
+            else:
+                normalized["protection_evidence"] = None
+                missing.append("protection_audit")
+                missing_fields.append(_identity_field(
+                    "protection_audit", "correlation_id", "account_id", "position_ticket"
+                ))
+
+            deviation_matches = deviation_by_trade_id.get(trade_id, []) if trade_id else []
+            if len(deviation_matches) == 1:
+                normalized["risk_deviation_evidence"] = [
+                    normalise_evidence_record(deviation_matches[0], "risk_deviation")
+                ]
+                sources.append(("risk_deviation", deviation_matches[0]))
+            elif len(deviation_matches) > 1:
+                normalized["risk_deviation_evidence"] = None
+                issues.append("risk_deviation:ambiguous_trade_id")
+                ambiguous_fields.append(_identity_field("risk_deviation", "trade_id"))
+            else:
+                normalized["risk_deviation_evidence"] = None
+                missing.append("risk_deviation")
+                missing_fields.append(_identity_field("risk_deviation", "trade_id"))
             normalized["outcome_authority"] = "trade_truth_v1"
-            normalized["_provenance"] = _provenance(sources, missing=missing, issues=issues)
+            normalized["_provenance"] = _provenance(
+                sources, missing=missing, issues=issues,
+                missing_fields=missing_fields, ambiguous_fields=ambiguous_fields,
+            )
             if not _matches(normalized, filters):
                 filtered += 1
                 continue
             output.append(normalized)
             joined += int(bool(execution or decision))
-            missing_optional += int(bool(missing or issues))
         output.sort(key=lambda row: (_timestamp_sort_key(row.get("exit_time")), str(row["trade_id"])))
         accounting = {
+            "primary_population": "unique trade_truth records with realised R",
             "source_rows_loaded": {
                 "trade_truth": len(truths), "execution_results": len(executions),
                 "decision_trace": len(decisions), "protection_audit": len(protections),
@@ -410,27 +622,44 @@ class InvestigationViews:
                 "risk_deviation": len(deviations),
             },
             "primary_rows": len(truths), "eligible_rows": len(truths) - excluded_missing - excluded_ambiguous,
-            "joined_rows": joined, "rows_missing_optional_context": missing_optional,
+            "joined_rows": joined,
             "rows_excluded_ambiguous_identity": excluded_ambiguous,
             "rows_excluded_missing_required_identity": excluded_missing,
+            "missing_required_identity_by_field": dict(sorted(missing_required_fields.items())),
             "duplicate_counts": {"trade_truth_identity_groups": len(duplicate_ids)},
             "filtered_out": filtered, "output_rows": len(output),
+            "excluded_rows": excluded_missing + excluded_ambiguous + filtered,
+            "fan_out": {"parent_rows": len(output), "output_rows": len(output), "additional_rows": 0},
+            "exact_identity_keys": {
+                "trade_truth_to_execution_results": "correlation_id + account_id",
+                "execution_results_to_decision_trace": "entity_id; correlation_id fallback",
+                "decision_trace_to_market_context": "symbol + cycle_id",
+                "execution_to_strategy_observations": "entity_id",
+                "trade_truth_to_protection_audit": "correlation_id + account_id + position_ticket",
+                "trade_truth_to_risk_deviation": "trade_id",
+            },
         }
+        _apply_evidence_gap_accounting(accounting, output)
+        accounting["ambiguous_rows"] = accounting["rows_with_ambiguous_optional_context"] + excluded_ambiguous
+        accounting["missing_rows"] = accounting["rows_missing_optional_context"] + excluded_missing
         accounting["balanced"] = len(truths) == len(output) + filtered + excluded_missing + excluded_ambiguous
+        self._bind_record_provenance(output)
         return InvestigationResult(
             view="trade_investigation", records=tuple(output), accounting=accounting,
             source_schemas={name: current_schema(name) for name in accounting["source_rows_loaded"]},
             join_contracts=(
-                JoinContract("trade_truth", "execution_results", "correlation_id", "one-to-zero-or-one"),
+                JoinContract("trade_truth", "execution_results", "correlation_id + account_id", "one-to-zero-or-one"),
                 JoinContract("execution_results", "decision_trace", "entity_id; fallback correlation_id", "one-to-zero-or-one"),
                 JoinContract("decision_trace", "market_context", "symbol + cycle_id", "one-to-zero-or-one"),
                 JoinContract("decision_trace", "strategy_observations", "entity_id", "one-to-zero-or-many-evaluations"),
-                JoinContract("trade_truth", "protection_audit/risk_deviation", "correlation_id", "one-to-zero-or-many-history"),
+                JoinContract("trade_truth", "protection_audit", "correlation_id + account_id + position_ticket", "one-to-zero-or-many-exact-history"),
+                JoinContract("trade_truth", "risk_deviation", "trade_id", "one-to-zero-or-one"),
             ),
             limitations=(
                 "MAE/MFE remain absent unless trade_truth itself carries them.",
                 "Mutable production data is not labelled as a frozen Stage 4 snapshot.",
             ),
+            **self._result_provenance(filters),
         )
 
     def build_decision_execution_outcome(
@@ -445,11 +674,16 @@ class InvestigationViews:
         duplicate_decisions = {key for key, rows in decision_ids.items() if len(rows) > 1}
         rows: list[dict[str, Any]] = []
         missing_required = ambiguous = filtered = 0
+        missing_required_fields: dict[str, int] = defaultdict(int)
         for decision in decisions:
             decision_key = str(_first(decision, "decision_id", "entity_id") or "")
             correlation_id = str(decision.get("correlation_id") or "")
             if not decision_key or not correlation_id:
                 missing_required += 1
+                if not decision_key:
+                    missing_required_fields["decision_trace.decision_id|entity_id"] += 1
+                if not correlation_id:
+                    missing_required_fields["decision_trace.correlation_id"] += 1
                 continue
             if decision_key in duplicate_decisions:
                 ambiguous += 1
@@ -463,13 +697,47 @@ class InvestigationViews:
                 continue
             for execution in execs or [None]:
                 candidates = truth_by_corr.get(correlation_id, [])
-                if execution is not None and len(candidates) > 1:
-                    account = str(_first(execution, "account_id") or "")
-                    scoped = [t for t in candidates if str(_first(t, "identity.account_id") or "") == account]
-                    candidates = scoped if account else candidates
+                issues: list[str] = []
+                missing_fields: list[str] = []
+                ambiguous_fields: list[str] = []
+                account_mismatch = False
+                if execution is not None and candidates:
+                    execution_account = str(_first(execution, "account_id") or "")
+                    truth_accounts = [
+                        str(_first(item, "identity.account_id") or "")
+                        for item in candidates
+                    ]
+                    if execution_account and all(truth_accounts):
+                        scoped = [
+                            item for item in candidates
+                            if str(_first(item, "identity.account_id")) == execution_account
+                        ]
+                        account_mismatch = not scoped
+                        candidates = scoped
+                    else:
+                        issues.append("trade_truth:account_id_missing_for_scope")
+                        ambiguous_fields.append(_identity_field("trade_truth", "account_id"))
+                        candidates = []
+                if account_mismatch:
+                    issues.append("trade_truth:account_id_mismatch")
+                    ambiguous_fields.append(_identity_field("trade_truth", "account_id"))
                 truth = candidates[0] if len(candidates) == 1 else None
-                issues = ["trade_truth:ambiguous_correlation_id"] if len(candidates) > 1 else []
-                missing = [name for name, value in (("execution_results", execution), ("trade_truth", truth)) if value is None]
+                if len(candidates) > 1:
+                    issues.append("trade_truth:ambiguous_account_scoped_identity")
+                    ambiguous_fields.append(_identity_field(
+                        "trade_truth", "correlation_id", "account_id"
+                    ))
+                missing = []
+                if execution is None:
+                    missing.append("execution_results")
+                if truth is None and not issues:
+                    missing.append("trade_truth")
+                if execution is None:
+                    missing_fields.append(_identity_field("execution_results", "correlation_id"))
+                if truth is None and not issues:
+                    missing_fields.append(_identity_field("trade_truth", "correlation_id"))
+                if account_mismatch or "trade_truth:account_id_missing_for_scope" in issues:
+                    missing.append("trade_truth")
                 sources: list[tuple[str, Mapping[str, Any]]] = [("decision_trace", decision)]
                 if execution: sources.append(("execution_results", execution))
                 if truth: sources.append(("trade_truth", truth))
@@ -477,32 +745,77 @@ class InvestigationViews:
                     **_decision_fields(decision),
                     "entity_id": decision.get("entity_id"), "correlation_id": correlation_id,
                     "symbol": decision.get("symbol"),
+                    "execution_account_id": _first(execution or {}, "account_id"),
+                    "realised_account_id": _first(truth or {}, "identity.account_id"),
+                    "realised_trade_id": _first(truth or {}, "identity.trade_id"),
                     "execution_result": normalise_evidence_record(execution, "execution_results_v1") if execution else None,
                     "realised_outcome": normalise_trade_truth_record(truth) if truth else None,
                     "outcome_authority": "trade_truth_v1" if truth else None,
-                    "_provenance": _provenance(sources, missing=missing, issues=issues),
+                    "_provenance": _provenance(
+                        sources, missing=missing, issues=issues,
+                        missing_fields=missing_fields,
+                        ambiguous_fields=ambiguous_fields,
+                    ),
                 }
                 if _matches(row, filters): rows.append(row)
                 else: filtered += 1
         rows.sort(key=lambda row: (str(row.get("decision_timestamp") or ""), str(row.get("decision_id") or "")))
+        unique_decision_ids = {str(r.get("decision_id") or "") for r in rows}
+        rows_per_decision: dict[str, int] = defaultdict(int)
+        for row in rows:
+            rows_per_decision[str(row.get("decision_id") or "")] += 1
+        execution_result_rows = sum(row["execution_result"] is not None for row in rows)
+        outcome_attached_rows = sum(row["realised_outcome"] is not None for row in rows)
+        decisions_with_execution = {
+            str(row.get("decision_id") or "")
+            for row in rows if row["execution_result"] is not None
+        }
+        decisions_without_execution_rows = sum(
+            row["execution_result"] is None for row in rows
+        )
         accounting = {
+            "primary_population": "decision_trace decisions; execution results fan out by account",
             "source_rows_loaded": {"decision_trace": len(decisions), "execution_results": len(executions), "trade_truth": len(truths)},
             "primary_rows": len(decisions), "eligible_rows": len(decisions) - missing_required - ambiguous,
             "joined_rows": sum(bool(r["execution_result"] or r["realised_outcome"]) for r in rows),
-            "rows_missing_optional_context": sum(bool(r["_provenance"]["missing_optional_evidence"]) for r in rows),
             "rows_excluded_ambiguous_identity": ambiguous,
             "rows_excluded_missing_required_identity": missing_required,
+            "missing_required_identity_by_field": dict(sorted(missing_required_fields.items())),
             "duplicate_counts": {"decision_identity_groups": len(duplicate_decisions)},
             "filtered_out": filtered, "output_rows": len(rows),
-            "balanced": len(decisions) == missing_required + ambiguous + filtered + len({str(r.get('decision_id')) for r in rows}),
+            "unique_decision_population": len(unique_decision_ids),
+            "account_fanned_execution_result_rows": execution_result_rows,
+            "outcome_attached_rows": outcome_attached_rows,
+            "fan_out": {
+                "decisions_with_multiple_execution_rows": sum(count > 1 for count in rows_per_decision.values()),
+                "decisions_with_execution_results": len(decisions_with_execution),
+                "decisions_without_execution_results": len(unique_decision_ids) - len(decisions_with_execution),
+                "additional_account_fan_out_rows": execution_result_rows - len(decisions_with_execution),
+                "execution_result_rows": execution_result_rows,
+                "no_execution_decision_rows": decisions_without_execution_rows,
+            },
+            "excluded_rows": missing_required + ambiguous + filtered,
+            "exact_identity_keys": {
+                "decision_trace_to_execution_results": "correlation_id; account-grained result rows",
+                "execution_results_to_trade_truth": "correlation_id + account_id",
+                "decision_without_execution_to_trade_truth": "correlation_id only when unique",
+            },
+            "balanced": len(decisions) == missing_required + ambiguous + filtered + len(unique_decision_ids),
+            "balanced_scope": "unique_decision_id_population_only",
+            "row_expansion_balanced": len(rows) == execution_result_rows + decisions_without_execution_rows,
         }
+        _apply_evidence_gap_accounting(accounting, rows)
+        accounting["missing_rows"] = accounting["rows_missing_optional_context"] + missing_required
+        accounting["ambiguous_rows"] = accounting["rows_with_ambiguous_optional_context"] + ambiguous
+        self._bind_record_provenance(rows)
         return InvestigationResult(
             view="decision_execution_outcome", records=tuple(rows), accounting=accounting,
             source_schemas={name: current_schema(name) for name in accounting["source_rows_loaded"]},
             join_contracts=(
                 JoinContract("decision_trace", "execution_results", "correlation_id", "one-to-many-account-grained"),
-                JoinContract("execution_results", "trade_truth", "correlation_id + account_id where available", "one-to-zero-or-one"),
+                JoinContract("execution_results", "trade_truth", "correlation_id + account_id whenever both are present", "one-to-zero-or-one; account mismatch remains unpaired"),
             ),
+            **self._result_provenance(filters),
         )
 
     def build_shadow_comparison(
@@ -556,14 +869,23 @@ class InvestigationViews:
                     + ([{"dataset": "trade_truth", "schema_version": current_schema("trade_truth"), "source_record_identity": _source_identity("trade_truth", live), "record_fingerprint": _hash(live)}] if live else []),
                     "reconstruction": envelope.to_dict(),
                     "population_state": "LIVE_MUTABLE_UNBOUND", "dataset_snapshot_id": None, "evidence_epoch_id": None,
-                    "missing_optional_evidence": ["trade_truth"] if live is None else [],
+                    "missing_optional_evidence": ["trade_truth"] if not live_matches else [],
                     "join_issues": ["trade_truth:ambiguous_canonical_opportunity_id"] if len(live_matches) > 1 else [],
+                    "missing_evidence_fields": (
+                        [_identity_field("trade_truth", "canonical_opportunity_id")]
+                        if not live_matches else []
+                    ),
+                    "ambiguous_evidence_fields": (
+                        [_identity_field("trade_truth", "canonical_opportunity_id")]
+                        if len(live_matches) > 1 else []
+                    ),
                 },
             }
             if _matches(row, filters): rows.append(row)
             else: filtered += 1
         rows.sort(key=lambda row: (str(row["canonical_opportunity_id"]), str(row["shadow_trade_id"])))
         accounting = {
+            "primary_population": "completed shadow_runtime lifecycles",
             "source_rows_loaded": {"shadow_runtime": len(events), "trade_truth": len(truths)},
             "primary_rows": len(report.artifacts) + len(report.limitations), "eligible_rows": len(report.artifacts),
             "joined_rows": sum(r["incumbent_outcome"] is not None for r in rows),
@@ -573,13 +895,24 @@ class InvestigationViews:
             "rows_excluded_missing_required_identity": 0,
             "duplicate_counts": {"invalid_or_ambiguous_shadow_lifecycles": len(report.limitations)},
             "filtered_out": filtered, "output_rows": len(rows),
+            "excluded_rows": len(report.limitations) + filtered,
+            "missing_rows": missing_live,
+            "ambiguous_rows": ambiguous_live + len(report.limitations),
+            "fan_out": {"parent_rows": len(report.artifacts), "output_rows": len(rows), "additional_rows": 0},
+            "exact_identity_keys": {
+                "shadow_runtime_to_trade_truth": "canonical_opportunity_id",
+                "shadow_runtime_lifecycle": "shadow_trade_id",
+            },
             "balanced": len(report.artifacts) == len(rows) + filtered,
         }
+        _apply_evidence_gap_accounting(accounting, rows)
+        self._bind_record_provenance(rows)
         return InvestigationResult(
             view="shadow_vs_incumbent", records=tuple(rows), accounting=accounting,
             source_schemas={"shadow_runtime": current_schema("shadow_runtime"), "trade_truth": current_schema("trade_truth")},
             join_contracts=(JoinContract("shadow_runtime reconstructed outcome", "trade_truth", "canonical_opportunity_id", "many-shadow-horizons-to-zero-or-one-live"),),
             limitations=("Shadow outcomes are simulated; incumbent outcomes are broker-realised.", "No timestamp-proximity matching is performed."),
+            **self._result_provenance(filters),
         )
 
     def build_context_performance(self, filters: InvestigationFilters = InvestigationFilters()) -> InvestigationResult:
@@ -596,26 +929,48 @@ class InvestigationViews:
             accounting=dict(base.accounting), source_schemas=base.source_schemas,
             join_contracts=base.join_contracts,
             limitations=base.limitations + ("This is slice-ready row evidence, not an inferential aggregate.",),
+            **self._result_provenance(filters),
         )
 
     def build_execution_quality(self, filters: InvestigationFilters = InvestigationFilters()) -> InvestigationResult:
-        datasets = ("execution_attempts", "execution_results", "execution_context", "protection_audit", "risk_deviation")
+        datasets = ("execution_attempts", "execution_results", "execution_context", "protection_audit", "risk_deviation", "trade_truth")
         loaded = {name: self._load(name, filters) for name in datasets}
-        primary = loaded["execution_attempts"] + loaded["execution_results"]
-        context_indexes = {name: _index(loaded[name], "correlation_id") for name in datasets[2:]}
+        verification_rows = [
+            row for row in loaded["execution_results"]
+            if row.get("comment") == "protection_verification"
+        ]
+        execution_results = [
+            row for row in loaded["execution_results"]
+            if row.get("comment") != "protection_verification"
+        ]
+        primary_sources = {
+            "execution_attempts": loaded["execution_attempts"],
+            "execution_results": execution_results,
+        }
+        primary = primary_sources["execution_attempts"] + primary_sources["execution_results"]
+        context_by_corr = _index(loaded["execution_context"], "correlation_id")
+        protection_by_identity = _compound_index(
+            loaded["protection_audit"], "correlation_id", "account_id", "position_ticket"
+        )
+        deviation_by_trade_id = _index(loaded["risk_deviation"], "trade_id")
+        truth_by_identity = _compound_index(
+            loaded["trade_truth"], "identity.correlation_id", "identity.account_id"
+        )
         rows: list[dict[str, Any]] = []
-        missing_required = filtered = missing_optional = ambiguous_optional = 0
+        missing_required = filtered = 0
+        missing_required_fields: dict[str, int] = defaultdict(int)
         identity_counts: dict[tuple[str, str], int] = defaultdict(int)
-        for source_name, source_rows in (("execution_attempts", loaded["execution_attempts"]), ("execution_results", loaded["execution_results"])):
+        for source_name, source_rows in primary_sources.items():
             for raw in source_rows:
                 identity_counts[(source_name, _source_identity(source_name, raw))] += 1
         duplicate_keys = {key for key, count in identity_counts.items() if count > 1}
         duplicate_rows = 0
-        for source_name, source_rows in (("execution_attempts", loaded["execution_attempts"]), ("execution_results", loaded["execution_results"])):
+        for source_name, source_rows in primary_sources.items():
             for raw in source_rows:
                 correlation_id = str(_first(raw, "correlation_id") or "")
                 if not correlation_id:
                     missing_required += 1
+                    missing_required_fields[f"{source_name}.correlation_id"] += 1
                     continue
                 identity = (source_name, _source_identity(source_name, raw))
                 if identity in duplicate_keys:
@@ -624,45 +979,126 @@ class InvestigationViews:
                 sources: list[tuple[str, Mapping[str, Any]]] = [(source_name, raw)]
                 missing: list[str] = []
                 issues: list[str] = []
+                missing_fields: list[str] = []
+                ambiguous_fields: list[str] = []
                 related: dict[str, Any] = {}
-                for dataset, index in context_indexes.items():
-                    matches = index.get(correlation_id, [])
-                    if len(matches) == 1:
-                        related[dataset] = normalise_evidence_record(matches[0], dataset)
-                        sources.append((dataset, matches[0]))
-                    elif len(matches) > 1:
-                        related[dataset] = None
-                        issues.append(f"{dataset}:ambiguous_correlation_id")
-                    else:
-                        related[dataset] = None
-                        missing.append(dataset)
+                context_matches = context_by_corr.get(correlation_id, [])
+                if len(context_matches) == 1:
+                    related["execution_context"] = normalise_evidence_record(
+                        context_matches[0], "execution_context"
+                    )
+                    sources.append(("execution_context", context_matches[0]))
+                elif len(context_matches) > 1:
+                    related["execution_context"] = None
+                    issues.append("execution_context:ambiguous_correlation_id")
+                    ambiguous_fields.append(_identity_field("execution_context", "correlation_id"))
+                else:
+                    related["execution_context"] = None
+                    missing.append("execution_context")
+                    missing_fields.append(_identity_field("execution_context", "correlation_id"))
+
+                account_id = str(_first(raw, "account_id") or "")
+                position_ticket = str(_first(raw, "position_ticket") or "")
+                protection_key = (correlation_id, account_id, position_ticket)
+                protection_matches = (
+                    protection_by_identity.get(protection_key, [])
+                    if all(protection_key) else []
+                )
+                if protection_matches:
+                    related["protection_audit"] = [
+                        normalise_evidence_record(item, "protection_audit")
+                        for item in protection_matches
+                    ]
+                    sources.extend(("protection_audit", item) for item in protection_matches)
+                else:
+                    related["protection_audit"] = None
+                    missing.append("protection_audit")
+                    missing_fields.append(_identity_field(
+                        "protection_audit", "correlation_id", "account_id", "position_ticket"
+                    ))
+
+                truth_key = (correlation_id, account_id)
+                truth_matches = truth_by_identity.get(truth_key, []) if all(truth_key) else []
+                if len(truth_matches) == 1:
+                    trade_truth = truth_matches[0]
+                    related["trade_truth"] = normalise_trade_truth_record(trade_truth)
+                    sources.append(("trade_truth", trade_truth))
+                    trade_id = str(_first(trade_truth, "identity.trade_id") or "")
+                elif len(truth_matches) > 1:
+                    related["trade_truth"] = None
+                    trade_id = ""
+                    issues.append("trade_truth:ambiguous_correlation_account_identity")
+                    ambiguous_fields.append(_identity_field(
+                        "trade_truth", "correlation_id", "account_id"
+                    ))
+                else:
+                    related["trade_truth"] = None
+                    trade_id = str(_first(raw, "trade_id") or "")
+                    missing.append("trade_truth")
+                    missing_fields.append(_identity_field(
+                        "trade_truth", "correlation_id", "account_id"
+                    ))
+                deviation_matches = deviation_by_trade_id.get(trade_id, []) if trade_id else []
+                if len(deviation_matches) == 1:
+                    related["risk_deviation"] = normalise_evidence_record(
+                        deviation_matches[0], "risk_deviation"
+                    )
+                    sources.append(("risk_deviation", deviation_matches[0]))
+                elif len(deviation_matches) > 1:
+                    related["risk_deviation"] = None
+                    issues.append("risk_deviation:ambiguous_trade_id")
+                    ambiguous_fields.append(_identity_field("risk_deviation", "trade_id"))
+                else:
+                    related["risk_deviation"] = None
+                    missing.append("risk_deviation")
+                    missing_fields.append(_identity_field("risk_deviation", "trade_id"))
                 row = {
                     **normalise_evidence_record(raw, "execution_results_v1" if source_name == "execution_results" else source_name),
                     "record_kind": source_name, "correlation_id": correlation_id,
+                    "account_id": account_id or None,
+                    "trade_id": trade_id or None,
                     "related_evidence": related,
-                    "_provenance": _provenance(sources, missing=missing, issues=issues),
+                    "_provenance": _provenance(
+                        sources, missing=missing, issues=issues,
+                        missing_fields=missing_fields,
+                        ambiguous_fields=ambiguous_fields,
+                    ),
                 }
                 if _matches(row, filters): rows.append(row)
                 else: filtered += 1
-                missing_optional += int(bool(missing)); ambiguous_optional += int(bool(issues))
         rows.sort(key=lambda row: (str(row.get("correlation_id")), str(row.get("record_kind")), _hash(row)))
         accounting = {
+            "primary_population": "execution_attempts plus non-verification execution_results",
             "source_rows_loaded": {name: len(value) for name, value in loaded.items()},
+            "execution_results_primary_rows": len(execution_results),
+            "execution_results_protection_verification_rows": len(verification_rows),
             "primary_rows": len(primary), "eligible_rows": len(primary) - missing_required - duplicate_rows,
             "joined_rows": sum(bool(r["_provenance"]["sources"][1:]) for r in rows),
-            "rows_missing_optional_context": missing_optional,
-            "rows_with_ambiguous_optional_context": ambiguous_optional,
             "rows_excluded_ambiguous_identity": duplicate_rows,
             "rows_excluded_missing_required_identity": missing_required,
+            "missing_required_identity_by_field": dict(sorted(missing_required_fields.items())),
             "duplicate_counts": {"ambiguous_source_identity_rows": duplicate_rows, "ambiguous_identity_groups": len(duplicate_keys)},
             "filtered_out": filtered, "output_rows": len(rows),
+            "excluded_rows": missing_required + duplicate_rows + filtered,
+            "fan_out": {"parent_rows": len(rows), "output_rows": len(rows), "additional_rows": 0},
+            "exact_identity_keys": {
+                "execution_results_to_execution_context": "correlation_id",
+                "execution_results_to_protection_audit": "correlation_id + account_id + position_ticket",
+                "execution_attempts/results_to_trade_truth": "correlation_id + account_id",
+                "trade_truth_to_risk_deviation": "trade_id",
+            },
             "balanced": len(primary) == len(rows) + filtered + missing_required + duplicate_rows,
         }
+        _apply_evidence_gap_accounting(accounting, rows)
+        accounting["missing_rows"] = accounting["rows_missing_optional_context"] + missing_required
+        accounting["ambiguous_rows"] = accounting["rows_with_ambiguous_optional_context"] + duplicate_rows
+        self._bind_record_provenance(rows)
         return InvestigationResult(
             view="execution_quality", records=tuple(rows), accounting=accounting,
             source_schemas={name: current_schema(name) for name in datasets},
             join_contracts=tuple(JoinContract("execution_attempts/results", name, "correlation_id", "one-to-zero-or-one") for name in datasets[2:]),
             limitations=("Multiple protection/audit observations at one correlation are reported as ambiguous, not collapsed.",),
+            **self._result_provenance(filters),
         )
 
     def build_risk_sequence(self, filters: InvestigationFilters = InvestigationFilters()) -> InvestigationResult:
@@ -693,6 +1129,7 @@ class InvestigationViews:
             view="risk_drawdown_sequence", records=tuple(rows), accounting=dict(base.accounting),
             source_schemas=base.source_schemas, join_contracts=base.join_contracts,
             limitations=base.limitations + ("Portfolio exposure is not invented when no exact evidence is joined.", "Drawdown is an R-sequence derivation, not broker equity drawdown."),
+            **self._result_provenance(filters),
         )
 
 

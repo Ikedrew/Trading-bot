@@ -231,7 +231,7 @@ def compute_risk_deviation(
 # PERSISTENCE
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def persist_risk_deviation(result: RiskDeviationResult) -> None:
+def persist_risk_deviation(result: RiskDeviationResult) -> bool:
     """
     Persist risk deviation result to local JSONL + S3 mirror.
 
@@ -278,9 +278,11 @@ def persist_risk_deviation(result: RiskDeviationResult) -> None:
                 result.symbol, result.trade_id, result.actual_risk_R,
                 result.risk_deviation,
             )
+        return True
 
     except Exception as exc:
         logger.error("[RISK_DEVIATION_PERSIST_ERROR] %s", exc)
+        return False
 
 
 def _write_s3_risk_deviation(symbol: str, date_str: str, line: str) -> None:

@@ -1,5 +1,5 @@
 """
-Initialise all 45 question products from the canonical question bank.
+Initialise legacy V10 question products from the read-only legacy question bank.
 
 Creates reports/research/questions/{QID}/question.json for every active question.
 Safe to re-run — only writes question.json, never overwrites findings.
@@ -18,7 +18,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from research_engine.v10.control_plane.question_products import QuestionProductManager
-from research_engine.v10.universes.question_bank import QUESTION_BANK
+from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK
 
 
 def initialise_all_products(base_dir: Path | str | None = None) -> int:

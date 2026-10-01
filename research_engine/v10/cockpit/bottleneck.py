@@ -18,7 +18,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-from research_engine.v10.universes.question_bank import QUESTION_BANK, get_question
+from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK, get_question
 from research_engine.v10.universes.models import Universe, QuestionStatus
 from research_engine.v10.runner.primitive_mapping import QUESTION_PARAMETERS
 

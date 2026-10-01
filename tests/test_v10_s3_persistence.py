@@ -19,6 +19,12 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
+pytest.skip(
+    "Retired subsystem: V10ResearchS3Publisher has no active implementation; "
+    "current V10 persistence is covered by test_v10_persistence_adapter.py",
+    allow_module_level=True,
+)
+
 from research_engine.v10.persistence.s3_publisher import (
     V10ResearchS3Publisher,
     get_s3_key,

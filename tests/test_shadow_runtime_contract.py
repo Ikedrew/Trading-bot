@@ -25,6 +25,7 @@ sys.path.insert(0, str(ROOT))
 from core.shadow.persistence import ShadowEventWriter, load_events
 from core.shadow.runtime import ShadowRuntime
 from core.identity.canonical import mint_observation_id
+from core.lifecycle_evidence_obligations import ObligationStatus, obligation_ledger
 
 SYMBOL = "EURUSD"
 ROOT_ID = "EURUSD*1784800000*TWEEZER_TOP"
@@ -399,18 +400,31 @@ def test_every_event_carries_three_version_dimensions(env):
 def test_full_lifecycle_plan_open_progress_close(env):
     env.rt.handle_opportunity(_ctx())                    # PLAN + OPEN
     t0 = _ctx()["bar_time_utc"]
-    for bt, hi, lo, cl in _bars_after(t0, 12, 1.10010, 1.09990, 1.10000):
+    for bt, hi, lo, cl in _bars_after(t0, 24, 1.10010, 1.09990, 1.10000):
         env.rt.evaluate_bar(symbol=SYMBOL, bar_time=bt,
                             bar_high=hi, bar_low=lo, bar_close=cl)
-    kinds = [e["event_type"] for e in env.events()]
+    events = env.events()
+    kinds = [e["event_type"] for e in events]
     assert kinds.count("PLAN") == 1
     assert kinds.count("OPEN") == 1
-    assert kinds.count("PROGRESS") >= 1                  # checkpoint at bar 12
-    prog = [e for e in env.events() if e["event_type"] == "PROGRESS"][-1]
+    assert kinds.count("PROGRESS") >= 2                  # checkpoints at bars 12 and 24
+    assert all(event.get("event_id") for event in events)
+    assert len({event["event_id"] for event in events}) == len(events)
+    obligations = [item for item in obligation_ledger().obligations()
+                   if item.expected_dataset == "shadow_runtime"]
+    assert len(obligations) == len(events)
+    assert {item.expected_identity["event_id"] for item in obligations} == {
+        event["event_id"] for event in events
+    }
+    assert all(item.current_status == ObligationStatus.NOT_YET_DUE.value
+               for item in obligations)
+    progresses = [e for e in events if e["event_type"] == "PROGRESS"]
+    assert len({event["event_id"] for event in progresses}) == len(progresses)
+    prog = progresses[-1]
     assert prog["canonical_opportunity_id"] == ROOT_ID
     assert prog["observation_id"] == OBSERVATION_ID
-    assert prog["lifecycle"]["bars_elapsed"] == 12
-    assert prog["lifecycle"]["last_evaluated_bar_time"] == t0 + 3600
+    assert prog["lifecycle"]["bars_elapsed"] == 24
+    assert prog["lifecycle"]["last_evaluated_bar_time"] == t0 + 7200
 
 
 def test_close_preserves_observation_id(env):

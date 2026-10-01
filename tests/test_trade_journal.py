@@ -19,6 +19,7 @@ import os
 import sys
 import tempfile
 import time
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -53,6 +54,9 @@ from core.trade_journal import (
     _get_journal_dir,
 )
 from core.trade_management.position import Position, PositionStatus
+from core.lifecycle_evidence_obligations import (
+    LifecycleEvidenceLedger, ObligationStatus,
+)
 from strategy.signals import Side
 
 
@@ -200,6 +204,25 @@ class TestBuildTradeRecord:
 # --- TEST: JOURNAL PERSISTENCE ------------------------------------------------
 
 class TestJournalPersistence:
+    def test_closed_trade_local_writes_remain_pending_reconciliation(
+        self, use_temp_journal, tmp_path,
+    ):
+        record = replace(_make_record(), account_id="ACCOUNT-A")
+        ledger = LifecycleEvidenceLedger(tmp_path / "obligation-ledger.data")
+        with patch("core.lifecycle_evidence_obligations.obligation_ledger",
+               return_value=ledger):
+            assert persist_trade(record) is True
+
+        by_dataset = {item.expected_dataset: item for item in ledger.obligations()}
+        assert by_dataset["trade_journal"].current_status == ObligationStatus.NOT_YET_DUE.value
+        assert by_dataset["trade_truth"].current_status == ObligationStatus.EXPECTED_BUT_MISSING.value
+        assert by_dataset["risk_deviation"].current_status == ObligationStatus.NOT_YET_DUE.value
+        assert all(
+            obligation.provenance.get("canonical_mirror_acknowledgement") == "NOT_OBSERVED"
+            for obligation in by_dataset.values()
+        ), [(dataset, obligation.current_status, dict(obligation.provenance))
+            for dataset, obligation in by_dataset.items()]
+
     def test_persist_creates_file(self, use_temp_journal):
         """Persisting a trade creates a JSONL file."""
         record = _make_record()

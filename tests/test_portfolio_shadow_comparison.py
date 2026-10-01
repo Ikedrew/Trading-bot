@@ -27,6 +27,9 @@ from core.portfolio_ranking.shadow_comparison import (
     persist_shadow_comparison,
     ShadowComparison,
 )
+from core.lifecycle_evidence_obligations import (
+    LifecycleEvidenceLedger, ObligationStatus,
+)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -199,8 +202,12 @@ class TestPersistence:
         pool = _pool_gbpusd_selected()
         comparison = compute_shadow_comparison(
             pool=pool, executed_symbols=["NZDUSD"], cycle_id=100,
+            runtime_session_id="session-A",
         )
-        with patch("core.portfolio_ranking.shadow_comparison._LOCAL_DIR", str(tmp_path / "shadow")):
+        ledger = LifecycleEvidenceLedger(tmp_path / "obligation-ledger.data")
+        with patch("core.portfolio_ranking.shadow_comparison._LOCAL_DIR", str(tmp_path / "shadow")), \
+             patch("core.lifecycle_evidence_obligations.obligation_ledger",
+                   return_value=ledger):
             persist_shadow_comparison(comparison)
 
         files = list((tmp_path / "shadow").glob("*.jsonl"))
@@ -208,6 +215,12 @@ class TestPersistence:
         record = json.loads(files[0].read_text().strip())
         assert record["agreement"] is False
         assert record["disagreement_type"] == "WRONG_SYMBOL"
+        obligation = ledger.obligations()[0]
+        assert obligation.expected_identity == {
+            "cycle_id": 100, "runtime_session_id": "session-A",
+        }
+        assert obligation.current_status == ObligationStatus.NOT_YET_DUE.value
+        assert obligation.provenance["canonical_mirror_acknowledgement"] == "NOT_OBSERVED"
 
     def test_agreement_with_multiple_candidates_persisted(self, tmp_path):
         """Agreement with >1 candidate is persisted (interesting for research)."""
@@ -231,13 +244,19 @@ class TestPersistence:
         )
         comparison = compute_shadow_comparison(
             pool=pool, executed_symbols=["EURUSD"], cycle_id=400,
+            runtime_session_id="session-boring",
         )
-        with patch("core.portfolio_ranking.shadow_comparison._LOCAL_DIR", str(tmp_path / "shadow")):
+        ledger = LifecycleEvidenceLedger(tmp_path / "obligation-ledger.data")
+        with patch("core.portfolio_ranking.shadow_comparison._LOCAL_DIR", str(tmp_path / "shadow")), \
+             patch("core.lifecycle_evidence_obligations.obligation_ledger",
+                   return_value=ledger):
             persist_shadow_comparison(comparison)
 
         # NOT persisted: agreement with only 1 candidate
         files = list((tmp_path / "shadow").glob("*.jsonl"))
         assert len(files) == 0
+        obligation, = ledger.obligations()
+        assert obligation.current_status == ObligationStatus.NOT_APPLICABLE.value
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

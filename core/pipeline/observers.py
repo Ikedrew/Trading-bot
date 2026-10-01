@@ -166,7 +166,30 @@ class ObserverRegistry:
             pass
 
         # ─── 6. Decision trace: build + persist + funnel record ───────
+        _trace_ledger = None
+        _trace_obligation = None
         try:
+            from core.lifecycle_evidence_obligations import (
+                create_dataset_obligation, obligation_ledger,
+            )
+            _trace_ledger = obligation_ledger()
+            _trace_identity = {
+                "entity_id": str(ctx.engine_result.get("entity_id") or ""),
+                "cycle_id": ctx.cycle_id,
+                "runtime_session_id": ctx.runtime_session_id,
+                "symbol": ctx.symbol,
+            }
+            _trace_event_id = (
+                f"decision-trace:{_trace_identity['entity_id']}:{ctx.cycle_id}:"
+                f"{ctx.runtime_session_id}"
+            )
+            _trace_obligation = create_dataset_obligation(
+                _trace_ledger, event_id=_trace_event_id,
+                lifecycle_stage="DECISION_TRACE_OBSERVER",
+                dataset="decision_trace", identity=_trace_identity,
+                timestamp=str(ctx.bar_time), producer="core.decision_trace.persist_decision_trace",
+                trigger="DECISION_TRACE_OBSERVER_REACHED",
+            )
             from core.decision_trace import build_decision_trace, persist_decision_trace
             _trace = build_decision_trace(
                 engine_result=ctx.engine_result,
@@ -177,9 +200,24 @@ class ObserverRegistry:
                 decision_id=ctx.decision_id,
                 correlation_id=ctx.correlation_id,
             )
-            persist_decision_trace(_trace)
+            _persisted = persist_decision_trace(_trace)
+            if not _persisted and _trace_ledger is not None and _trace_obligation is not None:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _trace_ledger, _trace_obligation, succeeded=False,
+                    failure_reason="DECISION_TRACE_OBSERVER_WRITE_FAILED",
+                )
             ctx.decision_funnel.record_trace(_trace)
-        except Exception:
+        except Exception as _trace_exc:
+            if _trace_ledger is not None and _trace_obligation is not None:
+                try:
+                    from core.lifecycle_evidence_obligations import record_producer_outcome
+                    record_producer_outcome(
+                        _trace_ledger, _trace_obligation, succeeded=False,
+                        failure_reason=f"DECISION_TRACE_OBSERVER_EXCEPTION:{type(_trace_exc).__name__}",
+                    )
+                except Exception:
+                    pass
             pass
 
         # ─── 7. Strategy observer: strategy intelligence observation ──
@@ -187,12 +225,51 @@ class ObserverRegistry:
         # Creates StrategyObservation records for research evidence.
         # Never influences decisions. Never modifies engine_result.
         # Failure here never affects trading pipeline.
+        _strategy_ledger = None
+        _strategy_obligation = None
         try:
+            from core.identity.canonical import mint_observation_id
+            from core.lifecycle_evidence_obligations import (
+                create_dataset_obligation, obligation_ledger,
+            )
+            _strategy_ledger = obligation_ledger()
+            _observation_id = mint_observation_id(
+                symbol=ctx.symbol, bar_time=ctx.bar_time, timeframe="M5")
+            _entity_id = str(ctx.engine_result.get("entity_id")
+                             or f"{ctx.symbol}_{int(ctx.bar_time)}")
+            _strategy_obligation = create_dataset_obligation(
+                _strategy_ledger,
+                event_id=f"strategy-observation:{_entity_id}:{_observation_id}",
+                lifecycle_stage="STRATEGY_OBSERVER",
+                dataset="strategy_observations",
+                identity={"entity_id": _entity_id,
+                          "observation_id": _observation_id,
+                          "symbol": ctx.symbol},
+                timestamp=str(ctx.bar_time),
+                producer="core.strategies.observation_persistence.persist_strategy_observation",
+                trigger="STRATEGY_OBSERVER_REACHED",
+            )
             from core.strategies.strategy_intelligence_observer import (
                 observe_strategy_intelligence,
             )
-            observe_strategy_intelligence(ctx)
-        except Exception:
+            _strategy_persisted = observe_strategy_intelligence(ctx)
+            if _strategy_persisted is False \
+                    and _strategy_ledger is not None and _strategy_obligation is not None:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _strategy_ledger, _strategy_obligation, succeeded=False,
+                    failure_reason="STRATEGY_OBSERVATION_PRODUCER_FAILED",
+                )
+        except Exception as _strategy_exc:
+            if _strategy_ledger is not None and _strategy_obligation is not None:
+                try:
+                    from core.lifecycle_evidence_obligations import record_producer_outcome
+                    record_producer_outcome(
+                        _strategy_ledger, _strategy_obligation, succeeded=False,
+                        failure_reason=f"STRATEGY_OBSERVER_EXCEPTION:{type(_strategy_exc).__name__}",
+                    )
+                except Exception:
+                    pass
             pass
 
         # NOTE (Production V1 canonical cleanup): the retired V2/V3 opportunity

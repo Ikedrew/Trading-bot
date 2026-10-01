@@ -95,7 +95,7 @@ class TestControlPlaneEngine:
             questions_dir=tmp_path / "questions",
         )
         # Use the real question bank
-        from research_engine.v10.universes.question_bank import QUESTION_BANK
+        from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK
         engine.index_questions(QUESTION_BANK)
         assert engine.state.questions_active >= 40
         assert len(engine.state.questions) == len(QUESTION_BANK)
@@ -131,7 +131,7 @@ class TestControlPlaneEngine:
             state_file=tmp_path / "s.json",
             questions_dir=tmp_path / "q",
         )
-        from research_engine.v10.universes.question_bank import QUESTION_BANK
+        from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK
         engine.index_questions(QUESTION_BANK)
 
         exec_qs = engine.get_questions_by_angle("EXECUTION")

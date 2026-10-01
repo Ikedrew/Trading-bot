@@ -115,9 +115,32 @@ def evaluate_research_bar(
 
 def _persist_research_trade(record: dict[str, Any]) -> None:
     """Persist research shadow trade to local JSONL + S3 mirror. Never raises."""
+    _ledger = None
+    _obligation = None
     try:
         identity = record.get("identity", {})
         symbol = identity.get("symbol", "UNKNOWN")
+        trade_id = str(identity.get("trade_id") or record.get("trade_id") or "")
+        event_type = str(record.get("event_type") or "CLOSE")
+        try:
+            from core.lifecycle_evidence_obligations import (
+                create_dataset_obligation, obligation_ledger,
+            )
+            _ledger = obligation_ledger()
+            _obligation = create_dataset_obligation(
+                _ledger,
+                event_id=f"research-shadow:{trade_id}:{event_type}",
+                lifecycle_stage="RESEARCH_SHADOW_OUTCOME",
+                dataset="research_shadow_trades",
+                identity={"trade_id": trade_id, "event_type": event_type,
+                          "symbol": symbol},
+                timestamp=str(record.get("timestamps", {}).get("exit_time") or ""),
+                producer="core.research_assessment.research_shadow_engine._persist_research_trade",
+                trigger="RESEARCH_SHADOW_TRADE_CLOSED",
+            )
+        except Exception:
+            _ledger = None
+            _obligation = None
         date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         local_path = Path(_LOCAL_DIR) / symbol / f"{date_str}.jsonl"
@@ -135,6 +158,15 @@ def _persist_research_trade(record: dict[str, Any]) -> None:
         finally:
             os.close(fd)
 
+        if _ledger is not None and _obligation is not None:
+            from core.lifecycle_evidence_obligations import record_producer_outcome
+            record_producer_outcome(
+                _ledger, _obligation, succeeded=True,
+                observed_record_id=trade_id or None,
+                provenance={"authority": "DERIVED_RESEARCH_ONLY",
+                            "local_path_authority": "LOCAL_ONLY"},
+            )
+
         # S3 mirror (fire-and-forget)
         try:
             from core import config as _cfg
@@ -143,7 +175,16 @@ def _persist_research_trade(record: dict[str, Any]) -> None:
         except Exception:
             pass
 
-    except Exception:
+    except Exception as exc:
+        if _ledger is not None and _obligation is not None:
+            try:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _ledger, _obligation, succeeded=False,
+                    failure_reason=f"RESEARCH_SHADOW_LOCAL_WRITE:{type(exc).__name__}",
+                )
+            except Exception:
+                pass
         pass
 
 

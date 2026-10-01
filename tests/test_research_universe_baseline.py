@@ -14,7 +14,7 @@ from research_engine.v10.universes.models import (
     RETIRED_UNIVERSES,
     Universe,
 )
-from research_engine.v10.universes.question_bank import (
+from research_engine.v10.universes.legacy_question_bank import (
     QUESTION_BANK,
     RETIRED_QUESTIONS,
 )

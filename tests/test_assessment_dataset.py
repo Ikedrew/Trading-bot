@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core.assessment.assessment import Assessment, SCHEMA_VERSION, DATASET_VERSION
 from core.assessment.builder import build_assessment
 from core.assessment.persistence import persist_assessment
+from core.lifecycle_evidence_obligations import ObligationStatus, obligation_ledger
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -326,6 +327,11 @@ class TestPersistence:
         assert record["symbol"] == "NZDUSD"
         assert record["score_strategy"] == 0.62
         assert record["ev"] == 0.000142
+        obligation, = obligation_ledger().find_exact(
+            "assessments", {"assessment_id": a.assessment_id},
+        )
+        assert obligation.current_status == ObligationStatus.NOT_YET_DUE.value
+        assert obligation.provenance["canonical_mirror_acknowledgement"] == "NOT_OBSERVED"
 
     @patch("core.assessment.persistence._write_s3")
     def test_s3_mirror_called(self, mock_s3):

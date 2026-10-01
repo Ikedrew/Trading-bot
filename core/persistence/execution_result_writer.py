@@ -83,7 +83,7 @@ def persist_execution_result(
     broker_confirmed_tp: float = 0.0,
     protection_status: str = "",
     protection_failure_reason: str = "",
-) -> None:
+) -> bool:
     """
     Persist one execution attempt to local JSONL + S3.
 
@@ -200,9 +200,11 @@ def persist_execution_result(
 
         # S3 mirror
         _write_s3(symbol, date_str, line)
+        return True
 
-    except Exception:
-        pass  # Execution result persistence must NEVER affect trading
+    except Exception as exc:
+        logger.error("[EXECUTION_RESULT_PERSIST_FAILED] symbol=%s error=%s", symbol, type(exc).__name__)
+        return False
 
 
 def _write_s3(symbol: str, date_str: str, line: str) -> None:

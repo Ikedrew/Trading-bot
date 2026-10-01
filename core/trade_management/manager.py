@@ -135,6 +135,7 @@ def _persist_management_action(
     requested_tp: float | None = None,
     requested_volume: float | None = None,
     lineage: dict[str, Any] | None = None,
+    position_ticket: int = 0,
 ) -> None:
     """Fire-and-forget persistence of one initiated management action.
 
@@ -144,9 +145,35 @@ def _persist_management_action(
     """
     try:
         from core.persistence.management_actions_writer import persist_management_action
+        from core.lifecycle_evidence_obligations import (
+            ObligationStatus, obligation_ledger, record_producer_outcome,
+        )
         _lineage = lineage or {}
-        persist_management_action(
-            management_action_id=str(uuid.uuid4()),
+        _action_id = str(uuid.uuid4())
+        _ledger = obligation_ledger()
+        _has_exact_identity = bool(_lineage.get("account_id") and position_ticket > 0)
+        _obligation = _ledger.create(
+            lifecycle_event_id=f"management-action:{_action_id}",
+            lifecycle_stage="MANAGEMENT_ACTION",
+            expected_dataset="management_actions",
+            identity={
+                "management_action_id": _action_id,
+                "account_id": _lineage.get("account_id", ""),
+                "position_ticket": position_ticket,
+                "trade_id": _lineage.get("trade_id", ""),
+                "symbol": symbol,
+            },
+            originating_timestamp="", due_state="EXPECTED_NOW",
+            due_after="MANAGEMENT_ACTION_INITIATED", requirement_type="REQUIRED",
+            current_status=(ObligationStatus.NOT_YET_DUE if _has_exact_identity
+                            else ObligationStatus.PRODUCER_FAILED),
+            producer="core.persistence.management_actions_writer.persist_management_action",
+            producer_trigger="MANAGEMENT_ACTION_INITIATED",
+            failure_reason=(None if _has_exact_identity
+                            else "ACCOUNT_OR_POSITION_TICKET_MISSING"),
+        )
+        _persisted = persist_management_action(
+            management_action_id=_action_id,
             trade_id=str(_lineage.get("trade_id", "") or ""),
             decision_id=str(_lineage.get("decision_id", "") or ""),
             canonical_opportunity_id=str(_lineage.get("canonical_opportunity_id", "") or ""),
@@ -163,8 +190,14 @@ def _persist_management_action(
             account_id=str(_lineage.get("account_id", "") or ""),
             broker=str(_lineage.get("broker", "") or ""),
             broker_server=str(_lineage.get("broker_server", "") or ""),
-            position_ticket=int(_lineage.get("position_ticket", 0) or 0),
+            position_ticket=int(position_ticket or 0),
             broker_symbol=str(_lineage.get("broker_symbol", "") or ""),
+        )
+        record_producer_outcome(
+            _ledger, _obligation, succeeded=bool(_persisted),
+            observed_record_id=_action_id,
+            failure_reason="MANAGEMENT_ACTION_LOCAL_WRITE_FAILED",
+            provenance={"local_path_authority": "LOCAL_ONLY"},
         )
     except Exception:
         pass
@@ -421,6 +454,7 @@ class TradeStateManager:
             requested_sl=pos.stop_loss,
             requested_tp=pos.take_profit,
             lineage=_lineage_from_pos(pos),
+            position_ticket=ticket,
         )
         result = self._execution.position_modify_sl_tp(
             symbol=pos.symbol,
@@ -476,7 +510,12 @@ class TradeStateManager:
                     "cycle_id": entry.cycle_id,
                     "canonical_opportunity_id": entry.canonical_opportunity_id,
                     "observation_id": entry.observation_id,
+                    "account_id": entry.account_id,
+                    "broker": entry.broker,
+                    "broker_server": entry.broker_server,
+                    "broker_symbol": entry.broker_symbol,
                 },
+                position_ticket=entry.position_ticket,
             )
             result = self._execution.position_modify_sl_tp(
                 symbol=entry.symbol,
@@ -687,6 +726,7 @@ class TradeStateManager:
                 symbol=pos.symbol,
                 requested_volume=close_vol,
                 lineage=_lineage_from_pos(pos),
+                position_ticket=int(pos.mt5_ticket),
             )
             result = self._execution.close_position(
                 symbol=pos.symbol,
@@ -743,6 +783,7 @@ class TradeStateManager:
                 action_reason=_close_action_reason,
                 symbol=pos.symbol,
                 lineage=_lineage_from_pos(pos),
+                position_ticket=int(pos.mt5_ticket),
             )
             result = self._execution.close_position(
                 symbol=pos.symbol,
@@ -989,7 +1030,12 @@ class TradeStateManager:
                     "cycle_id": entry.cycle_id,
                     "canonical_opportunity_id": entry.canonical_opportunity_id,
                     "observation_id": entry.observation_id,
+                    "account_id": entry.account_id,
+                    "broker": entry.broker,
+                    "broker_server": entry.broker_server,
+                    "broker_symbol": entry.broker_symbol,
                 },
+                position_ticket=entry.position_ticket,
             )
             result = self._execution.close_position(
                 symbol=entry.symbol,

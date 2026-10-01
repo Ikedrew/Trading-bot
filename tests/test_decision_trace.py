@@ -29,6 +29,7 @@ from core.decision_trace import (
     _compute_component_diagnostics,
     _compute_stages_reached,
 )
+from core.lifecycle_evidence_obligations import ObligationStatus, obligation_ledger
 
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -255,7 +256,7 @@ class TestPersistence:
                 engine_result=_make_no_trade_result(),
                 runtime_session_id="sess1",
             )
-            persist_decision_trace(trace)
+            assert persist_decision_trace(trace) is True
 
         files = list(tmp_path.rglob("*.jsonl"))
         assert len(files) == 1
@@ -263,6 +264,15 @@ class TestPersistence:
         record = json.loads(content)
         assert record["entity_id"] == "EURUSD_1700000000"
         assert record["terminal_stage"] == "ev_policy"
+        obligation, = obligation_ledger().find_exact(
+            "decision_trace", {
+                "entity_id": trace.entity_id,
+                "cycle_id": trace.cycle_id,
+                "runtime_session_id": trace.runtime_session_id,
+            },
+        )
+        assert obligation.current_status == ObligationStatus.NOT_YET_DUE.value
+        assert obligation.provenance["canonical_mirror_acknowledgement"] == "NOT_OBSERVED"
 
     def test_persist_never_raises(self, tmp_path):
         # Even with broken trace, should not raise

@@ -15,6 +15,7 @@ Storage:
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import os
 import threading
@@ -136,7 +137,9 @@ class QuarantineStore:
             record.get("trade_id")
             or record.get("record_id")
             or record.get("cycle_id")
-            or f"unknown_{now.timestamp():.0f}"
+            or "payload_" + hashlib.sha256(json.dumps(
+                record, sort_keys=True, separators=(",", ":"), default=str,
+            ).encode("utf-8")).hexdigest()[:24]
         )
 
         qr = QuarantineRecord(
@@ -155,8 +158,46 @@ class QuarantineStore:
             original_payload=record,  # NEVER modified
         )
 
-        # Persist
-        self._persist(qr, now)
+        # A quarantine obligation exists only after an actual contract rejection.
+        _ledger = None
+        _obligation = None
+        try:
+            from core.lifecycle_evidence_obligations import (
+                ObligationStatus, obligation_ledger,
+            )
+            _ledger = obligation_ledger()
+            _obligation = _ledger.create(
+                lifecycle_event_id=f"quarantine:{layer}:{qr.record_id}",
+                lifecycle_stage="CONTRACT_REJECTION",
+                expected_dataset="quarantine",
+                identity={"record_id": qr.record_id, "symbol": str(
+                    qr.original_payload.get("symbol") or "QUARANTINE")},
+                originating_timestamp=qr.timestamp,
+                due_state="EXPECTED_NOW", due_after="QUARANTINE_LOCAL_WRITE",
+                requirement_type="CONDITIONAL",
+                current_status=ObligationStatus.NOT_YET_DUE,
+                producer="core.contracts.quarantine.QuarantineStore",
+                producer_trigger=f"REJECTED:{layer}:{qr.violated_contract}",
+            )
+        except Exception as _obligation_exc:
+            _ledger = None
+            _obligation = None
+            logger.error("[LIFECYCLE_OBLIGATION] quarantine creation failed: %s",
+                         _obligation_exc)
+
+        _persisted = self._persist(qr, now)
+        if _ledger is not None and _obligation is not None:
+            try:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _ledger, _obligation, succeeded=_persisted,
+                    observed_record_id=qr.record_id,
+                    failure_reason="QUARANTINE_LOCAL_WRITE_FAILED",
+                    provenance={"local_path_authority": "LOCAL_ONLY"},
+                )
+            except Exception as _obligation_exc:
+                logger.error("[LIFECYCLE_OBLIGATION] quarantine outcome failed: %s",
+                             _obligation_exc)
 
         # Update metrics
         with self._lock:
@@ -177,8 +218,8 @@ class QuarantineStore:
 
         return qr
 
-    def _persist(self, qr: QuarantineRecord, now: datetime) -> None:
-        """Write quarantine record to local JSONL + S3 mirror. Never raises."""
+    def _persist(self, qr: QuarantineRecord, now: datetime) -> bool:
+        """Write quarantine record locally; S3 mirroring is secondary."""
         try:
             date_str = now.strftime("%Y-%m-%d")
             local_path = self._local_dir / qr.layer / f"{date_str}.jsonl"
@@ -195,14 +236,18 @@ class QuarantineStore:
             finally:
                 os.close(fd)
 
+            local_written = True
+
             # S3 mirror (fire-and-forget)
             try:
                 _write_s3_quarantine(qr.layer, date_str, line)
             except Exception:
                 pass
+            return local_written
 
         except Exception as exc:
             logger.debug("[QUARANTINE_PERSIST_FAIL] %s", exc)
+            return False
 
     def stats(self) -> dict[str, Any]:
         """Return quarantine metrics for observability."""

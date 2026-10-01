@@ -18,7 +18,7 @@ from research_engine.v10.runner.question_runner import (
     _determine_confidence,
     RunContext,
 )
-from research_engine.v10.universes.question_bank import get_question
+from research_engine.v10.universes.legacy_question_bank import get_question
 
 
 class TestDetermineOutcome:

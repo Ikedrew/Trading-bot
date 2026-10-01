@@ -158,9 +158,67 @@ class DecisionRecorder:
                 self._decision["decision_id"] = ""
         # ─── END IDENTITY PROPAGATION ─────────────────────────────────
 
+        try:
+            from core.lifecycle_evidence_obligations import (
+                create_terminal_decision_obligations, obligation_ledger,
+            )
+            _decision = self._decision.get("decision")
+            _decision_value = _decision.value if hasattr(_decision, "value") else str(_decision or "")
+            _identity = {
+                "symbol": self._decision.get("symbol", ""),
+                "cycle_id": self._decision.get("cycle_id"),
+                "decision_id": self._decision.get("decision_id", ""),
+                "correlation_id": self._decision.get("correlation_id", ""),
+                "entity_id": self._decision.get("entity_id", ""),
+                "observation_id": self._decision.get("observation_id", ""),
+                "canonical_opportunity_id": self._decision.get("canonical_opportunity_id", ""),
+            }
+            _event_id = "decision:" + str(_identity["decision_id"] or (
+                f"{_identity['symbol']}:{_identity['cycle_id']}:{_identity['entity_id']}"))
+            _decision_obligations = create_terminal_decision_obligations(
+                obligation_ledger(), event_id=_event_id,
+                identity=_identity, timestamp=str(cycle_start),
+                no_trade=_decision_value != "EXECUTE",
+            )
+            if not self._decision.get("decision_trace_observer_reached", False):
+                from core.lifecycle_evidence_obligations import create_dataset_obligation
+                create_dataset_obligation(
+                    obligation_ledger(), event_id=f"decision-trace-na:{_event_id}",
+                    lifecycle_stage="TERMINAL_DECISION",
+                    dataset="decision_trace",
+                    identity={"entity_id": "", "cycle_id": _identity["cycle_id"],
+                              "runtime_session_id": "",
+                              "symbol": _identity["symbol"]},
+                    timestamp=str(cycle_start),
+                    producer="core.runtime.DecisionRecorder",
+                    trigger="DECISION_TRACE_OBSERVER_NOT_APPLICABLE",
+                    applicable=False,
+                )
+            if not self._decision.get("strategy_observer_reached", False):
+                from core.lifecycle_evidence_obligations import create_dataset_obligation
+                create_dataset_obligation(
+                    obligation_ledger(),
+                    event_id=f"strategy-observation-na:{_identity['symbol']}:{_identity['cycle_id']}",
+                    lifecycle_stage="STRATEGY_OBSERVER",
+                    dataset="strategy_observations",
+                    identity={"entity_id": "", "observation_id": "",
+                              "symbol": _identity["symbol"]},
+                    timestamp=str(cycle_start),
+                    producer="core.runtime.DecisionRecorder",
+                    trigger="STRATEGY_OBSERVER_NOT_APPLICABLE",
+                    applicable=False,
+                )
+        except Exception as exc:
+            logger.critical(
+                "[LIFECYCLE_OBLIGATION_CREATE_FAILED] stage=TERMINAL_DECISION symbol=%s cycle=%s error=%s",
+                self._decision.get("symbol", "<unknown>"),
+                self._decision.get("cycle_id", "<unknown>"),
+                type(exc).__name__,
+            )
+
         self._written = True
         try:
-            self._ledger.record(
+            _ledger_accepted = self._ledger.record(
                 symbol=self._decision["symbol"],
                 cycle_id=self._decision["cycle_id"],
                 decision=self._decision["decision"] or DecisionOutcome.NO_TRADE,
@@ -197,6 +255,17 @@ class DecisionRecorder:
                 daily_loss_pct=self._decision["daily_loss_pct"],
                 decision_latency_ms=int((time.time() - cycle_start) * 1000),
             )
+            if _ledger_accepted is False:
+                from core.lifecycle_evidence_obligations import (
+                    ObligationStatus, obligation_ledger,
+                )
+                _matches = obligation_ledger().find_exact(
+                    "decision_ledger", {"decision_id": self._decision.get("decision_id", "")})
+                if len(_matches) == 1:
+                    obligation_ledger().update(
+                        _matches[0].obligation_id, ObligationStatus.PRODUCER_FAILED,
+                        failure_reason="DECISION_LEDGER_BUFFER_ENQUEUE_FAILED",
+                    )
         except Exception as e:
             print(f"[LEDGER WRITE ERROR] {type(e).__name__}: {e}")
 

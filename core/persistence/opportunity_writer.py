@@ -120,6 +120,8 @@ def persist_opportunity(
     Returns:
         True on success, False on failure. Never raises.
     """
+    _ledger = None
+    _obligation = None
     try:
         now = datetime.now(timezone.utc)
         if bar_time > 0:
@@ -130,6 +132,13 @@ def persist_opportunity(
         # ── Build record ──────────────────────────────────────────
         record: dict[str, Any] = {
             "schema_version": _SCHEMA_VERSION,
+
+            # Distinguishes this V10 evaluation grain from state-transition
+            # records emitted by core.opportunity.persistence.
+            "opportunity_record_id": (
+                f"v10:{canonical_opportunity_id}:{cycle_id}"
+                if canonical_opportunity_id else ""
+            ),
 
             # Canonical lineage
             "canonical_opportunity_id": canonical_opportunity_id,
@@ -179,6 +188,31 @@ def persist_opportunity(
             "persisted_at_utc": now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
         }
 
+        try:
+            from core.lifecycle_evidence_obligations import (
+                create_dataset_obligation, obligation_ledger,
+            )
+            _ledger = obligation_ledger()
+            _obligation = create_dataset_obligation(
+                _ledger,
+                event_id=(f"opportunity:{record['opportunity_record_id']}"
+                          if record["opportunity_record_id"] else
+                          f"opportunity:v10-missing:{symbol}:{cycle_id}"),
+                lifecycle_stage="OPPORTUNITY_EVALUATED",
+                dataset="opportunities",
+                identity={"opportunity_record_id": record["opportunity_record_id"],
+                          "canonical_opportunity_id": canonical_opportunity_id,
+                          "symbol": symbol},
+                timestamp=str(bar_time),
+                producer="core.persistence.opportunity_writer.persist_opportunity",
+                trigger="V10_OPPORTUNITY_EVALUATION",
+            )
+        except Exception as _obligation_exc:
+            _ledger = None
+            _obligation = None
+            logger.warning("[LIFECYCLE_OBLIGATION] V10 opportunity creation failed: %s",
+                           _obligation_exc)
+
         # ── Local JSONL persistence (canonical truth) ─────────────
         path = Path(_LOCAL_DIR) / symbol / f"{date_str}.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -191,12 +225,29 @@ def persist_opportunity(
         finally:
             os.close(fd)
 
+        if _ledger is not None and _obligation is not None:
+            from core.lifecycle_evidence_obligations import record_producer_outcome
+            record_producer_outcome(
+                _ledger, _obligation, succeeded=True,
+                observed_record_id=record.get("opportunity_record_id") or None,
+                provenance={"local_path_authority": "LOCAL_ONLY"},
+            )
+
         # ── S3 mirror (fire-and-forget) ──────────────────────────
         _write_s3(symbol, date_str, line)
 
         return True
 
     except Exception as exc:
+        if _ledger is not None and _obligation is not None:
+            try:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _ledger, _obligation, succeeded=False,
+                    failure_reason=f"OPPORTUNITY_V10_LOCAL_WRITE:{type(exc).__name__}",
+                )
+            except Exception:
+                pass
         logger.debug("[OPPORTUNITY_PERSIST] write_failed: %s", exc)
         return False
 

@@ -169,9 +169,41 @@ def persist_shadow_comparison(comparison: ShadowComparison) -> None:
     Only persists when there IS a disagreement (reduces noise).
     Agreement cycles are not persisted (they're the common case).
     """
+    _ledger = None
+    _obligation = None
     try:
+        from core.lifecycle_evidence_obligations import (
+            ObligationStatus, obligation_ledger,
+        )
+        _ledger = obligation_ledger()
+        _should_persist = not (comparison.agreement and comparison.total_candidates <= 1)
+        _identity_valid = bool(comparison.runtime_session_id)
+        _event_id = (
+            f"portfolio-shadow:{comparison.cycle_id}:{comparison.runtime_session_id}"
+        )
+        _obligation = _ledger.create(
+            lifecycle_event_id=_event_id, lifecycle_stage="PORTFOLIO_CYCLE",
+            expected_dataset="portfolio_shadow",
+            identity={"cycle_id": comparison.cycle_id,
+                      "runtime_session_id": comparison.runtime_session_id,
+                      "symbol": "PORTFOLIO"},
+            originating_timestamp=comparison.compared_at_utc,
+            due_state="EXPECTED_NOW" if _should_persist else "NOT_REQUIRED",
+            due_after="COMPARISON_LOCAL_WRITE" if _should_persist
+            else "AGREEMENT_WITH_SINGLE_CANDIDATE",
+            requirement_type="CONDITIONAL",
+            current_status=(
+                ObligationStatus.NOT_YET_DUE if _should_persist and _identity_valid
+                else ObligationStatus.PRODUCER_FAILED if _should_persist
+                else ObligationStatus.NOT_APPLICABLE
+            ),
+            producer="core.portfolio_ranking.shadow_comparison.persist_shadow_comparison",
+            producer_trigger="COMPARISON_ENABLED",
+            failure_reason=("RUNTIME_SESSION_ID_MISSING"
+                            if _should_persist and not _identity_valid else None),
+        )
         # Only persist interesting cases (disagreements or multi-candidate cycles)
-        if comparison.agreement and comparison.total_candidates <= 1:
+        if not _should_persist:
             return  # Common case: nothing interesting
 
         now = datetime.now(timezone.utc)
@@ -191,6 +223,14 @@ def persist_shadow_comparison(comparison: ShadowComparison) -> None:
         finally:
             os.close(fd)
 
+        if _should_persist and _identity_valid:
+            from core.lifecycle_evidence_obligations import record_producer_outcome
+            record_producer_outcome(
+                _ledger, _obligation, succeeded=True,
+                observed_record_id=_event_id,
+                provenance={"local_path_authority": "LOCAL_ONLY"},
+            )
+
         # ─── S3 MIRROR (Hive-partitioned, fire-and-forget) ───────────
         try:
             _write_s3_portfolio_shadow(date_str, line + "\n")
@@ -207,6 +247,16 @@ def persist_shadow_comparison(comparison: ShadowComparison) -> None:
             )
 
     except Exception as exc:
+        if _ledger is not None and _obligation is not None \
+                and _obligation.current_status != "NOT_APPLICABLE":
+            try:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _ledger, _obligation, succeeded=False,
+                    failure_reason=f"PORTFOLIO_SHADOW_LOCAL_WRITE:{type(exc).__name__}",
+                )
+            except Exception:
+                pass
         logger.error("[PORTFOLIO_SHADOW_ERROR] %s", exc)
 
 

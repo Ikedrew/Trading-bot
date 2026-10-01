@@ -37,7 +37,7 @@ def _get_observer():
     return _observer_instance
 
 
-def observe_strategy_intelligence(ctx: Any) -> None:
+def observe_strategy_intelligence(ctx: Any) -> bool:
     """
     Strategy intelligence observation — called by ObserverRegistry.
 
@@ -50,12 +50,13 @@ def observe_strategy_intelligence(ctx: Any) -> None:
     Never raises. Failure is logged and silently ignored.
     """
     try:
-        _do_observe(ctx)
+        return _do_observe(ctx)
     except Exception as exc:
         logger.debug("[STRATEGY_OBSERVER] observation failed: %s", exc)
+        return False
 
 
-def _do_observe(ctx: Any) -> None:
+def _do_observe(ctx: Any) -> bool:
     """Internal observation logic. May raise."""
     from core.strategies.condition_evaluator import build_market_snapshot
     from core.strategies.observation_persistence import (
@@ -298,7 +299,7 @@ def _do_observe(ctx: Any) -> None:
     # entity_id format: f"{symbol}_{bar_time}" — same as decision pipeline
     record["entity_id"] = engine_result.get("entity_id", "") or f"{ctx.symbol}_{int(ctx.bar_time)}"
 
-    persist_strategy_observation(record)
+    return persist_strategy_observation(record)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

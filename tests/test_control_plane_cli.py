@@ -13,7 +13,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from research_engine.v10.universes.question_bank import QUESTION_BANK, get_question
+from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK, get_question
 from research_engine.v10.runner.primitive_mapping import QUESTION_PARAMETERS, build_full_mapping
 from research_engine.v10.cockpit.bottleneck import _load_all_findings, analyse_bottleneck, recommend_next
 from research_engine.v10.cockpit.optimisation_register import _load_register, _append_register

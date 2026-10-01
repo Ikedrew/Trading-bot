@@ -30,7 +30,7 @@ from research_engine.v10.universes.correlation import (
     RelationshipType,
 )
 from research_engine.v10.universes.models import Universe, Population
-from research_engine.v10.universes.question_bank import QUESTION_BANK
+from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK
 from research_engine.v10.universes.question_validator import validate_all_questions
 
 

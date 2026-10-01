@@ -124,7 +124,7 @@ class ControlPlaneEngine:
                        If None, loads from the canonical question bank.
         """
         if questions is None:
-            from research_engine.v10.universes.question_bank import QUESTION_BANK
+            from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK
             questions = QUESTION_BANK
 
         from research_engine.v10.control_plane.question_products import (

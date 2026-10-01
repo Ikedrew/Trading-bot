@@ -24,7 +24,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from core.runtime.decision_recorder import DecisionRecorder
-from core.decision_ledger import DecisionOutcome
+from core.decision_ledger import DecisionLedgerWriter, DecisionOutcome
+from core.lifecycle_evidence_obligations import (
+    LifecycleEvidenceLedger, ObligationStatus,
+)
 
 
 # ─── TESTS ────────────────────────────────────────────────────────────────────
@@ -225,3 +228,37 @@ class TestErrorHandling:
         recorder.finalize(cycle_start=time.time())
 
         assert ledger.record.call_count == 2
+
+
+def test_decision_ledger_obligation_waits_for_durable_local_flush(tmp_path, monkeypatch):
+    lifecycle_ledger = LifecycleEvidenceLedger(
+        tmp_path.parent / "decision_obligations.jsonl")
+    monkeypatch.setattr(
+        "core.lifecycle_evidence_obligations.obligation_ledger",
+        lambda path=None: (LifecycleEvidenceLedger(path)
+                           if path is not None else lifecycle_ledger),
+    )
+    writer = DecisionLedgerWriter(
+        local_dir=str(tmp_path / "decision-ledger"), flush_batch_size=50,
+    )
+    recorder = DecisionRecorder(writer)
+    decision = recorder.init_cycle(
+        symbol="EURUSD", cycle_id=42, regime="RANGE",
+        context_snapshot_id="COR-42", drawdown_pct=0.0, daily_loss_pct=0.0,
+    )
+    decision.update({"decision": DecisionOutcome.NO_TRADE, "reason": "test_no_trade"})
+
+    recorder.finalize(cycle_start=1.0)
+    obligation, = lifecycle_ledger.find_exact(
+        "decision_ledger", {"decision_id": decision["decision_id"]},
+    )
+    assert obligation.current_status == ObligationStatus.NOT_YET_DUE.value
+    assert obligation.provenance == {}
+
+    writer.flush()
+    flushed, = lifecycle_ledger.find_exact(
+        "decision_ledger", {"decision_id": decision["decision_id"]},
+    )
+    assert flushed.current_status == ObligationStatus.NOT_YET_DUE.value
+    assert flushed.provenance["producer_write"] == "LOCAL_FSYNC_SUCCEEDED"
+    assert flushed.provenance["canonical_mirror_acknowledgement"] == "NOT_OBSERVED"

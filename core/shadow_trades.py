@@ -715,10 +715,30 @@ def _build_shadow_open_record(trade: "ShadowTrade") -> dict[str, Any]:
 
 def _persist_shadow_open(trade: "ShadowTrade") -> None:
     """Persist the OPEN event for a shadow trade. Never raises."""
+    _ledger = None
+    _obligation = None
     try:
         record = _build_shadow_open_record(trade)
         date_str = datetime.fromtimestamp(trade.entry_time, tz=timezone.utc).strftime("%Y-%m-%d")
         symbol = trade.symbol or "UNKNOWN"
+        try:
+            from core.lifecycle_evidence_obligations import (
+                create_dataset_obligation, obligation_ledger,
+            )
+            _ledger = obligation_ledger()
+            _obligation = create_dataset_obligation(
+                _ledger, event_id=f"legacy-shadow:{trade.trade_id}:OPEN",
+                lifecycle_stage="LEGACY_SHADOW_TRADE",
+                dataset="shadow_trades",
+                identity={"trade_id": trade.trade_id, "event_type": "OPEN",
+                          "symbol": symbol},
+                timestamp=str(trade.entry_time),
+                producer="core.shadow_trades._persist_shadow_open",
+                trigger="LEGACY_SHADOW_TRADE_OPEN",
+            )
+        except Exception:
+            _ledger = None
+            _obligation = None
 
         local_path = Path(_LOCAL_DIR) / symbol / f"{date_str}.jsonl"
         local_path.parent.mkdir(parents=True, exist_ok=True)
@@ -730,6 +750,15 @@ def _persist_shadow_open(trade: "ShadowTrade") -> None:
         finally:
             os.close(fd)
 
+        if _ledger is not None and _obligation is not None:
+            from core.lifecycle_evidence_obligations import record_producer_outcome
+            record_producer_outcome(
+                _ledger, _obligation, succeeded=True,
+                observed_record_id=trade.trade_id,
+                provenance={"authority": "LEGACY_NON_AUTHORITY",
+                            "local_path_authority": "LOCAL_ONLY"},
+            )
+
         try:
             from core import config as _cfg
             if getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
@@ -737,10 +766,21 @@ def _persist_shadow_open(trade: "ShadowTrade") -> None:
         except Exception:
             pass
     except Exception as exc:
+        if _ledger is not None and _obligation is not None:
+            try:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _ledger, _obligation, succeeded=False,
+                    failure_reason=f"LEGACY_SHADOW_OPEN_WRITE:{type(exc).__name__}",
+                )
+            except Exception:
+                pass
         logger.debug("[SHADOW_OPEN_PERSIST_FAIL] %s", exc)
 
 def _persist_shadow_trade(record: dict[str, Any]) -> None:
     """Persist to local JSONL and mirror to S3. Never raises."""
+    _ledger = None
+    _obligation = None
     try:
         # Support both v2 (nested identity) and legacy (top-level) schemas
         symbol = (
@@ -748,6 +788,27 @@ def _persist_shadow_trade(record: dict[str, Any]) -> None:
             or record.get("symbol")
             or "UNKNOWN"
         )
+        identity = record.get("identity", {})
+        trade_id = str(identity.get("trade_id") or record.get("trade_id") or "")
+        event_type = str(record.get("event_type") or _SHADOW_EVENT_CLOSE)
+        try:
+            from core.lifecycle_evidence_obligations import (
+                create_dataset_obligation, obligation_ledger,
+            )
+            _ledger = obligation_ledger()
+            _obligation = create_dataset_obligation(
+                _ledger, event_id=f"legacy-shadow:{trade_id}:{event_type}",
+                lifecycle_stage="LEGACY_SHADOW_TRADE",
+                dataset="shadow_trades",
+                identity={"trade_id": trade_id, "event_type": event_type,
+                          "symbol": symbol},
+                timestamp=str(record.get("timestamps", {}).get("exit_time") or ""),
+                producer="core.shadow_trades._persist_shadow_trade",
+                trigger=f"LEGACY_SHADOW_TRADE_{event_type}",
+            )
+        except Exception:
+            _ledger = None
+            _obligation = None
         exit_time = (
             record.get("simulated_outcome", {}).get("exit_timestamp")
             or record.get("timestamps", {}).get("exit_time")
@@ -767,6 +828,15 @@ def _persist_shadow_trade(record: dict[str, Any]) -> None:
         finally:
             os.close(fd)
 
+        if _ledger is not None and _obligation is not None:
+            from core.lifecycle_evidence_obligations import record_producer_outcome
+            record_producer_outcome(
+                _ledger, _obligation, succeeded=True,
+                observed_record_id=trade_id or None,
+                provenance={"authority": "LEGACY_NON_AUTHORITY",
+                            "local_path_authority": "LOCAL_ONLY"},
+            )
+
         # S3 mirror (fire-and-forget)
         try:
             from core import config as _cfg
@@ -776,6 +846,15 @@ def _persist_shadow_trade(record: dict[str, Any]) -> None:
             pass
 
     except Exception as exc:
+        if _ledger is not None and _obligation is not None:
+            try:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _ledger, _obligation, succeeded=False,
+                    failure_reason=f"LEGACY_SHADOW_TRADE_WRITE:{type(exc).__name__}",
+                )
+            except Exception:
+                pass
         logger.debug("[SHADOW_PERSIST_FAIL] %s", exc)
 
 

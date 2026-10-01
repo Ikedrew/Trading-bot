@@ -26,6 +26,9 @@ from core.portfolio_ranking.persistence import (
     SCHEMA_VERSION,
     DATASET_VERSION,
 )
+from core.lifecycle_evidence_obligations import (
+    LifecycleEvidenceLedger, ObligationStatus,
+)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -136,6 +139,21 @@ class TestSchemaCompliance:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class TestPersistence:
+    def test_local_ranking_write_keeps_obligation_pending(self, tmp_path):
+        pool = _make_pool()
+        ledger = LifecycleEvidenceLedger(tmp_path / "obligation-ledger.data")
+        with patch("core.portfolio_ranking.persistence._LOCAL_DIR", str(tmp_path / "rankings")), \
+             patch("core.portfolio_ranking.persistence._write_s3"), \
+             patch("core.lifecycle_evidence_obligations.obligation_ledger",
+                   return_value=ledger):
+            assert persist_portfolio_ranking(pool, runtime_session_id="session-test") is True
+
+        obligation = ledger.obligations()[0]
+        assert obligation.expected_dataset == "portfolio_rankings"
+        assert obligation.current_status == ObligationStatus.NOT_YET_DUE.value
+        assert obligation.provenance["producer_write"] == "LOCAL_FSYNC_SUCCEEDED"
+        assert obligation.provenance["canonical_mirror_acknowledgement"] == "NOT_OBSERVED"
+
     def test_writes_jsonl_file(self, tmp_path):
         pool = _make_pool()
         with patch("core.portfolio_ranking.persistence._LOCAL_DIR", str(tmp_path / "rankings")):
@@ -162,7 +180,7 @@ class TestPersistence:
         assert record["cycle_id"] == 4578
         assert record["runtime_session_id"] == "session_abc"
         assert "ranking_id" in record
-        assert record["ranking_id"].startswith("ranking_4578_")
+        assert record["ranking_id"] == "ranking_session_abc_4578"
         assert "ranked_at_utc" in record
 
         # Pool summary

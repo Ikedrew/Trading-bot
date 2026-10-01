@@ -35,6 +35,8 @@ from core.trade_management.manager import TradeStateManager
 from core.trade_management.position import Position, PositionStatus
 from core.trade_management.events import TradeLifecycleEvent
 from core.trade_identity import TradeIdentity
+from core.position_ownership import PositionOwnership
+from core.lifecycle_evidence_obligations import LifecycleEvidenceLedger, ObligationStatus
 from execution.mt5_execution import ExecutionResult, MT5Execution
 from strategy.signals import Side
 
@@ -129,10 +131,17 @@ class TestSltpModify:
 
         mgr = TradeStateManager(_cfg(), execution=mock_exec)
         pos = _make_position()
+        pos.ownership = PositionOwnership(
+            account_id="ACCOUNT-A", broker="BROKER", broker_server="SERVER",
+            position_ticket=12345, canonical_symbol="EURUSD",
+        )
         mgr._by_id[pos.position_id] = pos
+        ledger = LifecycleEvidenceLedger(Path(tmpdir) / "obligation-ledger.data")
 
         with patch("core.persistence.management_actions_writer._LOCAL_DIR", str(tmpdir)), \
-             patch("core.persistence.management_actions_writer._write_s3"):
+             patch("core.persistence.management_actions_writer._write_s3"), \
+             patch("core.lifecycle_evidence_obligations.obligation_ledger",
+                   return_value=ledger):
             mgr._push_stops_to_server_if_possible(pos, action_reason="SL_MOVED_BREAKEVEN")
 
         records = _read_management_records(tmpdir)
@@ -147,10 +156,17 @@ class TestSltpModify:
         assert record["requested_volume"] is None
         assert record["engine"] == "V10"
         assert record["management_action_id"]
+        assert record["account_id"] == "ACCOUNT-A"
+        assert record["position_ticket"] == 12345
         assert record["timestamp_utc"]
         assert record["timestamp_unix"] > 0
         # Management behaviour unchanged: broker modify still issued exactly once
         assert mock_exec.position_modify_sl_tp.call_count == 1
+        obligation = ledger.obligations()[0]
+        assert obligation.expected_identity["account_id"] == "ACCOUNT-A"
+        assert obligation.expected_identity["position_ticket"] == 12345
+        assert obligation.current_status == ObligationStatus.NOT_YET_DUE.value
+        assert obligation.provenance["canonical_mirror_acknowledgement"] == "NOT_OBSERVED"
 
     def test_break_even_path_initiates_sltp_modify_end_to_end(self, tmpdir):
         """The real break-even path (on_price_update) initiates one SLTP_MODIFY record."""

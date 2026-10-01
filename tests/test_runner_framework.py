@@ -36,7 +36,7 @@ from research_engine.v10.runner.primitive_mapping import (
     build_full_mapping,
     resolve_primitives_for_question,
 )
-from research_engine.v10.universes.question_bank import QUESTION_BANK
+from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK
 from research_engine.v10.universes.models import AnalysisType, ViewType
 
 
@@ -259,7 +259,7 @@ class TestSafeAnalyse:
 class TestQuestionRunner:
 
     def test_run_single_question(self):
-        from research_engine.v10.universes.question_bank import E_001
+        from research_engine.v10.universes.legacy_question_bank import E_001
         registry = build_default_registry()
         mapping = build_full_mapping(QUESTION_BANK)
         runner = QuestionRunner(registry, mapping)
@@ -275,7 +275,7 @@ class TestQuestionRunner:
 
     def test_run_batch_isolation(self):
         """One question failing doesn't crash others."""
-        from research_engine.v10.universes.question_bank import E_001, M_001, S_001
+        from research_engine.v10.universes.legacy_question_bank import E_001, M_001, S_001
         registry = build_default_registry()
         mapping = build_full_mapping(QUESTION_BANK)
         runner = QuestionRunner(registry, mapping)
@@ -294,7 +294,7 @@ class TestQuestionRunner:
 
     def test_missing_population_handled(self):
         """Question with empty population produces a finding (not crash)."""
-        from research_engine.v10.universes.question_bank import E_001
+        from research_engine.v10.universes.legacy_question_bank import E_001
         registry = build_default_registry()
         mapping = build_full_mapping(QUESTION_BANK)
         runner = QuestionRunner(registry, mapping)
@@ -359,7 +359,7 @@ class TestPrimitiveMapping:
 class TestEvidenceComposition:
 
     def test_compose_produces_finding(self):
-        from research_engine.v10.universes.question_bank import E_001
+        from research_engine.v10.universes.legacy_question_bank import E_001
 
         results = [
             AnalysisResult(
@@ -377,7 +377,7 @@ class TestEvidenceComposition:
         assert finding.primary_metrics["mean_r"] == 0.15
 
     def test_compose_handles_failed_primitive(self):
-        from research_engine.v10.universes.question_bank import E_001
+        from research_engine.v10.universes.legacy_question_bank import E_001
 
         results = [
             AnalysisResult(analysis_type="expectancy", success=False, error="Test error"),

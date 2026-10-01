@@ -202,12 +202,64 @@ def execute_multi_account_fanout(
         horizon_type=horizon_type,
         global_execution_enabled=bool(getattr(_cfg, "EXECUTION_ENABLED", True)),
         execute_one=_execute_one_for(canonical),
+        before_dispatch=_record_route_obligations,
         timeout=25.0,
     )
     _log_fanout_outcomes(symbol, canonical, outcomes)
     _persist_account_results(outcomes, cycle_id=cycle_id, entity_id=entity_id,
                              bid=bid, ask=ask, decision_ts_utc_ms=_dispatch_ts)
     return build_primary_execution_outcome(outcomes)
+
+
+def _record_route_obligations(routes: list[dict]) -> None:
+    """Durably declare each routed account branch before isolated worker dispatch."""
+    from core.lifecycle_evidence_obligations import (
+        create_account_execution_obligations, obligation_ledger,
+    )
+    import uuid as _uuid
+
+    ledger = obligation_ledger()
+    for route in routes:
+        target = route.get("target")
+        if target is None:
+            log.critical("[LIFECYCLE_EVIDENCE_ROUTE_WITHOUT_TARGET] status=PRODUCER_FAILED")
+            continue
+        account_id = str(getattr(target, "account_id", "") or "")
+        correlation_id = str(getattr(target, "correlation_id", "") or "")
+        decision_id = str(getattr(target, "decision_id", "") or "")
+        account_execution_id = str(getattr(target, "account_execution_id", "") or "")
+        order_send_expected = bool(
+            route.get("eligibility", {}).get("eligible")
+            and route.get("execution_enabled")
+        )
+        attempt_id = str(_uuid.uuid4()) if order_send_expected else None
+        event_id = "account-execution:" + (
+            account_execution_id or f"{decision_id}:{account_id}")
+        try:
+            result_obligation, attempt_obligation = create_account_execution_obligations(
+                ledger, event_id=event_id,
+                identity={
+                    "decision_id": decision_id,
+                    "correlation_id": correlation_id,
+                    "account_id": account_id,
+                    "broker": str(getattr(target, "broker", "") or ""),
+                    "broker_server": str(getattr(target, "broker_server", "") or ""),
+                    "trade_id": str(getattr(target, "trade_id", "") or ""),
+                    "symbol": str(getattr(target, "canonical_symbol", "") or ""),
+                    "attempt_id": attempt_id,
+                },
+                timestamp=str(getattr(target, "decision_ts_utc", "") or ""),
+                order_send_expected=order_send_expected,
+                attempt_id=attempt_id,
+            )
+            route["_lifecycle_result_obligation_id"] = result_obligation.obligation_id
+            route["_lifecycle_attempt_obligation_id"] = attempt_obligation.obligation_id
+            route["_lifecycle_attempt_id"] = attempt_id
+        except Exception as exc:
+            log.critical(
+                "[LIFECYCLE_OBLIGATION_CREATE_FAILED] stage=ACCOUNT_EXECUTION_BRANCH account=%s error=%s",
+                account_id or "<missing>", type(exc).__name__, exc_info=True,
+            )
 
 
 def _find_symbol_row(snapshot: dict, canonical_symbol: str) -> dict | None:
@@ -238,18 +290,40 @@ def _persist_account_results(
     bid: float, ask: float, decision_ts_utc_ms: int = 0,
 ) -> None:
     """Observational Phase-H persistence for every fan-out child attempt."""
-    try:
-        from core.persistence.execution_result_writer import persist_execution_result
-    except Exception:
-        return
     for out in outcomes:
         target = out.get("target")
         if target is None:
+            log.critical(
+                "[LIFECYCLE_EVIDENCE_ORPHANED_ACCOUNT_OUTCOME] account=%s correlation_id=%s",
+                out.get("account_id", "<missing>"), out.get("correlation_id", "<missing>"),
+            )
             continue
+        account_id = str(getattr(target, "account_id", "") or "")
+        correlation_id = str(getattr(target, "correlation_id", "") or "")
+        decision_id = str(getattr(target, "decision_id", "") or "")
+        account_execution_id = str(getattr(target, "account_execution_id", "") or "")
+        event_id = "account-execution:" + (account_execution_id or f"{decision_id}:{account_id}")
+        from core.lifecycle_evidence_obligations import (
+            ObligationStatus, obligation_ledger,
+        )
+        _ledger = obligation_ledger()
+        result_obligation = _ledger.get(str(out.get("_lifecycle_result_obligation_id") or ""))
+        attempt_obligation = _ledger.get(str(out.get("_lifecycle_attempt_obligation_id") or ""))
+        if result_obligation is None:
+            log.critical(
+                "[LIFECYCLE_OBLIGATION_MISSING] dataset=execution_results account=%s event=%s",
+                account_id, event_id,
+            )
+        if attempt_obligation is None:
+            log.critical(
+                "[LIFECYCLE_OBLIGATION_MISSING] dataset=execution_attempts account=%s event=%s",
+                account_id, event_id,
+            )
         try:
+            from core.persistence.execution_result_writer import persist_execution_result
             fill = out.get("fill_price") or 0.0
             entry = float(target.entry)
-            persist_execution_result(
+            _persisted = persist_execution_result(
                 symbol=getattr(target, "canonical_symbol", ""),
                 cycle_id=cycle_id,
                 result_ok=bool(out.get("ok")),
@@ -287,8 +361,45 @@ def _persist_account_results(
                 ask_at_execution=ask,
                 risk_distance=abs(entry - float(target.sl)),
             )
-        except Exception:
-            pass  # Observational persistence must never affect trading
+            if result_obligation is not None:
+                from core.lifecycle_evidence_obligations import (
+                    obligation_ledger, record_producer_outcome,
+                )
+                record_producer_outcome(
+                    obligation_ledger(), result_obligation,
+                    succeeded=bool(_persisted),
+                    observed_record_id=account_execution_id or correlation_id,
+                    failure_reason="EXECUTION_RESULT_LOCAL_PERSIST_FAILED",
+                    provenance={"account_id": account_id,
+                                "persistence_scope": "LOCAL_FSYNC",
+                                "s3_mirror_acknowledgement": "NOT_OBSERVED"},
+                )
+            if attempt_obligation is not None and not bool(out.get("executed")):
+                _outcome_status = str(out.get("status") or "")
+                _attempt_status = (
+                    ObligationStatus.NOT_APPLICABLE
+                    if _outcome_status in {"BLOCKED", "OBSERVED", "SKIPPED"}
+                    else ObligationStatus.AMBIGUOUS
+                )
+                _ledger.update(
+                    attempt_obligation.obligation_id, _attempt_status,
+                    failure_reason=(None if _attempt_status is ObligationStatus.NOT_APPLICABLE
+                                    else f"ORDER_SEND_STATE_UNKNOWN:{_outcome_status or 'UNKNOWN'}"),
+                    provenance={"account_id": account_id, "route_status": _outcome_status},
+                )
+        except Exception as exc:
+            log.exception("[EXECUTION_RESULT_OBLIGATION_HOOK_FAILED] account=%s", account_id)
+            if result_obligation is not None:
+                try:
+                    from core.lifecycle_evidence_obligations import (
+                        ObligationStatus, obligation_ledger,
+                    )
+                    obligation_ledger().update(
+                        result_obligation.obligation_id, ObligationStatus.PRODUCER_FAILED,
+                        failure_reason=f"EXECUTION_RESULT_WRITER_EXCEPTION:{type(exc).__name__}",
+                    )
+                except Exception:
+                    log.critical("[LIFECYCLE_OBLIGATION_LEDGER_FAILED] account=%s", account_id)
     # REPAIR (evidence continuity): fan-out replaced the legacy execution
     # boundary but stopped writing execution_attempts. Restore ONE
     # correctly-attributed attempt record per account execution attempt that
@@ -307,16 +418,61 @@ def _persist_account_attempts(outcomes: list[dict], *, cycle_id: int) -> None:
     """
     try:
         from core.persistence.execution_attempts_writer import persist_execution_attempt
-        import uuid as _uuid
-    except Exception:
+    except Exception as exc:
+        log.exception("[EXECUTION_ATTEMPT_WRITER_UNAVAILABLE]")
+        for out in outcomes:
+            obligation_id = out.get("_lifecycle_attempt_obligation_id")
+            if obligation_id:
+                try:
+                    from core.lifecycle_evidence_obligations import (
+                        ObligationStatus, obligation_ledger,
+                    )
+                    obligation_ledger().update(
+                        obligation_id, ObligationStatus.PRODUCER_FAILED,
+                        failure_reason=f"ATTEMPT_WRITER_IMPORT_FAILED:{type(exc).__name__}",
+                    )
+                except Exception:
+                    log.critical("[LIFECYCLE_OBLIGATION_LEDGER_FAILED] dataset=execution_attempts")
         return
     for out in outcomes:
         target = out.get("target")
-        if target is None or not bool(out.get("executed")):
+        obligation_id = out.get("_lifecycle_attempt_obligation_id")
+        if not obligation_id:
+            continue
+        from core.lifecycle_evidence_obligations import (
+            ObligationStatus, obligation_ledger, record_producer_outcome,
+        )
+        _ledger = obligation_ledger()
+        if not bool(out.get("executed")):
+            status = str(out.get("status") or "")
+            resolved = (ObligationStatus.NOT_APPLICABLE
+                        if status in {"BLOCKED", "OBSERVED", "SKIPPED"}
+                        else ObligationStatus.AMBIGUOUS)
+            try:
+                _ledger.update(
+                    obligation_id, resolved,
+                    failure_reason=(None if resolved is ObligationStatus.NOT_APPLICABLE
+                                    else f"ORDER_SEND_STATE_UNKNOWN:{status or 'UNKNOWN'}"),
+                    provenance={"route_status": status,
+                                "account_id": str(out.get("account_id") or "")},
+                )
+            except Exception:
+                log.exception("[EXECUTION_ATTEMPT_OBLIGATION_RESOLUTION_FAILED]")
+            continue
+        if target is None:
+            log.critical("[EXECUTION_ATTEMPT_OUTCOME_WITHOUT_TARGET] account=%s",
+                         out.get("account_id", "<unknown>"))
+            try:
+                _ledger.update(
+                    obligation_id, ObligationStatus.PRODUCER_FAILED,
+                    failure_reason="ATTEMPT_OUTCOME_TARGET_MISSING",
+                )
+            except Exception:
+                log.critical("[LIFECYCLE_OBLIGATION_LEDGER_FAILED] dataset=execution_attempts")
             continue
         try:
-            persist_execution_attempt(
-                attempt_id=str(_uuid.uuid4()),
+            _persisted = persist_execution_attempt(
+                attempt_id=str(out.get("_lifecycle_attempt_id") or ""),
                 decision_id=getattr(target, "decision_id", ""),
                 canonical_opportunity_id=getattr(target, "canonical_opportunity_id", ""),
                 observation_id=getattr(target, "observation_id", ""),
@@ -347,8 +503,26 @@ def _persist_account_attempts(outcomes: list[dict], *, cycle_id: int) -> None:
                 position_ticket=int(out.get("order", 0) or 0),
                 broker_symbol=route_broker_symbol(out),
             )
-        except Exception:
-            pass
+            record_producer_outcome(
+                _ledger, _ledger.get(obligation_id),
+                succeeded=bool(_persisted),
+                observed_record_id=str(out.get("_lifecycle_attempt_id") or ""),
+                failure_reason="EXECUTION_ATTEMPT_LOCAL_PERSIST_FAILED",
+                provenance={"account_id": getattr(target, "account_id", ""),
+                            "persistence_scope": "LOCAL_FSYNC",
+                            "s3_mirror_acknowledgement": "NOT_OBSERVED"},
+            )
+        except Exception as exc:
+            log.exception("[EXECUTION_ATTEMPT_OBLIGATION_HOOK_FAILED] account=%s",
+                          getattr(target, "account_id", "<unknown>"))
+            try:
+                _ledger.update(
+                    obligation_id, ObligationStatus.PRODUCER_FAILED,
+                    failure_reason=f"EXECUTION_ATTEMPT_WRITER_EXCEPTION:{type(exc).__name__}",
+                )
+            except Exception:
+                log.critical("[LIFECYCLE_OBLIGATION_LEDGER_FAILED] account=%s",
+                             getattr(target, "account_id", "<unknown>"))
 
 
 def _outcome_filling_mode(out: dict) -> int | None:

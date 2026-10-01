@@ -1097,14 +1097,44 @@ def _write_s3(symbol: str, date_str: str, line: str) -> None:
         pass  # S3 failure must never affect runtime
 
 
-def persist_decision_trace(trace: DecisionTrace) -> None:
+def persist_decision_trace(trace: DecisionTrace) -> bool:
     """
     Append trace to local JSONL + S3 mirror. Fire-and-forget. Never raises.
     Never affects trading behaviour.
     """
+    _ledger = None
+    _obligation = None
     try:
         symbol = trace.symbol or "UNKNOWN"
         ts = trace.timestamp_utc[:10] if len(trace.timestamp_utc) >= 10 else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+        try:
+            from core.lifecycle_evidence_obligations import (
+                create_dataset_obligation, obligation_ledger,
+            )
+            _ledger = obligation_ledger()
+            _identity = {
+                "entity_id": trace.entity_id,
+                "cycle_id": trace.cycle_id,
+                "runtime_session_id": trace.runtime_session_id,
+                "symbol": trace.symbol,
+            }
+            _event_id = (
+                f"decision-trace:{trace.entity_id}:{trace.cycle_id}:"
+                f"{trace.runtime_session_id}"
+            )
+            _obligation = create_dataset_obligation(
+                _ledger, event_id=_event_id, lifecycle_stage="DECISION_TRACE_OBSERVER",
+                dataset="decision_trace", identity=_identity,
+                timestamp=trace.timestamp_utc,
+                producer="core.decision_trace.persist_decision_trace",
+                trigger="DECISION_TRACE_OBSERVER_REACHED",
+            )
+        except Exception as _obligation_exc:
+            _ledger = None
+            _obligation = None
+            logger.warning("[LIFECYCLE_OBLIGATION] decision trace creation failed: %s",
+                           _obligation_exc)
 
         path = Path(_LOCAL_DIR) / symbol / f"{ts}.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -1119,11 +1149,30 @@ def persist_decision_trace(trace: DecisionTrace) -> None:
         finally:
             os.close(fd)
 
+        if _ledger is not None and _obligation is not None:
+            from core.lifecycle_evidence_obligations import record_producer_outcome
+            record_producer_outcome(
+                _ledger, _obligation, succeeded=True,
+                observed_record_id=_event_id,
+                provenance={"local_path_authority": "LOCAL_ONLY"},
+            )
+
         # S3 mirror (fire-and-forget durability)
         _write_s3(symbol, ts, line)
+        return True
 
-    except Exception:
+    except Exception as exc:
+        if _ledger is not None and _obligation is not None:
+            try:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _ledger, _obligation, succeeded=False,
+                    failure_reason=f"DECISION_TRACE_LOCAL_WRITE:{type(exc).__name__}",
+                )
+            except Exception:
+                pass
         pass  # Trace persistence must NEVER affect trading
+        return False
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

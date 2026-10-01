@@ -31,7 +31,7 @@ from research_engine.v10.runner.question_runner import (
     compose_evidence,
 )
 from research_engine.v10.runner.primitive_mapping import build_full_mapping
-from research_engine.v10.universes.question_bank import QUESTION_BANK, get_question
+from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK, get_question
 from research_engine.v10.universes.models import ViewType
 from research_engine.v10.control_plane.question_products import QuestionProductManager
 from research_engine.v10.control_plane.finding_schema import ResearchFinding

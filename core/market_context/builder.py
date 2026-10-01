@@ -160,33 +160,74 @@ class MarketContextBuilder:
         change_reason = ""
         if is_material:
             change_reason = self._change_detector.describe_change(ctx, self._previous)
-
         ctx = replace(ctx, is_material_change=is_material, change_reason=change_reason)
 
-        # ─── OBSERVATION LINEAGE (Phase 1/5) ─────────────────────────────
-        # Attach deterministic observation-level identity from real runtime
-        # context (symbol + closed-bar epoch). correlation_id is NOT known at
-        # this pre-engine stage (minted later by the cycle context builder) and
-        # canonical_opportunity_id may not yet exist — both are left empty
-        # rather than fabricated.
+        # Context is captured before the canonical opportunity and correlation
+        # identities exist. Only the deterministic observation identity is used.
         _identity_ctx = replace(
             ctx,
             entity_id=f"{self._symbol}_{int(current_time_s)}" if current_time_s else ctx.entity_id,
             bar_time=float(current_time_s) if current_time_s else ctx.bar_time,
         )
-
-        # Persist on material change
-        if is_material:
-            try:
+        _market_obligation = None
+        try:
+            from core.lifecycle_evidence_obligations import (
+                ObligationStatus, create_market_context_obligation,
+                obligation_ledger, record_producer_outcome,
+            )
+            _event_id = f"cycle:{self._symbol}:{int(current_time_s)}:{cycle_id}"
+            _ledger = obligation_ledger()
+            _market_obligation = create_market_context_obligation(
+                _ledger, event_id=_event_id, symbol=self._symbol,
+                cycle_id=cycle_id, entity_id=_identity_ctx.entity_id,
+                timestamp=str(int(current_time_s)),
+            )
+            if not is_material:
+                _ledger.update(
+                    _market_obligation.obligation_id, ObligationStatus.NOT_APPLICABLE,
+                    failure_reason="UNCHANGED_MATERIAL_CHANGE_GATE",
+                    provenance={"semantic": "UNCHANGED"},
+                )
+            else:
                 from core import config as _cfg
-                if getattr(_cfg, "MARKET_CONTEXT_PERSISTENCE_ENABLED", True):
-                    self._persistence.persist(
+                if not getattr(_cfg, "MARKET_CONTEXT_PERSISTENCE_ENABLED", True):
+                    _ledger.update(
+                        _market_obligation.obligation_id, ObligationStatus.NOT_APPLICABLE,
+                        failure_reason="MARKET_CONTEXT_PERSISTENCE_DISABLED",
+                    )
+                else:
+                    _persisted = self._persistence.persist(
                         _identity_ctx.to_dict(),
                         bar_time=_identity_ctx.bar_time,
                         entity_id=_identity_ctx.entity_id,
                     )
-            except Exception:
-                pass  # Persistence failure must never affect runtime
+                    record_producer_outcome(
+                        _ledger, _market_obligation, succeeded=bool(_persisted),
+                        observed_record_id=_identity_ctx.entity_id,
+                        failure_reason="MARKET_CONTEXT_LOCAL_PERSIST_FAILED",
+                        provenance={"material_change": True,
+                                    "persistence_scope": "LOCAL_FSYNC",
+                                    "s3_mirror_acknowledgement": "NOT_OBSERVED"},
+                    )
+        except Exception as exc:
+            logger.exception(
+                "[LIFECYCLE_OBLIGATION_PRODUCER_HOOK_FAILED] dataset=market_context symbol=%s cycle=%s",
+                self._symbol, cycle_id,
+            )
+            if _market_obligation is not None:
+                try:
+                    from core.lifecycle_evidence_obligations import (
+                        ObligationStatus, obligation_ledger,
+                    )
+                    obligation_ledger().update(
+                        _market_obligation.obligation_id, ObligationStatus.PRODUCER_FAILED,
+                        failure_reason=f"MARKET_CONTEXT_PRODUCER_EXCEPTION:{type(exc).__name__}",
+                    )
+                except Exception:
+                    logger.critical(
+                        "[LIFECYCLE_OBLIGATION_LEDGER_FAILED] dataset=market_context symbol=%s cycle=%s",
+                        self._symbol, cycle_id,
+                    )
 
         self._previous = _identity_ctx
         return _identity_ctx

@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core.opportunity.opportunity import Opportunity, OpportunityState
 from core.opportunity.factory import create_opportunity
 from core.opportunity.persistence import persist_opportunity, persist_opportunity_batch
+from core.lifecycle_evidence_obligations import ObligationStatus, obligation_ledger
 from strategy.signals import Signal, Side
 
 
@@ -310,6 +311,14 @@ class TestPersistence:
         assert record["pattern"] == "TWEEZER_TOP"
         assert record["state"] == "DETECTED"
         assert "_persisted_at" in record
+        assert record["opportunity_record_id"].startswith("lifecycle:")
+        obligation, = obligation_ledger().find_exact(
+            "opportunities", {
+                "opportunity_record_id": record["opportunity_record_id"],
+            },
+        )
+        assert obligation.current_status == ObligationStatus.NOT_YET_DUE.value
+        assert obligation.provenance["canonical_mirror_acknowledgement"] == "NOT_OBSERVED"
 
     def test_batch_persist(self, tmp_path):
         """Multiple opportunities persisted in one write."""

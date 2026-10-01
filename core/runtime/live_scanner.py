@@ -603,6 +603,7 @@ def run_live_scanner(
                 # Create Opportunity objects for ALL detected patterns.
                 # Purely observational: never affects trading decisions.
                 _cycle_opportunities: list = []
+                _opportunity_stage_failed = False
                 try:
                     from core.opportunity.factory import create_opportunity
                     from core.opportunity.persistence import persist_opportunity_batch
@@ -643,7 +644,27 @@ def run_live_scanner(
                     # Persist all detected opportunities immediately
                     persist_opportunity_batch(_cycle_opportunities)
                 except Exception:
+                    _opportunity_stage_failed = True
                     pass  # Opportunity layer failure must NEVER affect trading
+                if not _cycle_opportunities:
+                    try:
+                        from core.lifecycle_evidence_obligations import (
+                            create_dataset_obligation, obligation_ledger,
+                        )
+                        create_dataset_obligation(
+                            obligation_ledger(),
+                            event_id=f"opportunity-stage:{sym_state.symbol}:{cycle_id}",
+                            lifecycle_stage="OPPORTUNITY_EVALUATED",
+                            dataset="opportunities",
+                            identity={"opportunity_record_id": "",
+                                      "symbol": sym_state.symbol},
+                            timestamp=str(closed_time),
+                            producer="core.runtime.live_scanner.opportunity_stage",
+                            trigger="PATTERN_SCAN_COMPLETE",
+                            applicable=_opportunity_stage_failed,
+                        )
+                    except Exception:
+                        pass
                 # ─── END SHADOW OPPORTUNITY LAYER ─────────────────────────
                 try:
                     from core.pipeline.new_engine import run_new_engine
@@ -762,6 +783,7 @@ def run_live_scanner(
                     # then persist ONCE with all data attached.
                     # Never affects trading decisions.
                     _assessment_record = None
+                    _assessment_build_failed = False
                     try:
                         from core.assessment.builder import build_assessment
                         _assessment_record = build_assessment(
@@ -774,7 +796,26 @@ def run_live_scanner(
                             runtime_session_id=_runtime_session_id,
                         )
                     except Exception:
+                        _assessment_build_failed = True
                         pass  # Assessment build failure must NEVER affect trading
+                    if _assessment_record is None:
+                        try:
+                            from core.lifecycle_evidence_obligations import (
+                                create_dataset_obligation, obligation_ledger,
+                            )
+                            create_dataset_obligation(
+                                obligation_ledger(),
+                                event_id=f"assessment-stage:{sym_state.symbol}:{cycle_id}",
+                                lifecycle_stage="ASSESSMENT_STAGE",
+                                dataset="assessments",
+                                identity={"assessment_id": "", "symbol": sym_state.symbol},
+                                timestamp=str(closed_time),
+                                producer="core.assessment.builder.build_assessment",
+                                trigger="SCORING_NOT_REACHED",
+                                applicable=_assessment_build_failed,
+                            )
+                        except Exception:
+                            pass
 
                     # Horizon classification (runs BEFORE persistence)
                     try:
@@ -830,8 +871,36 @@ def run_live_scanner(
                                     "entity_id": _entity_id_cycle,
                                 },
                             )
-                            persist_horizon_candidates(candidates=_hz_cand_records)
+                            persist_horizon_candidates(
+                                candidates=_hz_cand_records,
+                                stage_identity={
+                                    "canonical_opportunity_id": _canonical_opp_id,
+                                    "entity_id": _entity_id_cycle,
+                                    "cycle_id": cycle_id,
+                                    "bar_time": float(closed_time),
+                                    "symbol": sym_state.symbol,
+                                },
+                            )
                         except Exception:
+                            try:
+                                from core.lifecycle_evidence_obligations import (
+                                    create_dataset_obligation, obligation_ledger,
+                                )
+                                create_dataset_obligation(
+                                    obligation_ledger(),
+                                    event_id=(f"horizon-candidate-stage-failed:"
+                                              f"{sym_state.symbol}:{cycle_id}"),
+                                    lifecycle_stage="HORIZON_CANDIDATE",
+                                    dataset="horizon_candidates",
+                                    identity={"candidate_id": "",
+                                              "symbol": sym_state.symbol},
+                                    timestamp=str(closed_time),
+                                    producer="core.runtime.live_scanner.horizon_candidate_stage",
+                                    trigger="HORIZON_CLASSIFIER_REACHED",
+                                    applicable=True,
+                                )
+                            except Exception:
+                                pass
                             pass  # Horizon candidates persistence must NEVER affect trading
                         # ─── END HORIZON CANDIDATES PERSISTENCE ───────────────────────────────
 
@@ -848,6 +917,25 @@ def run_live_scanner(
                                 sym_state.symbol, _eligible, _horizon_result.best_horizon,
                             )
                     except Exception:
+                        try:
+                            from core.lifecycle_evidence_obligations import (
+                                create_dataset_obligation, obligation_ledger,
+                            )
+                            create_dataset_obligation(
+                                obligation_ledger(),
+                                event_id=(f"horizon-candidate-stage-failed:"
+                                          f"{sym_state.symbol}:{cycle_id}"),
+                                lifecycle_stage="HORIZON_CANDIDATE",
+                                dataset="horizon_candidates",
+                                identity={"candidate_id": "",
+                                          "symbol": sym_state.symbol},
+                                timestamp=str(closed_time),
+                                producer="core.runtime.live_scanner.horizon_candidate_stage",
+                                trigger="HORIZON_CLASSIFIER_REACHED",
+                                applicable=True,
+                            )
+                        except Exception:
+                            pass
                         pass  # Horizon intelligence must NEVER affect trading
 
                     # Persist assessment WITH horizon data attached
@@ -1243,6 +1331,8 @@ def run_live_scanner(
                         decision_funnel=_decision_funnel,
                         market_context=_market_context,
                     ))
+                    _cycle_decision["decision_trace_observer_reached"] = True
+                    _cycle_decision["strategy_observer_reached"] = True
                     # ─── END OBSERVER DISPATCH ────────────────────────────────
                     if _new_result["action"] == "NO_TRADE":
                         # ─── LIFECYCLE: Decision drop ─────────────────────

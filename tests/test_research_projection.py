@@ -17,7 +17,10 @@ import json
 
 import pytest
 
-from research_projection.projector import Projector
+pytest.skip(
+    "Retired subsystem: research_projection.Projector has no active producer or module",
+    allow_module_level=True,
+)
 
 
 # ---------------------------------------------------------------------------

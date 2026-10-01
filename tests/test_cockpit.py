@@ -20,7 +20,7 @@ from research_engine.v10.cockpit.aggregator import (
     QuestionSummary,
 )
 from research_engine.v10.cockpit.generator import generate_cockpit
-from research_engine.v10.universes.question_bank import QUESTION_BANK
+from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK
 
 
 class TestCockpitAggregator:

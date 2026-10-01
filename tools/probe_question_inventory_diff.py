@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 
 def main() -> None:
     from research_engine.registry.research_question_registry import REGISTRY
-    from research_engine.v10.universes.question_bank import QUESTION_BANK, RETIRED_QUESTIONS
+    from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK, RETIRED_QUESTIONS
     from research_engine.v10.universes.models import QuestionStatus
 
     reg = {q.id: q for q in REGISTRY}

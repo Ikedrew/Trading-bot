@@ -26,7 +26,7 @@ from research_engine.v10.universes.models import (
     Universe,
     ViewType,
 )
-from research_engine.v10.universes.question_bank import (
+from research_engine.v10.universes.legacy_question_bank import (
     QUESTION_BANK,
     QUESTION_BANK_BY_ID,
     get_cross_angle_questions,

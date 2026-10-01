@@ -19,6 +19,9 @@ from core.protection_verification import (
     ProtectionStatus,
     _query_broker_position,
 )
+from core.position_ownership import PositionOwnership
+from core.lifecycle_evidence_obligations import LifecycleEvidenceLedger, ObligationStatus
+from core.accounts.worker import AccountReadError
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -49,6 +52,78 @@ def _mock_positions_get_by_ticket(target_ticket, positions_list):
     return _get
 
 
+class FakeLifecycleRouter:
+    """Explicit METAQUOTES test mapping with account-owned ticket reads."""
+    _accounts = {"METAQUOTES": ("MetaQuotes", "TEST_SERVER")}
+
+    def __init__(self, response):
+        self.response = response
+        self.calls = 0
+
+    def read(self, owner, operation, **kwargs):
+        assert operation == "positions_get"
+        assert (owner.account_id, owner.broker, owner.broker_server) == (
+            "METAQUOTES", *self._accounts["METAQUOTES"])
+        self.calls += 1
+        return self.response(self.calls) if callable(self.response) else self.response
+
+
+def _owner(ticket: int, symbol: str) -> PositionOwnership:
+    return PositionOwnership(
+        account_id="METAQUOTES", broker="MetaQuotes", broker_server="TEST_SERVER",
+        position_ticket=ticket, canonical_symbol=symbol, broker_symbol=symbol,
+        correlation_id=f"COR-{ticket}", decision_id=f"DEC-{ticket}",
+    )
+
+
+def test_verified_fill_records_local_protection_without_claiming_canonical_presence(tmp_path):
+    ledger = LifecycleEvidenceLedger(tmp_path / "obligations.jsonl")
+    owner = PositionOwnership(
+        account_id="ACCOUNT-A", broker="BROKER", broker_server="SERVER",
+        position_ticket=123, canonical_symbol="EURUSD",
+        correlation_id="COR-1", decision_id="DEC-1",
+    )
+
+    with patch("core.lifecycle_evidence_obligations.obligation_ledger",
+               return_value=ledger), \
+            patch("core.protection_verification._query_broker_position",
+                  return_value=(1.095, 1.105, True, 1, "exact_ticket")), \
+            patch("core.protection_verification._persist_result", return_value=True):
+        result = verify_protection(
+            symbol="EURUSD", position_ticket=123,
+            requested_sl=1.095, requested_tp=1.105,
+            correlation_id="COR-1", ownership=owner,
+        )
+
+    by_dataset = {item.expected_dataset: item for item in ledger.obligations()}
+    protection = by_dataset["protection_audit"]
+    truth = by_dataset["trade_truth"]
+    assert result.protection_status == ProtectionStatus.VERIFIED.value
+    assert protection.current_status == ObligationStatus.NOT_YET_DUE.value
+    assert protection.provenance["producer_write"] == "LOCAL_FSYNC_SUCCEEDED"
+    assert protection.provenance["canonical_mirror_acknowledgement"] == "NOT_OBSERVED"
+    assert truth.current_status == ObligationStatus.NOT_YET_DUE.value
+
+
+def test_missing_protection_account_is_explicit_producer_failure(tmp_path):
+    ledger = LifecycleEvidenceLedger(tmp_path / "obligations.jsonl")
+    with patch("core.lifecycle_evidence_obligations.obligation_ledger",
+               return_value=ledger), \
+            patch("core.protection_verification._query_broker_position",
+                  return_value=(0.0, 0.0, False, 1, "not_found")), \
+            patch("core.protection_verification._persist_result", return_value=True):
+        verify_protection(
+            symbol="EURUSD", position_ticket=123,
+            requested_sl=1.095, requested_tp=1.105,
+            correlation_id="COR-MISSING-ACCOUNT",
+        )
+
+    by_dataset = {item.expected_dataset: item for item in ledger.obligations()}
+    assert by_dataset["protection_audit"].current_status == ObligationStatus.PRODUCER_FAILED.value
+    assert by_dataset["trade_truth"].current_status == ObligationStatus.PRODUCER_FAILED.value
+    assert not by_dataset["protection_audit"].account_id
+
+
 # ═══════════════════════════════════════════════════════════════
 # TEST 1: Position exists with matching ticket
 # ═══════════════════════════════════════════════════════════════
@@ -61,15 +136,12 @@ class TestPositionFoundByTicket:
             ticket=54568066, sl=7607.975, tp=7704.7,
             symbol="US500", volume=56.5, magic=713001,
         )]
-        mock_get = _mock_positions_get_by_ticket(54568066, positions)
-
-        with patch("core.protection_verification.mt5_call", side_effect=lambda func, *a, **kw: mock_get(**kw)):
-            result = verify_protection(
-                symbol="US500",
-                position_ticket=54568066,
-                requested_sl=7607.975,
-                requested_tp=7704.7,
-            )
+        result = verify_protection(
+            symbol="US500", position_ticket=54568066,
+            requested_sl=7607.975, requested_tp=7704.7,
+            ownership=_owner(54568066, "US500"),
+            lifecycle_router=FakeLifecycleRouter(positions),
+        )
 
         assert result.protection_status == ProtectionStatus.VERIFIED.value
         assert result.broker_confirmed_sl == 7607.975
@@ -81,15 +153,12 @@ class TestPositionFoundByTicket:
             ticket=12345678, sl=1.0950, tp=1.1050,
             symbol="EURUSD", volume=0.10, magic=713001,
         )]
-        mock_get = _mock_positions_get_by_ticket(12345678, positions)
-
-        with patch("core.protection_verification.mt5_call", side_effect=lambda func, *a, **kw: mock_get(**kw)):
-            result = verify_protection(
-                symbol="EURUSD",
-                position_ticket=12345678,
-                requested_sl=1.0950,
-                requested_tp=1.1050,
-            )
+        result = verify_protection(
+            symbol="EURUSD", position_ticket=12345678,
+            requested_sl=1.0950, requested_tp=1.1050,
+            ownership=_owner(12345678, "EURUSD"),
+            lifecycle_router=FakeLifecycleRouter(positions),
+        )
 
         assert result.protection_status == ProtectionStatus.VERIFIED.value
 
@@ -99,41 +168,24 @@ class TestPositionFoundByTicket:
 # ═══════════════════════════════════════════════════════════════
 
 class TestFallbackMatch:
-    """Position exists but under different ticket → symbol+volume match."""
+    """Account-owned protection never falls back from a mismatched ticket."""
 
-    def test_symbol_volume_fallback_finds_position(self):
-        """Ticket doesn't match but volume+symbol does → found."""
-        # The position has a DIFFERENT ticket than expected
+    def test_different_ticket_is_rejected_without_symbol_volume_fallback(self):
+        """A similar symbol/volume record cannot satisfy the pinned ticket."""
         actual_position = FakeMT5Position(
             ticket=99999999, sl=7607.975, tp=7704.7,
             symbol="US500", volume=56.5, magic=713001,
         )
-
-        call_count = [0]
-
-        def mock_mt5_call(func, *args, **kwargs):
-            call_count[0] += 1
-            ticket = kwargs.get("ticket")
-            symbol = kwargs.get("symbol")
-            if ticket is not None:
-                # Ticket lookup fails (wrong ticket)
-                return None
-            if symbol is not None:
-                return [actual_position]
-            return None
-
-        with patch("core.protection_verification.mt5_call", side_effect=mock_mt5_call):
+        router = FakeLifecycleRouter([actual_position])
+        with pytest.raises(AccountReadError, match="POSITION_IDENTITY_MISMATCH"):
             sl, tp, found, attempts, method = _query_broker_position(
                 position_ticket=54568066,
                 symbol="US500",
                 volume=56.5,
                 magic=713001,
+                ownership=_owner(54568066, "US500"),
+                lifecycle_router=router,
             )
-
-        assert found is True
-        assert method == "symbol_volume_match"
-        assert sl == 7607.975
-        assert tp == 7704.7
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -147,13 +199,12 @@ class TestPositionGenuinelyClosed:
         def mock_mt5_call(func, *args, **kwargs):
             return None  # Nothing found anywhere
 
-        with patch("core.protection_verification.mt5_call", side_effect=mock_mt5_call):
-            result = verify_protection(
-                symbol="US500",
-                position_ticket=54568066,
-                requested_sl=7607.975,
-                requested_tp=7704.7,
-            )
+        result = verify_protection(
+            symbol="US500", position_ticket=54568066,
+            requested_sl=7607.975, requested_tp=7704.7,
+            ownership=_owner(54568066, "US500"),
+            lifecycle_router=FakeLifecycleRouter([]),
+        )
 
         assert result.protection_status == ProtectionStatus.POSITION_NOT_FOUND.value
         assert "54568066" in result.protection_failure_reason
@@ -163,13 +214,12 @@ class TestPositionGenuinelyClosed:
         def mock_mt5_call(func, *args, **kwargs):
             return []  # Empty list
 
-        with patch("core.protection_verification.mt5_call", side_effect=mock_mt5_call):
-            result = verify_protection(
-                symbol="US500",
-                position_ticket=54568066,
-                requested_sl=7607.975,
-                requested_tp=7704.7,
-            )
+        result = verify_protection(
+            symbol="US500", position_ticket=54568066,
+            requested_sl=7607.975, requested_tp=7704.7,
+            ownership=_owner(54568066, "US500"),
+            lifecycle_router=FakeLifecycleRouter([]),
+        )
 
         assert result.protection_status == ProtectionStatus.POSITION_NOT_FOUND.value
 
@@ -187,28 +237,16 @@ class TestBrokerDelay:
             ticket=54568066, sl=7607.975, tp=7704.7,
             symbol="US500", volume=56.5, magic=713001,
         )
-        call_count = [0]
-
-        def mock_mt5_call(func, *args, **kwargs):
-            call_count[0] += 1
-            ticket = kwargs.get("ticket")
-            if ticket is not None:
-                # Fail on first call, succeed on second
-                if call_count[0] <= 1:
-                    return None
-                return [position]
-            return None
-
-        with patch("core.protection_verification.mt5_call", side_effect=mock_mt5_call), \
-             patch("core.protection_verification.time.sleep"):  # Don't actually sleep
+        router = FakeLifecycleRouter(lambda call: [] if call == 1 else [position])
+        with patch("core.protection_verification.time.sleep"):
             sl, tp, found, attempts, method = _query_broker_position(
-                position_ticket=54568066,
-                symbol="US500",
+                position_ticket=54568066, symbol="US500",
+                ownership=_owner(54568066, "US500"), lifecycle_router=router,
             )
 
         assert found is True
         assert attempts == 2
-        assert method == "ticket_match"
+        assert method == "account_ticket_match"
         assert sl == 7607.975
 
     def test_found_on_third_attempt(self):
@@ -217,26 +255,13 @@ class TestBrokerDelay:
             ticket=54568066, sl=7607.975, tp=7704.7,
             symbol="US500", volume=56.5, magic=713001,
         )
-        attempt_count = [0]
-
-        def mock_mt5_call(func, *args, **kwargs):
-            ticket = kwargs.get("ticket")
-            symbol = kwargs.get("symbol")
-            if ticket is not None:
-                attempt_count[0] += 1
-                # Only succeed on 3rd ticket query
-                if attempt_count[0] >= 3:
-                    return [position]
-                return None
-            if symbol is not None:
-                return None  # symbol fallback also fails initially
-            return None
-
-        with patch("core.protection_verification.mt5_call", side_effect=mock_mt5_call), \
-             patch("core.protection_verification.time.sleep"):
+        router = FakeLifecycleRouter(lambda call: [position] if call >= 3 else [])
+        with patch("core.protection_verification.time.sleep"):
             sl, tp, found, attempts, method = _query_broker_position(
                 position_ticket=54568066,
                 symbol="US500",
+                ownership=_owner(54568066, "US500"),
+                lifecycle_router=router,
             )
 
         assert found is True
@@ -246,15 +271,14 @@ class TestBrokerDelay:
         """Verify that retry delays are progressive (not fixed)."""
         sleep_calls = []
 
-        def mock_mt5_call(func, *args, **kwargs):
-            return None  # Never found
-
         def mock_sleep(seconds):
             sleep_calls.append(seconds)
 
-        with patch("core.protection_verification.mt5_call", side_effect=mock_mt5_call), \
-             patch("core.protection_verification.time.sleep", side_effect=mock_sleep):
-            _query_broker_position(position_ticket=99999, symbol="TEST")
+        with patch("core.protection_verification.time.sleep", side_effect=mock_sleep):
+            _query_broker_position(
+                position_ticket=99999, symbol="TEST",
+                ownership=_owner(99999, "TEST"), lifecycle_router=FakeLifecycleRouter([]),
+            )
 
         # Should have delays: 0.5, 1.5, 3.0 (first attempt has no delay)
         assert len(sleep_calls) == 3

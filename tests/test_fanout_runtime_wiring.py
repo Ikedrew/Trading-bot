@@ -154,12 +154,14 @@ def test_canonical_lineage_is_passed_verbatim(monkeypatch, no_broker_probe):
 
     def fanout_spy(*, decision, accounts, snapshots, broker_symbols,
                    strategy_family, horizon_type, global_execution_enabled,
-                   execute_one, timeout):
+                   execute_one, before_dispatch, timeout):
         captured["decision"] = decision
         captured["accounts"] = tuple(accounts)
         captured["broker_symbols"] = dict(broker_symbols)
         captured["horizon_type"] = horizon_type
         captured["global_execution_enabled"] = global_execution_enabled
+        captured["before_dispatch"] = before_dispatch
+        before_dispatch([])
         return []  # no children → adapter maps to a blocked outcome
 
     import core.accounts.live_fanout as lf
@@ -188,6 +190,44 @@ def test_canonical_lineage_is_passed_verbatim(monkeypatch, no_broker_probe):
     assert captured["broker_symbols"]["VANTAGE"] == "EURUSD.van"
     assert captured["horizon_type"] == "SCALP"          # risk methodology untouched
     assert captured["global_execution_enabled"] is True
+
+
+def test_pre_dispatch_observer_creates_independent_account_obligations(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    import core.lifecycle_evidence_obligations as obligations
+    import core.runtime.fanout_execution as fanout
+
+    ledger = obligations.LifecycleEvidenceLedger(tmp_path / "obligations.jsonl")
+    monkeypatch.setattr(obligations, "obligation_ledger", lambda: ledger)
+
+    def route(account_id, *, eligible, enabled):
+        return {
+            "target": SimpleNamespace(
+                account_id=account_id, correlation_id="COR-1", decision_id="DEC-1",
+                account_execution_id=f"EXEC-{account_id}", broker=f"BROKER-{account_id}",
+                broker_server=f"SERVER-{account_id}", trade_id="", canonical_symbol="EURUSD",
+            ),
+            "eligibility": {"eligible": eligible},
+            "execution_enabled": enabled,
+        }
+
+    routes = [route("ACCOUNT-A", eligible=True, enabled=True),
+              route("ACCOUNT-B", eligible=False, enabled=True)]
+    fanout._record_route_obligations(routes)
+
+    a_result = ledger.get(routes[0]["_lifecycle_result_obligation_id"])
+    a_attempt = ledger.get(routes[0]["_lifecycle_attempt_obligation_id"])
+    b_result = ledger.get(routes[1]["_lifecycle_result_obligation_id"])
+    b_attempt = ledger.get(routes[1]["_lifecycle_attempt_obligation_id"])
+
+    assert a_result is not None and b_result is not None
+    assert a_result.obligation_id != b_result.obligation_id
+    assert a_result.account_id == "ACCOUNT-A"
+    assert b_result.account_id == "ACCOUNT-B"
+    assert a_attempt is not None and a_attempt.current_status == "NOT_YET_DUE"
+    assert b_attempt is not None and b_attempt.current_status == "NOT_APPLICABLE"
+    assert len(ledger.obligations()) == 4
 def test_blocked_children_map_to_not_executed_without_canonical_mutation(
     monkeypatch, no_broker_probe,
 ):

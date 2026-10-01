@@ -52,6 +52,7 @@ _SCHEMA_VERSION = "horizon_candidates_v1"
 def persist_horizon_candidates(
     *,
     candidates: list[dict[str, Any]],
+    stage_identity: dict[str, Any] | None = None,
 ) -> bool:
     """
     Persist a batch of horizon candidate records to local JSONL + S3 mirror.
@@ -70,7 +71,57 @@ def persist_horizon_candidates(
         True on success, False on failure. Never raises.
     """
     if not candidates:
+        if stage_identity:
+            try:
+                from core.lifecycle_evidence_obligations import (
+                    create_dataset_obligation, obligation_ledger,
+                )
+                symbol = str(stage_identity.get("symbol") or "UNKNOWN")
+                stage_id = str(
+                    stage_identity.get("canonical_opportunity_id")
+                    or stage_identity.get("entity_id") or ""
+                )
+                create_dataset_obligation(
+                    obligation_ledger(),
+                    event_id=(f"horizon-candidate-stage:{stage_id}:"
+                              f"{stage_identity.get('cycle_id', 0)}"),
+                    lifecycle_stage="HORIZON_CANDIDATE",
+                    dataset="horizon_candidates",
+                    identity={"candidate_id": "", "symbol": symbol},
+                    timestamp=str(stage_identity.get("bar_time") or ""),
+                    producer="core.persistence.horizon_candidates_writer.persist_horizon_candidates",
+                    trigger="HORIZON_CLASSIFIER_NO_ELIGIBLE_RECORDS",
+                    applicable=False,
+                )
+            except Exception as _obligation_exc:
+                logger.warning("[LIFECYCLE_OBLIGATION] empty horizon stage failed: %s",
+                               _obligation_exc)
         return False
+
+    _ledger = None
+    _obligations = []
+    try:
+        from core.lifecycle_evidence_obligations import (
+            create_dataset_obligation, obligation_ledger,
+        )
+        _ledger = obligation_ledger()
+        for index, candidate in enumerate(candidates):
+            _candidate_id = str(candidate.get("candidate_id") or "")
+            _event_id = f"horizon-candidate:{_candidate_id or index}"
+            _obligations.append(create_dataset_obligation(
+                _ledger, event_id=_event_id, lifecycle_stage="HORIZON_CANDIDATE",
+                dataset="horizon_candidates",
+                identity={"candidate_id": _candidate_id,
+                          "symbol": str(candidate.get("symbol") or "UNKNOWN")},
+                timestamp=str(candidate.get("bar_time") or ""),
+                producer="core.persistence.horizon_candidates_writer.persist_horizon_candidates",
+                trigger="HORIZON_CLASSIFIER_REACHED",
+            ))
+    except Exception as _obligation_exc:
+        _ledger = None
+        _obligations = []
+        logger.warning("[LIFECYCLE_OBLIGATION] horizon candidate creation failed: %s",
+                       _obligation_exc)
 
     try:
         now = datetime.now(timezone.utc)
@@ -122,11 +173,26 @@ def persist_horizon_candidates(
             # S3 mirror (fire-and-forget)
             _write_s3(symbol, date_str, content)
 
-        return True
+        _persisted = True
 
     except Exception as exc:
         logger.debug("[HORIZON_CANDIDATES_PERSIST] write_failed: %s", exc)
-        return False
+        _persisted = False
+
+    if _ledger is not None:
+        try:
+            from core.lifecycle_evidence_obligations import record_producer_outcome
+            for obligation in _obligations:
+                record_producer_outcome(
+                    _ledger, obligation, succeeded=_persisted,
+                    observed_record_id=str(obligation.expected_identity.get("candidate_id") or ""),
+                    failure_reason="HORIZON_CANDIDATE_LOCAL_WRITE_FAILED",
+                    provenance={"local_path_authority": "LOCAL_ONLY"},
+                )
+        except Exception as _obligation_exc:
+            logger.warning("[LIFECYCLE_OBLIGATION] horizon candidate outcome failed: %s",
+                           _obligation_exc)
+    return _persisted
 
 
 def build_horizon_candidate_records(

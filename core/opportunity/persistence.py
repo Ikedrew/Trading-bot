@@ -38,13 +38,15 @@ _S3_PREFIX = s3_base_prefix("opportunities")
 _SCHEMA_VERSION = "opportunities_v1"
 
 
-def persist_opportunity(opportunity: Opportunity) -> None:
+def persist_opportunity(opportunity: Opportunity) -> bool:
     """
     Persist an Opportunity record to local JSONL + S3 mirror.
 
     Fire-and-forget. Never raises. Never blocks the trading pipeline.
     Called on every state transition (DETECTED, ASSESSED, REJECTED, EXECUTED, EXPIRED).
     """
+    _ledger = None
+    _obligation = None
     try:
         now = datetime.now(timezone.utc)
         date_str = now.strftime("%Y-%m-%d")
@@ -53,10 +55,41 @@ def persist_opportunity(opportunity: Opportunity) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
 
         record = opportunity.to_dict()
+        _canonical_id = str(opportunity.canonical_opportunity_id or "")
+        _opportunity_record_id = (
+            f"lifecycle:{_canonical_id or opportunity.opportunity_id}:{opportunity.state}"
+            if (_canonical_id or opportunity.opportunity_id) else ""
+        )
+        record["opportunity_record_id"] = _opportunity_record_id
         # Add persistence metadata
         record["_persisted_at"] = now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         record["_state_at_persist"] = opportunity.state
         record["schema_version"] = _SCHEMA_VERSION
+
+        try:
+            from core.lifecycle_evidence_obligations import (
+                create_dataset_obligation, obligation_ledger,
+            )
+            _ledger = obligation_ledger()
+            _obligation = create_dataset_obligation(
+                _ledger,
+                event_id=(f"opportunity:{_opportunity_record_id}"
+                          if _opportunity_record_id else
+                          f"opportunity:lifecycle-missing:{opportunity.symbol}:{opportunity.cycle_id}"),
+                lifecycle_stage="OPPORTUNITY_LIFECYCLE",
+                dataset="opportunities",
+                identity={"opportunity_record_id": _opportunity_record_id,
+                          "canonical_opportunity_id": _canonical_id,
+                          "symbol": opportunity.symbol},
+                timestamp=str(opportunity.detected_at_utc),
+                producer="core.opportunity.persistence.persist_opportunity",
+                trigger=f"OPPORTUNITY_STATE_{opportunity.state}",
+            )
+        except Exception as _obligation_exc:
+            _ledger = None
+            _obligation = None
+            logger.warning("[LIFECYCLE_OBLIGATION] opportunity lifecycle creation failed: %s",
+                           _obligation_exc)
 
         line = json.dumps(record, separators=(",", ":"), default=str)
         fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
@@ -66,28 +99,54 @@ def persist_opportunity(opportunity: Opportunity) -> None:
         finally:
             os.close(fd)
 
+        if _ledger is not None and _obligation is not None:
+            from core.lifecycle_evidence_obligations import record_producer_outcome
+            record_producer_outcome(
+                _ledger, _obligation, succeeded=True,
+                observed_record_id=_opportunity_record_id or None,
+                provenance={"local_path_authority": "LOCAL_ONLY"},
+            )
+
         # ─── S3 MIRROR (Hive-partitioned, fire-and-forget) ───────────
         try:
             _write_s3_opportunity(opportunity.symbol, date_str, line + "\n")
         except Exception:
             pass  # S3 failure must NEVER affect opportunity persistence
         # ─── END S3 MIRROR ────────────────────────────────────────────
+        return True
 
     except Exception as exc:
+        if _ledger is not None and _obligation is not None:
+            try:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _ledger, _obligation, succeeded=False,
+                    failure_reason=f"OPPORTUNITY_LIFECYCLE_LOCAL_WRITE:{type(exc).__name__}",
+                )
+            except Exception:
+                pass
         logger.error("[OPPORTUNITY_PERSIST_ERROR] symbol=%s id=%s error=%s",
                      opportunity.symbol, opportunity.opportunity_id, exc)
+        return False
 
 
-def persist_opportunity_batch(opportunities: list[Opportunity]) -> None:
+def persist_opportunity_batch(opportunities: list[Opportunity]) -> bool:
     """
     Persist multiple opportunities efficiently (single file open per symbol/date).
 
     Fire-and-forget. Never raises.
     """
     if not opportunities:
-        return
+        return False
 
+    _ledger = None
+    _obligations = []
+    _persisted = False
     try:
+        from core.lifecycle_evidence_obligations import (
+            create_dataset_obligation, obligation_ledger,
+        )
+        _ledger = obligation_ledger()
         now = datetime.now(timezone.utc)
         date_str = now.strftime("%Y-%m-%d")
         persisted_at = now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
@@ -104,9 +163,27 @@ def persist_opportunity_batch(opportunities: list[Opportunity]) -> None:
             lines: list[str] = []
             for opp in opps:
                 record = opp.to_dict()
+                _canonical_id = str(opp.canonical_opportunity_id or "")
+                _record_id = (
+                    f"lifecycle:{_canonical_id or opp.opportunity_id}:{opp.state}"
+                    if (_canonical_id or opp.opportunity_id) else ""
+                )
+                record["opportunity_record_id"] = _record_id
                 record["_persisted_at"] = persisted_at
                 record["_state_at_persist"] = opp.state
                 lines.append(json.dumps(record, separators=(",", ":"), default=str))
+                _obligations.append(create_dataset_obligation(
+                    _ledger,
+                    event_id=f"opportunity:{_record_id or f'lifecycle-missing:{symbol}:{opp.cycle_id}'}",
+                    lifecycle_stage="OPPORTUNITY_LIFECYCLE",
+                    dataset="opportunities",
+                    identity={"opportunity_record_id": _record_id,
+                              "canonical_opportunity_id": _canonical_id,
+                              "symbol": symbol},
+                    timestamp=str(opp.detected_at_utc),
+                    producer="core.opportunity.persistence.persist_opportunity",
+                    trigger=f"OPPORTUNITY_STATE_{opp.state}",
+                ))
 
             content = "\n".join(lines) + "\n"
             fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
@@ -115,6 +192,7 @@ def persist_opportunity_batch(opportunities: list[Opportunity]) -> None:
                 os.fsync(fd)
             finally:
                 os.close(fd)
+            _persisted = True
 
             # ─── S3 MIRROR (batch — one put per symbol/date) ─────────
             try:
@@ -123,9 +201,31 @@ def persist_opportunity_batch(opportunities: list[Opportunity]) -> None:
                 pass  # S3 failure must NEVER affect opportunity persistence
             # ─── END S3 MIRROR ────────────────────────────────────────
 
+        from core.lifecycle_evidence_obligations import record_producer_outcome
+        for obligation in _obligations:
+            record_producer_outcome(
+                _ledger, obligation, succeeded=True,
+                observed_record_id=str(obligation.expected_identity.get(
+                    "opportunity_record_id") or "") or None,
+                provenance={"local_path_authority": "LOCAL_ONLY"},
+            )
+        return True
+
     except Exception as exc:
+        if _ledger is not None:
+            try:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                for obligation in _obligations:
+                    if obligation.current_status != "PRODUCER_FAILED":
+                        record_producer_outcome(
+                            _ledger, obligation, succeeded=False,
+                            failure_reason=f"OPPORTUNITY_BATCH_LOCAL_WRITE:{type(exc).__name__}",
+                        )
+            except Exception:
+                pass
         logger.error("[OPPORTUNITY_BATCH_PERSIST_ERROR] count=%d error=%s",
                      len(opportunities), exc)
+        return _persisted
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

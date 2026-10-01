@@ -70,7 +70,7 @@ def persist_portfolio_ranking(
     max_open_positions: int = 1,
     portfolio_context: Any = None,
     candidate_enrichments: list[Any] | None = None,
-) -> None:
+) -> bool:
     """
     Persist a complete ranking event to local JSONL + S3 mirror.
 
@@ -85,15 +85,16 @@ def persist_portfolio_ranking(
         portfolio_context: PortfolioContext snapshot (from context.py)
         candidate_enrichments: List of CandidateContextEnrichment (one per candidate)
     """
+    _ledger = None
+    _obligation = None
     try:
         now = datetime.now(timezone.utc)
         date_str = now.strftime("%Y-%m-%d")
         timestamp_utc = now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-        timestamp_ms = int(now.timestamp() * 1000)
 
         # Build ranking record
         cycle_id = getattr(pool, "cycle_id", 0)
-        ranking_id = f"ranking_{cycle_id}_{timestamp_ms}"
+        ranking_id = f"ranking_{runtime_session_id or 'SESSION_UNKNOWN'}_{cycle_id}"
 
         # Extract candidate details
         candidates: list[dict[str, Any]] = []
@@ -171,6 +172,42 @@ def persist_portfolio_ranking(
             "candidates": candidates,
         }
 
+        try:
+            from core.lifecycle_evidence_obligations import (
+                ObligationStatus, record_producer_outcome,
+            )
+            from core.lifecycle_evidence_obligations import obligation_ledger
+            _ledger = obligation_ledger()
+            _obligation = _ledger.create(
+                lifecycle_event_id=f"portfolio-ranking:{ranking_id}",
+                lifecycle_stage="PORTFOLIO_CYCLE",
+                expected_dataset="portfolio_rankings",
+                identity={"ranking_id": ranking_id,
+                          "symbol": selected_symbol or (candidates[0]["symbol"]
+                                                        if candidates else "UNKNOWN")},
+                originating_timestamp=timestamp_utc,
+                due_state="EXPECTED_NOW" if candidates else "NOT_REQUIRED",
+                due_after="PORTFOLIO_RANKING_LOCAL_WRITE" if candidates
+                else "NO_RANKING_CANDIDATES",
+                requirement_type="CONDITIONAL",
+                current_status=(ObligationStatus.NOT_YET_DUE if candidates
+                                else ObligationStatus.NOT_APPLICABLE),
+                producer="core.portfolio_ranking.persistence.persist_portfolio_ranking",
+                producer_trigger="RANKING_POOL_EXISTS" if candidates
+                else "NO_RANKING_CANDIDATES",
+            )
+            if candidates and not runtime_session_id:
+                from core.lifecycle_evidence_obligations import ObligationStatus
+                _obligation = _ledger.update(
+                    _obligation.obligation_id, ObligationStatus.PRODUCER_FAILED,
+                    failure_reason="PORTFOLIO_RANKING_RUNTIME_SESSION_ID_MISSING",
+                )
+        except Exception as _obligation_exc:
+            _ledger = None
+            _obligation = None
+            logger.warning("[LIFECYCLE_OBLIGATION] portfolio ranking creation failed: %s",
+                           _obligation_exc)
+
         # ─── LOCAL PERSISTENCE ────────────────────────────────────────
         path = Path(_LOCAL_DIR) / f"{date_str}.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -184,11 +221,34 @@ def persist_portfolio_ranking(
         finally:
             os.close(fd)
 
+        if _ledger is not None and _obligation is not None \
+                and _obligation.current_status != "NOT_APPLICABLE":
+            from core.lifecycle_evidence_obligations import record_producer_outcome
+            record_producer_outcome(
+                _ledger, _obligation, succeeded=True,
+                observed_record_id=ranking_id,
+                provenance={"local_path_authority": "LOCAL_ONLY"},
+            )
+
         # ─── S3 MIRROR ───────────────────────────────────────────────
-        _write_s3(date_str, line)
+        try:
+            _write_s3(date_str, line)
+        except Exception:
+            pass
+        return True
 
     except Exception as exc:
+        if _ledger is not None and _obligation is not None:
+            try:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _ledger, _obligation, succeeded=False,
+                    failure_reason=f"PORTFOLIO_RANKING_LOCAL_WRITE:{type(exc).__name__}",
+                )
+            except Exception:
+                pass
         logger.error("[PORTFOLIO_RANKING_PERSIST_ERROR] error=%s", exc)
+        return False
 
 
 def _write_s3(date_str: str, line: str) -> None:

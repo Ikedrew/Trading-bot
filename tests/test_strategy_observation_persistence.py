@@ -29,6 +29,7 @@ from core.strategies.observation_persistence import (
     persist_observation_batch,
     read_observations_local,
 )
+from core.lifecycle_evidence_obligations import ObligationStatus, obligation_ledger
 
 
 class TestObservationSchema:
@@ -83,9 +84,18 @@ class TestPersistence:
     def test_persist_creates_file(self):
         record = build_observation_record(
             observation_id="p-001", timestamp_utc=1719000000.0, symbol="EURUSD")
+        record["entity_id"] = "EURUSD_1719000000"
         assert persist_strategy_observation(record) is True
         files = list((Path(self.temp_dir) / "EURUSD").glob("*.jsonl"))
         assert len(files) == 1
+        obligation, = obligation_ledger().find_exact(
+            "strategy_observations", {
+                "entity_id": record["entity_id"],
+                "observation_id": record["observation_id"],
+            },
+        )
+        assert obligation.current_status == ObligationStatus.NOT_YET_DUE.value
+        assert obligation.provenance["canonical_mirror_acknowledgement"] == "NOT_OBSERVED"
 
     def test_persist_appends(self):
         for i in range(3):

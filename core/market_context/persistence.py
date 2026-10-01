@@ -42,6 +42,8 @@ class MarketContextPersistence:
             the caller supplies it:
                 entity_id   {SYMBOL}_{int(bar_time)} (deterministic, no mint)
                 bar_time    closed-bar epoch seconds of the snapshot
+                return False
+            return True
                 correlation_id  cycle correlation string when known
         Downstream join to the canonical root happens through assessment /
         decision rows carrying both this entity_id and the root.

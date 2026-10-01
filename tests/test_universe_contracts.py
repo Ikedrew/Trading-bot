@@ -37,7 +37,7 @@ from research_engine.v10.universes.contracts import (
     get_universe_contract,
 )
 from research_engine.v10.universes.models import ACTIVE_UNIVERSES, Population, Universe
-from research_engine.v10.universes.question_bank import QUESTION_BANK
+from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK
 from research_engine.v10.universes.question_validator import validate_all_questions
 from research_engine.v10.universes.resolver import (
     PopulationResolver,

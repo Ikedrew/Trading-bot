@@ -73,6 +73,31 @@ def persist_strategy_candidates(
     if not candidates:
         return False
 
+    _ledger = None
+    _obligations = []
+    try:
+        from core.lifecycle_evidence_obligations import (
+            create_dataset_obligation, obligation_ledger,
+        )
+        _ledger = obligation_ledger()
+        for index, candidate in enumerate(candidates):
+            _candidate_id = str(candidate.get("candidate_id") or "")
+            _event_id = f"strategy-candidate:{_candidate_id or index}"
+            _obligations.append(create_dataset_obligation(
+                _ledger, event_id=_event_id, lifecycle_stage="STRATEGY_CANDIDATE",
+                dataset="strategy_candidates",
+                identity={"candidate_id": _candidate_id,
+                          "symbol": str(candidate.get("symbol") or "UNKNOWN")},
+                timestamp=str(candidate.get("bar_time") or ""),
+                producer="core.persistence.strategy_candidates_writer.persist_strategy_candidates",
+                trigger="STRATEGY_CANDIDATE_EVALUATED",
+            ))
+    except Exception as _obligation_exc:
+        _ledger = None
+        _obligations = []
+        logger.warning("[LIFECYCLE_OBLIGATION] strategy candidate creation failed: %s",
+                       _obligation_exc)
+
     try:
         now = datetime.now(timezone.utc)
         evaluated_at = now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
@@ -122,11 +147,26 @@ def persist_strategy_candidates(
             # S3 mirror (fire-and-forget)
             _write_s3(symbol, date_str, content)
 
-        return True
+        _persisted = True
 
     except Exception as exc:
         logger.debug("[STRATEGY_CANDIDATES_PERSIST] write_failed: %s", exc)
-        return False
+        _persisted = False
+
+    if _ledger is not None:
+        try:
+            from core.lifecycle_evidence_obligations import record_producer_outcome
+            for obligation in _obligations:
+                record_producer_outcome(
+                    _ledger, obligation, succeeded=_persisted,
+                    observed_record_id=str(obligation.expected_identity.get("candidate_id") or ""),
+                    failure_reason="STRATEGY_CANDIDATE_LOCAL_WRITE_FAILED",
+                    provenance={"local_path_authority": "LOCAL_ONLY"},
+                )
+        except Exception as _obligation_exc:
+            logger.warning("[LIFECYCLE_OBLIGATION] strategy candidate outcome failed: %s",
+                           _obligation_exc)
+    return _persisted
 
 
 def build_candidate_records(

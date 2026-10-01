@@ -13,7 +13,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 import os
 os.chdir(str(_PROJECT_ROOT))
 
-from research_engine.v10.universes.question_bank import get_question
+from research_engine.v10.universes.legacy_question_bank import get_question
 from research_engine.v10.universes.models import Universe
 from research_engine.v10.universes import (
     ExecutionUniverseBuilder, DecisionUniverseBuilder,
@@ -55,7 +55,7 @@ def main():
     # 3. Setup runner
     registry = build_default_registry()
     mapping = build_full_mapping(
-        __import__("research_engine.v10.universes.question_bank", fromlist=["QUESTION_BANK"]).QUESTION_BANK
+        __import__("research_engine.v10.universes.legacy_question_bank", fromlist=["QUESTION_BANK"]).QUESTION_BANK
     )
     runner = QuestionRunner(registry, mapping)
     ctx = RunContext(run_id="verify_three_params")

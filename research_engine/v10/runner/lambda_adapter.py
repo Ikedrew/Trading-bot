@@ -234,9 +234,9 @@ class LambdaResearchAdapter:
         self._resolver.set_builders(builders)
 
     def _find_question(self, question_id: str) -> NewEngineQuestion | None:
-        from research_engine.v10.universes.question_bank import get_question
+        from research_engine.v10.universes.legacy_question_bank import get_question
         return get_question(question_id)
 
     def _get_question_bank(self) -> tuple[NewEngineQuestion, ...]:
-        from research_engine.v10.universes.question_bank import QUESTION_BANK
+        from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK
         return QUESTION_BANK

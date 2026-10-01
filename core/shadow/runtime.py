@@ -137,6 +137,7 @@ class ShadowRuntime:
     def _envelope(
         self,
         *,
+        event_id: str,
         event_type: str,
         symbol: str,
         market_time_utc: int,
@@ -148,6 +149,7 @@ class ShadowRuntime:
         pinned: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         ev: dict[str, Any] = {
+            "event_id": event_id,
             "event_type": event_type,
             "schema_version": SCHEMA_VERSION,
             "construction_model_version": CONSTRUCTION_MODEL_VERSION,
@@ -214,13 +216,62 @@ class ShadowRuntime:
         written: the guard is never downgraded to a warning, generation-2
         fields are never stripped, and the metadata is never rewritten.
         """
-        assert_emission_contract(event, dataset=DATASET_SHADOW_RUNTIME)
-        self._writer.append(
-            event=event,
-            symbol=event.get("symbol", "UNKNOWN"),
-            market_time_utc=int(event.get("event_market_time_utc_epoch_s", 0)),
-            broker_offset_seconds=int(event.get("broker_offset_seconds", 0)),
-        )
+        _ledger = None
+        _obligation = None
+        try:
+            from core.lifecycle_evidence_obligations import (
+                create_dataset_obligation, obligation_ledger,
+            )
+            _ledger = obligation_ledger()
+            _identity = {
+                "event_id": str(event.get("event_id") or ""),
+                "shadow_trade_id": str(event.get("shadow_trade_id") or ""),
+                "canonical_opportunity_id": str(event.get("canonical_opportunity_id") or ""),
+                "event_type": str(event.get("event_type") or ""),
+                "symbol": str(event.get("symbol") or "UNKNOWN"),
+            }
+            _obligation = create_dataset_obligation(
+                _ledger,
+                event_id=f"shadow-runtime:{_identity['event_id'] or 'MISSING'}",
+                lifecycle_stage="SHADOW_RUNTIME_EVENT",
+                dataset="shadow_runtime", identity=_identity,
+                timestamp=str(event.get("event_market_time_utc_iso8601") or ""),
+                producer="core.shadow.runtime.ShadowRuntime._write",
+                trigger=f"SHADOW_{_identity['event_type']}_EMITTED",
+            )
+        except Exception as _obligation_exc:
+            _ledger = None
+            _obligation = None
+            logger.error("[LIFECYCLE_OBLIGATION] shadow event creation failed: %s",
+                         _obligation_exc)
+
+        try:
+            assert_emission_contract(event, dataset=DATASET_SHADOW_RUNTIME)
+            persisted = self._writer.append(
+                event=event,
+                symbol=event.get("symbol", "UNKNOWN"),
+                market_time_utc=int(event.get("event_market_time_utc_epoch_s", 0)),
+                broker_offset_seconds=int(event.get("broker_offset_seconds", 0)),
+            )
+            if _ledger is not None and _obligation is not None:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _ledger, _obligation, succeeded=persisted is not False,
+                    observed_record_id=str(event.get("event_id") or "") or None,
+                    failure_reason="SHADOW_RUNTIME_LOCAL_WRITE_FAILED",
+                    provenance={"local_path_authority": "LOCAL_ONLY"},
+                )
+        except Exception as exc:
+            if _ledger is not None and _obligation is not None:
+                try:
+                    from core.lifecycle_evidence_obligations import record_producer_outcome
+                    record_producer_outcome(
+                        _ledger, _obligation, succeeded=False,
+                        failure_reason=f"SHADOW_RUNTIME_PRODUCER_EXCEPTION:{type(exc).__name__}",
+                    )
+                except Exception:
+                    pass
+            raise
 
     # ─────────────────────────────────────────────────────────────────────
     # PLAN + OPEN (branch point entry)
@@ -328,6 +379,7 @@ class ShadowRuntime:
 
         # ─── PLAN event — always written, even when nothing constructs ────
         plan_ev = self._envelope(
+            event_id=f"PLAN:{plan_id}",
             event_type="PLAN",
             symbol=symbol,
             market_time_utc=bar_time_utc,
@@ -402,6 +454,7 @@ class ShadowRuntime:
             )
 
             ev = self._envelope(
+                event_id=f"{trade_id}:OPEN",
                 event_type="OPEN",
                 symbol=symbol,
                 market_time_utc=bar_time_utc,
@@ -649,6 +702,8 @@ class ShadowRuntime:
     def _progress(self, *, sim: dict[str, Any]) -> None:
         """Periodic checkpoint (contract §19)."""
         ev = self._envelope(
+            event_id=(f"{sim['trade_id']}:PROGRESS:{sim['lifecycle'].bars_elapsed}:"
+                      f"{sim['lifecycle'].last_evaluated_bar_time}"),
             event_type="PROGRESS",
             symbol=sim["definition"]["symbol"],
             market_time_utc=sim["lifecycle"].last_evaluated_bar_time,
@@ -699,6 +754,7 @@ class ShadowRuntime:
 
         ms = utc_ms()
         ev = self._envelope(
+            event_id=f"{sim['trade_id']}:CLOSE",
             event_type="CLOSE",
             symbol=sim["definition"]["symbol"],
             market_time_utc=exit_market_time,

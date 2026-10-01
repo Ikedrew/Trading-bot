@@ -196,6 +196,13 @@ def isolate_runtime_persistence_dirs(tmp_path, monkeypatch):
         "core.execution_context._LOCAL_DIR", str(tmp_path / "execution_context")
     )
     monkeypatch.setattr("core.event_stream._EVENT_DIR", tmp_path / "events")
+    monkeypatch.setattr(
+        "core.lifecycle_evidence_obligations.DEFAULT_LEDGER_PATH",
+        tmp_path.parent / f"{tmp_path.name}_lifecycle_evidence_obligations.jsonl",
+    )
+    monkeypatch.setattr(
+        "core.lifecycle_evidence_obligations._DEFAULT_LEDGER", None
+    )
     # Config-level injection hooks (each module resolves these via
     # getattr(config, ...) on every call, so patching core.config is the
     # canonical redirection mechanism — no production code special-casing):

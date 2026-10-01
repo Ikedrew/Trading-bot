@@ -129,9 +129,35 @@ def persist_strategy_observation(record: dict[str, Any]) -> bool:
     Returns:
         True if local write succeeded, False otherwise.
     """
+    _ledger = None
+    _obligation = None
     try:
         symbol = record.get("symbol", "UNKNOWN")
         ts = record.get("timestamp_utc", 0)
+        _observation_id = str(record.get("observation_id") or "")
+        _entity_id = str(record.get("entity_id") or "")
+        try:
+            from core.lifecycle_evidence_obligations import (
+                create_dataset_obligation, obligation_ledger,
+            )
+            _ledger = obligation_ledger()
+            _obligation = create_dataset_obligation(
+                _ledger,
+                event_id=f"strategy-observation:{_entity_id}:{_observation_id}",
+                lifecycle_stage="STRATEGY_OBSERVER",
+                dataset="strategy_observations",
+                identity={"entity_id": _entity_id,
+                          "observation_id": _observation_id,
+                          "symbol": symbol},
+                timestamp=str(ts),
+                producer="core.strategies.observation_persistence.persist_strategy_observation",
+                trigger="STRATEGY_OBSERVER_REACHED",
+            )
+        except Exception as _obligation_exc:
+            _ledger = None
+            _obligation = None
+            logger.warning("[LIFECYCLE_OBLIGATION] strategy observation creation failed: %s",
+                           _obligation_exc)
 
         if isinstance(ts, (int, float)) and ts > 1_000_000_000:
             date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
@@ -151,12 +177,29 @@ def persist_strategy_observation(record: dict[str, Any]) -> bool:
         finally:
             os.close(fd)
 
+        if _ledger is not None and _obligation is not None:
+            from core.lifecycle_evidence_obligations import record_producer_outcome
+            record_producer_outcome(
+                _ledger, _obligation, succeeded=True,
+                observed_record_id=_observation_id or None,
+                provenance={"local_path_authority": "LOCAL_ONLY"},
+            )
+
         # ─── S3 MIRROR (SECONDARY) ───────────────────────────────────
         _write_s3(symbol, date_str, line)
 
         return True
 
     except Exception as exc:
+        if _ledger is not None and _obligation is not None:
+            try:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _ledger, _obligation, succeeded=False,
+                    failure_reason=f"STRATEGY_OBSERVATION_LOCAL_WRITE:{type(exc).__name__}",
+                )
+            except Exception:
+                pass
         logger.debug(
             "[STRATEGY_OBSERVATION_PERSIST] failed: symbol=%s error=%s",
             record.get("symbol", "?"), exc,

@@ -343,7 +343,7 @@ class DecisionLedgerWriter:
         self._total_written: int = 0
         self._total_errors: int = 0
 
-    def record(self, **kwargs: Any) -> None:
+    def record(self, **kwargs: Any) -> bool:
         """
         Record a decision cycle entry. Fire-and-forget. Never raises.
 
@@ -355,13 +355,18 @@ class DecisionLedgerWriter:
                 # Hard ceiling: drop oldest if buffer exceeds 5x batch size
                 # This prevents unbounded memory growth on persistent flush failure
                 if len(self._buffer) >= self._flush_batch_size * 5:
+                    dropped = self._buffer[:-(self._flush_batch_size * 4)]
                     self._buffer = self._buffer[-(self._flush_batch_size * 4):]
                     self._total_errors += 1
+                    self._resolve_lifecycle(dropped, succeeded=False,
+                                            failure_reason="DECISION_LEDGER_BUFFER_OVERFLOW")
                 self._buffer.append(entry)
                 if len(self._buffer) >= self._flush_batch_size:
                     self._flush_locked()
+            return True
         except Exception:
             self._total_errors += 1
+            return False
 
     def write(self, entry: dict[str, Any]) -> bool:
         """
@@ -379,8 +384,11 @@ class DecisionLedgerWriter:
                 # Hard ceiling: drop oldest if buffer exceeds 5x batch size
                 # This prevents unbounded memory growth on persistent flush failure
                 if len(self._buffer) >= self._flush_batch_size * 5:
+                    dropped = self._buffer[:-(self._flush_batch_size * 4)]
                     self._buffer = self._buffer[-(self._flush_batch_size * 4):]
                     self._total_errors += 1
+                    self._resolve_lifecycle(dropped, succeeded=False,
+                                            failure_reason="DECISION_LEDGER_BUFFER_OVERFLOW")
                 self._buffer.append(entry)
                 if len(self._buffer) >= self._flush_batch_size:
                     self._flush_locked()
@@ -418,25 +426,31 @@ class DecisionLedgerWriter:
             return
 
         # Group by (symbol, date) for partitioned writes
-        partitions: dict[tuple[str, str], list[str]] = {}
+        partitions: dict[tuple[str, str], tuple[list[str], list[dict[str, Any]]]] = {}
         for entry in self._buffer:
             symbol = entry.get("symbol", "UNKNOWN")
             date_str = entry["timestamp"][:10]  # YYYY-MM-DD from ISO
             key = (symbol, date_str)
             line = json.dumps(entry, separators=(",", ":"), default=str) + "\n"
-            partitions.setdefault(key, []).append(line)
+            lines, entries = partitions.setdefault(key, ([], []))
+            lines.append(line)
+            entries.append(entry)
 
         # Write each partition
-        for (symbol, date_str), lines in partitions.items():
-            self._write_local(symbol, date_str, lines)
+        for (symbol, date_str), (lines, entries) in partitions.items():
+            local_written = self._write_local(symbol, date_str, lines)
+            self._resolve_lifecycle(
+                entries, succeeded=local_written,
+                failure_reason="DECISION_LEDGER_LOCAL_WRITE_FAILED",
+            )
             self._write_s3(symbol, date_str, lines)
 
         self._total_written += len(self._buffer)
         self._buffer.clear()
         self._last_flush = _time.time()
 
-    def _write_local(self, symbol: str, date_str: str, lines: list[str]) -> None:
-        """Append lines to local JSONL partition. Never raises."""
+    def _write_local(self, symbol: str, date_str: str, lines: list[str]) -> bool:
+        """Append lines to local JSONL partition and report fsync success."""
         try:
             local_path = self._local_dir / symbol / f"{date_str}.jsonl"
             local_path.parent.mkdir(parents=True, exist_ok=True)
@@ -446,9 +460,43 @@ class DecisionLedgerWriter:
                 os.fsync(fd)
             finally:
                 os.close(fd)
+            return True
         except Exception as exc:
             self._total_errors += 1
             logger.debug("[DECISION_LEDGER] local_write_failed: %s", exc)
+            return False
+
+    @staticmethod
+    def _resolve_lifecycle(
+        entries: list[dict[str, Any]], *, succeeded: bool,
+        failure_reason: str = "",
+    ) -> None:
+        try:
+            from core.lifecycle_evidence_obligations import (
+                ObligationStatus, obligation_ledger, record_producer_outcome,
+            )
+            ledger = obligation_ledger()
+            for entry in entries:
+                decision_id = str(entry.get("decision_id") or "")
+                if not decision_id:
+                    logger.critical("[DECISION_LEDGER_OBLIGATION_ID_MISSING]")
+                    continue
+                matches = ledger.find_exact(
+                    "decision_ledger", {"decision_id": decision_id})
+                if len(matches) != 1:
+                    logger.critical(
+                        "[DECISION_LEDGER_OBLIGATION_MATCH_COUNT] decision_id=%s count=%d",
+                        decision_id, len(matches),
+                    )
+                    continue
+                record_producer_outcome(
+                    ledger, matches[0], succeeded=succeeded,
+                    observed_record_id=decision_id,
+                    failure_reason=failure_reason,
+                    provenance={"local_path_authority": "LOCAL_ONLY"},
+                )
+        except Exception as exc:
+            logger.error("[DECISION_LEDGER_OBLIGATION_UPDATE_FAILED] %s", exc)
 
     def _write_s3(self, symbol: str, date_str: str, lines: list[str]) -> None:
         """Create an immutable batch in the S3 partition. Never raises."""

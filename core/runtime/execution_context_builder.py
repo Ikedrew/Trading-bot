@@ -70,7 +70,10 @@ def build_cycle_context(
         Correlation ID string (empty string on failure).
     """
     _cor_id_cycle = ""
+    _cycle_obligations = None
+    _event_id = ""
     try:
+        _event_id = f"cycle:{sym_state.symbol}:{int(closed_time)}:{cycle_id}"
         _spread_cycle = ask - bid if (bid > 0 and ask > 0) else 0.0
         _atr_cycle = getattr(sym_state.engine_state, "volatility_filter", 0.0) or 0.0
         _spread_atr_cycle = (_spread_cycle / _atr_cycle) if _atr_cycle > 0 else 0.0
@@ -91,6 +94,22 @@ def build_cycle_context(
             symbol=sym_state.symbol,
             timestamp=float(closed_time),
         )
+        try:
+            from core.lifecycle_evidence_obligations import (
+                begin_active_cycle, obligation_ledger,
+            )
+            _cycle_obligations = begin_active_cycle(
+                obligation_ledger(), event_id=_event_id,
+                symbol=sym_state.symbol, cycle_id=cycle_id,
+                entity_id=f"{sym_state.symbol}_{int(closed_time)}",
+                correlation_id=_cor_id_cycle,
+                timestamp=str(int(closed_time)),
+            )
+        except Exception as exc:
+            logger.critical(
+                "[LIFECYCLE_OBLIGATION_CREATE_FAILED] stage=ACTIVE_CYCLE symbol=%s cycle=%s error=%s",
+                getattr(sym_state, "symbol", "<unknown>"), cycle_id, type(exc).__name__,
+            )
         _exec_ctx_cycle = build_execution_context(
             correlation_id=_cor_id_cycle,
             symbol=sym_state.symbol,
@@ -126,7 +145,37 @@ def build_cycle_context(
             _ctx_record["cycle_id"] = cycle_id
         except Exception:
             pass
-        persist_execution_context(_ctx_record)
-    except Exception:
-        pass  # Execution context must never block trading
+        _persisted = persist_execution_context(_ctx_record)
+        if _cycle_obligations is not None:
+            from core.lifecycle_evidence_obligations import (
+                obligation_ledger, record_producer_outcome,
+            )
+            record_producer_outcome(
+                obligation_ledger(), _cycle_obligations[0],
+                succeeded=bool(_persisted),
+                observed_record_id=_cor_id_cycle,
+                failure_reason="EXECUTION_CONTEXT_LOCAL_PERSIST_FAILED",
+                provenance={"persistence_scope": "LOCAL_FSYNC",
+                            "s3_mirror_acknowledgement": "NOT_OBSERVED"},
+            )
+    except Exception as exc:
+        logger.exception(
+            "[EXECUTION_CONTEXT_BUILD_FAILED] symbol=%s cycle=%s",
+            getattr(sym_state, "symbol", "<unknown>"), cycle_id,
+        )
+        if _cycle_obligations is not None:
+            try:
+                from core.lifecycle_evidence_obligations import (
+                    ObligationStatus, obligation_ledger,
+                )
+                obligation_ledger().update(
+                    _cycle_obligations[0].obligation_id,
+                    ObligationStatus.PRODUCER_FAILED,
+                    failure_reason=f"EXECUTION_CONTEXT_PRODUCER_EXCEPTION:{type(exc).__name__}",
+                )
+            except Exception:
+                logger.critical(
+                    "[LIFECYCLE_OBLIGATION_LEDGER_FAILED] dataset=execution_context symbol=%s cycle=%s",
+                    getattr(sym_state, "symbol", "<unknown>"), cycle_id,
+                )
     return _cor_id_cycle

@@ -182,6 +182,63 @@ def verify_protection(
         decision_id=_owner.decision_id if _owner else "",
     )
 
+    _lifecycle_ledger = None
+    _protection_obligation = None
+    try:
+        from core.accounts.position_state import position_key
+        from core.lifecycle_evidence_obligations import (
+            create_filled_position_obligations, obligation_ledger,
+        )
+        _lifecycle_ledger = obligation_ledger()
+        _account_id = str(getattr(_owner, "account_id", "") or "")
+        _trade_id = position_key(_owner) if _owner is not None and _account_id else ""
+        _correlation_id = str(
+            correlation_id or getattr(_owner, "correlation_id", "") or "")
+        _event_account = _account_id or "MISSING_ACCOUNT"
+        _protection_obligation, _ = create_filled_position_obligations(
+            _lifecycle_ledger,
+            event_id=(f"filled-position:{_event_account}:{position_ticket}:"
+                      f"{symbol}:{_correlation_id}"),
+            identity={
+                "correlation_id": _correlation_id,
+                "account_id": _account_id,
+                "trade_id": _trade_id,
+                "position_ticket": position_ticket,
+                "symbol": symbol,
+                "broker": str(getattr(_owner, "broker", "") or ""),
+                "broker_server": str(getattr(_owner, "broker_server", "") or ""),
+                "canonical_opportunity_id": str(
+                    getattr(_owner, "canonical_opportunity_id", "") or ""),
+                "decision_id": str(getattr(_owner, "decision_id", "") or ""),
+            },
+            timestamp="",
+        )
+    except Exception as _obligation_exc:
+        _lifecycle_ledger = None
+        _protection_obligation = None
+        logger.warning("[LIFECYCLE_OBLIGATION] fill creation failed: %s",
+                       _obligation_exc)
+
+    def _persist_verification() -> bool:
+        persisted = _persist_result(result, symbol)
+        if _lifecycle_ledger is not None and _protection_obligation is not None:
+            try:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _lifecycle_ledger, _protection_obligation,
+                    succeeded=persisted,
+                    observed_record_id=(
+                        f"{getattr(_owner, 'account_id', '') or 'MISSING_ACCOUNT'}:"
+                        f"{position_ticket}"
+                    ),
+                    failure_reason="PROTECTION_AUDIT_LOCAL_WRITE_FAILED",
+                    provenance={"local_path_authority": "LOCAL_ONLY"},
+                )
+            except Exception as _obligation_exc:
+                logger.warning("[LIFECYCLE_OBLIGATION] protection outcome update failed: %s",
+                               _obligation_exc)
+        return persisted
+
     try:
         # ─── QUERY BROKER FOR POSITION STATE ──────────────────────────
         broker_sl, broker_tp, found, attempts, match_method = _query_broker_position(
@@ -199,7 +256,7 @@ def verify_protection(
                 "[PROTECTION_CRITICAL] %s ticket=%d — POSITION NOT FOUND on broker",
                 symbol, position_ticket,
             )
-            _persist_result(result, symbol)
+            _persist_verification()
             return result
 
         result.broker_confirmed_sl = broker_sl
@@ -221,7 +278,7 @@ def verify_protection(
                 "[PROTECTION_VERIFIED] %s ticket=%d sl=%.5f tp=%.5f",
                 symbol, position_ticket, broker_sl, broker_tp,
             )
-            _persist_result(result, symbol)
+            _persist_verification()
             return result
 
         # ─── PROTECTION PROBLEM DETECTED ─────────────────────────────
@@ -319,7 +376,7 @@ def verify_protection(
         )
 
     result.verification_latency_ms = int((time.perf_counter() - t0) * 1000)
-    _persist_result(result, symbol)
+    _persist_verification()
     return result
 
 
@@ -343,6 +400,12 @@ def _query_broker_position(*, position_ticket, symbol, volume=0., magic=713001,
             time.sleep(delay)
         positions = router.read(ownership, 'positions_get', magic=magic)
         if positions:
+            if (len(positions) != 1
+                    or int(getattr(positions[0], "ticket", 0) or 0)
+                    != int(ownership.position_ticket)
+                    or str(getattr(positions[0], "symbol", "") or "")
+                    != str(ownership.broker_symbol or "")):
+                raise AccountReadError("POSITION_IDENTITY_MISMATCH")
             pos = positions[0]
             return float(pos.sl), float(pos.tp), True, attempt, 'account_ticket_match'
     return 0., 0., False, 4, 'not_found'
@@ -429,8 +492,8 @@ def _emit_discord_alert(symbol: str, ticket: int, result: ProtectionVerification
 # PERSISTENCE
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _persist_result(result: ProtectionVerificationResult, symbol: str) -> None:
-    """Persist verification result to local JSONL + S3 mirror. Fire-and-forget."""
+def _persist_result(result: ProtectionVerificationResult, symbol: str) -> bool:
+    """Persist verification result locally and report local fsync success."""
     try:
         now = datetime.now(timezone.utc)
         date_str = now.strftime("%Y-%m-%d")
@@ -453,8 +516,10 @@ def _persist_result(result: ProtectionVerificationResult, symbol: str) -> None:
             _write_s3_protection_audit(symbol, date_str, line + "\n")
         except Exception:
             pass
+        return True
     except Exception as exc:
         logger.error("[PROTECTION_PERSIST_ERROR] %s", exc)
+        return False
 
 
 def _write_s3_protection_audit(symbol: str, date_str: str, line: str) -> None:

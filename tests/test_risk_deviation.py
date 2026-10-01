@@ -235,7 +235,7 @@ class TestWinningTrade:
         assert result.risk_classification == RiskClassification.WIN
 
     def test_breakeven_trade(self):
-        """Trade exits at entry → actual_risk_R = 0.0, still WIN."""
+        """Valid geometry plus exit-at-entry is measured zero R, not missing data."""
         result = compute_risk_deviation(
             trade_id="pos_011",
             symbol="EURUSD",
@@ -246,8 +246,8 @@ class TestWinningTrade:
             initial_sl=1.09950,
         )
 
-        assert result.actual_risk_R is None
-        assert result.risk_deviation is None
+        assert result.actual_risk_R == 0.0
+        assert result.risk_deviation == 0.0
         assert result.risk_classification == RiskClassification.WIN
 
 

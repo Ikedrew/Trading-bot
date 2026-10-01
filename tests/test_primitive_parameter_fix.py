@@ -24,7 +24,7 @@ from research_engine.v10.runner.primitives.implementations import (
     build_default_registry,
 )
 from research_engine.v10.runner.question_runner import QuestionRunner, RunContext
-from research_engine.v10.universes.question_bank import QUESTION_BANK, get_question
+from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK, get_question
 
 
 class TestParameterMapping:

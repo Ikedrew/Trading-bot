@@ -237,7 +237,7 @@ class CockpitDataAggregator:
         if not questions_dir.exists():
             return
 
-        from research_engine.v10.universes.question_bank import QUESTION_BANK
+        from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK
 
         for q in QUESTION_BANK:
             summary = self._build_question_summary(q, questions_dir)
