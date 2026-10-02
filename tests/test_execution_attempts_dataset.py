@@ -836,6 +836,8 @@ class TestBrokerProtectionFields:
         with patch("core.persistence.execution_attempts_writer._LOCAL_DIR", str(tmpdir)):
             ok = persist_execution_attempt(
                 attempt_id="ATT-PROT-1",
+                correlation_id="COR-PROT-1",
+                account_id="ACCOUNT-A",
                 symbol="EURUSD",
                 action_type="ENTRY",
                 attempt_number=1,
@@ -867,6 +869,8 @@ class TestBrokerProtectionFields:
         with patch("core.persistence.execution_attempts_writer._LOCAL_DIR", str(tmpdir)):
             ok = persist_execution_attempt(
                 attempt_id="ATT-PROT-2",
+                correlation_id="COR-PROT-2",
+                account_id="ACCOUNT-A",
                 symbol="EURUSD",
                 action_type="SLTP_MODIFY",
                 attempt_number=1,

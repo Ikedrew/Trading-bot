@@ -333,8 +333,8 @@ class TestPersistence:
         assert obligation.current_status == ObligationStatus.NOT_YET_DUE.value
         assert obligation.provenance["canonical_mirror_acknowledgement"] == "NOT_OBSERVED"
 
-    @patch("core.assessment.persistence._write_s3")
-    def test_s3_mirror_called(self, mock_s3):
+    @patch("core.canonical_delivery.enqueue_canonical_delivery")
+    def test_outbox_handoff_called(self, mock_enqueue):
         result = _engine_result_execute()
         a = build_assessment(engine_result=result, symbol="GBPUSD", cycle_id=4578, bar_time=1784809820)
 
@@ -346,7 +346,8 @@ class TestPersistence:
                             with patch("core.assessment.persistence.Path.mkdir"):
                                 persist_assessment(a)
 
-        mock_s3.assert_called_once()
-        call_args = mock_s3.call_args
-        assert call_args[0][0] == "GBPUSD"  # symbol
-        assert "assessments_v1" in call_args[0][2]  # line contains schema_version
+        mock_enqueue.assert_called_once()
+        call_args = mock_enqueue.call_args.kwargs
+        assert call_args["symbol"] == "GBPUSD"
+        assert call_args["dataset"] == "assessments"
+        assert call_args["payload"]["schema_version"] == "assessments_v1"

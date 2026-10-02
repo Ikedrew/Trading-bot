@@ -443,7 +443,19 @@ class DecisionLedgerWriter:
                 entries, succeeded=local_written,
                 failure_reason="DECISION_LEDGER_LOCAL_WRITE_FAILED",
             )
-            self._write_s3(symbol, date_str, lines)
+            if local_written:
+                try:
+                    from core.canonical_delivery import enqueue_canonical_batch
+                    enqueue_canonical_batch(
+                        dataset="decision_ledger", payloads=entries,
+                        symbol=symbol, partition_date=date_str,
+                    )
+                except Exception as exc:
+                    self._total_errors += 1
+                    logger.error(
+                        "[DECISION_LEDGER_OUTBOX_HANDOFF_FAILED] symbol=%s error=%s",
+                        symbol, type(exc).__name__,
+                    )
 
         self._total_written += len(self._buffer)
         self._buffer.clear()
@@ -499,50 +511,12 @@ class DecisionLedgerWriter:
             logger.error("[DECISION_LEDGER_OBLIGATION_UPDATE_FAILED] %s", exc)
 
     def _write_s3(self, symbol: str, date_str: str, lines: list[str]) -> None:
-        """Create an immutable batch in the S3 partition. Never raises."""
-        try:
-            from core import config as _cfg
-            if not getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
-                return
-
-            import boto3
-            from botocore.config import Config as BotoConfig
-            s3 = boto3.client(
-                "s3",
-                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-                region_name=os.getenv("AWS_REGION", "eu-west-2"),
-                config=BotoConfig(
-                    connect_timeout=3,
-                    read_timeout=5,
-                    retries={"max_attempts": 0},
-                ),
-            )
-            from core.production_data_contract import canonical_s3_key
-            # Match the event writer's immutable/create-only model. A fresh UUID
-            # per batch avoids shared counters across threads, writers or restarts.
-            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-            key = canonical_s3_key(
-                "decision_ledger", symbol=symbol, date=date_str,
-                part=f"part-{stamp}-{uuid4().hex}.jsonl",
-            )
-            body = "".join(lines)
-
-            s3.put_object(
-                Bucket=_S3_BUCKET, Key=key,
-                Body=body.encode("utf-8"),
-                ContentType="application/x-ndjson",
-                IfNoneMatch="*",  # A collision must fail, never replace data.
-            )
-            from core.s3_write_observability import record_s3_success
-            record_s3_success("decision_ledger")
-        except Exception as _exc:
-            # Non-blocking: local write is authoritative; surface (not silent).
-            try:
-                from core.s3_write_observability import record_s3_failure
-                record_s3_failure("decision_ledger", _exc)
-            except Exception:
-                pass  # S3 failure must never affect runtime
+        """Compatibility name for deterministic per-record outbox handoff."""
+        from core.canonical_delivery import enqueue_canonical_jsonl
+        enqueue_canonical_jsonl(
+            dataset="decision_ledger", content="".join(lines), symbol=symbol,
+            partition_date=date_str,
+        )
 
     def stats(self) -> dict[str, Any]:
         """Return writer statistics."""

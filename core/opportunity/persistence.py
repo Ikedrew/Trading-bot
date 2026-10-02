@@ -108,10 +108,14 @@ def persist_opportunity(opportunity: Opportunity) -> bool:
             )
 
         # ─── S3 MIRROR (Hive-partitioned, fire-and-forget) ───────────
-        try:
-            _write_s3_opportunity(opportunity.symbol, date_str, line + "\n")
-        except Exception:
-            pass  # S3 failure must NEVER affect opportunity persistence
+        from core.canonical_delivery import enqueue_canonical_delivery
+        enqueue_canonical_delivery(
+            dataset="opportunities", payload=record,
+            symbol=opportunity.symbol, partition_date=date_str,
+            lifecycle_obligation_id=(
+                _obligation.obligation_id if _obligation is not None else None
+            ),
+        )
         # ─── END S3 MIRROR ────────────────────────────────────────────
         return True
 
@@ -195,10 +199,12 @@ def persist_opportunity_batch(opportunities: list[Opportunity]) -> bool:
             _persisted = True
 
             # ─── S3 MIRROR (batch — one put per symbol/date) ─────────
-            try:
-                _write_s3_opportunity_batch(symbol, date_str, content)
-            except Exception:
-                pass  # S3 failure must NEVER affect opportunity persistence
+            from core.canonical_delivery import enqueue_canonical_batch
+            enqueue_canonical_batch(
+                dataset="opportunities",
+                payloads=[json.loads(item) for item in lines],
+                symbol=symbol, partition_date=date_str,
+            )
             # ─── END S3 MIRROR ────────────────────────────────────────
 
         from core.lifecycle_evidence_obligations import record_producer_outcome
@@ -234,99 +240,18 @@ def persist_opportunity_batch(opportunities: list[Opportunity]) -> bool:
 
 
 def _write_s3_opportunity(symbol: str, date_str: str, line: str) -> None:
-    """
-    Mirror opportunity record to S3. Fire-and-forget. Never raises.
-
-    S3 Layout (Hive-compatible, Athena-queryable):
-        opportunities/schema_version=opportunities_v1/symbol={SYMBOL}/date={DATE}/part-000.jsonl
-
-    Partition keys:
-        - schema_version: enables future schema evolution
-        - symbol: enables per-pair opportunity analysis
-        - date: enables time-range partition pruning
-    """
-    try:
-        from core import config as _cfg
-        if not getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
-            return
-
-        import boto3
-        from botocore.config import Config as BotoConfig
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION", "eu-west-2"),
-            config=BotoConfig(
-                connect_timeout=3,
-                read_timeout=5,
-                retries={"max_attempts": 0},
-            ),
-        )
-        key = (
-            f"{_S3_PREFIX}/schema_version={_SCHEMA_VERSION}"
-            f"/symbol={symbol}/date={date_str}/part-000.jsonl"
-        )
-        body = line
-
-        # Read-append-write (acceptable for opportunity volume)
-        try:
-            existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
-            body = existing["Body"].read().decode("utf-8") + body
-        except Exception:
-            pass  # New file
-
-        s3.put_object(
-            Bucket=_S3_BUCKET, Key=key,
-            Body=body.encode("utf-8"),
-            ContentType="application/x-ndjson",
-        )
-    except Exception:
-        pass  # S3 failure must NEVER affect opportunity persistence
+    """Compatibility entry point; canonical delivery is now outbox-owned."""
+    from core.canonical_delivery import enqueue_canonical_jsonl
+    enqueue_canonical_jsonl(
+        dataset="opportunities", content=line, symbol=symbol,
+        partition_date=date_str,
+    )
 
 
 def _write_s3_opportunity_batch(symbol: str, date_str: str, content: str) -> None:
-    """
-    Mirror a batch of opportunity records to S3. Fire-and-forget. Never raises.
-
-    Same S3 key format as _write_s3_opportunity — appends to existing object.
-    More efficient: one S3 round-trip per symbol/date batch instead of per record.
-    """
-    try:
-        from core import config as _cfg
-        if not getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
-            return
-
-        import boto3
-        from botocore.config import Config as BotoConfig
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION", "eu-west-2"),
-            config=BotoConfig(
-                connect_timeout=3,
-                read_timeout=5,
-                retries={"max_attempts": 0},
-            ),
-        )
-        key = (
-            f"{_S3_PREFIX}/schema_version={_SCHEMA_VERSION}"
-            f"/symbol={symbol}/date={date_str}/part-000.jsonl"
-        )
-        body = content
-
-        # Read-append-write (acceptable for opportunity volume)
-        try:
-            existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
-            body = existing["Body"].read().decode("utf-8") + body
-        except Exception:
-            pass  # New file
-
-        s3.put_object(
-            Bucket=_S3_BUCKET, Key=key,
-            Body=body.encode("utf-8"),
-            ContentType="application/x-ndjson",
-        )
-    except Exception:
-        pass  # S3 failure must NEVER affect opportunity persistence
+    """Compatibility entry point; each record is independently enqueued."""
+    from core.canonical_delivery import enqueue_canonical_jsonl
+    enqueue_canonical_jsonl(
+        dataset="opportunities", content=content, symbol=symbol,
+        partition_date=date_str,
+    )

@@ -79,39 +79,19 @@ class MarketContextPersistence:
             finally:
                 os.close(fd)
 
-            # S3 mirror (fire-and-forget)
-            try:
-                from core import config as _cfg
-                if getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
-                    self._s3_append(symbol, date_str, line)
-            except Exception:
-                pass
+            from core.canonical_delivery import enqueue_canonical_delivery
+            enqueue_canonical_delivery(
+                dataset="market_context", payload=context_dict, symbol=symbol,
+                partition_date=date_str,
+            )
 
         except Exception as exc:
             logger.debug("[MARKET_CONTEXT_PERSIST_FAIL] %s", exc)
 
     def _s3_append(self, symbol: str, date_str: str, line: str) -> None:
-        """Append line to S3. Never raises."""
-        try:
-            import boto3
-            s3 = boto3.client(
-                "s3",
-                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-                region_name=os.getenv("AWS_REGION", "eu-west-2"),
-            )
-            key = f"{_S3_PREFIX}/schema_version={_SCHEMA_VERSION}/symbol={symbol}/date={date_str}/part-000.jsonl"
-
-            try:
-                existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
-                body = existing["Body"].read().decode("utf-8") + line
-            except Exception:
-                body = line
-
-            s3.put_object(
-                Bucket=_S3_BUCKET, Key=key,
-                Body=body.encode("utf-8"),
-                ContentType="application/x-ndjson",
-            )
-        except Exception:
-            pass  # S3 failure must never affect runtime
+        """Compatibility name for the governed durable handoff."""
+        from core.canonical_delivery import enqueue_canonical_jsonl
+        enqueue_canonical_jsonl(
+            dataset="market_context", content=line, symbol=symbol,
+            partition_date=date_str,
+        )

@@ -180,51 +180,20 @@ def persist_execution_attempt(
         finally:
             os.close(fd)
 
-        _write_s3(symbol, date_str, line)
+        from core.canonical_delivery import enqueue_canonical_delivery
+        enqueue_canonical_delivery(
+            dataset="execution_attempts", payload=record, symbol=symbol,
+            partition_date=date_str,
+        )
         return True
     except Exception:
         return False
 
 
 def _write_s3(symbol: str, date_str: str, line: str) -> None:
-    """Mirror to S3. Fire-and-forget. Never raises."""
-    try:
-        from core import config as _cfg
-        if not getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
-            return
-
-        import boto3
-        from botocore.config import Config as BotoConfig
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION", "eu-west-2"),
-            config=BotoConfig(
-                connect_timeout=3,
-                read_timeout=5,
-                retries={"max_attempts": 0},
-            ),
-        )
-        key = (
-            f"{_S3_PREFIX}/"
-            f"schema_version={_SCHEMA_VERSION}/"
-            f"symbol={symbol}/"
-            f"date={date_str}/"
-            f"part-000.jsonl"
-        )
-        body = line + "\n"
-
-        try:
-            existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
-            body = existing["Body"].read().decode("utf-8") + body
-        except Exception:
-            pass
-
-        s3.put_object(
-            Bucket=_S3_BUCKET, Key=key,
-            Body=body.encode("utf-8"),
-            ContentType="application/x-ndjson",
-        )
-    except Exception:
-        pass
+    """Compatibility name for the governed durable handoff."""
+    from core.canonical_delivery import enqueue_canonical_jsonl
+    enqueue_canonical_jsonl(
+        dataset="execution_attempts", content=line, symbol=symbol,
+        partition_date=date_str,
+    )

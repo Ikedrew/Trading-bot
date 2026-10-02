@@ -186,7 +186,14 @@ def persist_strategy_observation(record: dict[str, Any]) -> bool:
             )
 
         # ─── S3 MIRROR (SECONDARY) ───────────────────────────────────
-        _write_s3(symbol, date_str, line)
+        from core.canonical_delivery import enqueue_canonical_delivery
+        enqueue_canonical_delivery(
+            dataset="strategy_observations", payload=record, symbol=symbol,
+            partition_date=date_str,
+            lifecycle_obligation_id=(
+                _obligation.obligation_id if _obligation is not None else None
+            ),
+        )
 
         return True
 
@@ -224,54 +231,12 @@ def persist_observation_batch(records: list[dict[str, Any]]) -> int:
 
 
 def _write_s3(symbol: str, date_str: str, line: str) -> None:
-    """
-    Mirror a single observation line to S3. Fire-and-forget.
-
-    Pattern matches core/assessment/persistence.py and core/trade_truth_graph.py.
-    Never raises. Never blocks runtime.
-    """
-    try:
-        from core import config
-        if not getattr(config, "EVENT_STREAM_S3_MIRROR", False):
-            return
-
-        import boto3
-        from botocore.config import Config as BotoConfig
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION", "eu-west-2"),
-            config=BotoConfig(
-                connect_timeout=3,
-                read_timeout=5,
-                retries={"max_attempts": 0},
-            ),
-        )
-        from core.production_data_contract import canonical_s3_key
-        key = canonical_s3_key("strategy_observations", symbol=symbol, date=date_str)
-        body = line + "\n"
-
-        # Read-append-write (acceptable for observation volume)
-        try:
-            existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
-            body = existing["Body"].read().decode("utf-8") + body
-        except Exception:
-            pass  # New file
-
-        s3.put_object(
-            Bucket=_S3_BUCKET, Key=key,
-            Body=body.encode("utf-8"),
-            ContentType="application/x-ndjson",
-        )
-        from core.s3_write_observability import record_s3_success
-        record_s3_success("strategy_observations")
-    except Exception as _exc:
-        try:
-            from core.s3_write_observability import record_s3_failure
-            record_s3_failure("strategy_observations", _exc)
-        except Exception:
-            pass  # S3 failure must never affect runtime
+    """Compatibility entry point; canonical delivery is now outbox-owned."""
+    from core.canonical_delivery import enqueue_canonical_jsonl
+    enqueue_canonical_jsonl(
+        dataset="strategy_observations", content=line, symbol=symbol,
+        partition_date=date_str,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -493,8 +493,10 @@ def emit(
             "type": event_type_str,
         }
 
-        if symbol is not None:
-            event["symbol"] = symbol
+        # The governed event identity always includes symbol. Operational
+        # system-wide observations use an explicit sentinel, never a timestamp
+        # or inferred trading identity.
+        event["symbol"] = symbol or "SYSTEM"
 
         if timeframe is not None:
             event["timeframe"] = timeframe
@@ -538,13 +540,11 @@ def emit(
 
         _total_emitted += 1
 
-        # ─── S3 MIRROR (SECONDARY, NON-BLOCKING) ─────────────────────
-        # Fire-and-forget: exact same JSON, no transformation.
-        # S3 failure never affects return value or trading runtime.
-        try:
-            _s3_enqueue(line.rstrip("\n"), event)
-        except Exception:
-            pass  # S3 mirror failure must never affect emit result
+        from core.canonical_delivery import enqueue_canonical_delivery
+        enqueue_canonical_delivery(
+            dataset="events", payload=event,
+            symbol=event["symbol"], partition_date=date_str,
+        )
 
         return True
 

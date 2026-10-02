@@ -352,13 +352,11 @@ def persist_execution_context(ctx: ExecutionContext | dict[str, Any]) -> bool:
             record["market_access"]["spread"],
         )
 
-        # ─── S3 MIRROR (secondary, fire-and-forget) ──────────────────
-        try:
-            from core import config as _cfg
-            if getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
-                _s3_append(symbol, date_str, line)
-        except Exception:
-            pass  # S3 failure must never block local persistence
+        from core.canonical_delivery import enqueue_canonical_delivery
+        enqueue_canonical_delivery(
+            dataset="execution_context", payload=record, symbol=symbol,
+            partition_date=date_str,
+        )
 
         return True
 
@@ -368,36 +366,12 @@ def persist_execution_context(ctx: ExecutionContext | dict[str, Any]) -> bool:
 
 
 def _s3_append(symbol: str, date_str: str, line: str) -> None:
-    """Append to S3 execution_context partition. Fire-and-forget."""
-    try:
-        import boto3
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION", "eu-west-2"),
-        )
-        from core.production_data_contract import canonical_s3_key
-        key = canonical_s3_key("execution_context", symbol=symbol, date=date_str)
-        try:
-            existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
-            body = existing["Body"].read().decode("utf-8") + line
-        except Exception:
-            body = line
-        s3.put_object(
-            Bucket=_S3_BUCKET, Key=key,
-            Body=body.encode("utf-8"),
-            ContentType="application/x-ndjson",
-        )
-        from core.s3_write_observability import record_s3_success
-        record_s3_success("execution_context")
-    except Exception as _exc:
-        # Non-blocking: local write already succeeded; surface (not silent).
-        try:
-            from core.s3_write_observability import record_s3_failure
-            record_s3_failure("execution_context", _exc)
-        except Exception:
-            pass
+    """Compatibility name for the governed durable handoff."""
+    from core.canonical_delivery import enqueue_canonical_jsonl
+    enqueue_canonical_jsonl(
+        dataset="execution_context", content=line, symbol=symbol,
+        partition_date=date_str,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

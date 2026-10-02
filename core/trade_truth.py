@@ -426,16 +426,11 @@ def persist_trade_truth(record: dict[str, Any], *, local_dir: str = "logs/trade_
             record["outcome"]["net_profit"],
         )
 
-        # S3 mirror (fire-and-forget) — only when writing to production path
-        try:
-            from core import config as _cfg
-            _production_dir = Path("logs/trade_truth").resolve()
-            _actual_dir = Path(local_dir).resolve()
-            _is_production_path = (_actual_dir == _production_dir)
-            if _is_production_path and getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
-                _s3_persist(symbol, date_str, line)
-        except Exception:
-            pass
+        from core.canonical_delivery import enqueue_canonical_delivery
+        enqueue_canonical_delivery(
+            dataset="trade_truth", payload=record, symbol=symbol,
+            partition_date=date_str,
+        )
 
         return True
 
@@ -445,28 +440,12 @@ def persist_trade_truth(record: dict[str, Any], *, local_dir: str = "logs/trade_
 
 
 def _s3_persist(symbol: str, date_str: str, line: str) -> None:
-    """Fire-and-forget S3 write."""
-    try:
-        import boto3
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION", "eu-west-2"),
-        )
-        key = f"{_S3_TRADES_PREFIX}/schema_version={_SCHEMA_VERSION}/symbol={symbol}/date={date_str}/part-000.jsonl"
-        try:
-            existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
-            body = existing["Body"].read().decode("utf-8") + line
-        except Exception:
-            body = line
-        s3.put_object(
-            Bucket=_S3_BUCKET, Key=key,
-            Body=body.encode("utf-8"),
-            ContentType="application/x-ndjson",
-        )
-    except Exception:
-        pass
+    """Compatibility entry point; canonical delivery is now outbox-owned."""
+    from core.canonical_delivery import enqueue_canonical_jsonl
+    enqueue_canonical_jsonl(
+        dataset="trade_truth", content=line, symbol=symbol,
+        partition_date=date_str,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

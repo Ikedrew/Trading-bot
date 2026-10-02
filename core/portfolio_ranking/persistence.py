@@ -232,7 +232,14 @@ def persist_portfolio_ranking(
 
         # ─── S3 MIRROR ───────────────────────────────────────────────
         try:
-            _write_s3(date_str, line)
+            from core.canonical_delivery import enqueue_canonical_delivery
+            enqueue_canonical_delivery(
+                dataset="portfolio_rankings", payload=record, symbol="",
+                partition_date=date_str,
+                lifecycle_obligation_id=(
+                    _obligation.obligation_id if _obligation is not None else None
+                ),
+            )
         except Exception:
             pass
         return True
@@ -252,50 +259,9 @@ def persist_portfolio_ranking(
 
 
 def _write_s3(date_str: str, line: str) -> None:
-    """
-    Mirror ranking record to S3. Fire-and-forget. Never raises.
-
-    Follows standard pattern from decision_ledger.py.
-    """
-    try:
-        from core import config
-        if not getattr(config, "EVENT_STREAM_S3_MIRROR", False):
-            return
-
-        import boto3
-        from botocore.config import Config as BotoConfig
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION", "eu-west-2"),
-            config=BotoConfig(
-                connect_timeout=3,
-                read_timeout=5,
-                retries={"max_attempts": 0},
-            ),
-        )
-        from core.production_data_contract import canonical_s3_key
-        key = canonical_s3_key("portfolio_rankings", symbol="", date=date_str)
-        body = line + "\n"
-
-        # Read-append-write
-        try:
-            existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
-            body = existing["Body"].read().decode("utf-8") + body
-        except Exception:
-            pass  # New file
-
-        s3.put_object(
-            Bucket=_S3_BUCKET, Key=key,
-            Body=body.encode("utf-8"),
-            ContentType="application/x-ndjson",
-        )
-        from core.s3_write_observability import record_s3_success
-        record_s3_success("portfolio_rankings")
-    except Exception as _exc:
-        try:
-            from core.s3_write_observability import record_s3_failure
-            record_s3_failure("portfolio_rankings", _exc)
-        except Exception:
-            pass  # S3 failure must never affect runtime
+    """Compatibility entry point; canonical delivery is now outbox-owned."""
+    from core.canonical_delivery import enqueue_canonical_jsonl
+    enqueue_canonical_jsonl(
+        dataset="portfolio_rankings", content=line,
+        partition_date=date_str,
+    )

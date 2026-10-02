@@ -104,7 +104,14 @@ class ShadowEventWriter:
             finally:
                 os.close(fd)
 
-            self._mirror_s3(symbol, market_time_utc, broker_offset_seconds, line)
+            from core.canonical_delivery import enqueue_canonical_delivery
+            utc_date = datetime.fromtimestamp(
+                int(market_time_utc), tz=timezone.utc
+            ).strftime("%Y-%m-%d")
+            enqueue_canonical_delivery(
+                dataset="shadow_runtime", payload=event, symbol=symbol,
+                partition_date=utc_date,
+            )
             return True
         except Exception as exc:  # persistence must never affect any caller
             logger.debug("[SHADOW_RUNTIME_PERSIST_FAIL] %s", exc)
@@ -117,44 +124,15 @@ class ShadowEventWriter:
         broker_offset_seconds: int,
         line: str,
     ) -> None:
-        """S3 mirror. Fire-and-forget; never raises; gated by config."""
-        try:
-            from core import config as _cfg
-
-            if not getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
-                return
-
-            import boto3
-
-            from core.shadow.models import SCHEMA_VERSION
-
-            utc_date = datetime.fromtimestamp(
-                int(market_time_utc), tz=timezone.utc
-            ).strftime("%Y-%m-%d")
-            key = (
-                f"{_S3_PREFIX}/schema_version={SCHEMA_VERSION}"
-                f"/symbol={symbol}/date={utc_date}/part-000.jsonl"
-            )
-            s3 = boto3.client(
-                "s3",
-                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-                region_name=os.getenv("AWS_REGION", "eu-west-2"),
-            )
-            body = line
-            try:
-                existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
-                body = existing["Body"].read().decode("utf-8") + line
-            except Exception:
-                pass  # new object
-            s3.put_object(
-                Bucket=_S3_BUCKET,
-                Key=key,
-                Body=body.encode("utf-8"),
-                ContentType="application/x-ndjson",
-            )
-        except Exception:
-            pass  # mirror failure must never affect runtime
+        """Compatibility entry point; canonical delivery is outbox-owned."""
+        from core.canonical_delivery import enqueue_canonical_jsonl
+        utc_date = datetime.fromtimestamp(
+            int(market_time_utc), tz=timezone.utc
+        ).strftime("%Y-%m-%d")
+        enqueue_canonical_jsonl(
+            dataset="shadow_runtime", content=line, symbol=symbol,
+            partition_date=utc_date,
+        )
 
 
 def load_events(base_dir: str | None = None) -> list[dict[str, Any]]:

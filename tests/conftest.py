@@ -290,4 +290,7 @@ def isolate_runtime_persistence_dirs(tmp_path, monkeypatch):
         monkeypatch.setattr(
             f"core.config.{_cfg_sink}", str(tmp_path / _name), raising=False
         )
+    from core.canonical_delivery import configure_delivery_outbox
+    configure_delivery_outbox(tmp_path / "canonical_delivery_outbox.sqlite3")
     yield tmp_path
+    configure_delivery_outbox(None)

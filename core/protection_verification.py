@@ -511,11 +511,11 @@ def _persist_result(result: ProtectionVerificationResult, symbol: str) -> bool:
         finally:
             os.close(fd)
 
-        # S3 mirror (fire-and-forget)
-        try:
-            _write_s3_protection_audit(symbol, date_str, line + "\n")
-        except Exception:
-            pass
+        from core.canonical_delivery import enqueue_canonical_delivery
+        enqueue_canonical_delivery(
+            dataset="protection_audit", payload=record, symbol=symbol,
+            partition_date=date_str,
+        )
         return True
     except Exception as exc:
         logger.error("[PROTECTION_PERSIST_ERROR] %s", exc)
@@ -523,27 +523,9 @@ def _persist_result(result: ProtectionVerificationResult, symbol: str) -> bool:
 
 
 def _write_s3_protection_audit(symbol: str, date_str: str, line: str) -> None:
-    """Mirror to S3. Fire-and-forget. Never raises."""
-    try:
-        from core import config as _cfg
-        if not getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
-            return
-        import boto3
-        from botocore.config import Config as BotoConfig
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION", "eu-west-2"),
-            config=BotoConfig(connect_timeout=3, read_timeout=5, retries={"max_attempts": 0}),
-        )
-        key = f"{_S3_PREFIX}/schema_version={_SCHEMA_VERSION}/symbol={symbol}/date={date_str}/part-000.jsonl"
-        body = line
-        try:
-            existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
-            body = existing["Body"].read().decode("utf-8") + body
-        except Exception:
-            pass
-        s3.put_object(Bucket=_S3_BUCKET, Key=key, Body=body.encode("utf-8"), ContentType="application/x-ndjson")
-    except Exception:
-        pass
+    """Compatibility name for the governed durable handoff."""
+    from core.canonical_delivery import enqueue_canonical_jsonl
+    enqueue_canonical_jsonl(
+        dataset="protection_audit", content=line, symbol=symbol,
+        partition_date=date_str,
+    )

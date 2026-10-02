@@ -110,17 +110,18 @@ def _make_record(
     exit_time: float | None = None,
     pattern: str = "ENGULFING_BULLISH",
     close_reason: str = "take_profit",
+    account_id: str = "ACCOUNT-A",
 ) -> TradeRecord:
     """Quick helper to build a TradeRecord for testing."""
     pos = _make_position(position_id=trade_id, symbol=symbol, pattern=pattern)
     et = exit_time if exit_time is not None else pos.open_time + 3600
-    return build_trade_record(
+    return replace(build_trade_record(
         position=pos,
         exit_price=1.1050 if pnl > 0 else 1.0950,
         exit_time=et,
         close_reason=close_reason,
         realised_pnl_override=pnl,
-    )
+    ), account_id=account_id)
 
 
 # --- TEST: P&L CALCULATION ---------------------------------------------------

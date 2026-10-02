@@ -236,15 +236,16 @@ class TestPersistence:
         assert record["selected_symbol"] == ""
         assert record["candidates"] == []
 
-    @patch("core.portfolio_ranking.persistence._write_s3")
-    def test_s3_mirror_called(self, mock_s3, tmp_path):
+    @patch("core.canonical_delivery.enqueue_canonical_delivery")
+    def test_outbox_handoff_called(self, mock_enqueue, tmp_path):
         pool = _make_pool()
         with patch("core.portfolio_ranking.persistence._LOCAL_DIR", str(tmp_path / "rankings")):
             persist_portfolio_ranking(pool)
 
-        mock_s3.assert_called_once()
-        call_args = mock_s3.call_args[0]
-        assert "portfolio_ranking_v1" in call_args[1]  # line contains schema
+        mock_enqueue.assert_called_once()
+        call_args = mock_enqueue.call_args.kwargs
+        assert call_args["dataset"] == "portfolio_rankings"
+        assert call_args["payload"]["schema_version"] == "portfolio_ranking_v1"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

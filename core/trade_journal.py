@@ -406,55 +406,12 @@ def _date_from_timestamp(ts: float) -> str:
 
 
 def _write_s3_trade_journal(symbol: str, date_str: str, line: str) -> None:
-    """
-    Mirror trade journal record to S3. Fire-and-forget. Never raises.
-
-    S3 Layout (Hive-compatible, Athena-queryable):
-        trade_journal/schema_version=trade_journal_v1/symbol={SYMBOL}/date={DATE}/part-000.jsonl
-
-    Partition keys:
-        - schema_version: enables future schema evolution without breaking queries
-        - symbol: enables per-pair analysis
-        - date: enables time-range partition pruning
-    """
-    try:
-        from core import config as _cfg
-        if not getattr(_cfg, "EVENT_STREAM_S3_MIRROR", False):
-            return
-
-        import boto3
-        from botocore.config import Config as BotoConfig
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION", "eu-west-2"),
-            config=BotoConfig(
-                connect_timeout=3,
-                read_timeout=5,
-                retries={"max_attempts": 0},
-            ),
-        )
-        key = (
-            f"{_S3_PREFIX}/schema_version={_SCHEMA_VERSION}"
-            f"/symbol={symbol}/date={date_str}/part-000.jsonl"
-        )
-        body = line  # line already has trailing newline
-
-        # Read-append-write (acceptable for trade journal volume — max ~20 trades/day)
-        try:
-            existing = s3.get_object(Bucket=_S3_BUCKET, Key=key)
-            body = existing["Body"].read().decode("utf-8") + body
-        except Exception:
-            pass  # New file
-
-        s3.put_object(
-            Bucket=_S3_BUCKET, Key=key,
-            Body=body.encode("utf-8"),
-            ContentType="application/x-ndjson",
-        )
-    except Exception:
-        pass  # S3 failure must NEVER affect trade journal
+    """Compatibility entry point; canonical delivery is now outbox-owned."""
+    from core.canonical_delivery import enqueue_canonical_jsonl
+    enqueue_canonical_jsonl(
+        dataset="trade_journal", content=line, symbol=symbol,
+        partition_date=date_str,
+    )
 
 
 def persist_trade(record: TradeRecord) -> bool:
@@ -543,10 +500,14 @@ def persist_trade(record: TradeRecord) -> bool:
             )
 
         # ─── S3 MIRROR (Hive-partitioned, fire-and-forget) ───────────
-        try:
-            _write_s3_trade_journal(record.symbol, date_str, line)
-        except Exception:
-            pass  # S3 failure must NEVER affect trade journal persistence
+        from core.canonical_delivery import enqueue_canonical_delivery
+        enqueue_canonical_delivery(
+            dataset="trade_journal", payload=_record_to_dict(record),
+            symbol=record.symbol, partition_date=date_str,
+            lifecycle_obligation_id=(
+                _close_obligations[2].obligation_id if _close_obligations else None
+            ),
+        )
         # ─── END S3 MIRROR ────────────────────────────────────────────
 
         # ─── UNIFIED EVENT STREAM: OUTCOME ────────────────────────────

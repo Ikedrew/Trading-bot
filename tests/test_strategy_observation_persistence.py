@@ -118,6 +118,8 @@ class TestPersistence:
         records = [build_observation_record(
             observation_id=f"b-{i}", timestamp_utc=1719000000.0, symbol="EURUSD")
             for i in range(5)]
+        for i, record in enumerate(records):
+            record["entity_id"] = f"EURUSD_1719000000_{i}"
         assert persist_observation_batch(records) == 5
 
     def test_read_back(self):

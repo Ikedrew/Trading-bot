@@ -204,61 +204,16 @@ class S3BatchWriter:
         ).start()
 
     def _upload(self, key: str, body: bytes, event_count: int) -> None:
-        """Upload a single batch to S3 with retry."""
-        client = self._get_client()
-        if client is None:
-            self._total_errors += 1
-            return
-
-        max_retries = 3
-        for attempt in range(1, max_retries + 1):
-            try:
-                client.put_object(
-                    Bucket=self._bucket,
-                    Key=key,
-                    Body=body,
-                    ContentType="application/x-ndjson",
-                    # S3 must reject an astronomically unlikely generated-name
-                    # collision instead of replacing an existing production
-                    # object (HTTP 412 PreconditionFailed).
-                    IfNoneMatch="*",
-                )
-                self._total_flushed += event_count
-                self._total_batches += 1
-                logger.debug("[S3_BATCH] uploaded key=%s events=%d size=%d", key, event_count, len(body))
-                try:
-                    from core.s3_write_observability import record_s3_success
-                    record_s3_success(self._dataset)
-                except Exception:
-                    pass
-                return
-            except Exception as exc:
-                response = getattr(exc, "response", {}) or {}
-                error = response.get("Error", {}) or {}
-                if str(error.get("Code", "")) in {"412", "PreconditionFailed"}:
-                    self._total_errors += 1
-                    logger.critical(
-                        "[S3_BATCH] object_key_collision key=%s action=rejected "
-                        "reason='create-only If-None-Match precondition failed; "
-                        "existing production object preserved'",
-                        key,
-                    )
-                    try:
-                        from core.s3_write_observability import record_s3_failure
-                        record_s3_failure(self._dataset, exc)
-                    except Exception:
-                        pass
-                    return
-                if attempt == max_retries:
-                    self._total_errors += 1
-                    # Final retry exhausted — surface visibly (not just debug).
-                    try:
-                        from core.s3_write_observability import record_s3_failure
-                        record_s3_failure(self._dataset, exc)
-                    except Exception:
-                        pass
-                else:
-                    _time.sleep(0.5 * attempt)
+        """Compatibility batch handoff; network delivery belongs to Block 1C."""
+        symbol = key.split("/symbol=", 1)[1].split("/", 1)[0]
+        date_str = key.split("/date=", 1)[1].split("/", 1)[0]
+        from core.canonical_delivery import enqueue_canonical_jsonl
+        result = enqueue_canonical_jsonl(
+            dataset=self._dataset, content=body.decode("utf-8"),
+            symbol=symbol, partition_date=date_str,
+        )
+        self._total_flushed += result.logical_delivery_count
+        self._total_batches += 1
 
     def _timer_loop(self) -> None:
         """Background thread: periodic flush based on time interval."""

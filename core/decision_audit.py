@@ -546,13 +546,10 @@ def persist_risk_rejection(
                 f.flush()
                 os.fsync(f.fileno())
 
-        # S3 mirror via decision_trace writer path (fire-and-forget)
-        try:
-            if getattr(config, "EVENT_STREAM_S3_MIRROR", False):
-                from core.decision_trace import _write_s3 as _dt_write_s3
-                _dt_write_s3(symbol, date_str, line)
-        except Exception:
-            pass
+        # This retired compatibility record lacks decision_trace's governed
+        # entity_id/runtime_session_id identity and is therefore local-only.
+        # It must not bypass the canonical outbox or impersonate a canonical
+        # decision_trace record.
 
     except Exception as exc:
         logger.debug("[DECISION_AUDIT_RISK_REJECT] error=%s", exc)
