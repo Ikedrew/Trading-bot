@@ -438,6 +438,12 @@ class DecisionLedgerWriter:
 
         # Write each partition
         for (symbol, date_str), (lines, entries) in partitions.items():
+            local_path = self._local_dir / symbol / f"{date_str}.jsonl"
+            from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+            try_prepare_local_jsonl_handoffs(
+                dataset="decision_ledger", content="".join(lines),
+                symbol=symbol, partition_date=date_str, local_path=local_path,
+            )
             local_written = self._write_local(symbol, date_str, lines)
             self._resolve_lifecycle(
                 entries, succeeded=local_written,

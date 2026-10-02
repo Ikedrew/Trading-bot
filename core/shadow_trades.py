@@ -743,6 +743,11 @@ def _persist_shadow_open(trade: "ShadowTrade") -> None:
         local_path = Path(_LOCAL_DIR) / symbol / f"{date_str}.jsonl"
         local_path.parent.mkdir(parents=True, exist_ok=True)
         line = json.dumps(record, separators=(",", ":"), default=str) + "\n"
+        from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+        try_prepare_local_jsonl_handoffs(
+            dataset="shadow_trades", content=line, symbol=symbol,
+            partition_date=date_str, local_path=local_path,
+        )
         fd = os.open(str(local_path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         try:
             os.write(fd, line.encode("utf-8"))
@@ -823,6 +828,11 @@ def _persist_shadow_trade(record: dict[str, Any]) -> None:
         local_path.parent.mkdir(parents=True, exist_ok=True)
 
         line = json.dumps(record, separators=(",", ":"), default=str) + "\n"
+        from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+        try_prepare_local_jsonl_handoffs(
+            dataset="shadow_trades", content=line, symbol=symbol,
+            partition_date=date_str, local_path=local_path,
+        )
         fd = os.open(str(local_path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         try:
             os.write(fd, line.encode("utf-8"))

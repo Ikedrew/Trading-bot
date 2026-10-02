@@ -173,6 +173,11 @@ def persist_execution_attempt(
         path.parent.mkdir(parents=True, exist_ok=True)
 
         line = json.dumps(record, separators=(",", ":"), default=str)
+        from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+        try_prepare_local_jsonl_handoffs(
+            dataset="execution_attempts", content=line + "\n", symbol=symbol,
+            partition_date=date_str, local_path=path,
+        )
         fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         try:
             os.write(fd, (line + "\n").encode("utf-8"))

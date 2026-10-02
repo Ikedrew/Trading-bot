@@ -74,6 +74,22 @@ def test_every_audited_live_writer_uses_handoff_and_has_no_direct_s3_put():
             assert ".put_object(" not in source, (dataset, module_name)
 
 
+def test_every_audited_live_writer_prepares_handoff_before_local_append():
+    append_markers = ("os.write(fd", "fh.write(line)")
+    for dataset, modules in CANONICAL_WRITER_MODULES.items():
+        for module_name in modules:
+            spec = importlib.util.find_spec(module_name)
+            assert spec is not None and spec.origin, (dataset, module_name)
+            source = open(spec.origin, encoding="utf-8").read()
+            prepare = source.find("prepare_local_jsonl_handoffs(")
+            assert prepare >= 0, (dataset, module_name, "missing prepare hook")
+            appends = [source.find(marker) for marker in append_markers]
+            appends = [position for position in appends if position >= 0]
+            assert appends and prepare < min(appends), (
+                dataset, module_name, "handoff must precede local append",
+            )
+
+
 @pytest.mark.parametrize(
     "dataset",
     (
@@ -234,6 +250,30 @@ def test_event_producer_persists_locally_then_uses_outbox(tmp_path, monkeypatch)
     assert len(rows) == 1
     assert rows[0].delivery_state is DeliveryState.PENDING
     assert rows[0].canonical_ack is None
+
+
+def test_writer_does_not_append_local_row_when_handoff_journal_is_unavailable(
+    tmp_path, monkeypatch,
+):
+    from core.assessment.assessment import Assessment
+    from core.assessment.persistence import persist_assessment
+    from core.canonical_delivery_outbox import OutboxPersistenceError
+
+    monkeypatch.setattr(
+        "core.assessment.persistence._LOCAL_DIR", str(tmp_path / "assessments"),
+    )
+    monkeypatch.setattr(
+        "core.canonical_delivery_outbox.CanonicalDeliveryOutbox.prepare_local_handoff",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            OutboxPersistenceError("simulated outbox disk failure")),
+    )
+    record = Assessment(
+        assessment_id="AS-CRASH", opportunity_id="OP-CRASH", symbol="EURUSD",
+        cycle_id=1, bar_time=1790942400, entity_id="EURUSD_1790942400",
+    )
+
+    assert persist_assessment(record) is False
+    assert not list((tmp_path / "assessments").rglob("*.jsonl"))
 
 
 def test_historical_part_000_reader_remains_compatible():

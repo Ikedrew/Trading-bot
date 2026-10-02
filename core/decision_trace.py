@@ -1109,6 +1109,11 @@ def persist_decision_trace(trace: DecisionTrace) -> bool:
         _trace_dict = trace.to_dict()
         _trace_dict["schema_version"] = _SCHEMA_VERSION
         line = json.dumps(_trace_dict, separators=(",", ":"), default=str)
+        from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+        try_prepare_local_jsonl_handoffs(
+            dataset="decision_trace", content=line + "\n", symbol=symbol,
+            partition_date=ts, local_path=path,
+        )
         fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         try:
             os.write(fd, (line + "\n").encode("utf-8"))

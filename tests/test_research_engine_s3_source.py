@@ -142,6 +142,30 @@ def test_core_datasets_read_from_s3():
     assert len(load_execution_results("EURUSD")) == 1
 
 
+def test_identical_historical_and_outbox_objects_do_not_double_count():
+    record = {
+        "schema_version": current_schema("decision_ledger"),
+        "decision_id": "D-MIGRATION-1",
+        "symbol": "EURUSD",
+        "decision": "NO_TRADE",
+    }
+    new_record = {**record, "decision_id": "D-MIGRATION-2", "decision": "EXECUTE"}
+    body = _jsonl([record])
+    objects = {
+        _key("decision_ledger", "EURUSD", "2026-07-01", "part-000.jsonl"): _jsonl([
+            record, record,
+        ]),
+        _key("decision_ledger", "EURUSD", "2026-07-01",
+               "part-outbox-deterministic.jsonl"): _jsonl([record, new_record]),
+    }
+    _install(objects)
+
+    from research_engine.data_access.loaders import load_decision_ledger
+    rows = load_decision_ledger("EURUSD")
+
+    assert rows == [record, record, new_record]
+
+
 def test_missing_dataset_returns_empty_not_error():
     _install({})
     from research_engine.data_access.loaders import load_trade_truth

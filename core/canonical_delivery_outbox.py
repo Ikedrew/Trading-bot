@@ -42,6 +42,7 @@ from core.lifecycle_evidence_obligations import (
 from core.production_data_contract import (
     DATA_CONTRACT_VERSION,
     PRODUCTION_SCHEMA_REGISTRY,
+    canonical_s3_schema_prefix,
     canonical_s3_key,
     current_schema,
     is_symbol_scoped,
@@ -170,6 +171,24 @@ class OutboxStatus:
     dataset_breakdown: Mapping[str, Mapping[str, int]]
 
 
+@dataclass(frozen=True)
+class LocalHandoff:
+    handoff_id: str
+    dataset: str
+    symbol: str
+    partition_date: str
+    identity: Mapping[str, Any]
+    payload: Mapping[str, Any]
+    local_path: str
+    local_line: str
+    lifecycle_obligation_id: str | None
+    state: str
+    outbox_id: str | None
+    created_at: str
+    updated_at: str
+    last_error: str | None
+
+
 def _canonical_json(value: Any) -> str:
     """Serialize only JSON-compatible data; arbitrary repr() is forbidden."""
     try:
@@ -274,7 +293,7 @@ def canonical_outbox_destination(
 class CanonicalDeliveryOutbox:
     """Transaction-safe durable authority for canonical delivery obligations."""
 
-    _SCHEMA_VERSION = 3
+    _SCHEMA_VERSION = 5
 
     def __init__(
         self,
@@ -374,6 +393,25 @@ class CanonicalDeliveryOutbox:
                 ON outbox_records(delivery_state, next_retry_at, created_at);
             CREATE INDEX IF NOT EXISTS ix_outbox_dataset
                 ON outbox_records(dataset, delivery_state);
+            CREATE TABLE IF NOT EXISTS local_handoffs (
+                handoff_id TEXT PRIMARY KEY,
+                dataset TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                partition_date TEXT NOT NULL,
+                identity_json TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                local_path TEXT NOT NULL,
+                local_line TEXT NOT NULL,
+                lifecycle_obligation_id TEXT,
+                state TEXT NOT NULL CHECK (state IN ('PREPARED','COMPLETED','CONFLICT')),
+                outbox_id TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                last_error TEXT,
+                recovery_attempts INTEGER NOT NULL DEFAULT 0 CHECK (recovery_attempts >= 0)
+            );
+            CREATE INDEX IF NOT EXISTS ix_local_handoffs_recovery
+                ON local_handoffs(state, recovery_attempts, created_at, handoff_id);
             """
         )
         columns = {
@@ -391,6 +429,14 @@ class CanonicalDeliveryOutbox:
                 self._db.execute(
                     f"ALTER TABLE outbox_records ADD COLUMN {name} {declaration}"
                 )
+        handoff_columns = {
+            row[1] for row in self._db.execute("PRAGMA table_info(local_handoffs)")
+        }
+        if "recovery_attempts" not in handoff_columns:
+            self._db.execute(
+                "ALTER TABLE local_handoffs ADD COLUMN recovery_attempts "
+                "INTEGER NOT NULL DEFAULT 0"
+            )
         self._db.execute(f"PRAGMA user_version={self._SCHEMA_VERSION}")
 
     @contextmanager
@@ -441,6 +487,9 @@ class CanonicalDeliveryOutbox:
             raise ValueError(f"PAYLOAD_SCHEMA_MISMATCH:{dataset}:{present_schema}")
         canonical_payload["schema_version"] = schema
         exact_identity = governed_identity(dataset, canonical_payload, identity)
+        payload_identity = governed_identity(dataset, canonical_payload)
+        if payload_identity != exact_identity:
+            raise ValueError("EXPLICIT_IDENTITY_DOES_NOT_MATCH_PAYLOAD")
         payload_json = _canonical_json(canonical_payload)
         identity_json = _canonical_json(exact_identity)
         payload_hash = _sha256_text(payload_json)
@@ -465,6 +514,8 @@ class CanonicalDeliveryOutbox:
                         and existing["canonical_bucket"] == self.canonical_bucket
                     )
                     if same:
+                        self._complete_local_handoff_tx(
+                            db, idem, existing["outbox_id"], state="COMPLETED")
                         return EnqueueResult(
                             EnqueueOutcome.DUPLICATE, self._row_to_record(existing),
                         )
@@ -476,9 +527,14 @@ class CanonicalDeliveryOutbox:
                         """UPDATE outbox_records
                            SET delivery_state=?, last_error=?,
                                conflict_payload_sha256=?, claim_owner=NULL,
-                               claim_expires_at=NULL, updated_at=?, revision=revision+1
+                               claim_expires_at=NULL, next_retry_at=NULL,
+                               updated_at=?, revision=revision+1
                            WHERE idempotency_key=?""",
                         (DeliveryState.CONFLICT.value, reason, payload_hash, now, idem),
+                    )
+                    self._complete_local_handoff_tx(
+                        db, idem, f"outbox_{idem}", state="CONFLICT",
+                        error=reason,
                     )
                     changed = db.execute(
                         "SELECT * FROM outbox_records WHERE idempotency_key=?", (idem,),
@@ -495,12 +551,188 @@ class CanonicalDeliveryOutbox:
                     lifecycle_obligation_id, None, None, None, 0, 1,
                     "PENDING" if lifecycle_obligation_id else "NOT_LINKED", None,
                 ))
+                self._complete_local_handoff_tx(
+                    db, idem, outbox_id, state="COMPLETED")
                 created = db.execute(
                     "SELECT * FROM outbox_records WHERE idempotency_key=?", (idem,),
                 ).fetchone()
                 return EnqueueResult(EnqueueOutcome.CREATED, self._row_to_record(created))
         except (sqlite3.Error, OSError) as exc:
             raise OutboxPersistenceError(f"ENQUEUE_NOT_DURABLE:{exc}") from exc
+
+    def prepare_local_handoff(
+        self, *, dataset: str, payload: Mapping[str, Any], symbol: str,
+        partition_date: str, local_path: str | Path, local_line: str,
+        identity: Mapping[str, Any] | None = None,
+        lifecycle_obligation_id: str | None = None,
+    ) -> LocalHandoff:
+        """Durably journal a specific local record before its JSONL append."""
+        if dataset not in PRODUCTION_SCHEMA_REGISTRY:
+            raise ValueError(f"UNKNOWN_PRODUCTION_DATASET:{dataset}")
+        schema = current_schema(dataset)
+        canonical_payload = dict(payload)
+        present_schema = canonical_payload.get("schema_version")
+        if present_schema not in (None, schema):
+            raise ValueError(f"PAYLOAD_SCHEMA_MISMATCH:{dataset}:{present_schema}")
+        canonical_payload["schema_version"] = schema
+        exact_identity = governed_identity(dataset, canonical_payload, identity)
+        if governed_identity(dataset, canonical_payload) != exact_identity:
+            raise ValueError("EXPLICIT_IDENTITY_DOES_NOT_MATCH_PAYLOAD")
+        if not local_line or "\n" in local_line.rstrip("\r\n"):
+            raise ValueError("LOCAL_HANDOFF_LINE_REQUIRED")
+        try:
+            local_payload = json.loads(local_line.rstrip("\r\n"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"LOCAL_HANDOFF_LINE_INVALID:{exc.msg}") from exc
+        if not isinstance(local_payload, dict):
+            raise ValueError("LOCAL_HANDOFF_LINE_OBJECT_REQUIRED")
+        local_payload.setdefault("schema_version", schema)
+        if _canonical_json(local_payload) != _canonical_json(canonical_payload):
+            raise ValueError("LOCAL_HANDOFF_LINE_PAYLOAD_MISMATCH")
+        normalized_path = str(Path(local_path).resolve())
+        idem = deterministic_idempotency_key(dataset, schema, exact_identity)
+        payload_json = _canonical_json(canonical_payload)
+        identity_json = _canonical_json(exact_identity)
+        prepared_at = _normalise_utc(self._clock())
+        local_handoff = LocalHandoff(
+            handoff_id=idem, dataset=dataset, symbol=symbol,
+            partition_date=partition_date, identity=exact_identity,
+            payload=canonical_payload, local_path=normalized_path,
+            local_line=local_line.rstrip("\r\n"),
+            lifecycle_obligation_id=lifecycle_obligation_id,
+            state="PREPARED", outbox_id=None,
+            created_at=prepared_at, updated_at=prepared_at, last_error=None,
+        )
+        try:
+            conflict = False
+            with self._transaction() as db:
+                existing = db.execute(
+                    "SELECT * FROM local_handoffs WHERE handoff_id=?", (idem,),
+                ).fetchone()
+                if existing is not None:
+                    same = (
+                        existing["dataset"] == dataset
+                        and existing["identity_json"] == identity_json
+                        and existing["payload_json"] == payload_json
+                        and existing["local_path"] == normalized_path
+                        and existing["local_line"] == local_handoff.local_line
+                    )
+                    if not same:
+                        db.execute(
+                            "UPDATE local_handoffs SET state='CONFLICT', last_error=?, "
+                            "updated_at=? WHERE handoff_id=?",
+                            ("LOCAL_HANDOFF_IDEMPOTENCY_CONFLICT", local_handoff.updated_at, idem),
+                        )
+                        conflict = True
+                    else:
+                        return self._row_to_local_handoff(existing)
+                else:
+                    db.execute(
+                        """INSERT INTO local_handoffs (
+                            handoff_id,dataset,symbol,partition_date,identity_json,
+                            payload_json,local_path,local_line,lifecycle_obligation_id,
+                            state,outbox_id,created_at,updated_at,last_error
+                        ) VALUES (?,?,?,?,?,?,?,?,?,'PREPARED',NULL,?,?,NULL)""",
+                        (idem, dataset, symbol, partition_date, identity_json,
+                         payload_json, normalized_path, local_handoff.local_line,
+                         lifecycle_obligation_id, local_handoff.created_at,
+                         local_handoff.updated_at),
+                    )
+                    row = db.execute(
+                        "SELECT * FROM local_handoffs WHERE handoff_id=?", (idem,),
+                    ).fetchone()
+                    return self._row_to_local_handoff(row)
+            if conflict:
+                raise ValueError("LOCAL_HANDOFF_IDEMPOTENCY_CONFLICT")
+        except sqlite3.Error as exc:
+            raise OutboxPersistenceError(f"LOCAL_HANDOFF_NOT_DURABLE:{exc}") from exc
+
+    def pending_local_handoffs(self, *, limit: int = 100) -> tuple[LocalHandoff, ...]:
+        if limit < 0:
+            raise ValueError("LOCAL_HANDOFF_LIMIT_MUST_BE_NON_NEGATIVE")
+        if limit == 0:
+            return ()
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT * FROM local_handoffs WHERE state='PREPARED' "
+                "ORDER BY recovery_attempts,created_at,handoff_id LIMIT ?", (limit,),
+            ).fetchall()
+        return tuple(self._row_to_local_handoff(row) for row in rows)
+
+    def note_local_handoff_recovery_attempt(self, handoff_id: str, error: str) -> None:
+        now = _normalise_utc(self._clock())
+        try:
+            with self._transaction() as db:
+                db.execute(
+                    "UPDATE local_handoffs SET recovery_attempts=recovery_attempts+1, "
+                    "last_error=?,updated_at=? WHERE handoff_id=? AND state='PREPARED'",
+                    (error, now, handoff_id),
+                )
+        except sqlite3.Error as exc:
+            raise OutboxPersistenceError(
+                f"LOCAL_HANDOFF_RECOVERY_ATTEMPT_NOT_DURABLE:{exc}"
+            ) from exc
+
+    def local_handoff_status(self) -> Mapping[str, int]:
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT state,COUNT(*) AS n FROM local_handoffs GROUP BY state"
+            ).fetchall()
+        return {row["state"]: int(row["n"]) for row in rows}
+
+    def _complete_local_handoff_tx(
+        self, db: sqlite3.Connection, handoff_id: str, outbox_id: str, *,
+        state: str, error: str | None = None,
+    ) -> None:
+        existing = db.execute(
+            "SELECT 1 FROM local_handoffs WHERE handoff_id=? AND state='PREPARED'",
+            (handoff_id,),
+        ).fetchone()
+        if existing is None:
+            return
+        db.execute(
+            "UPDATE local_handoffs SET state=?,outbox_id=?,last_error=?,updated_at=? "
+            "WHERE handoff_id=? AND state='PREPARED'",
+            (state, outbox_id, error, _normalise_utc(self._clock()), handoff_id),
+        )
+
+    @staticmethod
+    def _row_to_local_handoff(row: sqlite3.Row) -> LocalHandoff:
+        try:
+            identity = json.loads(row["identity_json"])
+            payload = json.loads(row["payload_json"])
+            if not isinstance(identity, dict) or not isinstance(payload, dict):
+                raise TypeError("identity/payload must be JSON objects")
+            if row["state"] not in {"PREPARED", "COMPLETED", "CONFLICT"}:
+                raise ValueError("unknown local-handoff state")
+            if row["dataset"] not in PRODUCTION_SCHEMA_REGISTRY \
+                    or payload.get("schema_version") != current_schema(row["dataset"]):
+                raise ValueError("local-handoff dataset/schema mismatch")
+            if deterministic_idempotency_key(
+                    row["dataset"], payload["schema_version"], identity) != row["handoff_id"]:
+                raise ValueError("local-handoff deterministic identity mismatch")
+            if governed_identity(row["dataset"], payload) != identity:
+                raise ValueError("local-handoff payload identity mismatch")
+            local_payload = json.loads(row["local_line"])
+            if not isinstance(local_payload, dict):
+                raise TypeError("local line must be a JSON object")
+            local_payload.setdefault("schema_version", payload["schema_version"])
+            if _canonical_json(local_payload) != _canonical_json(payload):
+                raise ValueError("local line/payload mismatch")
+            if not row["local_path"] or not row["partition_date"]:
+                raise ValueError("local-handoff source location missing")
+            return LocalHandoff(
+                handoff_id=row["handoff_id"], dataset=row["dataset"],
+                symbol=row["symbol"], partition_date=row["partition_date"],
+                identity=identity, payload=payload,
+                local_path=row["local_path"], local_line=row["local_line"],
+                lifecycle_obligation_id=row["lifecycle_obligation_id"],
+                state=row["state"], outbox_id=row["outbox_id"],
+                created_at=row["created_at"], updated_at=row["updated_at"],
+                last_error=row["last_error"],
+            )
+        except (json.JSONDecodeError, KeyError, TypeError) as exc:
+            raise OutboxCorruptionError(f"CORRUPT_LOCAL_HANDOFF:{exc}") from exc
 
     def _insert_record(self, db: sqlite3.Connection, values: tuple[Any, ...]) -> None:
         db.execute(
@@ -649,6 +881,8 @@ class CanonicalDeliveryOutbox:
             raise ValueError("DELIVERY_ERROR_REQUIRED")
         now = _normalise_utc(self._clock())
         retry_at = _normalise_utc(next_retry_at) if next_retry_at else None
+        if state is DeliveryState.RETRYABLE_FAILURE and retry_at is None:
+            raise ValueError("RETRY_SCHEDULE_REQUIRED")
         try:
             with self._transaction() as db:
                 row = self._required_row(db, outbox_id)
@@ -695,19 +929,28 @@ class CanonicalDeliveryOutbox:
                     raise CanonicalAckError("ACK_PUT_SUCCESS_REQUIRED")
                 etag_available = evidence.get("etag_available")
                 if etag_available is None:
-                    etag_available = bool(evidence.get("etag"))
+                    if evidence.get("etag"):
+                        etag_available = True
+                    else:
+                        raise CanonicalAckError("ACK_ETAG_ABSENCE_NOT_EXPLICIT")
                 if not isinstance(etag_available, bool):
                     raise CanonicalAckError("ACK_ETAG_AVAILABILITY_REQUIRED")
                 if etag_available and not evidence.get("etag"):
                     raise CanonicalAckError("ACK_ETAG_VALUE_REQUIRED")
+                if etag_available and evidence.get("etag_observation") not in (None, "RETURNED"):
+                    raise CanonicalAckError("ACK_ETAG_OBSERVATION_MISMATCH")
                 if not etag_available and evidence.get("etag") not in (None, ""):
                     raise CanonicalAckError("ACK_ETAG_ABSENCE_CONTRADICTS_VALUE")
+                if not etag_available and evidence.get("etag_observation") != "NOT_RETURNED_BY_S3":
+                    raise CanonicalAckError("ACK_ETAG_ABSENCE_NOT_EXPLICIT")
                 if evidence.get("verification_method") not in _ACK_VERIFICATION_METHODS:
                     raise CanonicalAckError("ACK_EXACT_VERIFICATION_REQUIRED")
                 if evidence.get("verified_payload_sha256") != row["payload_sha256"]:
                     raise CanonicalAckError("ACK_VERIFIED_PAYLOAD_HASH_MISMATCH")
                 ack = dict(evidence)
                 ack["etag_available"] = etag_available
+                ack["etag_observation"] = (
+                    "RETURNED" if etag_available else "NOT_RETURNED_BY_S3")
                 ack["acknowledged_at"] = _normalise_utc(
                     evidence.get("acknowledged_at") or now
                 )
@@ -900,8 +1143,7 @@ class CanonicalDeliveryOutbox:
         if target not in STATE_TRANSITIONS[source]:
             raise InvalidDeliveryTransition(f"{source.value}->{target.value}")
 
-    @staticmethod
-    def _row_to_record(row: sqlite3.Row) -> OutboxRecord:
+    def _row_to_record(self, row: sqlite3.Row) -> OutboxRecord:
         try:
             identity = json.loads(row["identity_json"])
             payload = json.loads(row["payload_json"])
@@ -909,8 +1151,22 @@ class CanonicalDeliveryOutbox:
             state = DeliveryState(row["delivery_state"])
             if not isinstance(identity, dict) or not isinstance(payload, dict):
                 raise TypeError("identity/payload must be JSON objects")
+            if row["production_namespace"] != DATA_CONTRACT_VERSION:
+                raise ValueError("production namespace mismatch")
+            if row["schema_version"] != current_schema(row["dataset"]):
+                raise ValueError("production schema mismatch")
+            if not row["canonical_bucket"] or not row["canonical_key"]:
+                raise ValueError("canonical destination missing")
+            if row["canonical_bucket"] != self.canonical_bucket:
+                raise ValueError("canonical bucket mismatch")
+            if row["reconciliation_state"] not in {
+                "PENDING", "RECONCILED", "NOT_APPLICABLE", "NOT_LINKED", "ANOMALY",
+            }:
+                raise ValueError("unknown reconciliation state")
             if _sha256_text(_canonical_json(payload)) != row["payload_sha256"]:
                 raise ValueError("payload hash mismatch")
+            if governed_identity(row["dataset"], payload) != identity:
+                raise ValueError("governed payload identity mismatch")
             expected_idem = deterministic_idempotency_key(
                 row["dataset"], row["schema_version"], identity,
             )
@@ -918,6 +1174,51 @@ class CanonicalDeliveryOutbox:
                 raise ValueError("idempotency key mismatch")
             if row["outbox_id"] != f"outbox_{expected_idem}":
                 raise ValueError("outbox id mismatch")
+            schema_prefix = canonical_s3_schema_prefix(
+                row["dataset"], schema=row["schema_version"],
+            )
+            if not row["canonical_key"].startswith(schema_prefix):
+                raise ValueError("canonical destination prefix mismatch")
+            relative = row["canonical_key"][len(schema_prefix):].split("/")
+            if is_symbol_scoped(row["dataset"]):
+                if len(relative) != 3 or not relative[0].startswith("symbol=") \
+                        or not relative[0][len("symbol="):]:
+                    raise ValueError("canonical symbol partition invalid")
+                symbol = relative[0][len("symbol="):]
+                date_part, object_name = relative[1:]
+            else:
+                if len(relative) != 2:
+                    raise ValueError("canonical date partition invalid")
+                symbol = ""
+                date_part, object_name = relative
+            if not date_part.startswith("date=") or not _DATE_RE.fullmatch(date_part[5:]):
+                raise ValueError("canonical destination date partition invalid")
+            if object_name != f"part-outbox-{expected_idem}.jsonl":
+                raise ValueError("canonical destination part identity mismatch")
+            expected_destination = canonical_outbox_destination(
+                row["dataset"], symbol=symbol, partition_date=date_part[5:],
+                idempotency_key=expected_idem,
+            )
+            if expected_destination != row["canonical_key"]:
+                raise ValueError("canonical destination mismatch")
+            if state is DeliveryState.RETRYABLE_FAILURE:
+                if not row["next_retry_at"]:
+                    raise ValueError("retryable row lacks next_retry_at")
+                _normalise_utc(row["next_retry_at"])
+            elif row["next_retry_at"] is not None:
+                raise ValueError("non-retryable row has next_retry_at")
+            if state is DeliveryState.IN_FLIGHT:
+                if not row["claim_owner"] or not row["claim_expires_at"]:
+                    raise ValueError("in-flight row lacks durable lease")
+                _normalise_utc(row["claim_expires_at"])
+            elif row["claim_owner"] is not None or row["claim_expires_at"] is not None:
+                raise ValueError("non-in-flight row retains lease")
+            if state is DeliveryState.ACKNOWLEDGED and ack is None:
+                raise ValueError("acknowledged row has no ACK evidence")
+            if state is not DeliveryState.ACKNOWLEDGED and ack is not None:
+                raise ValueError("non-acknowledged row contains ACK evidence")
+            if ack is not None:
+                CanonicalDeliveryOutbox._validate_ack_row(row, ack)
             return OutboxRecord(
                 outbox_id=row["outbox_id"],
                 idempotency_key=row["idempotency_key"],
@@ -951,6 +1252,45 @@ class CanonicalDeliveryOutbox:
             raise OutboxCorruptionError(
                 f"CORRUPT_OUTBOX_ROW:{row['outbox_id']}:{exc}"
             ) from exc
+
+    @staticmethod
+    def _validate_ack_row(row: sqlite3.Row, ack: Any) -> None:
+        if not isinstance(ack, dict):
+            raise ValueError("ACK evidence must be an object")
+        expected = {
+            "outbox_id": row["outbox_id"],
+            "idempotency_key": row["idempotency_key"],
+            "canonical_bucket": row["canonical_bucket"],
+            "canonical_key": row["canonical_key"],
+            "payload_sha256": row["payload_sha256"],
+        }
+        if any(ack.get(field) != value for field, value in expected.items()):
+            raise ValueError("ACK identity/hash binding mismatch")
+        status = ack.get("put_status_code")
+        put_created = isinstance(status, int) and 200 <= status < 300
+        preexisting_verified = status == 412 and ack.get("object_preexisted") is True
+        if not (put_created or preexisting_verified):
+            raise ValueError("ACK lacks successful PUT/preexisting evidence")
+        if ack.get("verification_method") not in _ACK_VERIFICATION_METHODS:
+            raise ValueError("ACK exact verification method missing")
+        if ack.get("verified_payload_sha256") != row["payload_sha256"]:
+            raise ValueError("ACK verified payload hash mismatch")
+        etag_available = ack.get("etag_available")
+        if etag_available is None:
+            etag_available = bool(ack.get("etag"))
+        if not isinstance(etag_available, bool):
+            raise ValueError("ACK ETag availability invalid")
+        if etag_available and not ack.get("etag"):
+            raise ValueError("ACK ETag value missing")
+        if not etag_available:
+            if ack.get("etag") not in (None, ""):
+                raise ValueError("ACK ETag absence contradicts stored value")
+            if ack.get("etag_observation") != "NOT_RETURNED_BY_S3":
+                raise ValueError("ACK missing ETag is not truthfully recorded")
+        try:
+            _normalise_utc(str(ack["acknowledged_at"]))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("ACK timestamp invalid") from exc
 
 
 __all__ = [

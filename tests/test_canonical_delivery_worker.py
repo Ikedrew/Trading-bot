@@ -13,6 +13,7 @@ from core.canonical_delivery_worker import (
     classify_delivery_failure,
 )
 from core.lifecycle_evidence_obligations import (
+    DATASET_DISPOSITIONS,
     EXACT_IDENTITY_FIELDS,
     LifecycleEvidenceLedger,
     ObligationStatus,
@@ -143,6 +144,67 @@ def worker(box, s3, clock, **kwargs):
     )
 
 
+def assert_delivery_invariants(box, s3, ledger=None):
+    records = box.records()
+    ids = [record.idempotency_key for record in records]
+    assert len(ids) == len(set(ids)), "duplicate logical outbox identity"
+
+    for record in records:
+        if record.delivery_state is not DeliveryState.ACKNOWLEDGED:
+            continue
+        assert record.canonical_ack is not None, ("ACK without evidence", record.outbox_id)
+        object_key = (record.canonical_bucket, record.canonical_key)
+        assert object_key in s3.objects, ("ACK without canonical object", record.outbox_id)
+        stored = s3.objects[object_key]
+        expected_body = json.dumps(
+            record.payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True,
+            allow_nan=False,
+        ).encode("utf-8")
+        assert stored["Body"] == expected_body, ("ACK body mismatch", record.outbox_id)
+        assert hashlib.sha256(stored["Body"]).hexdigest() == record.payload_sha256
+        assert stored["Metadata"] == CanonicalDeliveryWorker._metadata(record)
+        ack = record.canonical_ack
+        assert ack["payload_sha256"] == record.payload_sha256
+        assert ack["verified_payload_sha256"] == record.payload_sha256
+        assert ack["canonical_key"] == record.canonical_key
+        assert ack["canonical_bucket"] == record.canonical_bucket
+        if ack["etag_available"]:
+            assert ack.get("etag")
+        else:
+            assert ack.get("etag") in (None, "")
+            assert ack.get("etag_observation") == "NOT_RETURNED_BY_S3"
+
+        if ledger is not None and record.lifecycle_obligation_id \
+                and record.reconciliation_state == "RECONCILED":
+            obligation = ledger.get(record.lifecycle_obligation_id)
+            assert obligation is not None
+            assert obligation.current_status == ObligationStatus.PRESENT.value
+            assert obligation.expected_dataset == record.dataset
+            assert dict(obligation.expected_identity) == dict(record.record_identity)
+
+    if ledger is not None:
+        for obligation in ledger.obligations():
+            if obligation.current_status != ObligationStatus.PRESENT.value \
+                    or obligation.provenance.get("canonical_delivery") != "ACKNOWLEDGED":
+                continue
+            linked = [record for record in records
+                      if record.outbox_id == obligation.observed_record_id]
+            assert len(linked) == 1, ("PRESENT without unique outbox ACK", obligation.obligation_id)
+            assert linked[0].delivery_state is DeliveryState.ACKNOWLEDGED
+            assert linked[0].dataset == obligation.expected_dataset
+            assert dict(linked[0].record_identity) == dict(obligation.expected_identity)
+
+    return {
+        "records": len(records),
+        "acknowledged": sum(record.delivery_state is DeliveryState.ACKNOWLEDGED
+                             for record in records),
+        "conflicts": sum(record.delivery_state is DeliveryState.CONFLICT
+                          for record in records),
+        "reconciled": sum(record.reconciliation_state == "RECONCILED"
+                           for record in records),
+    }
+
+
 def test_pending_success_is_verified_and_acknowledged(tmp_path):
     clock = Clock()
     box = outbox(tmp_path, clock)
@@ -180,6 +242,25 @@ def test_missing_verification_etag_is_recorded_without_weakening_exact_ack(tmp_p
     assert current.canonical_ack["etag_observation"] == "NOT_RETURNED_BY_S3"
     assert current.canonical_ack["verified_payload_sha256"] == record.payload_sha256
     assert current.canonical_ack["verification_method"] == "GET_BODY_SHA256"
+
+
+def test_mismatched_etag_is_informational_when_exact_body_hash_and_metadata_match(tmp_path):
+    class MismatchedETagS3(FakeS3):
+        def get_object(self, **kwargs):
+            response = super().get_object(**kwargs)
+            response["ETag"] = '"different-opaque-etag"'
+            return response
+
+    clock = Clock()
+    box = outbox(tmp_path, clock)
+    record = enqueue(box)
+    result = worker(box, MismatchedETagS3(), clock).run_once()
+
+    assert result.state_after is DeliveryState.ACKNOWLEDGED
+    ack = box.get(record.outbox_id).canonical_ack
+    assert ack["etag"] == '"different-opaque-etag"'
+    assert ack["verified_payload_sha256"] == record.payload_sha256
+    assert ack["verification_method"] == "GET_BODY_SHA256"
 
 
 def test_ack_reconciles_exact_lifecycle_obligation_and_is_idempotent(tmp_path):
@@ -283,6 +364,42 @@ def test_existing_different_object_is_conflict_and_never_overwritten(tmp_path):
     assert s3.put_calls == []
 
 
+@pytest.mark.parametrize("attack", [
+    "missing_metadata", "wrong_outbox_id", "wrong_payload_hash",
+    "wrong_dataset", "wrong_body",
+])
+def test_existing_object_metadata_and_body_attacks_conflict_without_overwrite(
+    tmp_path, attack,
+):
+    clock = Clock()
+    box = outbox(tmp_path, clock)
+    record = enqueue(box)
+    s3 = FakeS3()
+    s3.seed_exact(record)
+    object_key = (record.canonical_bucket, record.canonical_key)
+    existing = s3.objects[object_key]
+    if attack == "wrong_body":
+        existing["Body"] = b'{"decision_id":"ATTACK"}'
+    else:
+        metadata = dict(existing["Metadata"])
+        if attack == "missing_metadata":
+            metadata.pop("payload-sha256")
+        elif attack == "wrong_outbox_id":
+            metadata["outbox-id"] = "outbox-other"
+        elif attack == "wrong_dataset":
+            metadata["dataset"] = "events"
+        else:
+            metadata["payload-sha256"] = "0" * 64
+        existing["Metadata"] = metadata
+    preserved = {**existing, "Metadata": dict(existing["Metadata"])}
+
+    result = worker(box, s3, clock).run_once()
+
+    assert result.state_after is DeliveryState.CONFLICT
+    assert s3.objects[object_key] == preserved
+    assert s3.put_calls == []
+
+
 def test_create_only_race_with_exact_object_is_verified_as_success(tmp_path):
     class ConcurrentCreateS3(FakeS3):
         def put_object(self, **kwargs):
@@ -324,6 +441,37 @@ def test_post_put_verification_failure_retries_then_repairs_orphan(tmp_path):
     assert len(s3.put_calls) == 1
 
 
+def test_put_object_temporarily_invisible_to_get_retries_without_duplicate_put(tmp_path):
+    class DelayedVisibilityS3(FakeS3):
+        def get_object(self, **kwargs):
+            if getattr(self, "hide_first_read", False):
+                self.hide_first_read = False
+                raise FakeS3Error("NoSuchKey", 404, "temporarily not visible")
+            return super().get_object(**kwargs)
+
+        def put_object(self, **kwargs):
+            result = super().put_object(**kwargs)
+            self.hide_first_read = True
+            return result
+
+    clock = Clock()
+    box = outbox(tmp_path, clock)
+    record = enqueue(box)
+    s3 = DelayedVisibilityS3()
+    executor = worker(box, s3, clock)
+
+    first = executor.run_once()
+    assert first.state_after is DeliveryState.RETRYABLE_FAILURE
+    assert len(s3.objects) == 1
+    clock.advance(10)
+    recovered = executor.run_once()
+
+    assert recovered.state_after is DeliveryState.ACKNOWLEDGED
+    assert recovered.orphan_ack_recovered is True
+    assert len(s3.put_calls) == 1
+    assert box.get(record.outbox_id).canonical_ack["verified_payload_sha256"] == record.payload_sha256
+
+
 def test_put_success_crash_then_restart_recovers_lost_ack(tmp_path):
     class CrashAfterPut(BaseException):
         pass
@@ -342,6 +490,7 @@ def test_put_success_crash_then_restart_recovers_lost_ack(tmp_path):
     assert box.get(record.outbox_id).delivery_state is DeliveryState.IN_FLIGHT
     assert len(s3.objects) == 1
     box.close()
+
     clock.advance(31)
     restarted_box = CanonicalDeliveryOutbox(
         path, canonical_bucket="test-bucket", clock=clock.iso,
@@ -351,6 +500,218 @@ def test_put_success_crash_then_restart_recovers_lost_ack(tmp_path):
     assert result.orphan_ack_recovered is True
     assert result.state_after is DeliveryState.ACKNOWLEDGED
     assert len(s3.objects) == 1
+    restarted_box.close()
+
+
+def test_put_committed_but_response_lost_recovers_without_duplicate_object(tmp_path):
+    class CommitThenTimeoutS3(FakeS3):
+        def put_object(self, **kwargs):
+            super().put_object(**kwargs)
+            raise TimeoutError("response lost after S3 commit")
+
+    clock = Clock()
+    box = outbox(tmp_path, clock)
+    record = enqueue(box)
+    s3 = CommitThenTimeoutS3()
+    executor = worker(box, s3, clock)
+
+    failed = executor.run_once()
+    assert failed.state_after is DeliveryState.RETRYABLE_FAILURE
+    assert len(s3.objects) == 1
+    clock.advance(11)
+    recovered = executor.run_once()
+
+    assert recovered.state_after is DeliveryState.ACKNOWLEDGED
+    assert recovered.orphan_ack_recovered is True
+    assert len(s3.objects) == 1
+    assert len(s3.put_calls) == 1
+
+
+def test_local_fsync_crash_before_enqueue_recovers_and_reconciles_after_ack(
+    tmp_path, monkeypatch,
+):
+    from core.canonical_delivery import (
+        configure_delivery_outbox, get_delivery_outbox, recover_local_handoffs,
+    )
+    from core.decision_ledger import DecisionLedgerWriter, DecisionOutcome
+    from core.runtime.decision_recorder import DecisionRecorder
+
+    class CrashBeforeEnqueue(BaseException):
+        pass
+
+    path = tmp_path / "recovery.sqlite3"
+    local_dir = tmp_path / "decision-ledger"
+    lifecycle = LifecycleEvidenceLedger(tmp_path / "lifecycle.jsonl")
+    configure_delivery_outbox(path)
+    writer = DecisionLedgerWriter(local_dir=str(local_dir), flush_batch_size=1)
+    recorder = DecisionRecorder(writer)
+    decision = recorder.init_cycle(
+        symbol="EURUSD", cycle_id=18, regime="RANGE",
+        context_snapshot_id="COR-18", drawdown_pct=0.0, daily_loss_pct=0.0,
+        decision_id="D-LOCAL-CRASH",
+    )
+    decision.update({"decision": DecisionOutcome.NO_TRADE, "reason": "crash_fixture"})
+    create_terminal = __import__(
+        "core.lifecycle_evidence_obligations", fromlist=["create_terminal_decision_obligations"],
+    ).create_terminal_decision_obligations
+    create_terminal(
+        lifecycle, event_id="decision:D-LOCAL-CRASH",
+        identity={"symbol": "EURUSD", "cycle_id": 18,
+                  "decision_id": "D-LOCAL-CRASH", "correlation_id": "COR-18",
+                  "entity_id": "E-18"},
+        timestamp="2026-10-02T12:00:00+00:00", no_trade=True,
+    )
+    monkeypatch.setattr(
+        "core.lifecycle_evidence_obligations.obligation_ledger",
+        lambda path=None: lifecycle,
+    )
+    original_enqueue_batch = __import__(
+        "core.canonical_delivery", fromlist=["enqueue_canonical_batch"],
+    ).enqueue_canonical_batch
+    monkeypatch.setattr(
+        "core.canonical_delivery.enqueue_canonical_batch",
+        lambda **_kwargs: (_ for _ in ()).throw(CrashBeforeEnqueue()),
+    )
+
+    with pytest.raises(CrashBeforeEnqueue):
+        recorder.finalize(cycle_start=1.0)
+    local_files = list(local_dir.rglob("*.jsonl"))
+    assert len(local_files) == 1
+    assert len(local_files[0].read_text(encoding="utf-8").splitlines()) == 1
+    assert get_delivery_outbox().records() == ()
+    linked, = [item for item in get_delivery_outbox().pending_local_handoffs()
+               if item.dataset == "decision_ledger"]
+    obligation, = lifecycle.find_exact(
+        "decision_ledger", {"decision_id": "D-LOCAL-CRASH"},
+    )
+    assert linked.lifecycle_obligation_id == obligation.obligation_id
+    assert obligation.current_status == ObligationStatus.NOT_YET_DUE.value
+
+    monkeypatch.setattr("core.canonical_delivery.enqueue_canonical_batch", original_enqueue_batch)
+    configure_delivery_outbox(path)
+    recovered_box = get_delivery_outbox()
+    recovery = recover_local_handoffs(outbox=recovered_box, max_items=10)
+    assert recovery.recovered == 1
+    assert len(recovered_box.records()) == 1
+    s3 = FakeS3()
+    result, = worker(recovered_box, s3, Clock(), lifecycle_ledger=lifecycle).drain(max_items=1)
+    assert result.state_after is DeliveryState.ACKNOWLEDGED
+    assert lifecycle.get(obligation.obligation_id).current_status == ObligationStatus.PRESENT.value
+    assert len(s3.objects) == 1
+    assert len(local_files[0].read_text(encoding="utf-8").splitlines()) == 1
+    recovered_box.close()
+    configure_delivery_outbox(None)
+
+
+def test_crash_after_exact_verification_before_local_ack_recovers(tmp_path, monkeypatch):
+    class CrashBeforeAck(BaseException):
+        pass
+
+    clock = Clock()
+    path = tmp_path / "verified-before-ack.sqlite3"
+    box = CanonicalDeliveryOutbox(path, canonical_bucket="test-bucket", clock=clock.iso)
+    record = enqueue(box)
+    s3 = FakeS3()
+    monkeypatch.setattr(
+        box, "acknowledge",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(CrashBeforeAck()),
+    )
+    with pytest.raises(CrashBeforeAck):
+        worker(box, s3, clock).run_once()
+    assert box.get(record.outbox_id).delivery_state is DeliveryState.IN_FLIGHT
+    assert len(s3.objects) == 1
+    box.close()
+
+    clock.advance(30)
+    restarted = CanonicalDeliveryOutbox(path, canonical_bucket="test-bucket", clock=clock.iso)
+    result = worker(restarted, s3, clock).run_once()
+    assert result.expired_lease_reclaimed is True
+    assert result.orphan_ack_recovered is True
+    assert restarted.get(record.outbox_id).delivery_state is DeliveryState.ACKNOWLEDGED
+    assert len(s3.objects) == 1
+
+
+def test_crash_after_ack_before_lifecycle_reconciliation_repairs_on_restart(
+    tmp_path, monkeypatch,
+):
+    class CrashAfterAck(BaseException):
+        pass
+
+    clock = Clock()
+    path = tmp_path / "ack-before-reconcile.sqlite3"
+    ledger_path = tmp_path / "lifecycle.jsonl"
+    ledger = LifecycleEvidenceLedger(ledger_path)
+    obligation = create_dataset_obligation(
+        ledger, event_id="decision:D-71", lifecycle_stage="DECISION",
+        dataset="decision_ledger", identity={"decision_id": "D-71", "symbol": "EURUSD"},
+        timestamp=clock.iso(), producer="test", trigger="DECISION_WRITTEN",
+    )
+    box = CanonicalDeliveryOutbox(path, canonical_bucket="test-bucket", clock=clock.iso)
+    record = enqueue(box, suffix="71", lifecycle_obligation_id=obligation.obligation_id)
+    s3 = FakeS3()
+    first = worker(box, s3, clock, lifecycle_ledger=ledger)
+    monkeypatch.setattr(
+        first, "_safe_reconcile_lifecycle",
+        lambda *_args: (_ for _ in ()).throw(CrashAfterAck()),
+    )
+    with pytest.raises(CrashAfterAck):
+        first.run_once()
+    assert box.get(record.outbox_id).delivery_state is DeliveryState.ACKNOWLEDGED
+    assert ledger.get(obligation.obligation_id).current_status == ObligationStatus.NOT_YET_DUE.value
+    box.close()
+
+    restarted = CanonicalDeliveryOutbox(path, canonical_bucket="test-bucket", clock=clock.iso)
+    recovered_ledger = LifecycleEvidenceLedger(ledger_path)
+    result, = worker(restarted, s3, clock, lifecycle_ledger=recovered_ledger).reconciliation_sweep(
+        max_items=1)
+    assert result.state_after is DeliveryState.ACKNOWLEDGED
+    assert result.lifecycle_reconciled is True
+    assert recovered_ledger.get(obligation.obligation_id).current_status == ObligationStatus.PRESENT.value
+    assert len(s3.objects) == 1
+
+
+def test_crash_after_lifecycle_present_before_reconciliation_commit_is_idempotent(
+    tmp_path, monkeypatch,
+):
+    class CrashBeforeReconciliationCommit(BaseException):
+        pass
+
+    clock = Clock()
+    path = tmp_path / "present-before-reconcile-commit.sqlite3"
+    ledger_path = tmp_path / "lifecycle.jsonl"
+    ledger = LifecycleEvidenceLedger(ledger_path)
+    obligation = create_dataset_obligation(
+        ledger, event_id="decision:D-72", lifecycle_stage="DECISION",
+        dataset="decision_ledger", identity={"decision_id": "D-72", "symbol": "EURUSD"},
+        timestamp=clock.iso(), producer="test", trigger="DECISION_WRITTEN",
+    )
+    box = CanonicalDeliveryOutbox(path, canonical_bucket="test-bucket", clock=clock.iso)
+    record = enqueue(box, suffix="72", lifecycle_obligation_id=obligation.obligation_id)
+    s3 = FakeS3()
+    original_record_reconciliation = box.record_reconciliation
+
+    def crash_before_commit(outbox_id, *, state, error=None):
+        if state == "RECONCILED":
+            raise CrashBeforeReconciliationCommit()
+        return original_record_reconciliation(outbox_id, state=state, error=error)
+
+    monkeypatch.setattr(box, "record_reconciliation", crash_before_commit)
+    with pytest.raises(CrashBeforeReconciliationCommit):
+        worker(box, s3, clock, lifecycle_ledger=ledger).run_once()
+    assert box.get(record.outbox_id).delivery_state is DeliveryState.ACKNOWLEDGED
+    assert ledger.get(obligation.obligation_id).current_status == ObligationStatus.PRESENT.value
+    box.close()
+
+    restarted = CanonicalDeliveryOutbox(path, canonical_bucket="test-bucket", clock=clock.iso)
+    recovered_ledger = LifecycleEvidenceLedger(ledger_path)
+    result, = worker(restarted, s3, clock, lifecycle_ledger=recovered_ledger).reconciliation_sweep(
+        max_items=1)
+    assert result.lifecycle_reconciled is True
+    assert restarted.get(record.outbox_id).delivery_state is DeliveryState.ACKNOWLEDGED
+    assert restarted.get(record.outbox_id).reconciliation_state == "RECONCILED"
+    assert recovered_ledger.get(obligation.obligation_id).revision == 2
+    assert len(s3.objects) == 1
+    restarted.close()
 
 
 def test_active_lease_is_not_stolen_then_expired_lease_is_reclaimed(tmp_path):
@@ -362,10 +723,88 @@ def test_active_lease_is_not_stolen_then_expired_lease_is_reclaimed(tmp_path):
     )
     assert claimed.record.claim_owner == "worker-A"
     assert worker(box, FakeS3(), clock, owner_id="worker-B").run_once() is None
-    clock.advance(31)
+    clock.advance(30)
     result = worker(box, FakeS3(), clock, owner_id="worker-B").run_once()
     assert result.expired_lease_reclaimed is True
     assert result.state_after is DeliveryState.ACKNOWLEDGED
+
+
+def test_retry_is_claimable_at_exact_next_retry_boundary(tmp_path):
+    clock = Clock()
+    box = outbox(tmp_path, clock)
+    record = enqueue(box)
+    s3 = FakeS3()
+    s3.failures[record.canonical_key] = [TimeoutError("retry boundary")]
+    executor = worker(box, s3, clock)
+
+    failed = executor.run_once()
+    assert failed.state_after is DeliveryState.RETRYABLE_FAILURE
+    assert box.get(record.outbox_id).next_retry_at == "2026-10-02T12:00:10+00:00"
+    clock.advance(10)
+
+    recovered = executor.run_once()
+
+    assert recovered.state_after is DeliveryState.ACKNOWLEDGED
+
+
+def test_two_workers_claim_independent_records_without_stealing(tmp_path):
+    clock = Clock()
+    path = tmp_path / "two-workers.sqlite3"
+    worker_a_box = CanonicalDeliveryOutbox(
+        path, canonical_bucket="test-bucket", clock=clock.iso)
+    first = enqueue(worker_a_box, suffix="81")
+    second = enqueue(worker_a_box, suffix="82")
+    worker_b_box = CanonicalDeliveryOutbox(
+        path, canonical_bucket="test-bucket", clock=clock.iso)
+
+    claim_a = worker_a_box.claim_next_result(
+        now=clock.iso(), owner_id="worker-A", lease_seconds=30)
+    claim_b = worker_b_box.claim_next_result(
+        now=clock.iso(), owner_id="worker-B", lease_seconds=30)
+
+    assert claim_a is not None and claim_b is not None
+    assert claim_a.record.outbox_id != claim_b.record.outbox_id
+    assert {claim_a.record.outbox_id, claim_b.record.outbox_id} == {
+        first.outbox_id, second.outbox_id,
+    }
+    assert {claim_a.record.claim_owner, claim_b.record.claim_owner} == {
+        "worker-A", "worker-B",
+    }
+
+
+def test_500_record_backlog_preserves_fairness_and_terminal_states(tmp_path):
+    clock = Clock()
+    box = outbox(tmp_path, clock, "backlog.sqlite3")
+    records = [enqueue(box, suffix=str(index)) for index in range(1, 501)]
+    s3 = FakeS3()
+    timeout = records[0]
+    denied = records[1]
+    conflict = records[2]
+    s3.failures[timeout.canonical_key] = [TimeoutError("temporary outage")]
+    s3.failures[denied.canonical_key] = [FakeS3Error("AccessDenied", 403)]
+    conflict_object_key = (conflict.canonical_bucket, conflict.canonical_key)
+    s3.objects[conflict_object_key] = {
+        "Body": b'{"payload":"not-the-record"}',
+        "Metadata": {}, "ETag": '"conflict"',
+    }
+
+    results = worker(box, s3, clock).drain(max_items=500)
+    states = [result.state_after for result in results]
+
+    assert len(results) == 500
+    assert states.count(DeliveryState.RETRYABLE_FAILURE) == 1
+    assert states.count(DeliveryState.TERMINAL_FAILURE) == 1
+    assert states.count(DeliveryState.CONFLICT) == 1
+    assert states.count(DeliveryState.ACKNOWLEDGED) == 497
+    assert box.get(timeout.outbox_id).next_retry_at is not None
+    assert box.get(denied.outbox_id).next_retry_at is None
+    assert box.get(conflict.outbox_id).delivery_state is DeliveryState.CONFLICT
+    assert s3.objects[conflict_object_key]["Body"] == b'{"payload":"not-the-record"}'
+    status = box.status()
+    assert status.acknowledged_count == 497
+    assert status.retryable_failure_count == 1
+    assert status.terminal_failure_count == 1
+    assert status.conflict_count == 1
 
 
 def test_max_attempts_transitions_to_terminal(tmp_path):
@@ -681,11 +1120,14 @@ def test_bounded_end_to_end_acceptance_matrix(tmp_path):
     assert recovered.state_after is DeliveryState.ACKNOWLEDGED
     assert ledger.get(obligations[("execution_results", "B")]).current_status \
         == ObligationStatus.PRESENT.value
+    assert_delivery_invariants(box, s3, ledger)
 
 
 def test_worker_can_deliver_all_23_production_v1_datasets(tmp_path):
     clock = Clock()
     box = outbox(tmp_path, clock, "all-datasets.sqlite3")
+    ledger = LifecycleEvidenceLedger(tmp_path / "all-datasets-lifecycle.jsonl")
+    lifecycle_ids = {}
     for index, dataset in enumerate(PRODUCTION_SCHEMA_REGISTRY, start=1):
         identity = {
             field: ("EURUSD" if dataset == "events" and field == "symbol"
@@ -699,14 +1141,40 @@ def test_worker_can_deliver_all_23_production_v1_datasets(tmp_path):
                 key: value for key, value in identity.items()
                 if key in {"trade_id", "account_id"}
             }
+        obligation_id = None
+        if DATASET_DISPOSITIONS[dataset]["class"] in {
+            "A_LIVE_REQUIRED", "B_LIVE_CONDITIONAL",
+        }:
+            obligation = create_dataset_obligation(
+                ledger, event_id=f"all-datasets:{dataset}:{index}",
+                lifecycle_stage="BLOCK_1D_ALL_DATASET_TEST", dataset=dataset,
+                identity={**identity, "symbol": "EURUSD"},
+                timestamp=clock.iso(), producer="test", trigger="REPRESENTATIVE_RECORD",
+            )
+            lifecycle_ids[dataset] = obligation.obligation_id
+            obligation_id = obligation.obligation_id
         box.enqueue(
             dataset=dataset, payload=payload, identity=identity,
             symbol="EURUSD" if is_symbol_scoped(dataset) else "",
             partition_date=DATE,
+            lifecycle_obligation_id=obligation_id,
         )
-    results = worker(box, FakeS3(), clock).drain(max_items=23)
+    s3 = FakeS3()
+    results = worker(box, s3, clock, lifecycle_ledger=ledger).drain(max_items=23)
     assert len(results) == 23
     assert all(item.state_after is DeliveryState.ACKNOWLEDGED for item in results), [
         (item.dataset, item.state_after.value, item.error_class) for item in results
     ]
     assert box.status().acknowledged_count == 23
+    counts = assert_delivery_invariants(box, s3, ledger)
+    assert counts["records"] == 23
+    by_dataset = {item.dataset: item for item in results}
+    for dataset, disposition in DATASET_DISPOSITIONS.items():
+        item = by_dataset[dataset]
+        assert item.ack_verified is True
+        if disposition["class"] in {"A_LIVE_REQUIRED", "B_LIVE_CONDITIONAL"}:
+            assert item.lifecycle_reconciled is True
+            assert ledger.get(lifecycle_ids[dataset]).current_status == ObligationStatus.PRESENT.value
+        else:
+            assert item.lifecycle_reconciled is False
+            assert box.get(item.outbox_id).reconciliation_state == "NOT_APPLICABLE"

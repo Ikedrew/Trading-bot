@@ -535,8 +535,14 @@ def emit(
 
         with _lock:
             fh = _get_file_handle(date_str)
+            from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+            try_prepare_local_jsonl_handoffs(
+                dataset="events", content=line, symbol=event["symbol"],
+                partition_date=date_str, local_path=_current_file,
+            )
             fh.write(line)
             fh.flush()
+            os.fsync(fh.fileno())
 
         _total_emitted += 1
 

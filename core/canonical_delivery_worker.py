@@ -83,6 +83,14 @@ class WorkerStatus:
     recovered_orphan_ack_count: int
     reclaimed_expired_lease_count: int
     reconciliation_anomaly_count: int
+    local_handoff_prepared_count: int
+    local_handoff_completed_count: int
+    local_handoff_conflict_count: int
+    recovered_local_handoff_count: int
+    local_handoff_recovery_failure_count: int
+    last_run_at: str | None
+    last_successful_ack_at: str | None
+    last_worker_error: str | None
 
 
 def _utc_now() -> datetime:
@@ -191,8 +199,13 @@ class CanonicalDeliveryWorker:
         self._recovered_orphans = 0
         self._reclaimed_leases = 0
         self._reconciliation_anomalies = 0
+        self._recovered_local_handoffs = 0
+        self._local_handoff_recovery_failures = 0
         self._attempts_by_dataset: dict[str, int] = {}
         self._failures_by_error_class: dict[str, int] = {}
+        self._last_run_at: str | None = None
+        self._last_successful_ack_at: str | None = None
+        self._last_worker_error: str | None = None
 
     @staticmethod
     def _default_s3_client() -> Any:
@@ -423,6 +436,18 @@ class CanonicalDeliveryWorker:
         self, *, reconciliation_only: bool = False,
         exclude_outbox_ids: tuple[str, ...] = (),
     ) -> DeliveryResult | None:
+        self._last_run_at = _iso(self.clock())
+        try:
+            from core.canonical_delivery import recover_local_handoffs
+            recovery = recover_local_handoffs(outbox=self.outbox, max_items=100)
+            self._recovered_local_handoffs += recovery.recovered
+            self._local_handoff_recovery_failures += recovery.failed
+            if recovery.failed:
+                self._last_worker_error = "LOCAL_HANDOFF_RECOVERY_FAILED"
+        except Exception as exc:
+            self._local_handoff_recovery_failures += 1
+            self._last_worker_error = f"LOCAL_HANDOFF_RECOVERY:{type(exc).__name__}"
+            logger.exception("[CANONICAL_LOCAL_HANDOFF_RECOVERY_FAILED]")
         now = _iso(self.clock())
         claim = self.outbox.claim_next_result(
             now=now, owner_id=self.owner_id, lease_seconds=self.lease_seconds,
@@ -471,6 +496,9 @@ class CanonicalDeliveryWorker:
                 self._recovered_orphans += 1
             reconciled, anomaly = self._safe_reconcile_lifecycle(acked)
             final = self.outbox.get(record.outbox_id) or acked
+            self._last_successful_ack_at = final.canonical_ack.get("acknowledged_at") \
+                if final.canonical_ack else self._last_successful_ack_at
+            self._last_worker_error = None if anomaly is None else anomaly
             return DeliveryResult(
                 record.outbox_id, record.dataset, claim.state_before,
                 final.delivery_state, record.attempt_count,
@@ -479,9 +507,11 @@ class CanonicalDeliveryWorker:
                 claim.reclaimed_expired_lease,
             )
         except Exception as exc:
+            self._last_worker_error = f"{type(exc).__name__}:{exc}"
             current = self.outbox.get(record.outbox_id)
             if current is not None and current.delivery_state is DeliveryState.ACKNOWLEDGED:
                 reconciled, anomaly = self._safe_reconcile_lifecycle(current)
+                self._last_worker_error = anomaly
                 return DeliveryResult(
                     record.outbox_id, record.dataset, claim.state_before,
                     DeliveryState.ACKNOWLEDGED, record.attempt_count,
@@ -533,9 +563,27 @@ class CanonicalDeliveryWorker:
             processed.append(result.outbox_id)
         return tuple(results)
 
+    def reconcile_acknowledged(self, *, max_items: int = 100) -> tuple[DeliveryResult, ...]:
+        """Retry bounded lifecycle reconciliation for durable ACK rows only."""
+        if max_items < 0:
+            raise ValueError("MAX_ITEMS_MUST_BE_NON_NEGATIVE")
+        records = self.outbox.acknowledged_needing_reconciliation(limit=max_items)
+        results = []
+        for record in records:
+            reconciled, anomaly = self._safe_reconcile_lifecycle(record)
+            final = self.outbox.get(record.outbox_id) or record
+            results.append(DeliveryResult(
+                record.outbox_id, record.dataset, DeliveryState.ACKNOWLEDGED,
+                DeliveryState.ACKNOWLEDGED, record.attempt_count,
+                record.canonical_bucket, record.canonical_key, True, False,
+                None, reconciled, anomaly,
+            ))
+        return tuple(results)
+
     def status(self) -> WorkerStatus:
         outbox = self.outbox.status(now=self.clock())
         durable = self.outbox.delivery_metrics()
+        handoffs = self.outbox.local_handoff_status()
         return WorkerStatus(
             owner_id=self.owner_id,
             pending=outbox.pending_count,
@@ -550,6 +598,14 @@ class CanonicalDeliveryWorker:
             recovered_orphan_ack_count=durable["recovered_orphan_ack_count"],
             reclaimed_expired_lease_count=durable["reclaimed_expired_lease_count"],
             reconciliation_anomaly_count=durable["reconciliation_anomaly_count"],
+            local_handoff_prepared_count=handoffs.get("PREPARED", 0),
+            local_handoff_completed_count=handoffs.get("COMPLETED", 0),
+            local_handoff_conflict_count=handoffs.get("CONFLICT", 0),
+            recovered_local_handoff_count=self._recovered_local_handoffs,
+            local_handoff_recovery_failure_count=self._local_handoff_recovery_failures,
+            last_run_at=self._last_run_at,
+            last_successful_ack_at=self._last_successful_ack_at,
+            last_worker_error=self._last_worker_error,
         )
 
 

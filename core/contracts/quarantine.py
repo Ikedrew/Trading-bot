@@ -229,6 +229,13 @@ class QuarantineStore:
             record["schema_version"] = _SCHEMA_VERSION
             line = json.dumps(record, separators=(",", ":"), default=str) + "\n"
 
+            from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+            try_prepare_local_jsonl_handoffs(
+                dataset="quarantine", content=line,
+                symbol=str(qr.original_payload.get("symbol") or "QUARANTINE"),
+                partition_date=date_str, local_path=local_path,
+            )
+
             fd = os.open(str(local_path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
             try:
                 os.write(fd, line.encode("utf-8"))

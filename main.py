@@ -174,6 +174,7 @@ def main() -> None:
         from core.startup_self_test import run_startup_self_test
         run_startup_self_test()
 
+    _delivery_service = None
     try:
         symbols = getattr(config, "CANONICAL_SYMBOLS", None) or getattr(config, "SYMBOLS", [])
         if not symbols:
@@ -229,6 +230,23 @@ def main() -> None:
         except Exception:
             pass
 
+        if not config.REPLAY_MODE:
+            try:
+                from core.canonical_delivery_service import start_canonical_delivery_service
+                _delivery_service = start_canonical_delivery_service()
+                logger.info(
+                    "[CANONICAL_DELIVERY_SERVICE] started=%s recovered_local=%d",
+                    _delivery_service.status().running,
+                    _delivery_service.status().startup_recovered_handoffs,
+                )
+            except Exception as delivery_exc:
+                # Delivery is asynchronous evidence plumbing; it must not gate
+                # strategy, risk, or broker startup.
+                logger.critical(
+                    "[CANONICAL_DELIVERY_SERVICE_START_FAILED] %s: %s",
+                    type(delivery_exc).__name__, delivery_exc,
+                )
+
         if scanner_enabled and config.REPLAY_MODE:
             # Multi-symbol scanner: all symbols in one loop
             logger.info("[ROUTING] mode=replay_scanner | function=run_replay_scanner | symbols=%d", len(symbols))
@@ -259,6 +277,15 @@ def main() -> None:
                         pass
                     continue
     finally:
+        if _delivery_service is not None:
+            try:
+                from core.canonical_delivery_service import stop_canonical_delivery_service
+                if not stop_canonical_delivery_service():
+                    logger.error("[CANONICAL_DELIVERY_SERVICE_STOP_INCOMPLETE]")
+            except Exception as delivery_exc:
+                logger.error("[CANONICAL_DELIVERY_SERVICE_STOP_FAILED] %s",
+                             type(delivery_exc).__name__)
+
         # I4: Record daily equity snapshot before shutdown
         try:
             from core.equity_curve_tracker import record_daily_equity_snapshot

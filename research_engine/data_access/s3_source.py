@@ -636,7 +636,7 @@ class S3ResearchDataSource:
         if cache_key in self._cache:
             return self._cache[cache_key]
 
-        records: list[dict[str, Any]] = []
+        object_records: list[tuple[str, dict[str, Any]]] = []
         seen_keys: set[str] = set()
         for prefix in self._list_prefixes(dataset, symbol=symbol, all_schemas=all_schemas):
             for key in self._iter_keys(prefix):
@@ -645,7 +645,32 @@ class S3ResearchDataSource:
                 if not self._in_range(key, start_date, end_date):
                     continue
                 seen_keys.add(key)
-                records.extend(self._read_object(dataset, key))
+                object_records.extend(
+                    (key, record) for record in self._read_object(dataset, key)
+                )
+
+        legacy_counts: dict[str, int] = {}
+        for key, record in object_records:
+            if key.rsplit("/", 1)[-1] == "part-000.jsonl":
+                fingerprint = json.dumps(
+                    record, sort_keys=True, separators=(",", ":"),
+                    ensure_ascii=True,
+                )
+                legacy_counts[fingerprint] = legacy_counts.get(fingerprint, 0) + 1
+        outbox_counts: dict[str, int] = {}
+        records: list[dict[str, Any]] = []
+        for key, record in object_records:
+            filename = key.rsplit("/", 1)[-1]
+            if filename.startswith("part-outbox-") and filename.endswith(".jsonl"):
+                fingerprint = json.dumps(
+                    record, sort_keys=True, separators=(",", ":"),
+                    ensure_ascii=True,
+                )
+                count = outbox_counts.get(fingerprint, 0)
+                outbox_counts[fingerprint] = count + 1
+                if count < legacy_counts.get(fingerprint, 0):
+                    continue
+            records.append(record)
 
         order_keys = _ORDER_KEYS.get(dataset, _DEFAULT_ORDER_KEYS)
         records.sort(key=lambda r: _order_value(r, order_keys))

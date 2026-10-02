@@ -97,6 +97,15 @@ class ShadowEventWriter:
             path.parent.mkdir(parents=True, exist_ok=True)
             line = json.dumps(event, separators=(",", ":"), default=str) + "\n"
 
+            from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+            utc_date = datetime.fromtimestamp(
+                int(market_time_utc), tz=timezone.utc
+            ).strftime("%Y-%m-%d")
+            try_prepare_local_jsonl_handoffs(
+                dataset="shadow_runtime", content=line, symbol=symbol,
+                partition_date=utc_date, local_path=path,
+            )
+
             fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
             try:
                 os.write(fd, line.encode("utf-8"))
@@ -105,9 +114,6 @@ class ShadowEventWriter:
                 os.close(fd)
 
             from core.canonical_delivery import enqueue_canonical_delivery
-            utc_date = datetime.fromtimestamp(
-                int(market_time_utc), tz=timezone.utc
-            ).strftime("%Y-%m-%d")
             enqueue_canonical_delivery(
                 dataset="shadow_runtime", payload=event, symbol=symbol,
                 partition_date=utc_date,

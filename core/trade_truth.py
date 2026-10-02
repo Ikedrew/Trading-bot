@@ -412,6 +412,12 @@ def persist_trade_truth(record: dict[str, Any], *, local_dir: str = "logs/trade_
 
         line = json.dumps(record, separators=(",", ":"), default=str) + "\n"
 
+        from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+        try_prepare_local_jsonl_handoffs(
+            dataset="trade_truth", content=line, symbol=symbol,
+            partition_date=date_str, local_path=local_path,
+        )
+
         fd = os.open(str(local_path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         try:
             os.write(fd, line.encode("utf-8"))

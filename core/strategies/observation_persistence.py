@@ -169,6 +169,11 @@ def persist_strategy_observation(record: dict[str, Any]) -> bool:
         # ─── LOCAL PERSISTENCE (PRIMARY) ──────────────────────────────
         path = Path(_LOCAL_DIR) / symbol / f"{date_str}.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
+        from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+        try_prepare_local_jsonl_handoffs(
+            dataset="strategy_observations", content=line + "\n", symbol=symbol,
+            partition_date=date_str, local_path=path,
+        )
 
         fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         try:

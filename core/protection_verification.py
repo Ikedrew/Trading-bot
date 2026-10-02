@@ -504,6 +504,11 @@ def _persist_result(result: ProtectionVerificationResult, symbol: str) -> bool:
         record = result.to_dict()
         record["schema_version"] = _SCHEMA_VERSION
         line = json.dumps(record, separators=(",", ":"), default=str)
+        from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+        try_prepare_local_jsonl_handoffs(
+            dataset="protection_audit", content=line + "\n", symbol=symbol,
+            partition_date=date_str, local_path=path,
+        )
         fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         try:
             os.write(fd, (line + "\n").encode("utf-8"))

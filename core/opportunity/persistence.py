@@ -92,6 +92,11 @@ def persist_opportunity(opportunity: Opportunity) -> bool:
                            _obligation_exc)
 
         line = json.dumps(record, separators=(",", ":"), default=str)
+        from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+        try_prepare_local_jsonl_handoffs(
+            dataset="opportunities", content=line + "\n",
+            symbol=opportunity.symbol, partition_date=date_str, local_path=path,
+        )
         fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         try:
             os.write(fd, (line + "\n").encode("utf-8"))
@@ -190,6 +195,11 @@ def persist_opportunity_batch(opportunities: list[Opportunity]) -> bool:
                 ))
 
             content = "\n".join(lines) + "\n"
+            from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+            try_prepare_local_jsonl_handoffs(
+                dataset="opportunities", content=content, symbol=symbol,
+                partition_date=date_str, local_path=path,
+            )
             fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
             try:
                 os.write(fd, content.encode("utf-8"))

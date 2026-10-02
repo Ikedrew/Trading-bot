@@ -21,6 +21,7 @@ from core.canonical_delivery_outbox import (
     CanonicalDeliveryOutbox,
     DEFAULT_OUTBOX_PATH,
     EnqueueResult,
+    LocalHandoff,
     governed_identity,
 )
 from core.production_data_contract import PRODUCTION_SCHEMA_REGISTRY
@@ -86,6 +87,14 @@ class BatchEnqueueResult:
     @property
     def logical_delivery_count(self) -> int:
         return len({item.record.outbox_id for item in self.results})
+
+
+@dataclass(frozen=True)
+class LocalHandoffRecoveryResult:
+    inspected: int
+    recovered: int
+    waiting_for_local_record: int
+    failed: int
 
 
 _OUTBOX: CanonicalDeliveryOutbox | None = None
@@ -212,6 +221,138 @@ def enqueue_canonical_delivery(
         ) from exc
 
 
+def prepare_local_handoff(
+    *, dataset: str, payload: Mapping[str, Any], symbol: str,
+    partition_date: str, local_path: str | Path, local_line: str,
+    identity: Mapping[str, Any] | None = None,
+    lifecycle_obligation_id: str | None = None,
+    outbox: CanonicalDeliveryOutbox | None = None,
+) -> LocalHandoff:
+    """Journal the exact local record before its JSONL append is attempted."""
+    classification = CANONICAL_DELIVERY_MIGRATION.get(dataset)
+    if classification is not MigrationClassification.OUTBOX_MIGRATED:
+        raise CanonicalDeliveryHandoffError(f"UNCLASSIFIED_DATASET:{dataset}")
+    try:
+        return (outbox or get_delivery_outbox()).prepare_local_handoff(
+            dataset=dataset, payload=payload, symbol=symbol,
+            partition_date=partition_date, local_path=local_path,
+            local_line=local_line, identity=identity,
+            lifecycle_obligation_id=lifecycle_obligation_id,
+        )
+    except Exception as exc:
+        _record_handoff_failure(lifecycle_obligation_id, dataset, exc)
+        raise CanonicalDeliveryHandoffError(
+            f"LOCAL_HANDOFF_PREPARE_FAILED:{dataset}:{type(exc).__name__}"
+        ) from exc
+
+
+def prepare_local_jsonl_handoffs(
+    *, dataset: str, content: str, symbol: str, partition_date: str,
+    local_path: str | Path, outbox: CanonicalDeliveryOutbox | None = None,
+) -> tuple[LocalHandoff, ...]:
+    """Prepare each exact JSONL record before a writer appends the batch."""
+    try:
+        source_lines = [line for line in content.splitlines() if line.strip()]
+        payloads = [(line, json.loads(line)) for line in source_lines]
+    except json.JSONDecodeError as exc:
+        raise CanonicalDeliveryHandoffError(
+            f"LOCAL_HANDOFF_JSONL_INVALID:{dataset}:{exc.msg}"
+        ) from exc
+    if not all(isinstance(payload, dict) for _, payload in payloads):
+        raise CanonicalDeliveryHandoffError(f"LOCAL_HANDOFF_OBJECT_REQUIRED:{dataset}")
+    target = outbox or get_delivery_outbox()
+    handoffs = []
+    for line, payload in payloads:
+        identity = governed_identity(dataset, payload)
+        obligation_id = _existing_obligation_id(dataset, identity)
+        handoffs.append(target.prepare_local_handoff(
+            dataset=dataset, payload=payload, symbol=symbol,
+            partition_date=partition_date, local_path=local_path,
+            local_line=line,
+            identity=identity, lifecycle_obligation_id=obligation_id,
+        ))
+    return tuple(handoffs)
+
+
+def try_prepare_local_jsonl_handoffs(**kwargs: Any) -> tuple[LocalHandoff, ...]:
+    """Prepare recovery intents, failing closed on durable-store errors.
+
+    Rows missing governed identity may still be written to their existing local
+    forensic stream, but they are explicitly excluded from canonical recovery.
+    SQLite/durability failures and idempotency conflicts abort before local fsync.
+    """
+    try:
+            return prepare_local_jsonl_handoffs(**kwargs)
+    except Exception as exc:
+        logger.critical(
+            "[CANONICAL_LOCAL_HANDOFF_PREPARE_FAILED] dataset=%s error=%s",
+            kwargs.get("dataset", "UNKNOWN"), type(exc).__name__,
+        )
+        local_only_invalid_identity = (
+            isinstance(exc, ValueError)
+            and str(exc).startswith((
+                "EXACT_IDENTITY_FIELD_REQUIRED:",
+                "EXACT_IDENTITY_FIELD_NOT_SCALAR:",
+            ))
+        )
+        if not local_only_invalid_identity:
+            raise
+        return ()
+
+
+def recover_local_handoffs(
+    *, outbox: CanonicalDeliveryOutbox | None = None, max_items: int = 100,
+) -> LocalHandoffRecoveryResult:
+    """Recover only exact writer-registered JSONL lines; never scan arbitrary logs."""
+    if max_items < 0:
+        raise ValueError("MAX_ITEMS_MUST_BE_NON_NEGATIVE")
+    target = outbox or get_delivery_outbox()
+    pending = target.pending_local_handoffs(limit=max_items)
+    recovered = waiting = failed = 0
+    for handoff in pending:
+        try:
+            if not _local_handoff_line_exists(handoff):
+                target.note_local_handoff_recovery_attempt(
+                    handoff.handoff_id, "LOCAL_HANDOFF_SOURCE_NOT_FOUND",
+                )
+                waiting += 1
+                continue
+            enqueue_canonical_delivery(
+                dataset=handoff.dataset, payload=handoff.payload,
+                symbol=handoff.symbol, partition_date=handoff.partition_date,
+                identity=handoff.identity,
+                lifecycle_obligation_id=handoff.lifecycle_obligation_id,
+                outbox=target,
+            )
+            recovered += 1
+        except Exception as exc:
+            target.note_local_handoff_recovery_attempt(
+                handoff.handoff_id,
+                f"LOCAL_HANDOFF_RECOVERY_FAILED:{type(exc).__name__}",
+            )
+            failed += 1
+            logger.error(
+                "[CANONICAL_LOCAL_HANDOFF_RECOVERY_FAILED] handoff=%s dataset=%s error=%s",
+                handoff.handoff_id, handoff.dataset, type(exc).__name__,
+            )
+    return LocalHandoffRecoveryResult(len(pending), recovered, waiting, failed)
+
+
+def _local_handoff_line_exists(handoff: LocalHandoff) -> bool:
+    path = Path(handoff.local_path)
+    if not path.is_file():
+        return False
+    expected = handoff.local_line.encode("utf-8")
+    try:
+        with path.open("rb") as source:
+            for line in source:
+                if line.rstrip(b"\r\n") == expected:
+                    return True
+    except OSError:
+        logger.exception("[CANONICAL_LOCAL_HANDOFF_SOURCE_READ_FAILED] path=%s", path)
+    return False
+
+
 def enqueue_canonical_batch(
     *,
     dataset: str,
@@ -266,6 +407,23 @@ def validate_migration_coverage() -> None:
     allowed = set(MigrationClassification)
     invalid = {dataset: value for dataset, value in CANONICAL_DELIVERY_MIGRATION.items()
                if value not in allowed}
+    missing_recovery_hook = []
+    direct_put = []
+    for dataset, modules in CANONICAL_WRITER_MODULES.items():
+        for module_name in modules:
+            spec = __import__("importlib.util", fromlist=["find_spec"]).find_spec(module_name)
+            if spec is None or not spec.origin:
+                missing_recovery_hook.append((dataset, module_name, "MODULE_MISSING"))
+                continue
+            source = Path(spec.origin).read_text(encoding="utf-8", errors="ignore")
+            if "prepare_local_jsonl_handoffs(" not in source:
+                missing_recovery_hook.append((dataset, module_name, "PREWRITE_HANDOFF_MISSING"))
+            if ".put_" + "object(" in source:
+                direct_put.append((dataset, module_name))
+    if missing_recovery_hook:
+        raise RuntimeError(f"CANONICAL_LOCAL_RECOVERY_HOOK_MISSING:{missing_recovery_hook}")
+    if direct_put:
+        raise RuntimeError(f"CANONICAL_WRITER_DIRECT_S3_PUT:{direct_put}")
     if invalid:
         raise RuntimeError(f"INVALID_MIGRATION_CLASSIFICATION:{invalid}")
     writer_datasets = set(CANONICAL_WRITER_MODULES)
@@ -287,11 +445,16 @@ __all__ = [
     "CANONICAL_DELIVERY_MIGRATION",
     "CANONICAL_WRITER_MODULES",
     "CanonicalDeliveryHandoffError",
+    "LocalHandoffRecoveryResult",
     "MigrationClassification",
     "configure_delivery_outbox",
     "enqueue_canonical_batch",
     "enqueue_canonical_delivery",
     "enqueue_canonical_jsonl",
     "get_delivery_outbox",
+    "prepare_local_jsonl_handoffs",
+    "try_prepare_local_jsonl_handoffs",
+    "prepare_local_handoff",
+    "recover_local_handoffs",
     "validate_migration_coverage",
 ]

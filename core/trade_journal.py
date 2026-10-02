@@ -477,6 +477,11 @@ def persist_trade(record: TradeRecord) -> bool:
         filepath = journal_dir / f"{date_str}.jsonl"
 
         line = json.dumps(_record_to_dict(record), separators=(",", ":")) + "\n"
+        from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+        try_prepare_local_jsonl_handoffs(
+            dataset="trade_journal", content=line, symbol=record.symbol,
+            partition_date=date_str, local_path=filepath,
+        )
 
         # Append with fsync for crash safety
         try:

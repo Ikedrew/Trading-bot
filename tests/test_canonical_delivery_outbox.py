@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+import json
 import sqlite3
 
 import pytest
@@ -151,6 +152,21 @@ def test_ack_accepts_verified_identical_object_after_create_only_collision(tmp_p
     assert acknowledged.delivery_state is DeliveryState.ACKNOWLEDGED
 
 
+def test_ack_rejects_unreported_missing_etag_before_commit(tmp_path):
+    outbox = _outbox(tmp_path)
+    _enqueue_decision(outbox)
+    claimed = outbox.claim_next()
+    evidence = _ack_evidence(claimed)
+    evidence.pop("etag")
+
+    with pytest.raises(CanonicalAckError, match="ACK_ETAG_ABSENCE_NOT_EXPLICIT"):
+        outbox.acknowledge(claimed.outbox_id, evidence)
+
+    current = outbox.get(claimed.outbox_id)
+    assert current.delivery_state is DeliveryState.IN_FLIGHT
+    assert current.canonical_ack is None
+
+
 def test_retryable_failure_and_expired_interrupted_claim_survive_restart(tmp_path):
     outbox = _outbox(tmp_path)
     first = _enqueue_decision(outbox, decision="D1").record
@@ -205,6 +221,65 @@ def test_malformed_persisted_row_fails_closed_on_restart(tmp_path):
         _outbox(tmp_path)
 
 
+def test_malformed_ack_evidence_fails_closed_on_restart(tmp_path):
+    outbox = _outbox(tmp_path)
+    record = _enqueue_decision(outbox)
+    claimed = outbox.claim_next(owner_id="worker-A")
+    outbox.acknowledge(claimed.outbox_id, _ack_evidence(claimed))
+    outbox.close()
+
+    with sqlite3.connect(tmp_path / "outbox.sqlite3") as db:
+        db.execute("UPDATE outbox_records SET ack_json='{}'")
+        db.commit()
+
+    with pytest.raises(OutboxCorruptionError, match="CORRUPT_OUTBOX_ROW"):
+        _outbox(tmp_path)
+
+
+def test_unknown_persisted_delivery_state_fails_closed_on_restart(tmp_path):
+    outbox = _outbox(tmp_path)
+    _enqueue_decision(outbox)
+    outbox.close()
+    with sqlite3.connect(tmp_path / "outbox.sqlite3") as db:
+        db.execute("UPDATE outbox_records SET delivery_state='SILENTLY_ACKED'")
+        db.commit()
+
+    with pytest.raises(OutboxCorruptionError, match="CORRUPT_OUTBOX_ROW"):
+        _outbox(tmp_path)
+
+
+@pytest.mark.parametrize(("field", "value"), [
+    ("canonical_key", ""),
+    ("next_retry_at", None),
+])
+def test_impossible_delivery_metadata_fails_closed_on_restart(tmp_path, field, value):
+    outbox = _outbox(tmp_path)
+    record = _enqueue_decision(outbox).record
+    if field == "next_retry_at":
+        claimed = outbox.claim_next()
+        outbox.mark_retryable_failure(
+            claimed.outbox_id, error="offline",
+            next_retry_at="2026-10-01T12:00:10+00:00",
+        )
+    outbox.close()
+    with sqlite3.connect(tmp_path / "outbox.sqlite3") as db:
+        if field == "next_retry_at":
+            db.execute(
+                "UPDATE outbox_records SET delivery_state=?, next_retry_at=NULL "
+                "WHERE outbox_id=?",
+                (DeliveryState.RETRYABLE_FAILURE.value, record.outbox_id),
+            )
+        else:
+            db.execute(
+                "UPDATE outbox_records SET canonical_key=? WHERE outbox_id=?",
+                (value, record.outbox_id),
+            )
+        db.commit()
+
+    with pytest.raises(OutboxCorruptionError, match="CORRUPT_OUTBOX_ROW"):
+        _outbox(tmp_path)
+
+
 def test_account_and_dataset_identity_isolation(tmp_path):
     outbox = _outbox(tmp_path)
     common = {"correlation_id": "COR-1", "symbol": "EURUSD"}
@@ -230,6 +305,160 @@ def test_account_and_dataset_identity_isolation(tmp_path):
     assert account_a.idempotency_key != account_b.idempotency_key
     assert strategy.idempotency_key != horizon.idempotency_key
     assert len(outbox.records()) == 4
+
+
+def test_explicit_identity_must_match_serialized_payload(tmp_path):
+    outbox = _outbox(tmp_path)
+    with pytest.raises(ValueError, match="EXPLICIT_IDENTITY_DOES_NOT_MATCH_PAYLOAD"):
+        outbox.enqueue(
+            dataset="execution_results",
+            payload={"correlation_id": "COR-1", "account_id": "B",
+                     "symbol": "EURUSD"},
+            identity={"correlation_id": "COR-1", "account_id": "A"},
+            symbol="EURUSD", partition_date=DATE,
+        )
+    assert outbox.records() == ()
+
+
+def test_prepared_local_handoff_recovers_exact_line_idempotently(tmp_path):
+    from core.canonical_delivery import recover_local_handoffs
+
+    outbox = _outbox(tmp_path)
+    payload = _decision_payload("D-HANDOFF")
+    path = tmp_path / "local" / "EURUSD" / "2026-10-01.jsonl"
+    line = json.dumps(payload, separators=(",", ":"))
+    handoff = outbox.prepare_local_handoff(
+        dataset="decision_ledger", payload=payload, symbol="EURUSD",
+        partition_date=DATE, local_path=path, local_line=line,
+    )
+    assert handoff.state == "PREPARED"
+    assert outbox.records() == ()
+
+    path.parent.mkdir(parents=True)
+    path.write_text(line + "\n", encoding="utf-8")
+    recovery = recover_local_handoffs(outbox=outbox, max_items=1)
+
+    assert recovery.inspected == 1
+    assert recovery.recovered == 1
+    assert recovery.waiting_for_local_record == 0
+    assert len(outbox.records()) == 1
+    assert outbox.records()[0].outbox_id == f"outbox_{handoff.handoff_id}"
+    assert outbox.local_handoff_status() == {"COMPLETED": 1}
+    assert recover_local_handoffs(outbox=outbox, max_items=1).inspected == 0
+
+
+def test_missing_local_handoff_does_not_starve_later_valid_handoff_after_restart(
+    tmp_path,
+):
+    from core.canonical_delivery import LocalHandoffRecoveryResult, recover_local_handoffs
+
+    clock_values = iter([
+        "2026-10-01T10:00:00+00:00",
+        "2026-10-01T10:00:01+00:00",
+        "2026-10-01T10:00:02+00:00",
+    ])
+    outbox = _outbox(tmp_path, clock=lambda: next(clock_values))
+
+    missing_payload = _decision_payload("D-HANDOFF-MISSING")
+    missing_line = json.dumps(missing_payload, separators=(",", ":"))
+    missing = outbox.prepare_local_handoff(
+        dataset="decision_ledger", payload=missing_payload, symbol="EURUSD",
+        partition_date=DATE, local_path=tmp_path / "missing.jsonl",
+        local_line=missing_line,
+    )
+
+    valid_payload = _decision_payload("D-HANDOFF-VALID")
+    valid_line = json.dumps(valid_payload, separators=(",", ":"))
+    valid_path = tmp_path / "valid.jsonl"
+    valid = outbox.prepare_local_handoff(
+        dataset="decision_ledger", payload=valid_payload, symbol="EURUSD",
+        partition_date=DATE, local_path=valid_path, local_line=valid_line,
+    )
+    valid_path.write_text(valid_line + "\n", encoding="utf-8")
+
+    first = recover_local_handoffs(outbox=outbox, max_items=1)
+    assert first == LocalHandoffRecoveryResult(
+        inspected=1, recovered=0, waiting_for_local_record=1, failed=0,
+    )
+    outbox.close()
+
+    with sqlite3.connect(tmp_path / "outbox.sqlite3") as db:
+        attempts = dict(db.execute(
+            "SELECT handoff_id,recovery_attempts FROM local_handoffs"
+        ).fetchall())
+    assert attempts == {missing.handoff_id: 1, valid.handoff_id: 0}
+
+    restarted = _outbox(tmp_path)
+    second = recover_local_handoffs(outbox=restarted, max_items=1)
+
+    assert second == LocalHandoffRecoveryResult(
+        inspected=1, recovered=1, waiting_for_local_record=0, failed=0,
+    )
+    assert restarted.get(f"outbox_{valid.handoff_id}").payload["decision_id"] \
+        == "D-HANDOFF-VALID"
+    assert restarted.local_handoff_status() == {"COMPLETED": 1, "PREPARED": 1}
+
+
+def test_prewrite_handoff_only_bypasses_incomplete_identity(tmp_path):
+    from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+
+    outbox = _outbox(tmp_path)
+    assert try_prepare_local_jsonl_handoffs(
+        dataset="decision_ledger", content='{"symbol":"EURUSD"}',
+        symbol="EURUSD", partition_date=DATE,
+        local_path=tmp_path / "local" / "decisions.jsonl", outbox=outbox,
+    ) == ()
+    with pytest.raises(ValueError, match="PAYLOAD_NOT_CANONICAL_JSON"):
+        try_prepare_local_jsonl_handoffs(
+            dataset="decision_ledger",
+            content='{"decision_id":"D-NAN","value":NaN}',
+            symbol="EURUSD", partition_date=DATE,
+            local_path=tmp_path / "local" / "decisions.jsonl", outbox=outbox,
+        )
+
+
+def test_local_handoff_same_identity_changed_payload_is_durable_conflict(tmp_path):
+    outbox = _outbox(tmp_path)
+    first_payload = _decision_payload("D-HANDOFF-CONFLICT", reason="first")
+    first_line = json.dumps(first_payload, separators=(",", ":"))
+    outbox.prepare_local_handoff(
+        dataset="decision_ledger", payload=first_payload, symbol="EURUSD",
+        partition_date=DATE, local_path=tmp_path / "first.jsonl",
+        local_line=first_line,
+    )
+
+    changed_payload = _decision_payload("D-HANDOFF-CONFLICT", reason="changed")
+    changed_line = json.dumps(changed_payload, separators=(",", ":"))
+    with pytest.raises(ValueError, match="LOCAL_HANDOFF_IDEMPOTENCY_CONFLICT"):
+        outbox.prepare_local_handoff(
+            dataset="decision_ledger", payload=changed_payload, symbol="EURUSD",
+            partition_date=DATE, local_path=tmp_path / "first.jsonl",
+            local_line=changed_line,
+        )
+
+    handoffs = outbox.pending_local_handoffs(limit=10)
+    assert handoffs == ()
+    assert outbox.local_handoff_status() == {"CONFLICT": 1}
+
+
+def test_schema_upgrade_adds_local_handoff_table_without_losing_outbox_rows(tmp_path):
+    outbox = _outbox(tmp_path)
+    record = _enqueue_decision(outbox).record
+    outbox.close()
+    db_path = tmp_path / "outbox.sqlite3"
+    with sqlite3.connect(db_path) as db:
+        db.execute("DROP TABLE local_handoffs")
+        db.execute("PRAGMA user_version=3")
+        db.commit()
+
+    upgraded = _outbox(tmp_path)
+    assert upgraded.get(record.outbox_id).delivery_state is DeliveryState.PENDING
+    with sqlite3.connect(db_path) as db:
+        tables = {row[0] for row in db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+        version = db.execute("PRAGMA user_version").fetchone()[0]
+    assert "local_handoffs" in tables
+    assert version == 5
 
 
 def test_observation_timestamp_is_payload_not_implicit_identity_or_clock_material(tmp_path):
@@ -280,7 +509,10 @@ def test_status_exposes_counts_oldest_age_and_dataset_breakdown(tmp_path):
     _enqueue_decision(outbox, decision="D1")
     _enqueue_decision(outbox, decision="D2")
     claimed = outbox.claim_next(now="2026-10-01T10:02:00+00:00")
-    outbox.mark_retryable_failure(claimed.outbox_id, error="temporary")
+    outbox.mark_retryable_failure(
+        claimed.outbox_id, error="temporary",
+        next_retry_at="2026-10-01T12:00:10+00:00",
+    )
 
     status = outbox.status(now=datetime(2026, 10, 1, 10, 5, tzinfo=timezone.utc))
     assert status.pending_count == 1
@@ -319,7 +551,16 @@ def test_all_23_active_datasets_have_identity_destination_and_json_support(tmp_p
         }
         result = outbox.enqueue(
             dataset=dataset,
-            payload={"dataset_fixture": dataset, "identity_fixture": identity},
+            payload={
+                **identity,
+                "dataset_fixture": dataset,
+                "identity_fixture": identity,
+                **({"identity": {
+                    key: value for key, value in identity.items()
+                    if key in {"trade_id", "account_id"}
+                }} if dataset in {"trade_truth", "shadow_trades", "research_shadow_trades"}
+                   else {}),
+            },
             identity=identity,
             symbol="EURUSD" if is_symbol_scoped(dataset) else "",
             partition_date=DATE,

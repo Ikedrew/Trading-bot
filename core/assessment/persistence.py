@@ -83,6 +83,12 @@ def persist_assessment(assessment: Assessment) -> bool:
                            _obligation_exc)
         line = json.dumps(record, separators=(",", ":"), default=str)
 
+        from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+        try_prepare_local_jsonl_handoffs(
+            dataset="assessments", content=line + "\n", symbol=assessment.symbol,
+            partition_date=date_str, local_path=path,
+        )
+
         fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         try:
             os.write(fd, (line + "\n").encode("utf-8"))
