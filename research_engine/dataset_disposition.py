@@ -484,6 +484,68 @@ RESEARCH_DISPOSITIONS: dict[str, ResearchDisposition] = {
             "lives in trade_truth, not here."
         ),
     ),
+    "position_snapshots": ResearchDisposition(
+        dataset="position_snapshots",
+        phase2=Phase2Disposition.C_OPERATIONAL_ONLY,
+        status=ResearchDispositionStatus.INTENTIONALLY_OPERATIONAL,
+        reason=(
+            "Block 2B account-safe prop-risk telemetry: durable, account-scoped "
+            "observations of each open position on one exact trading account "
+            "(ticket ownership, canonical/broker symbol, side, volume, open and "
+            "current price, attached SL/TP, validated stop geometry, broker-reported "
+            "floating P&L and monetary risk-to-SL in account currency), plus the "
+            "explicit position-set observation boundary that proves absence and "
+            "closure. It is a live operational state surface with an explicit "
+            "unavailable/invalid/stale/unprotected quality contract, not a research "
+            "population: no Research Engine consumer reads it in Block 2B."
+        ),
+        research_purpose=(
+            "Operational position-state quality evidence: proves that the open "
+            "position set, protective stops and their monetary risk were observed, "
+            "fresh, correctly account-scoped and numerically valid at the moment a "
+            "risk decision was taken. Deliberately excluded from research "
+            "populations until a signed-off research question consumes it."
+        ),
+        consumers=(),
+        join_keys=("account_id", "position_snapshot_id", "observation_id",
+                   "position_ticket"),
+        temporal_availability=TemporalAvailability.BEFORE_DECISION,
+        lineage_guard_notes=(
+            "Open position state and risk-to-SL are observable before any decision. "
+            "They are BEFORE_DECISION state and are never an outcome label; "
+            "realised P&L lives in trade_truth, not here. A position-set row proves "
+            "the open set at an instant and is NOT evidence of a closed outcome."
+        ),
+    ),
+    "account_open_risk": ResearchDisposition(
+        dataset="account_open_risk",
+        phase2=Phase2Disposition.C_OPERATIONAL_ONLY,
+        status=ResearchDispositionStatus.INTENTIONALLY_OPERATIONAL,
+        reason=(
+            "Block 2B account open-risk aggregate: one account-scoped record per "
+            "observation cycle carrying open/protected/unprotected/unknown-risk "
+            "counts, known_open_risk, an authoritative total_open_risk that is "
+            "withheld whenever any open position's risk is unknown or unbounded, "
+            "floating P&L total and account currency. It is a live operational risk "
+            "surface with explicit completeness semantics, not a research "
+            "population: no Research Engine consumer reads it in Block 2B."
+        ),
+        research_purpose=(
+            "Operational risk-completeness evidence: proves how much open monetary "
+            "risk was provable, on which account and in which currency, at a given "
+            "observation. Deliberately excluded from research populations until a "
+            "signed-off research question consumes it."
+        ),
+        consumers=(),
+        join_keys=("account_id", "open_risk_id", "observation_id",
+                   "account_snapshot_id"),
+        temporal_availability=TemporalAvailability.BEFORE_DECISION,
+        lineage_guard_notes=(
+            "Open risk is BEFORE_DECISION state, never an outcome label. "
+            "total_open_risk is null whenever risk_complete is false; a consumer "
+            "must never treat known_open_risk as the authoritative total."
+        ),
+    ),
     "portfolio_rankings": ResearchDisposition(
         dataset="portfolio_rankings",
         phase2=Phase2Disposition.B_SUPPORTING_DIAGNOSTIC,

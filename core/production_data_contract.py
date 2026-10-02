@@ -88,6 +88,15 @@ PRODUCTION_SCHEMA_REGISTRY: dict[str, ProductionSchema] = {
     # equity, floating P&L, margin, free margin, margin level, currency and
     # leverage. Owned by core.risk.account_snapshot.
     "account_snapshots": _schema("account_snapshots", role=DatasetRole.SUPPORTING, owner="account_risk_telemetry", population="LIVE", partition_model=PartitionModel.DATE),
+    # Block 2B account-safe prop-risk telemetry. Account-scoped, date-partitioned
+    # (never symbol-scoped): per-position observations (one row per open position
+    # ticket) PLUS the explicit position-set observation boundary that proves
+    # absence/closure. Owned by core.risk.position_snapshot.
+    "position_snapshots": _schema("position_snapshots", role=DatasetRole.SUPPORTING, owner="position_risk_telemetry", population="LIVE", partition_model=PartitionModel.DATE),
+    # Block 2B account open-risk aggregate. Account-scoped and date-partitioned.
+    # Linked to its account snapshot by EXACT account_snapshot_id, never by
+    # timestamp proximity. Owned by core.risk.position_snapshot.
+    "account_open_risk": _schema("account_open_risk", role=DatasetRole.SUPPORTING, owner="position_risk_telemetry", population="LIVE", partition_model=PartitionModel.DATE),
     "portfolio_rankings": _schema("portfolio_rankings", role=DatasetRole.SUPPORTING, current="portfolio_ranking_v1", owner="portfolio_ranking", population="LIVE_AND_REPLAY", partition_model=PartitionModel.DATE),
     "shadow_runtime": _schema("shadow_runtime", role=DatasetRole.SUPPORTING, owner="shadow_runtime", population="SHADOW"),
     "shadow_trades": _schema("shadow_trades", role=DatasetRole.SUPPORTING, owner="shadow_trade_simulation", population="SHADOW"),

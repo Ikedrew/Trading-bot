@@ -26,7 +26,7 @@ DEFAULT_LEDGER_PATH = Path("logs/lifecycle_evidence_obligations.jsonl")
 ACCOUNT_SCOPED_DATASETS = frozenset({
     "execution_results", "execution_attempts", "protection_audit",
     "management_actions", "risk_deviation", "trade_truth", "trade_journal",
-    "account_snapshots",
+    "account_snapshots", "position_snapshots", "account_open_risk",
 })
 
 
@@ -84,6 +84,12 @@ EXACT_IDENTITY_FIELDS: dict[str, tuple[str, ...]] = {
     # observation identity (account + observation instant + source). Monetary
     # floats are never part of this identity.
     "account_snapshots": ("account_id", "snapshot_id"),
+    # Block 2B position telemetry. A position row is identified by the exact
+    # account plus its deterministic per-observation identity; a position-SET
+    # boundary row is identified by the exact account plus the observation-cycle
+    # id it closes. Monetary risk is NEVER part of identity.
+    "position_snapshots": ("account_id", "position_snapshot_id"),
+    "account_open_risk": ("account_id", "open_risk_id"),
     "trade_truth": ("trade_id", "account_id"),
     "shadow_runtime": ("event_id",),
     "shadow_trades": ("trade_id", "event_type"),
@@ -119,6 +125,8 @@ DATASET_DISPOSITIONS: dict[str, dict[str, str]] = {
     "management_actions": {"class": "B_LIVE_CONDITIONAL", "policy": "ACTION_INITIATED"},
     "risk_deviation": {"class": "B_LIVE_CONDITIONAL", "policy": "VALID_RISK_GEOMETRY"},
     "account_snapshots": {"class": "B_LIVE_CONDITIONAL", "policy": "ACCOUNT_STATE_OBSERVATION"},
+    "position_snapshots": {"class": "B_LIVE_CONDITIONAL", "policy": "OPEN_POSITION_OBSERVATION"},
+    "account_open_risk": {"class": "B_LIVE_CONDITIONAL", "policy": "OPEN_RISK_OBSERVATION"},
     "portfolio_rankings": {"class": "B_LIVE_CONDITIONAL", "policy": "RANKING_POOL_EXISTS"},
     "shadow_runtime": {"class": "B_LIVE_CONDITIONAL", "policy": "SHADOW_LIFECYCLE_EVENT"},
     "shadow_trades": {"class": "E_LEGACY_NON_AUTHORITY", "policy": "NEVER_SATISFIES_SHADOW_RUNTIME"},

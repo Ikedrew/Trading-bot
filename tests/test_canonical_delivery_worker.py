@@ -1123,7 +1123,7 @@ def test_bounded_end_to_end_acceptance_matrix(tmp_path):
     assert_delivery_invariants(box, s3, ledger)
 
 
-def test_worker_can_deliver_all_23_production_v1_datasets(tmp_path):
+def test_worker_can_deliver_all_active_production_v1_datasets(tmp_path):
     clock = Clock()
     box = outbox(tmp_path, clock, "all-datasets.sqlite3")
     ledger = LifecycleEvidenceLedger(tmp_path / "all-datasets-lifecycle.jsonl")
@@ -1160,14 +1160,15 @@ def test_worker_can_deliver_all_23_production_v1_datasets(tmp_path):
             lifecycle_obligation_id=obligation_id,
         )
     s3 = FakeS3()
-    results = worker(box, s3, clock, lifecycle_ledger=ledger).drain(max_items=24)
-    assert len(results) == 24
+    active_count = len(PRODUCTION_SCHEMA_REGISTRY)
+    results = worker(box, s3, clock, lifecycle_ledger=ledger).drain(max_items=active_count)
+    assert len(results) == active_count
     assert all(item.state_after is DeliveryState.ACKNOWLEDGED for item in results), [
         (item.dataset, item.state_after.value, item.error_class) for item in results
     ]
-    assert box.status().acknowledged_count == 24
+    assert box.status().acknowledged_count == active_count
     counts = assert_delivery_invariants(box, s3, ledger)
-    assert counts["records"] == 24
+    assert counts["records"] == active_count
     by_dataset = {item.dataset: item for item in results}
     for dataset, disposition in DATASET_DISPOSITIONS.items():
         item = by_dataset[dataset]
