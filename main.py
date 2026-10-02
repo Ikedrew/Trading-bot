@@ -247,6 +247,34 @@ def main() -> None:
                     type(delivery_exc).__name__, delivery_exc,
                 )
 
+            # Block 2D: the ONE managed prop-risk telemetry service. It runs the
+            # coherent 2A -> 2B -> 2C account-risk cycle for every enabled,
+            # configured account. Started AFTER canonical delivery so every
+            # produced row can hand off through the certified outbox, and it is
+            # strictly observational: telemetry must never gate trading.
+            try:
+                from core.risk.telemetry_runtime import (
+                    start_prop_risk_telemetry_service,
+                )
+                _telemetry_service = start_prop_risk_telemetry_service()
+                if _telemetry_service is None:
+                    logger.info(
+                        "[PROP_RISK_TELEMETRY] not started — no enabled account")
+                else:
+                    _telemetry_status = _telemetry_service.status()
+                    logger.info(
+                        "[PROP_RISK_TELEMETRY] started=%s accounts=%d interval_ms=%d",
+                        _telemetry_status.running,
+                        _telemetry_status.accounts_observed or len(
+                            _telemetry_service._identities),
+                        _telemetry_service.interval_ms,
+                    )
+            except Exception as telemetry_exc:
+                logger.critical(
+                    "[PROP_RISK_TELEMETRY_START_FAILED] %s: %s",
+                    type(telemetry_exc).__name__, telemetry_exc,
+                )
+
         if scanner_enabled and config.REPLAY_MODE:
             # Multi-symbol scanner: all symbols in one loop
             logger.info("[ROUTING] mode=replay_scanner | function=run_replay_scanner | symbols=%d", len(symbols))
@@ -277,6 +305,18 @@ def main() -> None:
                         pass
                     continue
     finally:
+        # Block 2D: stop prop-risk telemetry FIRST so no thread reads MT5 after
+        # the session is released below. Bounded stop; never blocks shutdown.
+        try:
+            from core.risk.telemetry_runtime import (
+                stop_prop_risk_telemetry_service,
+            )
+            if not stop_prop_risk_telemetry_service():
+                logger.error("[PROP_RISK_TELEMETRY_STOP_INCOMPLETE]")
+        except Exception as telemetry_exc:
+            logger.error("[PROP_RISK_TELEMETRY_STOP_FAILED] %s",
+                         type(telemetry_exc).__name__)
+
         if _delivery_service is not None:
             try:
                 from core.canonical_delivery_service import stop_canonical_delivery_service
