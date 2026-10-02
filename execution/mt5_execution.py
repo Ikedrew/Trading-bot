@@ -451,6 +451,43 @@ def describe_retcode(code: int) -> str:
     return names.get(code, f"UNKNOWN({code})")
 
 
+def _prop_account_identity():
+    """The EXACT account identity of the current MT5 session, or ``None``.
+
+    Read from the broker itself rather than assumed from config, so the prop
+    decision is bound to the account the order will really reach. Returns
+    ``None`` when identity cannot be established, which the gate treats as
+    BLOCKED.
+    """
+    try:
+        info = mt5.account_info()
+    except Exception:
+        return None
+    if info is None:
+        return None
+    login = getattr(info, "login", 0) or 0
+    server = str(getattr(info, "server", "") or "")
+    if not login or not server:
+        return None
+    try:
+        from core.risk.prop_rule_state import AccountKey
+
+        account_id = str(
+            getattr(info, "account_id", None)
+            or getattr(info, "name", None)
+            or getattr(info, "server_name", None)
+            or f"MT5_{server}_{login}"
+        )
+        return AccountKey(
+            account_id=account_id,
+            broker=str(getattr(info, "company", "") or getattr(info, "broker", "") or "MT5"),
+            server=server,
+            login=int(login),
+        )
+    except Exception:
+        return None
+
+
 class MT5Execution:
     def __init__(self, *, magic: int = 713_001, deviation: int = 20) -> None:
         self._magic = magic
@@ -611,6 +648,24 @@ class MT5Execution:
         else:
             normalized_sl = float(intent.sl)
             normalized_tp = float(intent.tp)
+
+        # ─── PROP RULE ENFORCEMENT GATE (Block 3C) ────────────────────────
+        # THE authoritative prop entry check on the legacy single-account path.
+        # It sits after every broker-level validation and immediately before the
+        # request is built and sent, so no code path below can reach the broker
+        # without a governed prop decision. Fail closed on any error.
+        _prop_ok, _prop_code = self._prop_enforcement_gate(
+            symbol=intent.symbol,
+            broker_symbol=broker_symbol,
+            side=intent.side.name,
+            price=price,
+            volume=float(intent.volume),
+            sl=normalized_sl,
+            tp=normalized_tp,
+        )
+        if not _prop_ok:
+            _safe_log(logging.WARNING, f"[PROP_GATE_BLOCKED] {_prop_code}")
+            return ExecutionResult(False, -1, 0, 0, _prop_code)
 
         request = {
             "action": mt5.TRADE_ACTION_DEAL,
@@ -994,6 +1049,66 @@ class MT5Execution:
             # Unknown account, failed verification, IPC timeout and unavailable
             # reads never fall back to another connection or mean 'closed'.
             return ExecutionResult(False, -1, 0, 0, "OWNERSHIP_OR_WORKER_FAILED:" + str(exc))
+
+    # ─── PROP ENFORCEMENT (Block 3C) ───────────────────────────────────────
+    # The final, authoritative prop-rule gate for the legacy single-account
+    # path. It builds the broker-normalised PlannedOrder (with the EXACT
+    # monetary risk from the broker's own profit calculation) and defers to the
+    # one governed gate. It never fails open.
+    @staticmethod
+    def _prop_enforcement_gate(
+        *, symbol: str, broker_symbol: str, side: str, price: float,
+        volume: float, sl: float, tp: float,
+    ) -> tuple[bool, str]:
+        try:
+            from core.risk.prop_entry_gate import prop_enforcement_gate
+            from core.risk.prop_rule_projection import PlannedOrder
+            from core.risk.prop_rule_runtime import prop_enforcement_runtime
+        except Exception as exc:
+            return False, f"PROP_ENFORCEMENT_IMPORT_FAILED:{type(exc).__name__}"
+
+        runtime = prop_enforcement_runtime()
+        if runtime is None:
+            try:
+                # Distinguishes explicit DISABLED (allow) from absent (block).
+                return prop_enforcement_gate(account=None, symbol=symbol)
+            except Exception as exc:
+                return False, f"PROP_ENFORCEMENT_ERROR:{type(exc).__name__}"
+
+        account = _prop_account_identity()
+        if account is None:
+            return False, "PROP_ACCOUNT_IDENTITY_UNAVAILABLE"
+
+        exact_risk = None
+        try:
+            order_type = mt5.ORDER_TYPE_BUY if side == "BUY" else mt5.ORDER_TYPE_SELL
+            loss = mt5.order_calc_profit(
+                order_type, broker_symbol, volume, price, sl or price
+            )
+            if isinstance(loss, (int, float)):
+                exact_risk = abs(float(loss))
+        except Exception:
+            exact_risk = None
+
+        try:
+            planned = PlannedOrder(
+                canonical_symbol=str(symbol),
+                side="BUY" if side == "BUY" else "SELL",
+                volume=float(volume),
+                entry_price=float(price),
+                stop_loss=float(sl or price),
+                take_profit=float(tp or 0.0),
+                planned_risk_amount=exact_risk,
+                broker_symbol=broker_symbol,
+            )
+            from core.clock import utc_now
+
+            return prop_enforcement_gate(
+                account=account, symbol=str(symbol), runtime=runtime,
+                order=planned, at_utc=utc_now(),
+            )
+        except Exception as exc:
+            return False, f"PROP_ENFORCEMENT_ERROR:{type(exc).__name__}"
 
     def position_modify_sl_tp(self, *, symbol, position_ticket, sl, tp,
                               ownership=None, account_id="", broker="", broker_server="",

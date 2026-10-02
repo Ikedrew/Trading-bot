@@ -275,6 +275,91 @@ def main() -> None:
                     type(telemetry_exc).__name__, telemetry_exc,
                 )
 
+            # Block 3C: the ONE managed prop-rule ENFORCEMENT runtime. Started
+            # AFTER telemetry so it can read the exact 2A/2B/2C evidence, and it
+            # restores durable suspension/kill state before any order can be
+            # sent. In DISABLED mode (no prop challenge configured) this is a
+            # no-op and trading behaves exactly as it did before Block 3C.
+            try:
+                from core.risk import prop_rule_runtime as _prop_enf
+                from core.risk.prop_position_enforcement import (
+                    LifecyclePositionClosePort,
+                    build_position_enforcement_hook,
+                )
+                _prop_mode_name = str(
+                    getattr(config, "PROP_ENFORCEMENT_MODE", "DISABLED") or "DISABLED"
+                ).upper()
+                if _prop_mode_name not in ("LIVE_ENFORCE", "SIMULATE_ONLY", "DISABLED"):
+                    logger.critical(
+                        "[PROP_ENFORCEMENT_UNKNOWN_MODE] mode=%s -> DISABLED",
+                        _prop_mode_name,
+                    )
+                    _prop_mode_name = "DISABLED"
+                _prop_wiring = {}
+                if _prop_mode_name != "DISABLED":
+                    # Block 3C production state-provider wiring. In LIVE_ENFORCE /
+                    # SIMULATE_ONLY the runtime gets the canonical 3B state
+                    # authority (durable store + rule pack + rule day + the
+                    # production provider) so governed 3B state can actually be
+                    # obtained at the cycle boundary. DISABLED stays exactly as
+                    # it was before Block 3C. There is NO synthetic pack and NO
+                    # default provider: anything unconfigured degrades loudly.
+                    from core.risk.prop_rule_state_provider import (
+                        build_production_enforcement_wiring,
+                    )
+
+                    _prop_wiring = build_production_enforcement_wiring(config)
+                    logger.info(
+                        "[PROP_ENFORCEMENT_STATE] provider=%s pack_store=%s "
+                        "pack_identity=%s rule_day=%s state_dir=%s",
+                        type(_prop_wiring["state_provider"]).__name__,
+                        _prop_wiring["rule_pack_store"] is not None,
+                        getattr(_prop_wiring["pack_identity"], "phase", None),
+                        getattr(_prop_wiring["rule_day_definition"], "key", lambda: None)(),
+                        getattr(config, "PROP_RULE_STATE_DIR", ""),
+                    )
+                _prop_runtime, _prop_report = (
+                    _prop_enf.start_prop_enforcement_runtime(
+                        at_utc=_prop_enf.datetime.now(_prop_enf.UTC),
+                        mode=_prop_enf.EnforcementMode(_prop_mode_name),
+                        # The ONE account/ticket-safe close boundary. Governed
+                        # position enforcement reaches the broker only through
+                        # here, and it reuses the existing account-owned lifecycle
+                        # IPC rather than introducing a second close path.
+                        close_port=LifecyclePositionClosePort(),
+                        **_prop_wiring,
+                    )
+                )
+                logger.info(
+                    "[PROP_ENFORCEMENT] started mode=%s ready=%s degraded=%s",
+                    _prop_report.mode.value, _prop_report.ready,
+                    _prop_report.degraded_reason.value,
+                )
+                # Block 3C runtime reachability: attach the governed
+                # position-enforcement hook to the ALREADY RUNNING bounded
+                # telemetry cycle. No new thread is created; the hook is invoked
+                # once per account per existing cycle, and only acts on positions
+                # a 3B rule explicitly demanded action on.
+                if _telemetry_service is not None:
+                    _telemetry_service._position_enforcement = (
+                        build_position_enforcement_hook()
+                    )
+                if not _prop_report.ready:
+                    # Startup is DEGRADED, never a silent "no prop rules". The
+                    # entry gate refuses with exactly this reason.
+                    logger.critical(
+                        "[PROP_ENFORCEMENT_DEGRADED] reason=%s checks=%s",
+                        _prop_report.degraded_reason.value,
+                        [
+                            (c.name, c.satisfied, c.detail)
+                            for c in _prop_report.checks
+                        ],
+                    )
+            except Exception as prop_exc:
+                logger.critical(
+                    "[PROP_ENFORCEMENT_START_FAILED] %s", type(prop_exc).__name__
+                )
+
         if scanner_enabled and config.REPLAY_MODE:
             # Multi-symbol scanner: all symbols in one loop
             logger.info("[ROUTING] mode=replay_scanner | function=run_replay_scanner | symbols=%d", len(symbols))
@@ -316,6 +401,20 @@ def main() -> None:
         except Exception as telemetry_exc:
             logger.error("[PROP_RISK_TELEMETRY_STOP_FAILED] %s",
                          type(telemetry_exc).__name__)
+
+        # Block 3C: stop prop-rule enforcement BEFORE the MT5 session is
+        # released below, and before any other service. It owns no thread, so
+        # this is a bounded state change; after it, the entry gate fails closed.
+        try:
+            from core.risk.prop_rule_runtime import (
+                stop_prop_enforcement_runtime,
+            )
+            if not stop_prop_enforcement_runtime():
+                logger.error("[PROP_ENFORCEMENT_STOP_INCOMPLETE]")
+        except Exception as prop_stop_exc:
+            logger.error(
+                "[PROP_ENFORCEMENT_STOP_FAILED] %s", type(prop_stop_exc).__name__
+            )
 
         if _delivery_service is not None:
             try:

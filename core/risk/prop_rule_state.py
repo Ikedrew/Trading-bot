@@ -2347,7 +2347,13 @@ class PropRuleStateStore:
     def state_lineage(self, account: AccountKey) -> dict[str, Any]:
         """Exact lineage of one account's state, for evaluation identity."""
         anchor = self._initial_anchors.get(account.identity)
-        events = sorted(self._events.values(), key=lambda e: (e.closed_at_utc, e.event_id))
+        events = sorted(
+            (
+                event for event in self._events.values()
+                if event.account.identity == account.identity
+            ),
+            key=lambda e: (e.closed_at_utc, e.event_id),
+        )
         return {
             "initial_anchor_id": anchor.anchor_id if anchor else None,
             "event_ids": [event.event_id for event in events],

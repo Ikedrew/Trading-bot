@@ -83,6 +83,82 @@ def _validate_execution_risk(*, mt5, account, side: str, broker_symbol: str,
 
 
 
+def _prop_entry_gate(
+    *, account, broker_symbol: str, side: str, price: float,
+    volume: float, sl: float, tp: float, target: dict,
+) -> tuple[bool, str]:
+    """The Block 3C prop enforcement gate for this exact account and order.
+
+    Kept as a small adapter so the ORDER PATH stays readable and so every live
+    entry route reaches exactly one prop authority. It builds the broker-
+    normalised :class:`PlannedOrder` (including the EXACT monetary risk the
+    broker itself computed above) and defers to the single governed gate.
+
+    It NEVER fails open. Any error resolving the runtime, the account identity or
+    the exact planned risk returns BLOCKED.
+    """
+    try:
+        from core.risk.prop_entry_gate import prop_enforcement_gate
+        from core.risk.prop_rule_projection import PlannedOrder
+        from core.risk.prop_rule_state import AccountKey
+        from core.risk.prop_rule_runtime import prop_enforcement_runtime
+    except Exception as exc:  # import failure must not silently allow trading
+        return False, f"PROP_ENFORCEMENT_IMPORT_FAILED:{type(exc).__name__}"
+
+    runtime = prop_enforcement_runtime()
+    if runtime is None:
+        # No runtime configured at all. The gate itself distinguishes an
+        # explicit DISABLED configuration (allow) from an absent one (block).
+        try:
+            return prop_enforcement_gate(account=None, symbol=broker_symbol)
+        except Exception as exc:
+            return False, f"PROP_ENFORCEMENT_ERROR:{type(exc).__name__}"
+
+    account_key = AccountKey(
+        account_id=str(getattr(account, "account_id", "") or ""),
+        broker=str(getattr(account, "broker", "") or ""),
+        server=str(getattr(account, "server", "") or ""),
+        login=int(getattr(account, "login", 0) or 0),
+    )
+    exact_risk = None
+    order_type = "BUY" if side == "BUY" else "SELL"
+    try:
+        import MetaTrader5 as mt5
+
+        loss = mt5.order_calc_profit(
+            mt5.ORDER_TYPE_BUY if order_type == "BUY" else mt5.ORDER_TYPE_SELL,
+            broker_symbol, volume, price, sl,
+        )
+        if isinstance(loss, (int, float)):
+            exact_risk = abs(float(loss))
+    except Exception:
+        exact_risk = None
+
+    planned = PlannedOrder(
+        canonical_symbol=str(target.get("canonical_symbol") or broker_symbol),
+        side=order_type,
+        volume=float(volume),
+        entry_price=float(price),
+        stop_loss=float(sl),
+        take_profit=float(tp or 0.0),
+        planned_risk_amount=exact_risk,
+        broker_symbol=broker_symbol,
+    )
+
+    from core.clock import utc_now
+
+    try:
+        return prop_enforcement_gate(
+            account=account_key,
+            symbol=planned.canonical_symbol,
+            runtime=runtime,
+            order=planned,
+            at_utc=utc_now(),
+        )
+    except Exception as exc:
+        return False, f"PROP_ENFORCEMENT_ERROR:{type(exc).__name__}"
+
+
 def execute_pinned(request: dict, mt5) -> dict:
     from core.mt5_symbol_spec import (
         MT5SymbolSpec, validate_stops, validate_volume,
@@ -168,6 +244,28 @@ def execute_pinned(request: dict, mt5) -> dict:
     if not risk_ok:
         return {"account_id": account.account_id, "executed": False,
                 "status": "BLOCKED", **risk_evidence,
+                "canonical_sl": canonical_sl, "canonical_tp": canonical_tp,
+                "broker_sl": sl, "broker_tp": tp, **_lineage(target)}
+
+    # ─── PROP RULE ENFORCEMENT GATE (Block 3C, fail closed BEFORE order_send) ─
+    # THE authoritative prop entry check for THIS exact account. It sits after
+    # every broker-level validation and immediately before the send, so no later
+    # code path can reach the broker without a governed prop decision. The
+    # generic execution-risk budget above is NOT a prop-rule authority; this is.
+    _prop_allowed, _prop_code = _prop_entry_gate(
+        account=account,
+        broker_symbol=broker_symbol,
+        side=side,
+        price=market,
+        volume=volume,
+        sl=sl,
+        tp=tp,
+        target=target,
+    )
+    if not _prop_allowed:
+        return {"account_id": account.account_id, "executed": False,
+                "status": "BLOCKED", "comment": _prop_code,
+                "prop_enforcement": _prop_code,
                 "canonical_sl": canonical_sl, "canonical_tp": canonical_tp,
                 "broker_sl": sl, "broker_tp": tp, **_lineage(target)}
 

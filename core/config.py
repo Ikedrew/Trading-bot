@@ -107,6 +107,31 @@ EXECUTION_ENABLED = True           # Enables/disables live order placement (mast
 TRADE_MANAGEMENT_ENABLED = True    # Enables/disables SL/TP modifications (post-entry management)
 POSITION_CLOSE_ENABLED = True      # Enables/disables broker close actions
 
+# ??? PROP RULE ENFORCEMENT (Block 3C) ???????????????????????????????????????
+# DISABLED      no prop challenge is configured; runtime behaves exactly as
+#               before Block 3C. This is an EXPLICIT choice, never inferred
+#               from a missing rule pack.
+# SIMULATE_ONLY compute and persist every decision, change nothing (used for
+#               forward validation before a live prop deployment).
+# LIVE_ENFORCE  compute and enforce: block, close, suspend.
+PROP_ENFORCEMENT_MODE = _os.getenv("PROP_ENFORCEMENT_MODE", "DISABLED").upper()
+
+# Block 3C production state-provider wiring. A LIVE_ENFORCE / SIMULATE_ONLY
+# deployment needs these to be EXPLICIT. When they are absent the runtime
+# reports RULE_PACK_MISSING / STATE_UNAVAILABLE and refuses to trade; there is
+# deliberately NO default pack and NO synthetic fallback.
+PROP_RULE_PACK_DIR = _os.getenv("PROP_RULE_PACK_DIR", "")     # canonical pack JSON
+PROP_RULE_PROVIDER = _os.getenv("PROP_RULE_PROVIDER", "")
+PROP_RULE_PROGRAM = _os.getenv("PROP_RULE_PROGRAM", "")
+PROP_RULE_PHASE = _os.getenv("PROP_RULE_PHASE", "")
+PROP_RULE_ACCOUNT_SIZE = int(_os.getenv("PROP_RULE_ACCOUNT_SIZE", "0") or 0)
+PROP_RULE_CURRENCY = _os.getenv("PROP_RULE_CURRENCY", "")
+PROP_RULE_PLATFORM = _os.getenv("PROP_RULE_PLATFORM", "")
+# Rule-day semantics for the active pack, and where durable 3B state lives.
+PROP_RULE_DAY_TIMEZONE = _os.getenv("PROP_RULE_DAY_TIMEZONE", "")
+PROP_RULE_DAY_RESET = _os.getenv("PROP_RULE_DAY_RESET", "00:00:00")
+PROP_RULE_STATE_DIR = _os.getenv("PROP_RULE_STATE_DIR", "data/prop_rule_state")
+
 # --- External side effects ---
 ALERTING_ENABLED = True            # Enables/disables Discord/webhook alerts
 METRICS_ENABLED = True              # Enables/disables metrics emission (equity curve, dashboard)

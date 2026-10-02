@@ -230,6 +230,7 @@ class PropRiskTelemetryService:
         cluster_dir: str = DEFAULT_CLUSTER_DIR,
         persist: bool = True,
         start_immediately: bool = False,
+        position_enforcement: Callable[..., Any] | None = None,
     ) -> None:
         self._identities = tuple(identities)
         if len({i.account_id for i in self._identities}) != len(self._identities):
@@ -257,6 +258,13 @@ class PropRiskTelemetryService:
         self._portfolio_dir = portfolio_dir
         self._cluster_dir = cluster_dir
         self._persist = persist
+        # Block 3C: the governed position-enforcement hook. This is the ONE place
+        # a live trading cycle reaches PropEnforcementRuntime.enforce_positions.
+        # It is injected (not imported) so telemetry keeps no dependency on the
+        # enforcement package, and so the call site is observable and removable
+        # by a test. ``None`` means DISABLED: nothing is ever enforced.
+        self._position_enforcement = position_enforcement
+        self._last_enforcement: dict[str, int] = {}
 
         self._canonical = _canonical_resolver(_canonical_symbols())
         self._stop = threading.Event()
@@ -331,12 +339,83 @@ class PropRiskTelemetryService:
                 outbox=self._outbox,
             ).observe(cycle, account_snapshot=snapshot)
 
+            # ── Block 3C: governed position enforcement, THIS account ────
+            # The single runtime call site. Everything it needs is already
+            # established: the exact identity, this cycle's frozen instant, the
+            # PROVEN open-ticket set from 2B and this cycle's 2C portfolio. It
+            # acts only on decisions 3B already demanded, and it is contained:
+            # a failure here can never abort the cycle or reach another account.
+            self._enforce_positions(
+                identity, clock(),
+                cycle.position_set, cycle.positions,
+                getattr(portfolio_cycle, "portfolio", None),
+                account_snapshot=snapshot,
+                open_risk=getattr(cycle, "open_risk", None),
+            )
+
             return self._result(identity, snapshot, cycle, portfolio_cycle)
         except Exception as exc:  # telemetry must never kill the runtime
             logger.exception(
                 "[PROP_RISK_TELEMETRY] cycle failed account=%s", identity.account_id)
             return self._degraded(
                 identity, f"TELEMETRY_CYCLE_FAILED:{type(exc).__name__}")
+
+    # ── Block 3C: the ONE governed position-enforcement call site ────────
+    def _enforce_positions(
+        self, identity: AccountIdentity, instant: datetime,
+        position_set: Any, positions: Any, portfolio: Any,
+        account_snapshot: Any = None, open_risk: Any = None,
+    ) -> tuple:
+        """Run governed position enforcement for THIS account in THIS cycle.
+
+        WHY HERE, AND WHY ONLY HERE
+        --------------------------
+        This runs inside the existing bounded per-account cycle, after 2A/2B/2C
+        produced this account's evidence under ONE frozen instant, and before the
+        cycle's result is returned. At this point the exact account identity,
+        the active rule pack, the 3B state seam and the PROVEN open tickets are
+        all simultaneously available, and no broker shutdown has begun.
+
+        It adds NO thread: no new polling loop, nothing per-account, per-rule
+        or per-provider. It is one call inside the loop that already existed.
+
+        FAILURE IS CONTAINED
+        -------------------
+        Enforcement must never kill an observational telemetry cycle, and one
+        account's enforcement failure must never affect another account. Any
+        exception is logged and swallowed here; the caller still receives the
+        telemetry result it always received.
+        """
+        hook = self._position_enforcement
+        if hook is None:
+            return ()
+        try:
+            results = hook(
+                identity=identity,
+                position_set=position_set,
+                observed_at_utc=instant,
+                positions=positions,
+                portfolio=portfolio,
+                account_snapshot=account_snapshot,
+                open_risk=open_risk,
+            )
+        except Exception as exc:  # telemetry must never kill the runtime
+            logger.exception(
+                "[PROP_POSITION_ENFORCEMENT] cycle hook failed account=%s error=%s",
+                identity.account_id, type(exc).__name__,
+            )
+            return ()
+        results = tuple(results or ())
+        with self._lock:
+            self._last_enforcement[identity.account_id] = len(results)
+        if results:
+            logger.warning(
+                "[PROP_POSITION_ENFORCEMENT] account=%s governed position "
+                "actions=%d outcomes=%s",
+                identity.account_id, len(results),
+                ",".join(sorted({r.outcome.value for r in results})),
+            )
+        return results
 
     def _capture_snapshot(
         self, identity: AccountIdentity, clock: Callable[[], datetime],
