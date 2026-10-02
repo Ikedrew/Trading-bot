@@ -538,8 +538,8 @@ def test_terminal_failure_is_durable_and_not_claimable(tmp_path):
     assert reloaded.status().terminal_or_conflict_count == 1
 
 
-def test_all_23_active_datasets_have_identity_destination_and_json_support(tmp_path):
-    assert len(PRODUCTION_SCHEMA_REGISTRY) == 23
+def test_all_24_active_datasets_have_identity_destination_and_json_support(tmp_path):
+    assert len(PRODUCTION_SCHEMA_REGISTRY) == 24
     assert set(PRODUCTION_SCHEMA_REGISTRY) == set(EXACT_IDENTITY_FIELDS)
     outbox = _outbox(tmp_path)
 
@@ -571,7 +571,7 @@ def test_all_23_active_datasets_have_identity_destination_and_json_support(tmp_p
         )
         assert result.record.payload["identity_fixture"] == identity
 
-    assert len(outbox.records()) == 23
+    assert len(outbox.records()) == 24
 
 
 def test_bounded_acceptance_matrix(tmp_path, monkeypatch):

@@ -83,6 +83,11 @@ PRODUCTION_SCHEMA_REGISTRY: dict[str, ProductionSchema] = {
     "protection_audit": _schema("protection_audit", role=DatasetRole.SUPPORTING, owner="protection_verification", population="LIVE"),
     "management_actions": _schema("management_actions", role=DatasetRole.SUPPORTING, owner="trade_management", population="LIVE"),
     "risk_deviation": _schema("risk_deviation", role=DatasetRole.SUPPORTING, owner="risk_observation", population="LIVE"),
+    # Account-safe prop-risk telemetry. Account-scoped (never symbol-scoped):
+    # canonical, durable observations of one exact trading account's balance,
+    # equity, floating P&L, margin, free margin, margin level, currency and
+    # leverage. Owned by core.risk.account_snapshot.
+    "account_snapshots": _schema("account_snapshots", role=DatasetRole.SUPPORTING, owner="account_risk_telemetry", population="LIVE", partition_model=PartitionModel.DATE),
     "portfolio_rankings": _schema("portfolio_rankings", role=DatasetRole.SUPPORTING, current="portfolio_ranking_v1", owner="portfolio_ranking", population="LIVE_AND_REPLAY", partition_model=PartitionModel.DATE),
     "shadow_runtime": _schema("shadow_runtime", role=DatasetRole.SUPPORTING, owner="shadow_runtime", population="SHADOW"),
     "shadow_trades": _schema("shadow_trades", role=DatasetRole.SUPPORTING, owner="shadow_trade_simulation", population="SHADOW"),

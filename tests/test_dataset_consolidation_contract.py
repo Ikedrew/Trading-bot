@@ -33,10 +33,11 @@ _EXPECTED_RETAINED = {
     # CORE (7)
     "events", "market_context", "opportunities", "assessments",
     "decision_ledger", "execution_results", "trade_truth",
-    # SUPPORTING (13)
+    # SUPPORTING (14)
     "strategy_candidates", "horizon_candidates", "decision_trace",
     "execution_context", "execution_attempts", "protection_audit",
-    "management_actions", "risk_deviation", "portfolio_rankings",
+    "management_actions", "risk_deviation", "account_snapshots",
+    "portfolio_rankings",
     "shadow_runtime", "shadow_trades", "strategy_observations",
     "research_shadow_trades",
     # PROJECTION (3)
@@ -46,7 +47,9 @@ _EXPECTED_RETAINED = {
 
 def test_registry_is_exactly_the_retained_consolidated_set():
     assert set(PRODUCTION_SCHEMA_REGISTRY) == _EXPECTED_RETAINED
-    assert len(PRODUCTION_SCHEMA_REGISTRY) == 23
+    # 23 consolidated datasets + account_snapshots (Block 2A account-safe
+    # prop-risk telemetry). The retained-set equality above is the real guard.
+    assert len(PRODUCTION_SCHEMA_REGISTRY) == 24
 
 
 def test_no_retired_dataset_is_in_the_registry():

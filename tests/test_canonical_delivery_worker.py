@@ -1160,14 +1160,14 @@ def test_worker_can_deliver_all_23_production_v1_datasets(tmp_path):
             lifecycle_obligation_id=obligation_id,
         )
     s3 = FakeS3()
-    results = worker(box, s3, clock, lifecycle_ledger=ledger).drain(max_items=23)
-    assert len(results) == 23
+    results = worker(box, s3, clock, lifecycle_ledger=ledger).drain(max_items=24)
+    assert len(results) == 24
     assert all(item.state_after is DeliveryState.ACKNOWLEDGED for item in results), [
         (item.dataset, item.state_after.value, item.error_class) for item in results
     ]
-    assert box.status().acknowledged_count == 23
+    assert box.status().acknowledged_count == 24
     counts = assert_delivery_invariants(box, s3, ledger)
-    assert counts["records"] == 23
+    assert counts["records"] == 24
     by_dataset = {item.dataset: item for item in results}
     for dataset, disposition in DATASET_DISPOSITIONS.items():
         item = by_dataset[dataset]

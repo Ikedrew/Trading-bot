@@ -458,6 +458,32 @@ RESEARCH_DISPOSITIONS: dict[str, ResearchDisposition] = {
         temporal_availability=TemporalAvailability.AFTER_OUTCOME,
         lineage_guard_notes="Deviation is computed after the trade is realised; AFTER_OUTCOME evidence.",
     ),
+    "account_snapshots": ResearchDisposition(
+        dataset="account_snapshots",
+        phase2=Phase2Disposition.C_OPERATIONAL_ONLY,
+        status=ResearchDispositionStatus.INTENTIONALLY_OPERATIONAL,
+        reason=(
+            "Account-safe prop-risk telemetry: durable, account-scoped observations of "
+            "one exact trading account (balance, equity, floating P&L, margin, free "
+            "margin, margin level, currency, leverage) with explicit data-quality "
+            "status. It is a live operational state surface, not a research population: "
+            "no Research Engine consumer reads it in Block 2A."
+        ),
+        research_purpose=(
+            "Operational account-state quality evidence: proves that balance/equity were "
+            "available, fresh, correctly account-scoped and numerically valid at the "
+            "moment a risk decision was taken. Deliberately excluded from research "
+            "populations until a signed-off research question consumes it."
+        ),
+        consumers=(),
+        join_keys=("account_id", "snapshot_id"),
+        temporal_availability=TemporalAvailability.BEFORE_DECISION,
+        lineage_guard_notes=(
+            "Account state is observable before any decision. Balance/equity snapshots "
+            "are BEFORE_DECISION state and are never an outcome label; realised P&L "
+            "lives in trade_truth, not here."
+        ),
+    ),
     "portfolio_rankings": ResearchDisposition(
         dataset="portfolio_rankings",
         phase2=Phase2Disposition.B_SUPPORTING_DIAGNOSTIC,

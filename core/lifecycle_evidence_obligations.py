@@ -26,6 +26,7 @@ DEFAULT_LEDGER_PATH = Path("logs/lifecycle_evidence_obligations.jsonl")
 ACCOUNT_SCOPED_DATASETS = frozenset({
     "execution_results", "execution_attempts", "protection_audit",
     "management_actions", "risk_deviation", "trade_truth", "trade_journal",
+    "account_snapshots",
 })
 
 
@@ -79,6 +80,10 @@ EXACT_IDENTITY_FIELDS: dict[str, tuple[str, ...]] = {
     "protection_audit": ("correlation_id", "account_id", "position_ticket"),
     "management_actions": ("management_action_id", "account_id", "position_ticket"),
     "risk_deviation": ("trade_id", "account_id"),
+    # Account state is identified by the exact account plus the deterministic
+    # observation identity (account + observation instant + source). Monetary
+    # floats are never part of this identity.
+    "account_snapshots": ("account_id", "snapshot_id"),
     "trade_truth": ("trade_id", "account_id"),
     "shadow_runtime": ("event_id",),
     "shadow_trades": ("trade_id", "event_type"),
@@ -113,6 +118,7 @@ DATASET_DISPOSITIONS: dict[str, dict[str, str]] = {
     "protection_audit": {"class": "B_LIVE_CONDITIONAL", "policy": "FILLED_POSITION"},
     "management_actions": {"class": "B_LIVE_CONDITIONAL", "policy": "ACTION_INITIATED"},
     "risk_deviation": {"class": "B_LIVE_CONDITIONAL", "policy": "VALID_RISK_GEOMETRY"},
+    "account_snapshots": {"class": "B_LIVE_CONDITIONAL", "policy": "ACCOUNT_STATE_OBSERVATION"},
     "portfolio_rankings": {"class": "B_LIVE_CONDITIONAL", "policy": "RANKING_POOL_EXISTS"},
     "shadow_runtime": {"class": "B_LIVE_CONDITIONAL", "policy": "SHADOW_LIFECYCLE_EVENT"},
     "shadow_trades": {"class": "E_LEGACY_NON_AUTHORITY", "policy": "NEVER_SATISFIES_SHADOW_RUNTIME"},

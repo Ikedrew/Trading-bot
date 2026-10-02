@@ -65,6 +65,7 @@ CANONICAL_WRITER_MODULES: dict[str, tuple[str, ...]] = {
     "protection_audit": ("core.protection_verification",),
     "management_actions": ("core.persistence.management_actions_writer",),
     "risk_deviation": ("core.risk_deviation",),
+    "account_snapshots": ("core.risk.account_snapshot",),
     "portfolio_rankings": ("core.portfolio_ranking.persistence",),
     "shadow_runtime": ("core.shadow.persistence",),
     "shadow_trades": ("core.shadow_trades",),
