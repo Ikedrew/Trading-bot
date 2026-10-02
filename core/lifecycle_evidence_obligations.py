@@ -27,6 +27,11 @@ ACCOUNT_SCOPED_DATASETS = frozenset({
     "execution_results", "execution_attempts", "protection_audit",
     "management_actions", "risk_deviation", "trade_truth", "trade_journal",
     "account_snapshots", "position_snapshots", "account_open_risk",
+    # Block 2C: portfolio/correlation exposure is ACCOUNT-SCOPED per-account
+    # telemetry (grains A and B). The cross-account aggregate (grain C) is NOT
+    # in this set: it is explicitly multi-account by contract and carries its
+    # own aggregate identity instead of an account identity.
+    "portfolio_exposure", "correlation_exposure",
 })
 
 
@@ -90,6 +95,15 @@ EXACT_IDENTITY_FIELDS: dict[str, tuple[str, ...]] = {
     # id it closes. Monetary risk is NEVER part of identity.
     "position_snapshots": ("account_id", "position_snapshot_id"),
     "account_open_risk": ("account_id", "open_risk_id"),
+    # Block 2C portfolio / correlation exposure. Each row is identified by the
+    # exact account plus a deterministic per-observation identity that already
+    # embeds the exact 2B observation lineage AND the exact correlation model
+    # version. Monetary risk is NEVER part of identity.
+    "portfolio_exposure": ("account_id", "portfolio_exposure_id"),
+    "correlation_exposure": ("account_id", "cluster_exposure_id"),
+    # Grain C is a DIFFERENT grain: an explicitly requested multi-account
+    # aggregate identified by its OWN aggregate identity, never by one account.
+    "cross_account_portfolio_exposure": ("cross_account_exposure_id",),
     "trade_truth": ("trade_id", "account_id"),
     "shadow_runtime": ("event_id",),
     "shadow_trades": ("trade_id", "event_type"),
@@ -127,6 +141,9 @@ DATASET_DISPOSITIONS: dict[str, dict[str, str]] = {
     "account_snapshots": {"class": "B_LIVE_CONDITIONAL", "policy": "ACCOUNT_STATE_OBSERVATION"},
     "position_snapshots": {"class": "B_LIVE_CONDITIONAL", "policy": "OPEN_POSITION_OBSERVATION"},
     "account_open_risk": {"class": "B_LIVE_CONDITIONAL", "policy": "OPEN_RISK_OBSERVATION"},
+    "portfolio_exposure": {"class": "B_LIVE_CONDITIONAL", "policy": "PORTFOLIO_EXPOSURE_OBSERVATION"},
+    "correlation_exposure": {"class": "B_LIVE_CONDITIONAL", "policy": "CORRELATION_EXPOSURE_OBSERVATION"},
+    "cross_account_portfolio_exposure": {"class": "B_LIVE_CONDITIONAL", "policy": "CROSS_ACCOUNT_EXPOSURE_REQUESTED"},
     "portfolio_rankings": {"class": "B_LIVE_CONDITIONAL", "policy": "RANKING_POOL_EXISTS"},
     "shadow_runtime": {"class": "B_LIVE_CONDITIONAL", "policy": "SHADOW_LIFECYCLE_EVENT"},
     "shadow_trades": {"class": "E_LEGACY_NON_AUTHORITY", "policy": "NEVER_SATISFIES_SHADOW_RUNTIME"},

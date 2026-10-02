@@ -56,7 +56,7 @@ def _payload(dataset: str, suffix: str = "1") -> dict[str, object]:
 def test_all_active_datasets_have_exactly_one_migration_classification_and_writer():
     validate_migration_coverage()
     active = set(PRODUCTION_SCHEMA_REGISTRY)
-    assert len(active) == 26
+    assert len(active) == 29
     assert set(CANONICAL_DELIVERY_MIGRATION) == active == set(CANONICAL_WRITER_MODULES)
     assert set(EXACT_IDENTITY_FIELDS) == active
     assert set(CANONICAL_DELIVERY_MIGRATION.values()) == {

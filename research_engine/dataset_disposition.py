@@ -546,6 +546,98 @@ RESEARCH_DISPOSITIONS: dict[str, ResearchDisposition] = {
             "must never treat known_open_risk as the authoritative total."
         ),
     ),
+    "portfolio_exposure": ResearchDisposition(
+        dataset="portfolio_exposure",
+        phase2=Phase2Disposition.C_OPERATIONAL_ONLY,
+        status=ResearchDispositionStatus.INTENTIONALLY_OPERATIONAL,
+        reason=(
+            "Block 2C account-safe portfolio exposure: one account-scoped record "
+            "per observation cycle carrying position/symbol/long/short counts, "
+            "known_open_risk, an authoritative total_open_risk that is withheld "
+            "whenever the underlying Block 2B risk is incomplete, per-symbol and "
+            "per-direction concentration, and the exact correlation model "
+            "id/version used. It is a live operational concentration surface, "
+            "not a research population: no Research Engine consumer reads it in "
+            "Block 2C."
+        ),
+        research_purpose=(
+            "Operational concentration-quality evidence: proves how open risk was "
+            "distributed across symbols, directions and correlation clusters at "
+            "a given observation. Deliberately excluded from research "
+            "populations until a signed-off research question consumes it."
+        ),
+        consumers=(),
+        join_keys=("account_id", "portfolio_exposure_id", "observation_id",
+                   "open_risk_snapshot_id", "account_snapshot_id"),
+        temporal_availability=TemporalAvailability.BEFORE_DECISION,
+        lineage_guard_notes=(
+            "Portfolio exposure is BEFORE_DECISION state, never an outcome "
+            "label. total_open_risk is null whenever risk_complete is false and "
+            "every risk_pct_* field is null unless its denominator is "
+            "authoritative; a consumer must never treat known_open_risk as the "
+            "total or treat a concentration percentage as a prop-rule verdict."
+        ),
+    ),
+    "correlation_exposure": ResearchDisposition(
+        dataset="correlation_exposure",
+        phase2=Phase2Disposition.C_OPERATIONAL_ONLY,
+        status=ResearchDispositionStatus.INTENTIONALLY_OPERATIONAL,
+        reason=(
+            "Block 2C correlation-cluster exposure: one row per governed "
+            "correlation cluster per account observation carrying member "
+            "symbols/tickets, known_cluster_risk, an authoritative "
+            "total_cluster_risk withheld on any unknown member risk, a labelled "
+            "direction mix, and the exact static correlation model version. "
+            "Cluster membership identifies CONCENTRATION, never hedging credit. "
+            "No Research Engine consumer reads it in Block 2C."
+        ),
+        research_purpose=(
+            "Operational correlated-concentration evidence: proves which "
+            "directional themes were simultaneously exposed and how much risk "
+            "sat in each. Deliberately excluded from research populations until "
+            "a signed-off research question consumes it."
+        ),
+        consumers=(),
+        join_keys=("account_id", "cluster_exposure_id", "cluster_id",
+                   "portfolio_exposure_id", "observation_id"),
+        temporal_availability=TemporalAvailability.BEFORE_DECISION,
+        lineage_guard_notes=(
+            "Correlation exposure is BEFORE_DECISION state. A cluster's risk is "
+            "the SUM of member monetary risk: opposing directions never net and "
+            "no diversification discount is applied. Rows are tied to one exact "
+            "correlation model version; a model change starts new rows and never "
+            "reinterprets historical ones."
+        ),
+    ),
+    "cross_account_portfolio_exposure": ResearchDisposition(
+        dataset="cross_account_portfolio_exposure",
+        phase2=Phase2Disposition.C_OPERATIONAL_ONLY,
+        status=ResearchDispositionStatus.INTENTIONALLY_OPERATIONAL,
+        reason=(
+            "Block 2C explicitly requested CROSS-ACCOUNT aggregate: a DIFFERENT "
+            "grain from per-account portfolio exposure, carrying participating "
+            "account ids, per-currency risk buckets, and combined monetary "
+            "totals that are published only when every participating account "
+            "shares one currency. No Research Engine consumer reads it in "
+            "Block 2C."
+        ),
+        research_purpose=(
+            "Operational multi-account concentration evidence. Deliberately "
+            "excluded from research populations: an aggregate across accounts is "
+            "not a per-account research population and must never be merged into "
+            "one."
+        ),
+        consumers=(),
+        join_keys=("cross_account_exposure_id", "account_ids", "observation_ids"),
+        temporal_availability=TemporalAvailability.BEFORE_DECISION,
+        lineage_guard_notes=(
+            "Cross-account aggregation is opt-in and explicitly labelled. "
+            "combined_known_risk/combined_total_risk are null when participating "
+            "accounts span multiple currencies because no governed FX "
+            "conversion exists; per-currency buckets are authoritative instead. "
+            "One account's risk can never satisfy another."
+        ),
+    ),
     "portfolio_rankings": ResearchDisposition(
         dataset="portfolio_rankings",
         phase2=Phase2Disposition.B_SUPPORTING_DIAGNOSTIC,

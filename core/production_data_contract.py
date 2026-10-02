@@ -97,6 +97,22 @@ PRODUCTION_SCHEMA_REGISTRY: dict[str, ProductionSchema] = {
     # Linked to its account snapshot by EXACT account_snapshot_id, never by
     # timestamp proximity. Owned by core.risk.position_snapshot.
     "account_open_risk": _schema("account_open_risk", role=DatasetRole.SUPPORTING, owner="position_risk_telemetry", population="LIVE", partition_model=PartitionModel.DATE),
+    # Block 2C account-safe portfolio/correlation exposure. Account-scoped and
+    # date-partitioned. Grain A: one row per ACCOUNT PORTFOLIO OBSERVATION.
+    # Derived strictly from one exact Block 2B observation cycle and linked to
+    # it by EXACT observation_id + open_risk_snapshot_id. Owned by
+    # core.risk.portfolio_exposure.
+    "portfolio_exposure": _schema("portfolio_exposure", role=DatasetRole.SUPPORTING, owner="portfolio_risk_telemetry", population="LIVE", partition_model=PartitionModel.DATE),
+    # Block 2C correlation-cluster exposure. Grain B: one row per CORRELATION
+    # CLUSTER per account observation, in its OWN dataset so the two grains are
+    # never conflated. Carries the exact correlation model id/version used.
+    "correlation_exposure": _schema("correlation_exposure", role=DatasetRole.SUPPORTING, owner="portfolio_risk_telemetry", population="LIVE", partition_model=PartitionModel.DATE),
+    # Block 2C explicitly requested CROSS-ACCOUNT aggregate. Grain C: a
+    # DIFFERENT grain from per-account exposure, in its OWN dataset with its own
+    # identity namespace. Monetary totals are only published when every
+    # participating account shares one currency; otherwise currency buckets
+    # carry the truth and no FX conversion is guessed.
+    "cross_account_portfolio_exposure": _schema("cross_account_portfolio_exposure", role=DatasetRole.SUPPORTING, owner="portfolio_risk_telemetry", population="LIVE", partition_model=PartitionModel.DATE),
     "portfolio_rankings": _schema("portfolio_rankings", role=DatasetRole.SUPPORTING, current="portfolio_ranking_v1", owner="portfolio_ranking", population="LIVE_AND_REPLAY", partition_model=PartitionModel.DATE),
     "shadow_runtime": _schema("shadow_runtime", role=DatasetRole.SUPPORTING, owner="shadow_runtime", population="SHADOW"),
     "shadow_trades": _schema("shadow_trades", role=DatasetRole.SUPPORTING, owner="shadow_trade_simulation", population="SHADOW"),

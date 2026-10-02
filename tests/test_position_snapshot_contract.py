@@ -2068,8 +2068,10 @@ def test_both_new_datasets_are_in_the_lifecycle_disposition_table():
 
 
 def test_the_registry_retains_exactly_the_expected_active_dataset_count():
-    """Block 2B moved the Production V1 registry from 24 to 26 datasets."""
-    assert len(PRODUCTION_SCHEMA_REGISTRY) == 26
+    """Block 2B moved 24 -> 26; Block 2C portfolio/correlation exposure added 3."""
+    # Block 2C's own datasets are asserted by test_portfolio_exposure_contract.
+    # This guard proves 2B's datasets were NOT weakened or removed by 2C.
+    assert len(PRODUCTION_SCHEMA_REGISTRY) == 29
     assert DATASET in PRODUCTION_SCHEMA_REGISTRY
     assert OPEN_RISK_DATASET in PRODUCTION_SCHEMA_REGISTRY
     # Identity, writer and migration tables stay exactly in step with it.
