@@ -124,15 +124,20 @@ class OutboxRecord:
     created_at: str
     updated_at: str
     attempt_count: int
+    last_attempt_at: str | None
     next_retry_at: str | None
     delivery_state: DeliveryState
     last_error: str | None
+    last_error_class: str | None
     canonical_ack: Mapping[str, Any] | None
     lifecycle_obligation_id: str | None
     conflict_payload_sha256: str | None
     claim_owner: str | None
     claim_expires_at: str | None
+    lease_reclaim_count: int
     revision: int
+    reconciliation_state: str
+    reconciliation_error: str | None
 
     @property
     def account_id(self) -> Any:
@@ -143,6 +148,13 @@ class OutboxRecord:
 class EnqueueResult:
     outcome: EnqueueOutcome
     record: OutboxRecord
+
+
+@dataclass(frozen=True)
+class ClaimResult:
+    record: OutboxRecord
+    state_before: DeliveryState
+    reclaimed_expired_lease: bool
 
 
 @dataclass(frozen=True)
@@ -262,7 +274,7 @@ def canonical_outbox_destination(
 class CanonicalDeliveryOutbox:
     """Transaction-safe durable authority for canonical delivery obligations."""
 
-    _SCHEMA_VERSION = 1
+    _SCHEMA_VERSION = 3
 
     def __init__(
         self,
@@ -343,15 +355,20 @@ class CanonicalDeliveryOutbox:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+                last_attempt_at TEXT,
                 next_retry_at TEXT,
                 delivery_state TEXT NOT NULL,
                 last_error TEXT,
+                last_error_class TEXT,
                 ack_json TEXT,
                 lifecycle_obligation_id TEXT,
                 conflict_payload_sha256 TEXT,
                 claim_owner TEXT,
                 claim_expires_at TEXT,
-                revision INTEGER NOT NULL DEFAULT 1 CHECK (revision >= 1)
+                lease_reclaim_count INTEGER NOT NULL DEFAULT 0,
+                revision INTEGER NOT NULL DEFAULT 1 CHECK (revision >= 1),
+                reconciliation_state TEXT NOT NULL DEFAULT 'NOT_LINKED',
+                reconciliation_error TEXT
             );
             CREATE INDEX IF NOT EXISTS ix_outbox_delivery
                 ON outbox_records(delivery_state, next_retry_at, created_at);
@@ -359,6 +376,21 @@ class CanonicalDeliveryOutbox:
                 ON outbox_records(dataset, delivery_state);
             """
         )
+        columns = {
+            row[1] for row in self._db.execute("PRAGMA table_info(outbox_records)")
+        }
+        additions = {
+            "last_attempt_at": "TEXT",
+            "last_error_class": "TEXT",
+            "reconciliation_state": "TEXT NOT NULL DEFAULT 'NOT_LINKED'",
+            "reconciliation_error": "TEXT",
+            "lease_reclaim_count": "INTEGER NOT NULL DEFAULT 0",
+        }
+        for name, declaration in additions.items():
+            if name not in columns:
+                self._db.execute(
+                    f"ALTER TABLE outbox_records ADD COLUMN {name} {declaration}"
+                )
         self._db.execute(f"PRAGMA user_version={self._SCHEMA_VERSION}")
 
     @contextmanager
@@ -458,8 +490,10 @@ class CanonicalDeliveryOutbox:
                 self._insert_record(db, (
                     outbox_id, idem, dataset, DATA_CONTRACT_VERSION, schema,
                     self.canonical_bucket, destination, identity_json, payload_json,
-                    payload_hash, now, now, 0, None, DeliveryState.PENDING.value,
-                    None, None, lifecycle_obligation_id, None, None, None, 1,
+                    payload_hash, now, now, 0, None, None,
+                    DeliveryState.PENDING.value, None, None, None,
+                    lifecycle_obligation_id, None, None, None, 0, 1,
+                    "PENDING" if lifecycle_obligation_id else "NOT_LINKED", None,
                 ))
                 created = db.execute(
                     "SELECT * FROM outbox_records WHERE idempotency_key=?", (idem,),
@@ -474,10 +508,12 @@ class CanonicalDeliveryOutbox:
                    outbox_id, idempotency_key, dataset, production_namespace,
                    schema_version, canonical_bucket, canonical_key, identity_json,
                    payload_json, payload_sha256, created_at, updated_at,
-                   attempt_count, next_retry_at, delivery_state, last_error,
-                   ack_json, lifecycle_obligation_id, conflict_payload_sha256,
-                   claim_owner, claim_expires_at, revision
-               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   attempt_count, last_attempt_at, next_retry_at, delivery_state,
+                   last_error, last_error_class, ack_json,
+                   lifecycle_obligation_id, conflict_payload_sha256,
+                   claim_owner, claim_expires_at, lease_reclaim_count, revision,
+                   reconciliation_state, reconciliation_error
+               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             values,
         )
 
@@ -502,6 +538,20 @@ class CanonicalDeliveryOutbox:
         owner_id: str | None = None,
         lease_seconds: int = 300,
     ) -> OutboxRecord | None:
+        result = self.claim_next_result(
+            now=now, owner_id=owner_id, lease_seconds=lease_seconds,
+        )
+        return result.record if result is not None else None
+
+    def claim_next_result(
+        self,
+        *,
+        now: str | None = None,
+        owner_id: str | None = None,
+        lease_seconds: int = 300,
+        ignore_retry_schedule: bool = False,
+        exclude_outbox_ids: tuple[str, ...] = (),
+    ) -> ClaimResult | None:
         if lease_seconds <= 0:
             raise ValueError("POSITIVE_CLAIM_LEASE_REQUIRED")
         claimed_at = _normalise_utc(now or self._clock())
@@ -512,20 +562,27 @@ class CanonicalDeliveryOutbox:
         owner = owner_id or f"pid-{os.getpid()}-thread-{threading.get_ident()}"
         try:
             with self._transaction() as db:
+                exclusion = ""
+                parameters: list[Any] = [
+                    DeliveryState.PENDING.value,
+                    DeliveryState.RETRYABLE_FAILURE.value,
+                    1 if ignore_retry_schedule else 0,
+                    claimed_at,
+                    DeliveryState.IN_FLIGHT.value,
+                    claimed_at,
+                ]
+                if exclude_outbox_ids:
+                    placeholders = ",".join("?" for _ in exclude_outbox_ids)
+                    exclusion = f" AND outbox_id NOT IN ({placeholders})"
+                    parameters.extend(exclude_outbox_ids)
                 row = db.execute(
                     """SELECT * FROM outbox_records
-                       WHERE delivery_state=? OR
+                       WHERE (delivery_state=? OR
                              (delivery_state=? AND
-                              (next_retry_at IS NULL OR next_retry_at<=?)) OR
-                             (delivery_state=? AND claim_expires_at<=?)
-                       ORDER BY created_at, outbox_id LIMIT 1""",
-                    (
-                        DeliveryState.PENDING.value,
-                        DeliveryState.RETRYABLE_FAILURE.value,
-                        claimed_at,
-                        DeliveryState.IN_FLIGHT.value,
-                        claimed_at,
-                    ),
+                              (?=1 OR next_retry_at IS NULL OR next_retry_at<=?)) OR
+                             (delivery_state=? AND claim_expires_at<=?))"""
+                    + exclusion + " ORDER BY created_at, outbox_id LIMIT 1",
+                    tuple(parameters),
                 ).fetchone()
                 if row is None:
                     return None
@@ -535,29 +592,50 @@ class CanonicalDeliveryOutbox:
                 db.execute(
                     """UPDATE outbox_records
                        SET delivery_state=?, attempt_count=attempt_count+1,
-                           next_retry_at=NULL, last_error=NULL, updated_at=?,
-                           claim_owner=?, claim_expires_at=?, revision=revision+1
+                           last_attempt_at=?, next_retry_at=NULL, last_error=NULL,
+                           last_error_class=NULL, updated_at=?,
+                           claim_owner=?, claim_expires_at=?,
+                           lease_reclaim_count=lease_reclaim_count+?,
+                           revision=revision+1
                        WHERE outbox_id=? AND revision=?""",
-                    (DeliveryState.IN_FLIGHT.value, claimed_at, owner, lease_until,
+                    (DeliveryState.IN_FLIGHT.value, claimed_at, claimed_at,
+                     owner, lease_until, 1 if source is DeliveryState.IN_FLIGHT else 0,
                      row["outbox_id"], row["revision"]),
                 )
                 changed = db.execute(
                     "SELECT * FROM outbox_records WHERE outbox_id=?",
                     (row["outbox_id"],),
                 ).fetchone()
-                return self._row_to_record(changed)
+                return ClaimResult(
+                    record=self._row_to_record(changed),
+                    state_before=source,
+                    reclaimed_expired_lease=source is DeliveryState.IN_FLIGHT,
+                )
         except sqlite3.Error as exc:
             raise OutboxPersistenceError(f"CLAIM_NOT_DURABLE:{exc}") from exc
 
     def mark_retryable_failure(
         self, outbox_id: str, *, error: str, next_retry_at: str | None = None,
+        error_class: str | None = None,
     ) -> OutboxRecord:
         return self._set_failure(
             outbox_id, DeliveryState.RETRYABLE_FAILURE, error, next_retry_at,
+            error_class,
         )
 
-    def mark_terminal_failure(self, outbox_id: str, *, error: str) -> OutboxRecord:
-        return self._set_failure(outbox_id, DeliveryState.TERMINAL_FAILURE, error, None)
+    def mark_terminal_failure(
+        self, outbox_id: str, *, error: str, error_class: str | None = None,
+    ) -> OutboxRecord:
+        return self._set_failure(
+            outbox_id, DeliveryState.TERMINAL_FAILURE, error, None, error_class,
+        )
+
+    def mark_conflict(
+        self, outbox_id: str, *, error: str, error_class: str = "ObjectConflict",
+    ) -> OutboxRecord:
+        return self._set_failure(
+            outbox_id, DeliveryState.CONFLICT, error, None, error_class,
+        )
 
     def _set_failure(
         self,
@@ -565,6 +643,7 @@ class CanonicalDeliveryOutbox:
         state: DeliveryState,
         error: str,
         next_retry_at: str | None,
+        error_class: str | None,
     ) -> OutboxRecord:
         if not error:
             raise ValueError("DELIVERY_ERROR_REQUIRED")
@@ -576,10 +655,11 @@ class CanonicalDeliveryOutbox:
                 self._assert_transition(row, state)
                 db.execute(
                     """UPDATE outbox_records
-                       SET delivery_state=?, last_error=?, next_retry_at=?,
+                       SET delivery_state=?, last_error=?, last_error_class=?,
+                           next_retry_at=?,
                            claim_owner=NULL, claim_expires_at=NULL,
                            updated_at=?, revision=revision+1 WHERE outbox_id=?""",
-                    (state.value, error, retry_at, now, outbox_id),
+                    (state.value, error, error_class, retry_at, now, outbox_id),
                 )
                 changed = self._required_row(db, outbox_id)
                 return self._row_to_record(changed)
@@ -613,13 +693,21 @@ class CanonicalDeliveryOutbox:
                 preexisting_verified = status == 412 and evidence.get("object_preexisted") is True
                 if not (put_created or preexisting_verified):
                     raise CanonicalAckError("ACK_PUT_SUCCESS_REQUIRED")
-                if not evidence.get("etag"):
-                    raise CanonicalAckError("ACK_ETAG_REQUIRED")
+                etag_available = evidence.get("etag_available")
+                if etag_available is None:
+                    etag_available = bool(evidence.get("etag"))
+                if not isinstance(etag_available, bool):
+                    raise CanonicalAckError("ACK_ETAG_AVAILABILITY_REQUIRED")
+                if etag_available and not evidence.get("etag"):
+                    raise CanonicalAckError("ACK_ETAG_VALUE_REQUIRED")
+                if not etag_available and evidence.get("etag") not in (None, ""):
+                    raise CanonicalAckError("ACK_ETAG_ABSENCE_CONTRADICTS_VALUE")
                 if evidence.get("verification_method") not in _ACK_VERIFICATION_METHODS:
                     raise CanonicalAckError("ACK_EXACT_VERIFICATION_REQUIRED")
                 if evidence.get("verified_payload_sha256") != row["payload_sha256"]:
                     raise CanonicalAckError("ACK_VERIFIED_PAYLOAD_HASH_MISMATCH")
                 ack = dict(evidence)
+                ack["etag_available"] = etag_available
                 ack["acknowledged_at"] = _normalise_utc(
                     evidence.get("acknowledged_at") or now
                 )
@@ -627,7 +715,7 @@ class CanonicalDeliveryOutbox:
                 db.execute(
                     """UPDATE outbox_records
                        SET delivery_state=?, ack_json=?, last_error=NULL,
-                           next_retry_at=NULL, claim_owner=NULL,
+                           last_error_class=NULL, next_retry_at=NULL, claim_owner=NULL,
                            claim_expires_at=NULL, updated_at=?, revision=revision+1
                        WHERE outbox_id=?""",
                     (DeliveryState.ACKNOWLEDGED.value, ack_json, now, outbox_id),
@@ -635,6 +723,55 @@ class CanonicalDeliveryOutbox:
                 return self._row_to_record(self._required_row(db, outbox_id))
         except sqlite3.Error as exc:
             raise OutboxPersistenceError(f"ACK_NOT_DURABLE:{exc}") from exc
+
+    def record_reconciliation(
+        self, outbox_id: str, *, state: str, error: str | None = None,
+    ) -> OutboxRecord:
+        if state not in {"PENDING", "RECONCILED", "NOT_APPLICABLE", "NOT_LINKED", "ANOMALY"}:
+            raise ValueError(f"INVALID_RECONCILIATION_STATE:{state}")
+        now = _normalise_utc(self._clock())
+        try:
+            with self._transaction() as db:
+                self._required_row(db, outbox_id)
+                db.execute(
+                    """UPDATE outbox_records SET reconciliation_state=?,
+                       reconciliation_error=?, updated_at=?, revision=revision+1
+                       WHERE outbox_id=?""",
+                    (state, error, now, outbox_id),
+                )
+                return self._row_to_record(self._required_row(db, outbox_id))
+        except sqlite3.Error as exc:
+            raise OutboxPersistenceError(f"RECONCILIATION_NOT_DURABLE:{exc}") from exc
+
+    def acknowledged_needing_reconciliation(
+        self, *, limit: int = 100, exclude_outbox_ids: tuple[str, ...] = (),
+    ) -> tuple[OutboxRecord, ...]:
+        """Read bounded ACK rows whose lifecycle reconciliation is incomplete."""
+        if limit < 0:
+            raise ValueError("RECONCILIATION_LIMIT_MUST_BE_NON_NEGATIVE")
+        if limit == 0:
+            return ()
+        exclusion = ""
+        parameters: list[Any] = [
+            DeliveryState.ACKNOWLEDGED.value, "PENDING", "ANOMALY", "NOT_LINKED",
+        ]
+        if exclude_outbox_ids:
+            placeholders = ",".join("?" for _ in exclude_outbox_ids)
+            exclusion = f" AND outbox_id NOT IN ({placeholders})"
+            parameters.extend(exclude_outbox_ids)
+        parameters.append(limit)
+        try:
+            with self._lock:
+                rows = self._db.execute(
+                    """SELECT * FROM outbox_records
+                       WHERE delivery_state=? AND reconciliation_state IN (?,?,?)"""
+                    + exclusion + " ORDER BY updated_at, created_at, outbox_id LIMIT ?",
+                    tuple(parameters),
+                ).fetchall()
+            return tuple(self._row_to_record(row) for row in rows)
+        except (sqlite3.Error, TypeError, ValueError, KeyError) as exc:
+            raise OutboxPersistenceError(
+                f"RECONCILIATION_SCAN_FAILED:{exc}") from exc
 
     def reconciliation_contract(self, outbox_id: str) -> Mapping[str, Any]:
         """Exact future Block 1C comparison material; this does not claim ACK."""
@@ -709,6 +846,40 @@ class CanonicalDeliveryOutbox:
             dataset_breakdown=breakdown,
         )
 
+    def delivery_metrics(self) -> Mapping[str, Any]:
+        """Durable aggregates used by worker observability after restart."""
+        with self._lock:
+            attempts = {
+                row["dataset"]: int(row["n"] or 0)
+                for row in self._db.execute(
+                    "SELECT dataset, SUM(attempt_count) AS n FROM outbox_records GROUP BY dataset"
+                ).fetchall()
+            }
+            failures = {
+                row["last_error_class"]: int(row["n"])
+                for row in self._db.execute(
+                    """SELECT last_error_class, COUNT(*) AS n FROM outbox_records
+                       WHERE last_error_class IS NOT NULL GROUP BY last_error_class"""
+                ).fetchall()
+            }
+            recovered = int(self._db.execute(
+                """SELECT COUNT(*) FROM outbox_records
+                   WHERE ack_json LIKE '%\"object_preexisted\":true%'"""
+            ).fetchone()[0])
+            reclaimed = int(self._db.execute(
+                "SELECT COALESCE(SUM(lease_reclaim_count),0) FROM outbox_records"
+            ).fetchone()[0])
+            anomalies = int(self._db.execute(
+                "SELECT COUNT(*) FROM outbox_records WHERE reconciliation_state='ANOMALY'"
+            ).fetchone()[0])
+        return {
+            "attempts_by_dataset": attempts,
+            "failures_by_error_class": failures,
+            "recovered_orphan_ack_count": recovered,
+            "reclaimed_expired_lease_count": reclaimed,
+            "reconciliation_anomaly_count": anomalies,
+        }
+
     @staticmethod
     def _required_row(db: sqlite3.Connection, outbox_id: str) -> sqlite3.Row:
         row = db.execute(
@@ -761,15 +932,20 @@ class CanonicalDeliveryOutbox:
                 created_at=row["created_at"],
                 updated_at=row["updated_at"],
                 attempt_count=row["attempt_count"],
+                last_attempt_at=row["last_attempt_at"],
                 next_retry_at=row["next_retry_at"],
                 delivery_state=state,
                 last_error=row["last_error"],
+                last_error_class=row["last_error_class"],
                 canonical_ack=ack,
                 lifecycle_obligation_id=row["lifecycle_obligation_id"],
                 conflict_payload_sha256=row["conflict_payload_sha256"],
                 claim_owner=row["claim_owner"],
                 claim_expires_at=row["claim_expires_at"],
+                lease_reclaim_count=row["lease_reclaim_count"],
                 revision=row["revision"],
+                reconciliation_state=row["reconciliation_state"],
+                reconciliation_error=row["reconciliation_error"],
             )
         except (json.JSONDecodeError, TypeError, ValueError, KeyError) as exc:
             raise OutboxCorruptionError(
@@ -780,6 +956,7 @@ class CanonicalDeliveryOutbox:
 __all__ = [
     "CanonicalAckError",
     "CanonicalDeliveryOutbox",
+    "ClaimResult",
     "DeliveryState",
     "EnqueueOutcome",
     "EnqueueResult",

@@ -254,4 +254,7 @@ def test_excursion_checkpoint_is_the_only_noncanonical_direct_s3_exemption():
     for path in Path(root).rglob("*.py"):
         if ".put_object(" in path.read_text(encoding="utf-8", errors="ignore"):
             direct.append(path.relative_to(root).as_posix())
-    assert direct == ["trade_management/excursion_state.py"]
+    assert direct == [
+        "canonical_delivery_worker.py",
+        "trade_management/excursion_state.py",
+    ]
