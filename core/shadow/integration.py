@@ -251,3 +251,18 @@ def evaluate_closed_bar(
         bar_index=bar_index,
         bar_open=bar_open,
     )
+    # Linked candidate observation: same closed bar, parallel/observational,
+    # isolated so candidate failures can never affect baseline shadow truth.
+    try:
+        from core.shadow.candidate_runtime import get_candidate_runtime
+        get_candidate_runtime().evaluate_bar(
+            symbol=symbol,
+            bar_time=int(bar_time_utc),
+            bar_high=bar_high,
+            bar_low=bar_low,
+            bar_close=bar_close,
+            bar_index=bar_index,
+            bar_open=bar_open,
+        )
+    except Exception:
+        logger.debug("[SHADOW_CANDIDATE_BAR_ISOLATED]", exc_info=True)
