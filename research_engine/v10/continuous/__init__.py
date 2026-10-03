@@ -11,11 +11,17 @@ Components:
 """
 
 from research_engine.v10.continuous.orchestrator import ContinuousResearchOrchestrator
+from research_engine.v10.continuous.frontier_coordinator import (
+    FrontierCycleResult,
+    run_frontier_snapshot_cycle,
+)
 from research_engine.v10.continuous.state import CycleState, CycleStatus, TriggerStatus
 
 __all__ = [
     "ContinuousResearchOrchestrator",
+    "FrontierCycleResult",
     "CycleState",
     "CycleStatus",
     "TriggerStatus",
+    "run_frontier_snapshot_cycle",
 ]
