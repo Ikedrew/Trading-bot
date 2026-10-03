@@ -19,6 +19,70 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+def bind_candidate_from_shadow_open(event: dict[str, Any]) -> None:
+    """Create registered candidate lifecycles only from persisted baseline OPENs."""
+    try:
+        if not isinstance(event, dict) or event.get("event_type") != "OPEN":
+            return
+        arm_block = event.get("experiment_arm")
+        if not isinstance(arm_block, dict):
+            return
+        assigned_arm = str(arm_block.get("experiment_arm") or "")
+        if assigned_arm != "CANDIDATE":
+            return
+        construction = dict(event.get("construction") or {})
+        identity = dict(event.get("identity") or {})
+        shadow_trade_id = str(event.get("shadow_trade_id") or "")
+        canonical_id = str(event.get("canonical_opportunity_id") or "")
+        horizon = str(
+            event.get("horizon")
+            or identity.get("trade_horizon")
+            or identity.get("evaluated_horizon")
+            or ""
+        )
+        if not shadow_trade_id or not canonical_id or not horizon:
+            logger.error("[SHADOW_CANDIDATE_BIND_INVALID_OPEN] missing identity")
+            return
+
+        from core.shadow.candidate_runtime import get_candidate_runtime
+        candidate_runtime = get_candidate_runtime()
+        for registration in candidate_runtime.registrations():
+            if registration.required_experiment_arm and (
+                registration.required_experiment_arm != assigned_arm
+            ):
+                continue
+            if registration.experiment_id and registration.experiment_id != str(
+                arm_block.get("experiment_id") or ""
+            ):
+                continue
+            try:
+                candidate_runtime.bind_shadow_lifecycle(
+                    shadow_trade_id=shadow_trade_id,
+                    canonical_opportunity_id=canonical_id,
+                    trade_horizon=horizon,
+                    symbol=str(event.get("symbol") or ""),
+                    direction=str(construction.get("direction") or ""),
+                    entry_time=int(event.get("entry_market_time_utc_epoch_s") or 0),
+                    entry_price=float(construction["entry_price"]),
+                    stop_loss=float(construction["stop_loss"]),
+                    take_profit=float(construction["take_profit"]),
+                    experiment_id=str(arm_block.get("experiment_id") or ""),
+                    experiment_arm=assigned_arm,
+                    arm_assignment=arm_block,
+                    baseline_lineage=dict(event.get("record_lineage") or {}),
+                    baseline_open_event_id=str(event.get("event_id") or ""),
+                    candidate_id=registration.candidate_id,
+                    policy_id=registration.policy_id,
+                )
+            except Exception:
+                logger.exception(
+                    "[SHADOW_CANDIDATE_BIND_ISOLATED] candidate=%s policy=%s",
+                    registration.candidate_id,
+                    registration.policy_id,
+                )
+    except Exception:
+        logger.exception("[SHADOW_CANDIDATE_OPEN_HOOK_ISOLATED]")
+
 
 class ShadowV2Handled(Exception):
     """
@@ -253,9 +317,14 @@ def evaluate_closed_bar(
     )
     # Linked candidate observation: same closed bar, parallel/observational,
     # isolated so candidate failures can never affect baseline shadow truth.
+    has_candidate_registrations = False
     try:
         from core.shadow.candidate_runtime import get_candidate_runtime
-        get_candidate_runtime().evaluate_bar(
+        candidate_runtime = get_candidate_runtime()
+        ensure_recovered = getattr(candidate_runtime, "ensure_recovered", None)
+        if callable(ensure_recovered):
+            ensure_recovered()
+        candidate_runtime.evaluate_bar(
             symbol=symbol,
             bar_time=int(bar_time_utc),
             bar_high=bar_high,
@@ -264,5 +333,15 @@ def evaluate_closed_bar(
             bar_index=bar_index,
             bar_open=bar_open,
         )
+        registered_keys = getattr(candidate_runtime, "registered_keys", None)
+        has_candidate_registrations = (
+            bool(registered_keys()) if callable(registered_keys) else False
+        )
     except Exception:
-        logger.debug("[SHADOW_CANDIDATE_BAR_ISOLATED]", exc_info=True)
+        logger.exception("[SHADOW_CANDIDATE_BAR_ISOLATED]")
+    if has_candidate_registrations:
+        try:
+            from core.shadow.candidate_evaluation import get_candidate_evaluation
+            get_candidate_evaluation().reconcile()
+        except Exception:
+            logger.exception("[SHADOW_CANDIDATE_EVALUATION_RECONCILE_ISOLATED]")

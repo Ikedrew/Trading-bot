@@ -156,6 +156,8 @@ class CandidateState:
     candidate_exit_time: int | None = None
     candidate_r: float | None = None
     terminal: bool = False
+    experiment_id: str = ""
+    experiment_arm: str = ""
     lineage: dict = field(default_factory=dict)
     schema_version: str = SCHEMA_VERSION
     model_version: str = CANDIDATE_MODEL_VERSION
@@ -200,6 +202,8 @@ class CandidateState:
             "candidate_exit_time": self.candidate_exit_time,
             "candidate_r": self.candidate_r,
             "terminal": bool(self.terminal),
+            "experiment_id": self.experiment_id,
+            "experiment_arm": self.experiment_arm,
             "lineage": dict(self.lineage or {}),
             "schema_version": self.schema_version,
             "model_version": self.model_version,
@@ -232,6 +236,8 @@ class CandidateState:
             candidate_exit_time=get("candidate_exit_time"),
             candidate_r=get("candidate_r"),
             terminal=bool(get("terminal", False)),
+            experiment_id=str(get("experiment_id", "") or ""),
+            experiment_arm=str(get("experiment_arm", "") or ""),
             lineage=dict(get("lineage", {}) or {}),
             schema_version=str(get("schema_version", SCHEMA_VERSION) or SCHEMA_VERSION),
             model_version=str(get("model_version", CANDIDATE_MODEL_VERSION) or CANDIDATE_MODEL_VERSION),
@@ -256,4 +262,3 @@ __all__ = [
     "candidate_runtime_id",
     "compute_candidate_r",
 ]
-

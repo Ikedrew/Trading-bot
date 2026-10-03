@@ -205,7 +205,7 @@ class ShadowRuntime:
         # Reuse the persisted envelope, retagged with this event type.
         return dict(pinned, event_type=str(event_type or ""))
 
-    def _write(self, event: dict[str, Any]) -> None:
+    def _write(self, event: dict[str, Any]) -> bool:
         """
         THE serialization/persistence boundary for every ``shadow_runtime``
         record (PLAN, OPEN, PROGRESS and CLOSE all pass through here).
@@ -261,6 +261,7 @@ class ShadowRuntime:
                     failure_reason="SHADOW_RUNTIME_LOCAL_WRITE_FAILED",
                     provenance={"local_path_authority": "LOCAL_ONLY"},
                 )
+            return persisted is not False
         except Exception as exc:
             if _ledger is not None and _obligation is not None:
                 try:
@@ -567,7 +568,13 @@ class ShadowRuntime:
                 decision_market_time_utc=bar_time_utc,
                 enabled=shadow_arm_enabled(),
             )
-            self._write(ev)
+            persisted = self._write(ev)
+            if persisted:
+                try:
+                    from core.shadow.integration import bind_candidate_from_shadow_open
+                    bind_candidate_from_shadow_open(ev)
+                except Exception:
+                    logger.exception("[SHADOW_CANDIDATE_OPEN_HOOK_ISOLATED]")
 
             self._active[trade_id] = {
                 "trade_id": trade_id,
