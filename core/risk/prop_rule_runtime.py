@@ -467,6 +467,34 @@ class PropEnforcementRuntime:
 
     # -- evaluation ----------------------------------------------------------
 
+    def _refresh_active_pack(self, at_utc: datetime) -> None:
+        """Re-resolve the pack in force at THIS instant before evaluating.
+
+        Block 3D REPAIR. The active pack was resolved once at startup and then
+        reused for the whole process lifetime, so a rule-pack VERSION or PHASE
+        transition was never picked up at runtime: the bot would keep enforcing
+        the previous pack's limits indefinitely. The pack is now resolved
+        strictly at each evaluation instant, exactly as the 3B state provider
+        already does, and an unresolvable pack leaves ``_active_pack`` as
+        ``None`` so the existing fail-closed paths apply.
+        """
+        if self._packs is None or self._pack_identity is None:
+            return
+        identity = self._pack_identity
+        try:
+            pack = self._packs.find_rule_pack(
+                identity.provider, identity.program, identity.phase,
+                identity.account_size, at_utc,
+                currency=identity.currency, platform=identity.platform,
+            )
+        except Exception:
+            self._active_pack = None
+            self._status.active_rule_pack_id = ""
+            return
+        if getattr(pack, "is_usable", False):
+            self._active_pack = pack
+            self._status.active_rule_pack_id = pack.rule_pack_id
+
     def evaluate(
         self,
         *,
@@ -480,6 +508,9 @@ class PropEnforcementRuntime:
         3C performs no rule arithmetic of its own: this is the same
         ``evaluate_pack`` the historical evaluator uses.
         """
+        # Block 3D: the pack in force is resolved strictly at THIS instant, so a
+        # version or phase transition is honoured by every evaluation path.
+        self._refresh_active_pack(at_utc)
         if self._active_pack is None:
             raise EnforcementError("NO_ACTIVE_RULE_PACK")
         context = EvaluationContext(
@@ -660,6 +691,9 @@ class PropEnforcementRuntime:
         """
         symbol = order.canonical_symbol if order is not None else ""
 
+        if self.mode is not EnforcementMode.DISABLED:
+            self._refresh_active_pack(at_utc)
+
         if self.mode is EnforcementMode.DISABLED:
             return EntryVerdict(
                 account=account, symbol=symbol, allowed=True,
@@ -704,6 +738,10 @@ class PropEnforcementRuntime:
         results = self.evaluate(
             account=account, state=state, at_utc=at_utc, portfolio=portfolio
         )
+        # Block 3D: a self-clearing suspension is released BEFORE the restored
+        # block set is folded in, so a rule-day reset actually restores trading.
+        self._reconcile_rule_day_suspensions(
+            account, at_utc=at_utc, results=results)
         decisions = list(self._decisions(
             account=account, results=results, at_utc=at_utc
         ))
@@ -805,6 +843,84 @@ class PropEnforcementRuntime:
             ),
         )
 
+    def _rule_day_key(self, at_utc: datetime) -> str:
+        """The governed rule day key for an instant, or "" when unconfigured."""
+        if self._rule_day is None:
+            return ""
+        try:
+            return self._rule_day.rule_day_for(at_utc).isoformat()
+        except Exception:
+            return ""
+
+    def _reconcile_rule_day_suspensions(
+        self,
+        account: AccountKey,
+        *,
+        at_utc: datetime,
+        results: Sequence[EvaluationResult],
+    ) -> None:
+        """Clear SELF-CLEARING suspensions once their rule day has passed.
+
+        Block 3D REPAIR. A rule whose recovery class is ``RULE_DAY_RESET`` (a
+        daily loss limit, for example) raises a suspension that is temporary BY
+        CONSTRUCTION. Without this reconciliation nothing ever cleared it, so a
+        single breached trading day halted the account permanently -- across
+        restarts -- which is exactly the permanent false-terminal 3D must not
+        ship.
+
+        The clearance is GOVERNED, never silent:
+
+        * only a suspension whose own recovery class clears on a new rule day is
+          considered;
+        * only once its recorded rule day is genuinely in the past;
+        * only when the rule that raised it now evaluates PASS or
+          NOT_APPLICABLE against live evidence;
+        * and it is persisted with an explicit clearance authority.
+        """
+        if self.mode is not EnforcementMode.LIVE_ENFORCE:
+            return
+        current = self._rule_day_key(at_utc)
+        if not current:
+            return
+        verdicts = {r.rule_id: r.status for r in results}
+        for suspension in self._state_store.suspensions_for(account):
+            if not suspension.clears_on_new_rule_day:
+                continue
+            if not suspension.rule_day or suspension.rule_day >= current:
+                continue
+            rule_id = self._rule_id_for_enforcement(
+                suspension.triggering_enforcement_id
+            )
+            status = verdicts.get(rule_id)
+            if status not in (
+                EvaluationStatus.PASS, EvaluationStatus.NOT_APPLICABLE
+            ):
+                continue
+            try:
+                self._state_store.clear_suspension(
+                    suspension.suspension_id, at_utc=at_utc,
+                    by="PROP_ENFORCEMENT_RUNTIME", authority="RULE_DAY_RESET",
+                )
+                logger.info(
+                    "[PROP_ENFORCEMENT] suspension cleared by rule-day reset "
+                    "account=%s suspension=%s rule=%s",
+                    account.account_id, suspension.suspension_id, rule_id,
+                )
+            except Exception as exc:
+                logger.error(
+                    "[PROP_ENFORCEMENT] rule-day clearance failed account=%s: %s",
+                    account.account_id, type(exc).__name__,
+                )
+
+    def _rule_id_for_enforcement(self, enforcement_id: str) -> str:
+        """The rule that raised this decision, read from the durable audit."""
+        if not enforcement_id:
+            return ""
+        for record in self._state_store.audit_records():
+            if record.enforcement_id == enforcement_id:
+                return record.rule_id
+        return ""
+
     def _persist(self, verdict: EntryVerdict) -> None:
         """Persist every MATERIAL decision, honouring the mode.
 
@@ -828,14 +944,18 @@ class PropEnforcementRuntime:
 
         if self.mode is not EnforcementMode.LIVE_ENFORCE:
             return
+        rule_day = self._rule_day_key(verdict.evaluated_at_utc)
         for decision in verdict.blocking:
             action = decision.enforcement_action
             if action is EnforcementAction.SUSPEND_ACCOUNT:
-                self._executor.suspend(decision, at_utc=decision.effective_at_utc)
+                self._executor.suspend(
+                    decision, at_utc=decision.effective_at_utc,
+                    rule_day=rule_day,
+                )
             elif action is EnforcementAction.SUSPEND_CHALLENGE:
                 self._executor.suspend(
                     decision, at_utc=decision.effective_at_utc,
-                    scope=SuspensionScope.CHALLENGE,
+                    scope=SuspensionScope.CHALLENGE, rule_day=rule_day,
                 )
             elif action is EnforcementAction.KILL_SWITCH:
                 self._executor.trigger_kill_switch(

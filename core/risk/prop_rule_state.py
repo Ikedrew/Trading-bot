@@ -2277,7 +2277,13 @@ class PropRuleStateStore:
         if not snapshot_id:
             raise PropRuleStateError("HIGH_WATER_REQUIRES_SOURCE_SNAPSHOT_ID")
         key = (account.identity, account_currency)
-        self._hw_obs.setdefault(key, []).append(
+        observations = self._hw_obs.setdefault(key, [])
+        # Block 3D REPAIR (minimal): ONE snapshot is ONE observation. The same
+        # source snapshot re-evaluated (for example after a restart replays the
+        # cycle) must not inflate the observation count or the last-seen time.
+        if any(existing[0] == snapshot_id for existing in observations):
+            return self.high_water_for(account, account_currency)
+        observations.append(
             (
                 snapshot_id,
                 _require_finite(balance, "HIGH_WATER_BALANCE") or 0.0,
@@ -2298,7 +2304,16 @@ class PropRuleStateStore:
                 "observed_at_utc": moment.isoformat(),
             },
         )
-        return self._project_high_water(account, account_currency)
+        # Block 3D REPAIR (minimal): the MONOTONE projection must also be
+        # published to the read cache. Previously only the freshly computed
+        # projection was returned, while ``self._high_water`` kept the value
+        # cached by the first ``high_water_for`` call. For the whole lifetime of
+        # a running process the high-water therefore never advanced past its
+        # FIRST observation, so a TRAILING drawdown floor stayed pinned to the
+        # opening equity and silently behaved like a STATIC drawdown until a
+        # restart recomputed it. Recording now republishes the projection.
+        self._high_water[key] = self._project_high_water(account, account_currency)
+        return self._high_water[key]
 
     def _project_high_water(self, account: AccountKey, account_currency: str) -> HighWaterState:
         key = (account.identity, account_currency)

@@ -718,6 +718,14 @@ def recovery_for(rule_type: RuleType, criticality: EnforcementCriticality) -> Re
     return RecoveryClass.ON_RULE_PASS
 
 
+#: Recovery classes a rule day / event window clears WITHOUT human authority.
+#: A suspension raised by such a rule is temporary by construction and must
+#: never be recorded as terminal, or the recovery class becomes unreachable.
+SELF_CLEARING_RECOVERY: frozenset[RecoveryClass] = frozenset(
+    {RecoveryClass.RULE_DAY_RESET, RecoveryClass.EXTERNAL_WINDOW}
+)
+
+
 def decide_policy(
     *,
     rule: Any,
@@ -793,10 +801,20 @@ def decide_policy(
         # HARD_STOP and ENTRY_BLOCK both refuse new exposure; the difference is
         # the recorded criticality and the durable suspension HARD_STOP also
         # triggers, not a different arithmetic.
+        #
+        # Block 3D REPAIR: TERMINAL is only correct when the rule's OWN recovery
+        # class cannot clear itself. ``DAILY_LOSS_LIMIT`` carries
+        # ``RULE_DAY_RESET`` precisely because a daily limit resets every rule
+        # day; marking its breach terminal made that recovery class unreachable
+        # (``SuspensionState.clears_on_new_rule_day`` requires a non-terminal
+        # suspension) and turned a single bad day into a PERMANENT account halt.
         return _out(
             _SCOPE_ENTRY_ACTION[scope],
             action_required=True,
-            terminal=criticality is EnforcementCriticality.HARD_STOP,
+            terminal=(
+                criticality is EnforcementCriticality.HARD_STOP
+                and recovery not in SELF_CLEARING_RECOVERY
+            ),
         )
 
     # â”€â”€ indeterminate: fail closed exactly where criticality says so â”€â”€â”€â”€â”€â”€â”€

@@ -49,6 +49,8 @@ from core.risk.prop_rule_evaluator import (
     evaluate_rule,
 )
 from core.risk.prop_rule_enforcement import (
+    SELF_CLEARING_RECOVERY,
+    recovery_for,
     ACTION_PRECEDENCE,
     ACTION_RANK,
     ENTRY_BLOCKING_ACTIONS,
@@ -306,14 +308,35 @@ def test_pass_never_blocks():
     assert outcome.terminal is False
 
 
-def test_breach_of_daily_loss_blocks_all_entries_terminally():
+def test_breach_of_daily_loss_blocks_all_entries_until_the_rule_day_reset():
+    """A daily loss limit blocks ALL entries, but is TEMPORARY by construction.
+
+    Block 3D correction. This assertion previously required ``terminal is True``
+    while also requiring ``recovery is RULE_DAY_RESET``, which is a
+    contradiction: ``SuspensionState.clears_on_new_rule_day`` requires a
+    NON-terminal suspension, so a terminal daily-loss suspension could never be
+    released. Nothing cleared such a suspension at the rule-day boundary either,
+    so a single breached trading day halted the account permanently across
+    restarts. A daily limit resets daily, so the breach must be terminal=False
+    and released by the exact governed rule-day reset.
+    """
     rule = _daily_loss_rule()
     outcome = decide_policy(rule=rule, result=make_result(rule, EvaluationStatus.BREACH))
     assert outcome.action is EnforcementAction.BLOCK_ALL_ENTRIES
     assert outcome.criticality is EnforcementCriticality.HARD_STOP
     assert outcome.action_required is True
-    assert outcome.terminal is True
     assert outcome.recovery is RecoveryClass.RULE_DAY_RESET
+    # Terminal exactly when the rule's own recovery class cannot clear itself.
+    assert outcome.terminal is False
+    assert outcome.recovery not in SELF_CLEARING_RECOVERY or outcome.terminal is False
+
+
+def test_terminal_rules_stay_terminal_despite_hard_stop_criticality():
+    """A static/trailing drawdown breach has no self-clearing recovery."""
+    for rule_type in (RuleType.STATIC_DRAWDOWN, RuleType.TRAILING_DRAWDOWN):
+        assert criticality_for(rule_type) is EnforcementCriticality.HARD_STOP
+        recovery = recovery_for(rule_type, EnforcementCriticality.HARD_STOP)
+        assert recovery not in SELF_CLEARING_RECOVERY
 
 
 def test_indeterminate_daily_loss_blocks_new_risk_but_never_liquidates():

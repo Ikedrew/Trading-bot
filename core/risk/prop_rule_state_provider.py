@@ -54,7 +54,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import datetime, time, timezone
-from typing import Any
+from typing import Any, Mapping
 
 from core.risk.prop_rule_enums import RulePhase
 from core.risk.prop_rule_pack import (
@@ -74,6 +74,7 @@ from core.risk.prop_rule_state import (
     RuleDayDefinition,
     build_account_evaluation_state,
     content_hash,
+    to_epoch_ms,
 )
 
 UTC = timezone.utc
@@ -93,6 +94,72 @@ STATE_PACK_MISSING = "PROP_3B_RULE_PACK_MISSING"
 STATE_PACK_AMBIGUOUS = "PROP_3B_RULE_PACK_AMBIGUOUS"
 STATE_PACK_NOT_USABLE = "PROP_3B_RULE_PACK_NOT_USABLE"
 STATE_CURRENCY_MISMATCH = "PROP_3B_RULE_PACK_CURRENCY_MISMATCH"
+STATE_DURABLE_EVIDENCE_UNAVAILABLE = "PROP_3B_DURABLE_EVIDENCE_UNAVAILABLE"
+
+
+class _DurableTelemetrySources:
+    """Read the EXISTING durable Block 2 evidence for ONE exact account.
+
+    This is NOT a new store, dataset or service. It only re-reads what the real
+    Block 2 producers already persisted, through their own public readers, and
+    re-applies their own freshness thresholds at the caller's instant.
+
+    EVERY failure returns ``None``. There is no fallback value, no zero and no
+    partially reconstructed evidence: an order arriving between telemetry cycles
+    is authorised only from genuinely fresh, complete, proven observations.
+    """
+
+    def __init__(self, dirs: Mapping[str, str] | None) -> None:
+        self._dirs = dict(dirs or {})
+
+    def load(self, account: AccountKey, *, at_utc: datetime) -> Any | None:
+        if not self._dirs:
+            return None
+        try:
+            from core.risk.account_snapshot import AccountSnapshotStore
+            from core.risk.portfolio_exposure import PortfolioExposureStore
+            from core.risk.position_snapshot import PositionSnapshotStore
+        except Exception:  # pragma: no cover - import guard
+            return None
+        try:
+            now_ms = to_epoch_ms(at_utc)
+            snapshot = AccountSnapshotStore(
+                base_dir=self._dirs["account"]).latest(
+                    account.account_id, now_ms=now_ms
+            )
+            positions = PositionSnapshotStore(
+                base_dir=self._dirs["position"],
+                open_risk_dir=self._dirs["open_risk"],
+            )
+            position_set = positions.latest_position_set(account.account_id)
+            # An incomplete set never becomes "no open positions".
+            if not position_set.position_set_complete:
+                return None
+            open_risk = positions.latest_open_risk(
+                account.account_id, now_ms=now_ms
+            )
+            portfolio = PortfolioExposureStore(
+                base_dir=self._dirs["portfolio"],
+                cluster_dir=self._dirs["cluster"],
+            ).latest_portfolio_exposure(account.account_id, now_ms=now_ms)
+        except Exception:
+            return None
+        # Identity is proven by 2A; never trust a record for another account.
+        snapshot_identity = (
+            str(getattr(snapshot, "account_id", "") or ""),
+            str(getattr(snapshot, "broker", "") or ""),
+            str(getattr(snapshot, "server", "") or ""),
+            getattr(snapshot, "login", None),
+        )
+        if snapshot_identity != account.identity:
+            return None
+        return CycleEvidence(
+            observed_at_utc=at_utc,
+            account_snapshot=snapshot,
+            open_risk=open_risk,
+            position_set=position_set,
+            portfolio=portfolio,
+        )
 
 
 @dataclass(frozen=True)
@@ -144,11 +211,35 @@ class PropRuleStateProvider:
         state_store: PropRuleStateStore | None = None,
         base_dir: str | None = None,
         source_provenance: str = "BLOCK_3B_STATE_PROVIDER",
+        telemetry_dirs: Mapping[str, str] | None = None,
     ) -> None:
         self._packs = rule_pack_store
         self._identity = pack_identity
         self._definition = rule_day_definition
         self._provenance = str(source_provenance or "BLOCK_3B_STATE_PROVIDER")
+        # Block 3D REPAIR (minimal): the durable Block 2 evidence fallback.
+        #
+        # THE DEFECT THIS CLOSES
+        # ----------------------
+        # The live order path reaches ``prop_enforcement_gate`` -> ``authorize_entry``
+        # WITHOUT this cycle's ``CycleEvidence``: an order can arrive between two
+        # bounded telemetry cycles. The provider therefore received ``evidence=None``,
+        # failed with STATE_EVIDENCE_UNAVAILABLE and returned ``None``, so the entry
+        # gate blocked EVERY order with ``PROP_DEGRADED:STATE_UNAVAILABLE`` even for a
+        # fully compliant account. The system could never allow trading.
+        #
+        # THE REPAIR
+        # ----------
+        # When no live cycle evidence is supplied, resolve the SAME evidence from the
+        # EXISTING durable Block 2 stores (2A account snapshots, 2B position sets and
+        # open risk, 2C portfolio exposure), each re-evaluated for freshness at the
+        # caller's instant using the stores' OWN freshness thresholds.
+        #
+        # It is strictly fail-closed: no durable record, an incomplete position set,
+        # a non-fresh record or any store error all return ``None``, so the gate
+        # blocks new risk exactly as before. No state is ever fabricated, no stale
+        # value becomes a false zero, and no new dataset or service is introduced.
+        self._telemetry = _DurableTelemetrySources(telemetry_dirs)
         # A base_dir makes the state DURABLE: the store rebuilds the initial
         # anchor, the rule-day anchor, the high-water marks, the P&L ledger and
         # the trading-day history from their append-only records at construction,
@@ -209,6 +300,18 @@ class PropRuleStateProvider:
             if self.last_failure.get(account.account_id) != STATE_INSTANT_MISMATCH:
                 self._fail(account, STATE_INSTANT_UNAVAILABLE)
             return None
+
+        # Block 3D REPAIR: an order can arrive BETWEEN two bounded telemetry
+        # cycles, so no live CycleEvidence may be supplied. Resolve the SAME
+        # evidence from the existing durable Block 2 stores instead of failing
+        # closed unconditionally. A missing, incomplete or non-fresh record still
+        # resolves to None and blocks new risk exactly as before.
+        if evidence is None:
+            resolved = self._telemetry.load(account, at_utc=moment)
+            if resolved is None:
+                self._fail(account, STATE_DURABLE_EVIDENCE_UNAVAILABLE)
+                return None
+            evidence = resolved
 
         snapshot = getattr(evidence, "account_snapshot", None)
         currency = self._currency(account, snapshot)
@@ -429,15 +532,43 @@ def production_state_provider(
     rule_day_definition: RuleDayDefinition | None = None,
     base_dir: str | None = None,
     state_store: PropRuleStateStore | None = None,
+    telemetry_dirs: Mapping[str, str] | None = None,
 ) -> PropRuleStateProvider:
-    """Build THE production provider. Exactly one is created per process."""
+    """Build THE production provider. Exactly one is created per process.
+
+    ``telemetry_dirs`` names the EXISTING durable Block 2 evidence directories.
+    When omitted, the production Block 2 defaults are used, so the entry gate can
+    resolve fresh evidence between bounded telemetry cycles. Passing explicit
+    ``None`` disables the fallback entirely and restores unconditional
+    fail-closed behaviour.
+    """
     return PropRuleStateProvider(
         rule_pack_store=rule_pack_store,
         pack_identity=pack_identity,
         rule_day_definition=rule_day_definition,
         state_store=state_store,
         base_dir=base_dir,
+        telemetry_dirs=(
+            default_telemetry_dirs() if telemetry_dirs is None else telemetry_dirs
+        ),
     )
+
+
+def default_telemetry_dirs() -> dict[str, str]:
+    """The EXACT durable Block 2 directories the telemetry service writes."""
+    from core.risk.account_snapshot import DEFAULT_LOCAL_DIR as ACCOUNT_DIR
+    from core.risk.portfolio_exposure import DEFAULT_LOCAL_DIR as PORTFOLIO_DIR
+    from core.risk.portfolio_exposure import DEFAULT_CLUSTER_DIR as CLUSTER_DIR
+    from core.risk.position_snapshot import DEFAULT_LOCAL_DIR as POSITION_DIR
+    from core.risk.position_snapshot import DEFAULT_OPEN_RISK_DIR as OPEN_RISK_DIR
+
+    return {
+        "account": ACCOUNT_DIR,
+        "position": POSITION_DIR,
+        "open_risk": OPEN_RISK_DIR,
+        "portfolio": PORTFOLIO_DIR,
+        "cluster": CLUSTER_DIR,
+    }
 
 
 def load_production_rule_pack_store(pack_dir: str) -> Any | None:
@@ -523,6 +654,7 @@ __all__ = [
     "CycleEvidence",
     "PropRuleStateProvider",
     "STATE_CURRENCY_MISMATCH",
+    "STATE_DURABLE_EVIDENCE_UNAVAILABLE",
     "STATE_CURRENCY_UNAVAILABLE",
     "STATE_EVIDENCE_UNAVAILABLE",
     "STATE_IDENTITY_MISMATCH",
@@ -534,6 +666,7 @@ __all__ = [
     "STATE_PACK_NOT_USABLE",
     "STATE_PACK_STORE_UNCONFIGURED",
     "build_production_enforcement_wiring",
+    "default_telemetry_dirs",
     "load_production_rule_pack_store",
     "production_state_provider",
 ]
