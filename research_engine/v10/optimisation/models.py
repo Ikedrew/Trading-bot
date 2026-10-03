@@ -28,6 +28,10 @@ class CandidateStatus(str, Enum):
     PROPOSED = "PROPOSED"
     READY_FOR_TEST = "READY_FOR_TEST"
     TESTING = "TESTING"
+    FORWARD_VALIDATED = "FORWARD_VALIDATED"
+    SHADOW_VALIDATION_ACTIVE = "SHADOW_VALIDATION_ACTIVE"
+    SHADOW_VALIDATED = "SHADOW_VALIDATED"
+    READY_FOR_PROMOTION_REVIEW = "READY_FOR_PROMOTION_REVIEW"
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
 
@@ -80,12 +84,18 @@ class OptimisationCandidate:
     risk_level: str = "LOW"
     status: str = "PROPOSED"
     notes: str = ""
+    policy_id: str = ""
+    treatment_hash: str = ""
+    status_history: list[dict[str, Any]] = field(default_factory=list)
+    shadow_binding: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         if not self.created_at:
             self.created_at = timestamp_now()
         if not self.baseline_id:
             raise ValueError("OptimisationCandidate requires a baseline_id")
+        if not self.status_history:
+            self.status_history = [{"status": self.status, "timestamp": self.created_at}]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -99,6 +109,10 @@ class OptimisationCandidate:
             "risk_level": self.risk_level,
             "status": self.status,
             "notes": self.notes,
+            "policy_id": self.policy_id,
+            "treatment_hash": self.treatment_hash,
+            "status_history": list(self.status_history),
+            "shadow_binding": dict(self.shadow_binding),
         }
 
 

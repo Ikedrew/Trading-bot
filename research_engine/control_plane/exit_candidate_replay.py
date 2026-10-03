@@ -74,6 +74,10 @@ from research_engine.registry.exit_policy_adjudication import (
     COMMON_ANALYTICAL_CONTRACT,
     HD09_ADJUDICATED_CONTRACT,
 )
+from core.shadow.frozen_trailing_policy import (
+    advance_frozen_trailing,
+    initialise_frozen_trailing,
+)
 
 CANDIDATE_REPLAY_SCHEMA_VERSION = "exit_candidate_replay_v1"
 
@@ -592,6 +596,10 @@ def _evaluate_outcome(
     if policy_type == "TRAILING":
         activation_r = float(policy["activation_r"])
         distance_r = float(policy["distance_r"])
+        trailing_state = initialise_frozen_trailing(
+            entry_price=entry, stop_loss=stop, take_profit=target,
+            risk_distance=risk, timeout_bars=timeout_bars,
+        )
     elif policy_type == "REDUCED_TP":
         cap_r = float(policy["target_cap_r"])
         # The cap only ever moves the target closer to entry.
@@ -626,6 +634,22 @@ def _evaluate_outcome(
             mfe_extreme = max(mfe_extreme, bar.high)
         else:
             mfe_extreme = min(mfe_extreme, bar.low)
+
+        if policy_type == "TRAILING":
+            step = advance_frozen_trailing(
+                policy=policy, entry_price=entry, stop_loss=stop,
+                take_profit=target, risk_distance=risk,
+                direction=record.direction, bar_high=bar.high,
+                bar_low=bar.low, bar_close=bar.close,
+                prior_state=trailing_state,
+            )
+            trailing_state = step.state
+            if step.terminal:
+                exit_reason = step.exit_reason
+                exit_price = step.exit_price
+                exit_utc = bar.timestamp_utc_ms // 1000
+                break
+            continue
 
         # Effective protective stop for this bar: trailing uses only bars
         # completed BEFORE this bar; the original SL is always retained.

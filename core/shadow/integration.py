@@ -47,6 +47,9 @@ def bind_candidate_from_shadow_open(event: dict[str, Any]) -> None:
         from core.shadow.candidate_runtime import get_candidate_runtime
         candidate_runtime = get_candidate_runtime()
         for registration in candidate_runtime.registrations():
+            entry_time = int(event.get("entry_market_time_utc_epoch_s") or 0)
+            if entry_time < int(registration.activation_frontier_epoch_s or 0):
+                continue
             if registration.required_experiment_arm and (
                 registration.required_experiment_arm != assigned_arm
             ):
@@ -62,7 +65,7 @@ def bind_candidate_from_shadow_open(event: dict[str, Any]) -> None:
                     trade_horizon=horizon,
                     symbol=str(event.get("symbol") or ""),
                     direction=str(construction.get("direction") or ""),
-                    entry_time=int(event.get("entry_market_time_utc_epoch_s") or 0),
+                    entry_time=entry_time,
                     entry_price=float(construction["entry_price"]),
                     stop_loss=float(construction["stop_loss"]),
                     take_profit=float(construction["take_profit"]),
@@ -71,6 +74,11 @@ def bind_candidate_from_shadow_open(event: dict[str, Any]) -> None:
                     arm_assignment=arm_block,
                     baseline_lineage=dict(event.get("record_lineage") or {}),
                     baseline_open_event_id=str(event.get("event_id") or ""),
+                    treatment_context={
+                        "timeout_bars": int(dict(
+                            event.get("simulation_assumptions") or {}
+                        ).get("timeout_bars") or 0),
+                    },
                     candidate_id=registration.candidate_id,
                     policy_id=registration.policy_id,
                 )

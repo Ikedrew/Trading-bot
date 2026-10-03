@@ -29,6 +29,7 @@ class CandidateRegistration:
                  treatment_hash: str, adapter, entry_geometry=None,
                  provenance=None, experiment_id: str = "",
                  required_experiment_arm: str = "CANDIDATE",
+                 activation_frontier_epoch_s: int = 0,
                  minimum_sample_requirement: int | None = None,
                  readiness_criteria=None) -> None:
         self.candidate_id = candidate_id
@@ -39,6 +40,7 @@ class CandidateRegistration:
         self.provenance = dict(provenance or {})
         self.experiment_id = str(experiment_id or "")
         self.required_experiment_arm = str(required_experiment_arm or "")
+        self.activation_frontier_epoch_s = int(activation_frontier_epoch_s or 0)
         self.minimum_sample_requirement = minimum_sample_requirement
         self.readiness_criteria = dict(readiness_criteria or {})
 
@@ -55,6 +57,7 @@ class CandidateRuntime:
         self._close_count: dict = {}
         self._degraded: dict = {}
         self._integrity_failures: dict = {}
+        self._canonical_bindings: dict = {}
         self._recovered = False
 
     def register(self, reg: CandidateRegistration) -> bool:
@@ -62,6 +65,10 @@ class CandidateRuntime:
             return False
         key = (str(reg.candidate_id), str(reg.policy_id))
         if key in self._registrations:
+            existing = self._registrations[key]
+            if (str(existing.treatment_hash) != str(reg.treatment_hash)
+                    or type(existing.adapter) is not type(reg.adapter)):
+                raise ValueError("CANDIDATE_REGISTRATION_CONFLICT")
             return True
         self._registrations[key] = reg
         self._recovered = False
@@ -86,6 +93,7 @@ class CandidateRuntime:
                               arm_assignment: dict | None = None,
                               baseline_lineage: dict | None = None,
                               baseline_open_event_id: str = "",
+                              treatment_context: dict | None = None,
                               candidate_id: str, policy_id: str) -> str:
         if not canonical_opportunity_id or not shadow_trade_id:
             raise ValueError("CANDIDATE_CANONICAL_IDENTITY_MISSING")
@@ -95,6 +103,8 @@ class CandidateRuntime:
         reg = self._registrations.get(key)
         if reg is None:
             raise ValueError("CANDIDATE_NOT_REGISTERED")
+        if int(entry_time) < int(reg.activation_frontier_epoch_s or 0):
+            raise ValueError("CANDIDATE_PRE_BIND_EVIDENCE_INELIGIBLE")
         if (
             experiment_arm
             and reg.required_experiment_arm
@@ -111,6 +121,13 @@ class CandidateRuntime:
         reason = ident.validate()
         if reason:
             raise ValueError(reason)
+        canonical_key = (
+            str(canonical_opportunity_id), str(trade_horizon or "").upper(),
+            str(candidate_id), str(policy_id),
+        )
+        existing_rid = self._canonical_bindings.get(canonical_key)
+        if existing_rid:
+            return str(existing_rid)
         rid = ident.runtime_id
         if rid in self._active or rid in self._closed:
             return rid
@@ -124,6 +141,7 @@ class CandidateRuntime:
             "risk_distance": risk,
         }
         entry_geometry.update(reg.entry_geometry)
+        entry_geometry.update(dict(treatment_context or {}))
         try:
             init_state = dict(reg.adapter.initialize(
                 entry_geometry=dict(entry_geometry)) or {})
@@ -153,6 +171,7 @@ class CandidateRuntime:
             },
         )
         self._active[rid] = st
+        self._canonical_bindings[canonical_key] = rid
         self._adapters[rid] = reg.adapter
         ok = self._emit("CANDIDATE_OPEN", st, bar_time=int(entry_time or 0),
                         diagnostic="")
@@ -322,6 +341,7 @@ class CandidateRuntime:
         self._close_count = {}
         self._degraded = {}
         self._integrity_failures = {}
+        self._canonical_bindings = {}
         restored = 0
         quarantined = 0
         for ev in events:
@@ -332,6 +352,10 @@ class CandidateRuntime:
             except Exception:
                 continue
             rid = str(ev.get("candidate_runtime_id") or st.runtime_id)
+            canonical_key = (
+                str(st.canonical_opportunity_id), str(st.trade_horizon).upper(),
+                str(st.candidate_id), str(st.policy_id),
+            )
             if ev.get("schema_version") != SCHEMA_VERSION:
                 if rid not in self._invalid:
                     quarantined += 1
@@ -344,6 +368,18 @@ class CandidateRuntime:
                 continue
             key = (st.candidate_id, st.policy_id)
             reg = self._registrations.get(key)
+            if reg is not None and int(st.entry_time) < int(
+                    reg.activation_frontier_epoch_s or 0):
+                self._active.pop(rid, None)
+                if rid not in self._invalid:
+                    quarantined += 1
+                self._invalid[rid] = "CANDIDATE_PRE_BIND_EVIDENCE_INELIGIBLE"
+                self._integrity_failures[rid] = {
+                    "candidate_id": st.candidate_id,
+                    "policy_id": st.policy_id,
+                    "reason": "CANDIDATE_PRE_BIND_EVIDENCE_INELIGIBLE",
+                }
+                continue
             if reg is not None and str(reg.treatment_hash) != str(st.treatment_hash):
                 self._active.pop(rid, None)
                 if rid not in self._invalid:
@@ -388,6 +424,19 @@ class CandidateRuntime:
                     "policy_id": st.policy_id,
                     "reason": self._invalid[rid],
                 }
+            if et in {"CANDIDATE_OPEN", "CANDIDATE_PROGRESS", "CANDIDATE_CLOSE"}:
+                existing_rid = self._canonical_bindings.get(canonical_key)
+                if existing_rid and existing_rid != rid:
+                    self._invalid[rid] = "CANDIDATE_CANONICAL_BINDING_CONFLICT"
+                    self._integrity_failures[rid] = {
+                        "candidate_id": st.candidate_id,
+                        "policy_id": st.policy_id,
+                        "reason": "CANDIDATE_CANONICAL_BINDING_CONFLICT",
+                    }
+                    self._active.pop(rid, None)
+                    quarantined += 1
+                else:
+                    self._canonical_bindings[canonical_key] = rid
         for rid, st in list(self._active.items()):
             reg = self._registrations.get((st.candidate_id, st.policy_id))
             if reg is None:
@@ -444,6 +493,8 @@ def get_candidate_runtime() -> CandidateRuntime:
     global _CANDIDATE_RUNTIME
     if _CANDIDATE_RUNTIME is None:
         _CANDIDATE_RUNTIME = CandidateRuntime()
+        from core.shadow.opt_dp1_002 import register_opt_dp1_002
+        register_opt_dp1_002(_CANDIDATE_RUNTIME)
     return _CANDIDATE_RUNTIME
 
 

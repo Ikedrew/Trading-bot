@@ -247,6 +247,13 @@ class CandidateEvaluation:
                     "identity": runtime_id,
                 })
                 continue
+            candidate_entry_time = int(
+                candidate_open.get("bar_time_utc")
+                or candidate_state.get("entry_time") or 0)
+            if candidate_entry_time < int(
+                    getattr(registration, "activation_frontier_epoch_s", 0) or 0):
+                # Historical/offline evidence is lineage only, never prospective n.
+                continue
             if (
                 candidate_open.get("shadow_trade_id") != shadow_trade_id
                 or candidate_open.get("canonical_opportunity_id") != canonical_id
@@ -388,6 +395,7 @@ class CandidateEvaluation:
                 "candidate_exit_reason": str(candidate_outcome.get("exit_reason") or ""),
                 "baseline_exit_time": baseline_exit_time,
                 "candidate_exit_time": candidate_exit_time,
+                "candidate_entry_time": candidate_entry_time,
                 "outcome_classification": classification,
                 "lineage": {
                     "baseline_event_id": str(baseline_close.get("event_id") or ""),

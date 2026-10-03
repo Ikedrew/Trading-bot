@@ -67,7 +67,38 @@ class OptimisationRegistry:
     def update_candidate_status(self, candidate_id: str, status: str) -> None:
         c = self._candidates.get(candidate_id)
         if c:
+            if c.status == status:
+                return
             c.status = status
+            from research_engine.v10.base import timestamp_now
+            c.status_history.append({"status": status, "timestamp": timestamp_now()})
+
+    def bind_shadow_candidate(
+        self, candidate_id: str, *, policy_id: str, treatment_hash: str,
+        binding: dict[str, Any],
+    ) -> None:
+        """Record an explicit prospective shadow binding; never live approval."""
+        candidate = self._candidates.get(candidate_id)
+        if candidate is None:
+            raise ValueError("CANDIDATE_NOT_FOUND")
+        if candidate.shadow_binding:
+            if candidate.shadow_binding != binding:
+                raise ValueError("SHADOW_BINDING_CONFLICT")
+            return
+        if candidate.status not in {"FORWARD_VALIDATED", "SHADOW_VALIDATION_ACTIVE"}:
+            raise ValueError("CANDIDATE_NOT_FORWARD_VALIDATED")
+        if not policy_id or not treatment_hash or binding.get("live_approved") is not False:
+            raise ValueError("SHADOW_BINDING_IDENTITY_INVALID")
+        candidate.policy_id = policy_id
+        candidate.treatment_hash = treatment_hash
+        candidate.shadow_binding = dict(binding)
+        if candidate.status != "SHADOW_VALIDATION_ACTIVE":
+            candidate.status = "SHADOW_VALIDATION_ACTIVE"
+            candidate.status_history.append({
+                "status": candidate.status,
+                "timestamp": str(binding.get("activated_at") or ""),
+                "evidence": str(binding.get("forward_validation_record") or ""),
+            })
 
     # ─── VALIDATION PLANS ─────────────────────────────────────
 

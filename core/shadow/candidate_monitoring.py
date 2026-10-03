@@ -204,6 +204,8 @@ class CandidateMonitor:
                 if pair.get("candidate_id") == cid
                 and pair.get("policy_id") == pid
                 and pair.get("treatment_hash") == treatment_hash
+                and int(pair.get("candidate_entry_time") or 0) >= int(
+                    getattr(reg, "activation_frontier_epoch_s", 0) or 0)
             ]
             unit_rows = _collapse_by_canonical(group_pairs)
             baseline_values = [float(row["baseline_r"]) for row in unit_rows]
@@ -220,6 +222,9 @@ class CandidateMonitor:
             relevant_runtime_ids = {
                 rid for rid, event in latest.items()
                 if event.get("candidate_id") == cid and event.get("policy_id") == pid
+                and int(dict(event.get("state") or {}).get("entry_time")
+                        or event.get("bar_time_utc") or 0) >= int(
+                            getattr(reg, "activation_frontier_epoch_s", 0) or 0)
             }
             relevant_shadow_ids = {
                 str(event.get("shadow_trade_id") or "")

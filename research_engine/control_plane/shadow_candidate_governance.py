@@ -236,6 +236,7 @@ class CandidateRegistrationView:
     treatment_hash: str
     minimum_sample_requirement: int | None = None
     readiness_criteria: Mapping[str, Any] | None = None
+    activation_frontier_epoch_s: int = 0
 
     @classmethod
     def from_value(cls, value: Any) -> "CandidateRegistrationView":
@@ -246,6 +247,7 @@ class CandidateRegistrationView:
             str(get("treatment_hash", "") or ""),
             get("minimum_sample_requirement"),
             dict(get("readiness_criteria", {}) or {}),
+            int(get("activation_frontier_epoch_s", 0) or 0),
         )
 
 
@@ -270,7 +272,10 @@ def _validate_candidate_records(records: Sequence[dict[str, Any]],
                                 errors: list[str]) -> list[dict[str, Any]]:
     relevant = [row for row in records
                 if row.get("candidate_id") == registration.candidate_id
-                and row.get("policy_id") == registration.policy_id]
+                and row.get("policy_id") == registration.policy_id
+                and int(dict(row.get("state") or {}).get("entry_time")
+                        or row.get("bar_time_utc") or 0)
+                >= registration.activation_frontier_epoch_s]
     relevant = _deduplicate(relevant, "event_id", errors)
     seen_runtime_events: dict[tuple[str, str, int], dict[str, Any]] = {}
     for row in relevant:
@@ -319,7 +324,9 @@ def _validate_evaluations(
 ) -> list[dict[str, Any]]:
     relevant = [row for row in records
                 if row.get("candidate_id") == registration.candidate_id
-                and row.get("policy_id") == registration.policy_id]
+                and row.get("policy_id") == registration.policy_id
+                and int(row.get("candidate_entry_time") or 0)
+                >= registration.activation_frontier_epoch_s]
     relevant = _deduplicate(relevant, "pair_id", errors)
     candidate_by_event = {str(row.get("event_id")): row for row in candidate_records
                           if row.get("event_id")}
