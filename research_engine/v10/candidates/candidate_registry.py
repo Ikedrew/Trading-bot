@@ -79,6 +79,45 @@ class CandidateRegistry:
         self._persist()
         logger.info(f"[CANDIDATE_REGISTRY] {candidate_id}: {candidate.status} -> {new_status}")
 
+    def record_shadow_research_status(
+        self, candidate_id: str, summary: dict[str, Any]
+    ) -> None:
+        """Explicitly record a governed shadow transition and its frontier.
+
+        Merely producing a research summary never calls this method.  Even a
+        READY_FOR_PROMOTION_REVIEW transition is evidence metadata only and
+        cannot produce ACCEPTED/live state.
+        """
+        candidate = self._candidates.get(candidate_id)
+        if not candidate:
+            raise ValueError(f"Candidate '{candidate_id}' not found")
+        if str(summary.get("candidate_id") or "") != candidate_id:
+            raise ValueError("CANDIDATE_RESEARCH_IDENTITY_MISMATCH")
+        if summary.get("integrity_status") != "VERIFIED":
+            raise ValueError("CANDIDATE_RESEARCH_EVIDENCE_UNVERIFIED")
+        new_status = str(summary.get("status") or "")
+        if new_status in {"", "NOT_OBSERVED", "SHADOW_VALIDATION_INVALID"}:
+            raise ValueError("CANDIDATE_RESEARCH_STATUS_NOT_TRANSITIONABLE")
+        frontier = tuple(str(item) for item in summary.get("evidence_frontier") or ())
+        if not frontier or not summary.get("snapshot_id"):
+            raise ValueError("CANDIDATE_RESEARCH_FRONTIER_MISSING")
+        if new_status != candidate.status:
+            validate_transition(candidate.status, new_status)
+            candidate.status = new_status
+        prior = candidate.status_history[-1] if candidate.status_history else {}
+        if (prior.get("status") == new_status
+                and tuple(prior.get("evidence_frontier") or ()) == frontier):
+            return
+        candidate.status_history.append({
+            "status": new_status,
+            "timestamp": str(summary.get("last_evidence_time") or ""),
+            "evidence_snapshot_id": str(summary["snapshot_id"]),
+            "evidence_frontier": list(frontier),
+            "policy_id": str(summary.get("policy_id") or ""),
+            "treatment_hash": str(summary.get("treatment_hash") or ""),
+        })
+        self._persist()
+
     # ─── VALIDATION HISTORY ───────────────────────────────────
 
     def add_validation_result(

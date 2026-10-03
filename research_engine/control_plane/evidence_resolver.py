@@ -13,7 +13,11 @@ import math
 from typing import Any, Callable, Mapping
 
 from research_engine.data_quality.classifier import DataEpoch, classify_record
-from core.production_data_contract import PRODUCTION_SCHEMA_REGISTRY, current_schema
+from core.production_data_contract import (
+    GOVERNED_EVIDENCE_SCHEMA_REGISTRY,
+    PRODUCTION_SCHEMA_REGISTRY,
+    current_schema,
+)
 
 
 _PHYSICAL_DATASETS = {
@@ -27,6 +31,7 @@ _CANONICAL_V1_SOURCES = frozenset({
     "portfolio_rankings", "portfolio_shadow", "execution_results_v1",
     "execution_context", "protection_audit_v1", "execution_attempts_v1",
     "risk_deviation_v1", "opportunities", "assessments",
+    "shadow_candidate", "shadow_candidate_evaluation",
     # The strict provenance boundary normalises these versioned aliases to
     # their physical production-contract dataset names before classification.
     "execution_results", "protection_audit", "execution_attempts",
@@ -288,11 +293,12 @@ def canonical_evidence_source(source: str) -> str | None:
     if not value:
         return None
     physical = _PHYSICAL_DATASETS.get(value, value)
-    if physical in PRODUCTION_SCHEMA_REGISTRY:
+    if physical in PRODUCTION_SCHEMA_REGISTRY or physical in GOVERNED_EVIDENCE_SCHEMA_REGISTRY:
         return physical
     if value.endswith("_v1"):
         candidate = value[:-3]
-        if candidate in PRODUCTION_SCHEMA_REGISTRY:
+        if (candidate in PRODUCTION_SCHEMA_REGISTRY
+                or candidate in GOVERNED_EVIDENCE_SCHEMA_REGISTRY):
             return candidate
     return None
 

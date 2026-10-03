@@ -122,6 +122,53 @@ class PromotionReadinessSummary:
         }
 
 
+@dataclass(frozen=True)
+class CandidatePromotionReviewGate:
+    """Research review eligibility; explicitly not live approval."""
+
+    candidate_id: str
+    evidence_status: str
+    integrity_status: str
+    review_eligible: bool
+    live_approved: bool = False
+    blockers: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "candidate_id": self.candidate_id,
+            "evidence_status": self.evidence_status,
+            "integrity_status": self.integrity_status,
+            "review_eligible": self.review_eligible,
+            "live_approved": False,
+            "blockers": list(self.blockers),
+        }
+
+
+def evaluate_candidate_promotion_review(
+    candidate_summary: dict[str, Any],
+) -> CandidatePromotionReviewGate:
+    """Adapt a governed candidate summary into the generic review gate.
+
+    This reporting gate cannot approve or enable live execution.  The only
+    positive result is eligibility for a separate human promotion review.
+    """
+    status = str(candidate_summary.get("status") or "NOT_OBSERVED")
+    integrity = str(candidate_summary.get("integrity_status") or "UNVERIFIED")
+    eligible = status == "READY_FOR_PROMOTION_REVIEW" and integrity == "VERIFIED"
+    blockers = list(candidate_summary.get("integrity_reasons") or ())
+    if status != "READY_FOR_PROMOTION_REVIEW":
+        blockers.append("SHADOW_CRITERIA_OR_REVIEW_PREREQUISITES_UNSATISFIED")
+    if integrity != "VERIFIED":
+        blockers.append("CANDIDATE_EVIDENCE_INTEGRITY_UNVERIFIED")
+    return CandidatePromotionReviewGate(
+        candidate_id=str(candidate_summary.get("candidate_id") or ""),
+        evidence_status=status,
+        integrity_status=integrity,
+        review_eligible=eligible,
+        blockers=tuple(sorted(set(blockers))),
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # DECISION GATE REPORT (Section 12)
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -40,6 +40,11 @@ s7_strategy_horizon_interaction.json -> S7  (S5/S6/E3 can never own it)
 OWNERSHIP CONTRACT (Repair 4B.4)
 --------------------------------
 x6_execution_stability.json -> X6  (no other canonical question may own it)
+
+OWNERSHIP CONTRACT (HD09)
+-------------------------
+Each EX1/EX2/EX5-EX10 policy report is solely owned by its same-named
+canonical question.  No report may be relabelled to satisfy another question.
 """
 from __future__ import annotations
 
@@ -134,7 +139,6 @@ HD13_HD14_HD15_ADJUDICATED_REPORT_OWNERS: dict[str, str] = {
     "g2_lineage_coverage.json": "G2",
     "g3_research_validity.json": "G3",
 }
-
 
 def _derive_adjudicated_owners() -> dict[str, str]:
     """Derive adjudicated report ownership from the frozen Wave-A5 findings."""

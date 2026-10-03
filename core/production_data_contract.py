@@ -123,6 +123,23 @@ PRODUCTION_SCHEMA_REGISTRY: dict[str, ProductionSchema] = {
     "quarantine": _schema("quarantine", role=DatasetRole.PROJECTION, owner="contract_validation", population="LIVE_AND_REPLAY"),
 }
 
+# Governed local research evidence is intentionally outside the canonical S3
+# delivery census.  It still uses the same schema contract type and strict V1
+# authority, but persists through its own append-only runtime writers.
+GOVERNED_EVIDENCE_SCHEMA_REGISTRY: dict[str, ProductionSchema] = {
+    "shadow_candidate": _schema(
+        "shadow_candidate", role=DatasetRole.SUPPORTING,
+        owner="shadow_candidate_runtime", population="SHADOW"),
+    "shadow_candidate_evaluation": _schema(
+        "shadow_candidate_evaluation", role=DatasetRole.SUPPORTING,
+        owner="shadow_candidate_evaluation", population="SHADOW"),
+}
+
+
+def governed_schema_registry() -> dict[str, ProductionSchema]:
+    """All canonical and local governed evidence schema authorities."""
+    return {**PRODUCTION_SCHEMA_REGISTRY, **GOVERNED_EVIDENCE_SCHEMA_REGISTRY}
+
 # ─── RETIRED DATASETS (Production V1 consolidation: 35 → 23) ──────────────────
 # The following 12 dataset generations were removed. Their unique fields were
 # integrated into a retained V1 owner at the field's natural runtime point
@@ -151,12 +168,12 @@ RETIRED_DATASETS: frozenset[str] = frozenset({
 
 def current_schema(dataset: str) -> str:
     """Return the sole schema emitted for a production dataset."""
-    return PRODUCTION_SCHEMA_REGISTRY[dataset].current
+    return governed_schema_registry()[dataset].current
 
 
 def supported_schemas(dataset: str) -> frozenset[str]:
     """Return current plus explicitly supported historical reader schemas."""
-    entry = PRODUCTION_SCHEMA_REGISTRY[dataset]
+    entry = governed_schema_registry()[dataset]
     return frozenset((entry.current, *entry.legacy_supported_versions))
 
 
