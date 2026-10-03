@@ -15,13 +15,19 @@ from research_engine.v10.continuous.frontier_coordinator import (
     FrontierCycleResult,
     run_frontier_snapshot_cycle,
 )
+from research_engine.v10.continuous.canonical_question_cycle import (
+    CanonicalQuestionCycleError,
+    run_canonical_question_cycle,
+)
 from research_engine.v10.continuous.state import CycleState, CycleStatus, TriggerStatus
 
 __all__ = [
     "ContinuousResearchOrchestrator",
+    "CanonicalQuestionCycleError",
     "FrontierCycleResult",
     "CycleState",
     "CycleStatus",
     "TriggerStatus",
     "run_frontier_snapshot_cycle",
+    "run_canonical_question_cycle",
 ]
