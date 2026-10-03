@@ -203,6 +203,21 @@ class QuestionCycleStore:
         immutable_json(path, result.to_dict())
         return path
 
+    def load_question_result(
+        self, question_id: str, snapshot_id: str,
+    ) -> CanonicalQuestionResult | None:
+        path = self.question_result_path(question_id, snapshot_id)
+        if not path.exists():
+            return None
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, TypeError, ValueError) as exc:
+            raise QuestionCycleStateError("QUESTION_RESULT_HISTORY_UNREADABLE") from exc
+        result = CanonicalQuestionResult.from_dict(value)
+        if result.question_id != question_id or result.snapshot_id != snapshot_id:
+            raise QuestionCycleStateError("QUESTION_RESULT_HISTORY_IDENTITY_MISMATCH")
+        return result
+
     def load_projection(self, cycle_id: str) -> dict[str, Any]:
         path = self.projection_path(cycle_id)
         try:

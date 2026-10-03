@@ -19,15 +19,23 @@ from research_engine.v10.continuous.canonical_question_cycle import (
     CanonicalQuestionCycleError,
     run_canonical_question_cycle,
 )
+from research_engine.v10.continuous.scientific_state_bridge import (
+    ScientificStateBridgeError,
+    ScientificStateBridgeResult,
+    run_scientific_state_bridge,
+)
 from research_engine.v10.continuous.state import CycleState, CycleStatus, TriggerStatus
 
 __all__ = [
     "ContinuousResearchOrchestrator",
     "CanonicalQuestionCycleError",
+    "ScientificStateBridgeError",
+    "ScientificStateBridgeResult",
     "FrontierCycleResult",
     "CycleState",
     "CycleStatus",
     "TriggerStatus",
     "run_frontier_snapshot_cycle",
     "run_canonical_question_cycle",
+    "run_scientific_state_bridge",
 ]

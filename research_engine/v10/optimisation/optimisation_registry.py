@@ -7,15 +7,13 @@ Stores hypotheses and candidates with status tracking.
 from __future__ import annotations
 
 import json
-import logging
+import os
 from pathlib import Path
 from typing import Any
 
 from research_engine.v10.optimisation.models import (
     ResearchHypothesis, OptimisationCandidate, ValidationPlan,
 )
-
-logger = logging.getLogger(__name__)
 
 _REGISTRY_DIR = "data/research/optimisation"
 
@@ -36,6 +34,9 @@ class OptimisationRegistry:
     # ─── HYPOTHESES ───────────────────────────────────────────
 
     def add_hypothesis(self, hypothesis: ResearchHypothesis) -> None:
+        existing = self._hypotheses.get(hypothesis.hypothesis_id)
+        if existing is not None and existing.to_dict() != hypothesis.to_dict():
+            raise ValueError("HYPOTHESIS_IDENTITY_COLLISION")
         self._hypotheses[hypothesis.hypothesis_id] = hypothesis
 
     def get_hypothesis(self, hypothesis_id: str) -> ResearchHypothesis | None:
@@ -54,6 +55,9 @@ class OptimisationRegistry:
     # ─── CANDIDATES ───────────────────────────────────────────
 
     def add_candidate(self, candidate: OptimisationCandidate) -> None:
+        existing = self._candidates.get(candidate.candidate_id)
+        if existing is not None and existing.to_dict() != candidate.to_dict():
+            raise ValueError("CANDIDATE_IDENTITY_COLLISION")
         self._candidates[candidate.candidate_id] = candidate
 
     def get_candidate(self, candidate_id: str) -> OptimisationCandidate | None:
@@ -111,7 +115,7 @@ class OptimisationRegistry:
     # ─── PERSISTENCE ──────────────────────────────────────────
 
     def save(self) -> str:
-        """Persist registry to disk."""
+        """Persist registry atomically; failures are never swallowed."""
         self._dir.mkdir(parents=True, exist_ok=True)
         data = {
             "hypotheses": {k: v.to_dict() for k, v in self._hypotheses.items()},
@@ -119,7 +123,17 @@ class OptimisationRegistry:
             "plans": {k: v.to_dict() for k, v in self._plans.items()},
         }
         path = self._dir / "registry.json"
-        path.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
+        temporary = path.with_name(path.name + ".tmp")
+        try:
+            with temporary.open("w", encoding="utf-8", newline="\n") as handle:
+                json.dump(data, handle, indent=2, sort_keys=True, default=str)
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, path)
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            raise
         return str(path)
 
     def load(self) -> None:
@@ -129,17 +143,35 @@ class OptimisationRegistry:
             return
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict) or set(data) != {"hypotheses", "candidates", "plans"}:
+                raise ValueError("OPTIMISATION_REGISTRY_STRUCTURE_INVALID")
+            if not all(isinstance(data[name], dict) for name in data):
+                raise ValueError("OPTIMISATION_REGISTRY_SECTION_INVALID")
             for k, v in data.get("hypotheses", {}).items():
-                self._hypotheses[k] = ResearchHypothesis(**{
+                row = ResearchHypothesis(**{
                     f: v[f] for f in ResearchHypothesis.__dataclass_fields__ if f in v
                 })
+                if row.hypothesis_id != k:
+                    raise ValueError("HYPOTHESIS_REGISTRY_KEY_MISMATCH")
+                self._hypotheses[k] = row
             for k, v in data.get("candidates", {}).items():
-                self._candidates[k] = OptimisationCandidate(**{
+                row = OptimisationCandidate(**{
                     f: v[f] for f in OptimisationCandidate.__dataclass_fields__ if f in v
                 })
+                if row.candidate_id != k:
+                    raise ValueError("CANDIDATE_REGISTRY_KEY_MISMATCH")
+                self._candidates[k] = row
             for k, v in data.get("plans", {}).items():
-                self._plans[k] = ValidationPlan(**{
+                row = ValidationPlan(**{
                     f: v[f] for f in ValidationPlan.__dataclass_fields__ if f in v
                 })
-        except (json.JSONDecodeError, TypeError):
-            logger.warning("[OPT_REGISTRY] Failed to load registry")
+                if row.candidate_id != k or k not in self._candidates:
+                    raise ValueError("VALIDATION_PLAN_REGISTRY_KEY_MISMATCH")
+                self._plans[k] = row
+            if any(
+                row.hypothesis_id and row.hypothesis_id not in self._hypotheses
+                for row in self._candidates.values()
+            ):
+                raise ValueError("CANDIDATE_HYPOTHESIS_DEPENDENCY_MISSING")
+        except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+            raise ValueError("OPTIMISATION_REGISTRY_CORRUPT") from exc

@@ -50,6 +50,17 @@ class ResearchHypothesis:
     confidence: str = "LOW"
     evidence_strength: str = ""
     status: str = "PROPOSED"
+    version: int = 1
+    hypothesis_type: str = "OBSERVATIONAL_HYPOTHESIS"
+    mechanism: str = ""
+    mechanism_unknown: bool = True
+    target_population: dict[str, Any] = field(default_factory=dict)
+    falsification_criteria: list[str] = field(default_factory=list)
+    required_evidence: list[str] = field(default_factory=list)
+    source_finding_versions: list[str] = field(default_factory=list)
+    source_question_results: list[str] = field(default_factory=list)
+    evidence_lineage: dict[str, Any] = field(default_factory=dict)
+    history: list[dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self):
         if not self.created_at:
@@ -68,6 +79,17 @@ class ResearchHypothesis:
             "confidence": self.confidence,
             "evidence_strength": self.evidence_strength,
             "status": self.status,
+            "version": self.version,
+            "hypothesis_type": self.hypothesis_type,
+            "mechanism": self.mechanism,
+            "mechanism_unknown": self.mechanism_unknown,
+            "target_population": self.target_population,
+            "falsification_criteria": self.falsification_criteria,
+            "required_evidence": self.required_evidence,
+            "source_finding_versions": self.source_finding_versions,
+            "source_question_results": self.source_question_results,
+            "evidence_lineage": self.evidence_lineage,
+            "history": self.history,
         }
 
 
@@ -88,6 +110,13 @@ class OptimisationCandidate:
     treatment_hash: str = ""
     status_history: list[dict[str, Any]] = field(default_factory=list)
     shadow_binding: dict[str, Any] = field(default_factory=dict)
+    source_finding_versions: list[str] = field(default_factory=list)
+    source_question_results: list[str] = field(default_factory=list)
+    target_population: dict[str, Any] = field(default_factory=dict)
+    validation_objective: str = ""
+    validation_requirements: dict[str, Any] = field(default_factory=dict)
+    limitations: list[str] = field(default_factory=list)
+    provenance: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         if not self.created_at:
@@ -113,6 +142,13 @@ class OptimisationCandidate:
             "treatment_hash": self.treatment_hash,
             "status_history": list(self.status_history),
             "shadow_binding": dict(self.shadow_binding),
+            "source_finding_versions": list(self.source_finding_versions),
+            "source_question_results": list(self.source_question_results),
+            "target_population": dict(self.target_population),
+            "validation_objective": self.validation_objective,
+            "validation_requirements": dict(self.validation_requirements),
+            "limitations": list(self.limitations),
+            "provenance": dict(self.provenance),
         }
 
 
