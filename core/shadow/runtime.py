@@ -81,6 +81,15 @@ def shadow_arm_enabled() -> bool:
 
 logger = logging.getLogger(__name__)
 
+#: Recovery fail-closed reason for a persisted legacy OPEN that carries no
+#: ``record_lineage`` at all.  This is the single high-volume legacy case (a
+#: pre-governance stream can hold tens of thousands of identical OPENs), so it
+#: is counted and reported once per recovery pass instead of logged per record.
+#: See ``ShadowRuntime.recover``.
+_RECOVERY_UNPINNED_REASON = (
+    "RECOVERED_LIFECYCLE_UNPINNED:shadow_runtime:"
+    "no record_lineage on the persisted OPEN")
+
 
 def _shadow_trade_id(canonical_opportunity_id: str, horizon: str) -> str:
     """Deterministic, globally-unique shadow lifecycle identity.
@@ -833,6 +842,7 @@ class ShadowRuntime:
         self._active.clear()
         self._quarantined.clear()
         closed: set[str] = set()
+        legacy_unpinned_count = 0
         for ev in load_events(self._writer.base_dir):
             et = ev.get("event_type")
             tid = str(ev.get("shadow_trade_id", "") or "")
@@ -862,12 +872,14 @@ class ShadowRuntime:
                 # records, which is exactly the "new code + old metadata" ban.
                 pinned = ev.get("record_lineage")
                 if not isinstance(pinned, dict):
-                    self._quarantined[tid] = (
-                        "RECOVERED_LIFECYCLE_UNPINNED:shadow_runtime:"
-                        "no record_lineage on the persisted OPEN")
-                    logger.error(
-                        "[SHADOW_RUNTIME_RECOVERY_QUARANTINE] %s",
-                        self._quarantined[tid])
+                    # Legacy generation-1 OPEN with no pinned lineage.  The
+                    # fail-closed outcome is unchanged -- still quarantined,
+                    # still never resumed -- but this is the one repeated case
+                    # that can number in the tens of thousands, so the
+                    # per-record error is suppressed and the volume is reported
+                    # once, after this recovery pass completes.
+                    self._quarantined[tid] = _RECOVERY_UNPINNED_REASON
+                    legacy_unpinned_count += 1
                     continue
                 try:
                     self._lifecycle_lineage("OPEN", pinned)
@@ -917,6 +929,11 @@ class ShadowRuntime:
             elif et == "CLOSE":
                 self._active.pop(tid, None)
                 closed.add(tid)
+        if legacy_unpinned_count:
+            logger.warning(
+                "[SHADOW_RUNTIME_RECOVERY_QUARANTINE_SUMMARY] "
+                "legacy_unpinned_open_count=%d",
+                legacy_unpinned_count)
 
     def snapshot(self, shadow_trade_id: str) -> dict[str, Any] | None:
         """Introspection helper (tests/diagnostics). Read-only view of live state."""
