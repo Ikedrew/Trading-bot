@@ -95,10 +95,8 @@ def test_operational_questions_have_no_unnecessary_repair_work():
 def test_primary_blocker_counts_cover_every_non_operational_question_once():
     counts = blocker_counts()
     assert set(counts) == {
-        "chronology", "counterfactual design", "no runner",
-        "runner mismatch",
+        "chronology", "counterfactual design", "evidence authority",
     }
-    assert counts["no runner"] == len(WAVE_A_NO_RUNNER_TARGETS)
     assert sum(counts.values()) == len(STRUCTURALLY_NON_OPERATIONAL_IDS)
 
 
@@ -150,7 +148,7 @@ def test_direct_gains_are_disjoint_and_cover_all_non_operational_ids():
         "D6", "PORT-1", "OPP-1", "P1", "E3", "S1", "S5", "S6", "S7",
         "X3", "EXEC1", "X6", "R1", "R2", "R3", "R4", "R5", "G3",
     }
-    assert partial_progress_gain == {"EX1", "EX2", "EX7", "EX9", "EX10", "L1", "L4", "G1", "G2"}
+    assert partial_progress_gain == {"EX1", "EX2", "EX7", "EX9", "EX10", "L1", "L3", "L4", "G1", "G2"}
     assert outstanding_gain == set(STRUCTURALLY_NON_OPERATIONAL_IDS)
     assert REPAIR_WAVES["RW2"].implemented is True
     assert set(REPAIR_WAVES["RW2"].direct_gain) == {"M1", "M3", "M7", "M8", "M11"}
@@ -180,18 +178,21 @@ def test_unlocked_ids_are_not_claimed_as_early_direct_gain():
     assert REPAIR_WAVES["RW11"].unlocked_not_yet_operational == ("G3",)
 
 
-def test_all_no_runner_ids_still_require_real_implementation():
-    # S5/S6/S7 were implemented by Repairs 2B.2/2B.3/2B.4; designs remain history.
-    # X6, HD13/HD14 G1/G2, and HD15 G3 are implemented; only L6 remains.
+def test_historical_no_runner_roster_does_not_override_l6_current_implementation():
+    # The Wave-A set is historical classification. Pass A installed L6's
+    # canonical runner/report; its remaining state is an evidence-authority
+    # blocker, not a missing implementation.
     assert WAVE_A_NO_RUNNER_TARGETS == {"L6"}
     for qid in WAVE_A_NO_RUNNER_TARGETS:
         entry = MASTER_REPAIR_LEDGER[qid]
         question = REGISTRY_BY_ID[qid]
         assert not entry.structurally_operational
-        assert entry.primary_blocker_category == "no runner"
-        assert entry.gates.runner == "FAIL"
-        assert question.runner_module == question.runner_function == ""
-        assert question.report_filename == ""
+        assert entry.primary_blocker_category == "evidence authority"
+        assert entry.gates.runner == "PASS"
+        assert entry.gates.report_ownership == "PASS"
+        assert question.runner_module == "research_engine.experiments.learning_cycle_validation"
+        assert question.runner_function == "run_l6"
+        assert question.report_filename == "l6_learning_cycle_validation.json"
 
 
 def test_a5_ownership_conclusions_are_preserved():
@@ -232,13 +233,11 @@ def test_rw1_ownership_repair_preserves_historical_gain_and_later_progress():
         assert entry.repair_actions == ()
         assert entry.to_dict()["structurally_operational"] is True
 
-    expected_blockers = {"L3": "runner mismatch"}
-    for qid, category in expected_blockers.items():
-        entry = MASTER_REPAIR_LEDGER[qid]
-        assert not entry.structurally_operational
-        assert entry.gates.report_ownership == "FAIL"
-        assert entry.primary_blocker_category == category
-        assert entry.proposed_repair_wave == "RW10"
+    l3 = MASTER_REPAIR_LEDGER["L3"]
+    assert l3.structurally_operational
+    assert l3.gates.report_ownership == "PASS"
+    assert l3.primary_blocker_category == ""
+    assert l3.proposed_repair_wave == ""
 
     assert MASTER_REPAIR_LEDGER["L1"].structurally_operational
     assert MASTER_REPAIR_LEDGER["L1"].gates.report_ownership == "PASS"
@@ -264,8 +263,7 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
     assert wave.implementation_evidence
     assert all(item.strip() for item in wave.implementation_evidence)
     assert set(wave.unlocked_not_yet_operational) == {"E3", "S1", "R1", "R2", "L1", "L3"}
-    for qid in {"L3"}:
-        assert not MASTER_REPAIR_LEDGER[qid].structurally_operational
+    assert MASTER_REPAIR_LEDGER["L3"].structurally_operational
     assert MASTER_REPAIR_LEDGER["L1"].structurally_operational
     for qid in {"E3", "S1", "R1", "R2"}:
         assert MASTER_REPAIR_LEDGER[qid].structurally_operational
@@ -314,7 +312,7 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
             assert other.implementation_evidence == ()
 
 
-def test_evidence_gap_accounting_preserves_v1_freeze_and_g3_requirement():
+def test_evidence_gap_accounting_preserves_v1_freeze_and_future_requirements():
     counts = evidence_gap_counts()
     assert counts["ALREADY_AVAILABLE"] == len(STRUCTURALLY_OPERATIONAL_IDS)
     assert counts["NEW_RESEARCH_EVIDENCE"] == 0

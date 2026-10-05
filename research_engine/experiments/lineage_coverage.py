@@ -13,6 +13,17 @@ from research_engine.registry import data_governance_adjudication as A
 from research_engine.registry.definition_validator import build_definitions_from_registry
 from research_engine.registry.research_question_registry import REGISTRY
 
+# Governed evaluator semantic identity; see component_reward for the contract.
+EVALUATOR_SEMANTIC_VERSIONS = {
+    "run_g2": "g2_exhaustive_snapshot_scoped_lineage_v2",
+}
+EVALUATOR_GOVERNANCE_CONTRACT_VERSIONS = {
+    "run_g2": {
+        "HD14_VERSION": A.HD14_VERSION,
+        "ADJUDICATION_VERSION": A.ADJUDICATION_VERSION,
+    },
+}
+
 REPORT_FILENAME = "g2_lineage_coverage.json"
 _METADATA = ("symbol", "strategy", "strategy_family", "evaluated_horizon", "trade_horizon", "horizon")
 

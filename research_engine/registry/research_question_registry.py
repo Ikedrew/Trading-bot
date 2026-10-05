@@ -548,9 +548,9 @@ L3 = ResearchQuestion(
         ValidationRule("lineage_coverage", ">=", 0.80, "Need decision context linked to outcomes"),
         ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy required"),
     ),
-    runner_module="research_engine.experiments.component_reward",
-    runner_function="run",
-    report_filename="q1_component_reward.json",
+    runner_module="research_engine.experiments.architecture_assumption_validity",
+    runner_function="run_l3",
+    report_filename="l3_architecture_assumption_validity.json",
     legacy_ids=("Q1",),
 )
 
@@ -811,6 +811,9 @@ L6 = ResearchQuestion(
     validation_rules=(
         ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required for confidence assessment"),
     ),
+    runner_module="research_engine.experiments.learning_cycle_validation",
+    runner_function="run_l6",
+    report_filename="l6_learning_cycle_validation.json",
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════

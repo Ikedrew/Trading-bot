@@ -5,20 +5,24 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import sys
+import uuid
 from typing import Any, Callable, Mapping
 
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
 from research_engine.v10.continuous.canonical_question_cycle import run_canonical_question_cycle
 from research_engine.v10.continuous.cycle_state import (
-    ContinuousCycleStore, ContinuousResearchCycleResult,
+    ContinuousCycleProgressStore, ContinuousCycleStore, ContinuousResearchCycleResult,
 )
 from research_engine.v10.continuous.frontier_coordinator import (
-    NO_NEW_GOVERNED_EVIDENCE, SNAPSHOT_READY, run_frontier_snapshot_cycle,
+    FRONTIER_INCOMPLETE, NO_NEW_GOVERNED_EVIDENCE, SNAPSHOT_READY,
+    run_frontier_snapshot_cycle,
 )
 from research_engine.v10.continuous.q71_orchestration import run_q71_orchestration
 from research_engine.v10.continuous.question_cycle_state import QuestionCycleStore
 from research_engine.v10.continuous.research_projection import (
-    ResearchProjectionStore, build_unified_research_projection,
+    ResearchProjectionStore, build_evaluation_refresh_projection,
+    build_unified_research_projection,
 )
 from research_engine.v10.continuous.scientific_state_bridge import run_scientific_state_bridge
 from research_engine.v10.continuous.scientific_state_store import ScientificStateStore
@@ -45,12 +49,113 @@ def _cycle_id(material: Mapping[str, Any]) -> str:
     return "CRCYCLE-" + hashlib.sha256(canonical_json(material).encode("utf-8")).hexdigest()[:32].upper()
 
 
+def _attempt_cycle_id(cycle_attempt_id: str, identity: str) -> str:
+    return _cycle_id({
+        "cycle_attempt_id": cycle_attempt_id,
+        "identity": identity,
+    })
+
+
+def _is_current_successful_projection(
+    projection: Mapping[str, Any] | None, frontier: Any,
+    stale_question_ids: Mapping[str, str] | None = None,
+) -> bool:
+    """True only when the retained projection is current in BOTH identities.
+
+    Evidence identity alone is not sufficient: a published question result is
+    current only when the governed evidence identity AND the governed evaluation
+    identity still match.  If any question's evaluator has changed, the
+    projection is no longer current even though the snapshot is unchanged.
+    """
+    if not projection or not projection.get("projection_version"):
+        return False
+    data_frontier = projection.get("data_frontier")
+    questions = projection.get("canonical_questions")
+    if not (
+        isinstance(data_frontier, Mapping)
+        and str(data_frontier.get("snapshot_id") or "")
+        == str(_value(frontier, "snapshot_id") or "")
+        and bool(data_frontier.get("last_successful_research_cycle"))
+        and isinstance(questions, list)
+        and len(questions) == 70
+    ):
+        return False
+    return not stale_question_ids
+
+
+def _retained_coherent_frontier_is_usable(frontier: Any) -> bool:
+    """Whether no promoted evidence changed and the retained snapshot is safe.
+
+    A partial newer candidate is usable only through the coordinator's explicit
+    retained-verification contract.  Other incomplete/invalid frontier results
+    remain fatal and can never reach question evaluation.
+    """
+    status = str(_value(frontier, "status") or "")
+    if status == NO_NEW_GOVERNED_EVIDENCE:
+        return True
+    return (
+        status == FRONTIER_INCOMPLETE
+        and str(_value(frontier, "verification_status") or "")
+        == "RETAINED_VERIFIED"
+        and str(_value(frontier, "failure_reason") or "").startswith(
+            "REQUIRED_DATASETS_NOT_YET_COHERENT_AT_NEWEST_COVERAGE:")
+        and all(str(_value(frontier, name) or "") for name in (
+            "snapshot_id", "fingerprint", "investigation_epoch"))
+    )
+
+
+def _stale_evaluation_questions(
+    projection: Mapping[str, Any] | None, *,
+    question_state_dir: Path,
+    registry_loader: Callable[[], Any] | None = None,
+) -> dict[str, str]:
+    """Return questions whose published result is no longer current.
+
+    This compares each published result's recorded governed evaluation identity
+    against the currently authoritative evaluator.  It is diagnostic plus
+    orchestration: it decides whether a no-new-evidence cycle may be a true
+    no-op, and it never asserts anything scientific about the world.
+    """
+    if not projection:
+        return {}
+    rows = projection.get("canonical_questions")
+    if not isinstance(rows, list):
+        return {}
+    recorded = {
+        str(row.get("question_id")): ((row.get("result") or {}).get("evaluation_identity"))
+        for row in rows if isinstance(row, Mapping)
+    }
+    try:
+        if registry_loader is not None:
+            questions = tuple(registry_loader())
+        else:
+            from research_engine.v10.continuous.canonical_question_cycle import _load_registry
+            questions = _load_registry()
+        from research_engine.registry.definition_validator import build_definitions_from_registry
+        from research_engine.v10.continuous.canonical_question_cycle import REGISTRY_VERSION
+        from research_engine.v10.continuous.evaluation_identity import (
+            evaluation_identities, stale_question_ids,
+        )
+        identities = evaluation_identities(
+            questions, build_definitions_from_registry(questions),
+            registry_version=REGISTRY_VERSION)
+    except Exception as exc:
+        # Fail closed: if evaluation identity cannot be established, the retained
+        # projection cannot be proven current, so the cycle must re-evaluate
+        # rather than silently skip.
+        print(f"evaluation identity check failed: {type(exc).__name__}:{exc}",
+              file=sys.stderr)
+        return {"__EVALUATION_IDENTITY_UNAVAILABLE__": "STALE_EVALUATION"}
+    return stale_question_ids(recorded, identities)
+
+
 def run_continuous_research_cycle(
     *, state_root: Path | str = Path("data/research/continuous"),
     frontier_runner: Callable[..., Any] = run_frontier_snapshot_cycle,
     question_runner: Callable[..., Any] = run_canonical_question_cycle,
     bridge_runner: Callable[..., Any] = run_scientific_state_bridge,
     q71_runner: Callable[..., Mapping[str, Any]] = run_q71_orchestration,
+    question_registry_loader: Callable[[], Any] | None = None,
     frontier_kwargs: Mapping[str, Any] | None = None,
     question_kwargs: Mapping[str, Any] | None = None,
     bridge_kwargs: Mapping[str, Any] | None = None,
@@ -62,8 +167,10 @@ def run_continuous_research_cycle(
     shadow_evidence: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> ContinuousResearchCycleResult:
     """Run one external-scheduler-friendly cycle; it never promotes live state."""
+    cycle_attempt_id = uuid.uuid4().hex.upper()
     root = Path(state_root)
     cycle_store = ContinuousCycleStore(root / "cycles")
+    progress_store = ContinuousCycleProgressStore(root / "cycle_progress.json")
     projection_store = ResearchProjectionStore(root / "projection")
     validation_store: ValidationQueueStore | None = None
     question_state_dir = Path((question_kwargs or {}).get(
@@ -79,13 +186,27 @@ def run_continuous_research_cycle(
     q71: Mapping[str, Any] = {}
     projection_path = None
     started = previous.completed_at if previous else ""
+    evaluation_only_question_ids: tuple[str, ...] | None = None
+    retained_projection: Mapping[str, Any] | None = None
+
+    def progress(method: str, *args: Any, **kwargs: Any) -> None:
+        try:
+            getattr(progress_store, method)(*args, **kwargs)
+        except Exception as exc:  # diagnostics must not alter scientific outcomes
+            print(f"continuous progress persistence failed: {type(exc).__name__}:{exc}",
+                  file=sys.stderr)
+
+    progress("start", cycle_attempt_id=cycle_attempt_id)
 
     def failed(stage: str, exc: BaseException, *, identity: Mapping[str, Any]) -> ContinuousResearchCycleResult:
         stages[stage] = "FAILED"
         stamp = str(_value(frontier, "frontier_end", "") or started)
+        failure_identity = _cycle_id({
+            **identity, "failure_stage": stage,
+            "failure": f"{type(exc).__name__}:{exc}",
+        })
         result = ContinuousResearchCycleResult(
-            continuous_cycle_id=_cycle_id({**identity, "failure_stage": stage,
-                                           "failure": f"{type(exc).__name__}:{exc}"}),
+            continuous_cycle_id=_attempt_cycle_id(cycle_attempt_id, failure_identity),
             cycle_outcome="FAILED", frontier_snapshot_id=_value(frontier, "snapshot_id"),
             question_cycle_id=_value(question, "cycle_id"),
             bridge_run_id=_value(bridge, "bridge_run_id"),
@@ -94,55 +215,178 @@ def run_continuous_research_cycle(
             predecessor_cycle_id=predecessor_id, started_at=started,
             completed_at=stamp, stage_statuses=dict(stages), failure_stage=stage,
             failure_reason=f"{type(exc).__name__}:{exc}", projection_path=projection_path,
+            cycle_attempt_id=cycle_attempt_id,
+            evidence_identity=(
+                None if _value(frontier, "snapshot_id") is None
+                else str(_value(frontier, "snapshot_id"))
+            ),
         )
         cycle_store.save(result, successful=False)
+        progress("finish", "FAILED", failure_stage=stage)
         return result
 
+    progress("enter_stage", "FRONTIER")
     try:
         frontier = frontier_runner(**dict(frontier_kwargs or {}))
         stages["FRONTIER"] = str(_value(frontier, "status", "UNKNOWN"))
+        progress("exit_stage", "FRONTIER", status=stages["FRONTIER"], details={
+            "snapshot_id": _value(frontier, "snapshot_id"),
+            "frontier_id": _value(frontier, "frontier_id"),
+        })
     except Exception as exc:
+        progress("exit_stage", "FRONTIER", status="FAILED", details={
+            "failure": f"{type(exc).__name__}:{exc}"})
         return failed("FRONTIER", exc, identity={"predecessor": predecessor_id})
     started = str(_value(frontier, "frontier_end", "") or started)
-    if _value(frontier, "status") == NO_NEW_GOVERNED_EVIDENCE:
-        for stage in ("QUESTIONS", "SCIENTIFIC_STATE", "Q71_PLUS", "VALIDATION_QUEUE"):
-            stages[stage] = "SKIPPED_NO_NEW_EVIDENCE"
+    bootstrap_from_existing_snapshot = False
+    if _retained_coherent_frontier_is_usable(frontier):
         try:
             latest = projection_store.load_latest()
         except Exception as exc:
             return failed("PROJECTION", exc, identity={
                 "snapshot": _value(frontier, "snapshot_id"), "predecessor": predecessor_id})
-        stages["PROJECTION"] = "RETAINED" if latest else "NOT_AVAILABLE"
-        material = {"outcome": "NO_NEW_RESEARCH_EVIDENCE",
-                    "snapshot_id": _value(frontier, "snapshot_id"),
-                    "frontier_id": _value(frontier, "frontier_id"),
-                    "predecessor": predecessor_id}
-        result = ContinuousResearchCycleResult(
-            continuous_cycle_id=_cycle_id(material), cycle_outcome="NO_NEW_RESEARCH_EVIDENCE",
-            frontier_snapshot_id=_value(frontier, "snapshot_id"), question_cycle_id=None,
-            bridge_run_id=None, q71_agenda_id=None, q71_queue_id=None,
-            validation_queue_version=None,
-            projection_version=None if latest is None else latest.get("projection_version"),
-            predecessor_cycle_id=predecessor_id, started_at=started, completed_at=started,
-            stage_statuses=stages,
-            projection_path=None if latest is None else str(projection_store.latest_path),
-        )
-        cycle_store.save(result, successful=True)
-        return result
-    if _value(frontier, "status") != SNAPSHOT_READY or _value(frontier, "verification_status") != "VERIFIED":
+        # Neither a no-op nor an explicitly retained incomplete candidate moves
+        # the governed EVIDENCE frontier.  That says nothing about whether the
+        # EVALUATOR is current, so evaluation identity is checked independently.
+        stale_questions = _stale_evaluation_questions(
+            latest, question_state_dir=question_state_dir,
+            registry_loader=question_registry_loader)
+        if _is_current_successful_projection(latest, frontier, stale_questions):
+            for stage in ("QUESTIONS", "SCIENTIFIC_STATE", "Q71_PLUS", "VALIDATION_QUEUE"):
+                stages[stage] = "SKIPPED_NO_NEW_EVIDENCE"
+                progress("skip_stage", stage, "NO_NEW_EVIDENCE_WITH_CURRENT_PROJECTION")
+            stages["PROJECTION"] = "RETAINED"
+            progress("skip_stage", "PROJECTION", "CURRENT_PROJECTION_RETAINED")
+            material = {"outcome": "NO_NEW_RESEARCH_EVIDENCE",
+                        "snapshot_id": _value(frontier, "snapshot_id"),
+                        "frontier_id": _value(frontier, "frontier_id"),
+                        "predecessor": predecessor_id}
+            evidence_identity = (
+                None if _value(frontier, "snapshot_id") is None
+                else str(_value(frontier, "snapshot_id"))
+            )
+            result = ContinuousResearchCycleResult(
+                continuous_cycle_id=_attempt_cycle_id(cycle_attempt_id, _cycle_id(material)),
+                cycle_outcome="NO_NEW_RESEARCH_EVIDENCE",
+                frontier_snapshot_id=_value(frontier, "snapshot_id"), question_cycle_id=None,
+                bridge_run_id=None, q71_agenda_id=None, q71_queue_id=None,
+                validation_queue_version=None,
+                projection_version=latest.get("projection_version"),
+                predecessor_cycle_id=predecessor_id, started_at=started, completed_at=started,
+                stage_statuses=stages,
+                projection_path=str(projection_store.latest_path),
+                cycle_attempt_id=cycle_attempt_id, evidence_identity=evidence_identity,
+            )
+            cycle_store.save(result, successful=True)
+            progress("finish", "COMPLETED")
+            return result
+        if not all(str(_value(frontier, name) or "") for name in (
+                "snapshot_id", "fingerprint", "investigation_epoch")):
+            return failed("FRONTIER", ContinuousResearchLoopError(
+                "BOOTSTRAP_FRONTIER_IDENTITY_INCOMPLETE"),
+                identity={"frontier": _value(frontier, "frontier_id")})
+        # The immutable frontier already exists, but the downstream read model
+        # has never been published.  Run Blocks 2-4 once from that exact
+        # snapshot; the canonical question runner validates its manifest,
+        # fingerprint, epoch and bound object identities before evaluation.
+        unknown = sorted(qid for qid in stale_questions if qid.startswith("__"))
+        if unknown:
+            return failed("QUESTIONS", ContinuousResearchLoopError(
+                "EVALUATION_IDENTITY_UNAVAILABLE:" + ",".join(unknown)),
+                identity={"frontier": _value(frontier, "frontier_id")})
+        if latest is not None:
+            evaluation_only_question_ids = tuple(sorted(stale_questions))
+            retained_projection = latest
+        bootstrap_from_existing_snapshot = True
+    if (not bootstrap_from_existing_snapshot and (
+            _value(frontier, "status") != SNAPSHOT_READY
+            or _value(frontier, "verification_status") != "VERIFIED")):
         return failed("FRONTIER", ContinuousResearchLoopError(
             "FRONTIER_DID_NOT_PRODUCE_VERIFIED_SNAPSHOT:" + str(_value(frontier, "failure_reason"))),
             identity={"frontier": _value(frontier, "frontier_id")})
 
+    progress("enter_stage", "QUESTIONS", details={
+        "questions_entered": 0, "questions_completed": 0})
     try:
-        question = question_runner(frontier, **dict(question_kwargs or {}))
+        question_options = dict(question_kwargs or {})
+
+        def question_progress(event: Mapping[str, Any]) -> None:
+            progress("update_stage", "QUESTIONS", event)
+
+        question_options.setdefault("progress_callback", question_progress)
+        if evaluation_only_question_ids is not None:
+            question_options.setdefault(
+                "evaluation_only_question_ids", evaluation_only_question_ids)
+        question = question_runner(frontier, **question_options)
         if _value(question, "total_questions") != 70 or str(_value(question, "cycle_status")) not in {
             "COMPLETED", "COMPLETED_WITH_QUESTION_FAILURES",
         }:
             raise ContinuousResearchLoopError("CANONICAL_70_ACCOUNTING_INVALID")
         stages["QUESTIONS"] = str(_value(question, "cycle_status"))
+        progress("exit_stage", "QUESTIONS", status=stages["QUESTIONS"], details={
+            "questions_completed": _value(question, "total_questions", 0),
+            "evaluated_count": _value(question, "evaluated_count", 0),
+            "retained_count": _value(question, "retained_count", 0),
+        })
     except Exception as exc:
+        progress("exit_stage", "QUESTIONS", status="FAILED", details={
+            "failure": f"{type(exc).__name__}:{exc}"})
         return failed("QUESTIONS", exc, identity={"snapshot": _value(frontier, "snapshot_id")})
+
+    material_question_changes = tuple(_value(question, "changed_question_ids", ()) or ())
+    if evaluation_only_question_ids is not None and not material_question_changes:
+        for stage in ("SCIENTIFIC_STATE", "Q71_PLUS", "VALIDATION_QUEUE"):
+            stages[stage] = "SKIPPED_NO_MATERIAL_QUESTION_CHANGE"
+            progress("skip_stage", stage, "EVALUATION_REFRESH_WITH_EQUIVALENT_SCIENCE")
+        progress("enter_stage", "PROJECTION")
+        try:
+            if retained_projection is None:
+                raise ContinuousResearchLoopError(
+                    "EVALUATION_REFRESH_WITHOUT_RETAINED_PROJECTION")
+            qstore = QuestionCycleStore(question_state_dir)
+            question_projection = qstore.load_current()
+            cycle_material = {
+                "snapshot": _value(frontier, "snapshot_id"),
+                "question": _value(question, "cycle_id"),
+                "evaluation_refresh": evaluation_only_question_ids,
+                "predecessor": predecessor_id,
+            }
+            cycle_id = _attempt_cycle_id(cycle_attempt_id, _cycle_id(cycle_material))
+            projection = build_evaluation_refresh_projection(
+                continuous_cycle_id=cycle_id, frontier=frontier,
+                question_projection=question_projection,
+                predecessor_projection=retained_projection,
+                refreshed_question_ids=evaluation_only_question_ids,
+            )
+            projection_path = str(projection_store.save(projection))
+            stages["PROJECTION"] = "COMPLETED_EVALUATION_REFRESH"
+            progress("exit_stage", "PROJECTION", status=stages["PROJECTION"], details={
+                "projection_version": projection["projection_version"],
+                "projection_path": projection_path,
+            })
+        except Exception as exc:
+            progress("exit_stage", "PROJECTION", status="FAILED", details={
+                "failure": f"{type(exc).__name__}:{exc}"})
+            return failed("PROJECTION", exc, identity={
+                "question": _value(question, "cycle_id")})
+        completed = str(_value(question, "completed_at", started))
+        result = ContinuousResearchCycleResult(
+            continuous_cycle_id=cycle_id, cycle_outcome="COMPLETED",
+            frontier_snapshot_id=str(_value(frontier, "snapshot_id")),
+            question_cycle_id=str(_value(question, "cycle_id")),
+            bridge_run_id=None, q71_agenda_id=None, q71_queue_id=None,
+            validation_queue_version=None,
+            projection_version=projection["projection_version"],
+            predecessor_cycle_id=predecessor_id, started_at=started,
+            completed_at=completed, stage_statuses=stages,
+            projection_path=projection_path, cycle_attempt_id=cycle_attempt_id,
+            evidence_identity=str(_value(frontier, "snapshot_id")),
+        )
+        cycle_store.save(result, successful=True)
+        progress("finish", "COMPLETED")
+        return result
+
+    progress("enter_stage", "SCIENTIFIC_STATE")
     try:
         bridge = bridge_runner(question, **dict(bridge_kwargs or {}))
         if str(_value(bridge, "status")) not in {
@@ -151,9 +395,13 @@ def run_continuous_research_cycle(
         }:
             raise ContinuousResearchLoopError("SCIENTIFIC_STATE_BRIDGE_NOT_COMPLETE")
         stages["SCIENTIFIC_STATE"] = str(_value(bridge, "status"))
+        progress("exit_stage", "SCIENTIFIC_STATE", status=stages["SCIENTIFIC_STATE"])
     except Exception as exc:
+        progress("exit_stage", "SCIENTIFIC_STATE", status="FAILED", details={
+            "failure": f"{type(exc).__name__}:{exc}"})
         return failed("SCIENTIFIC_STATE", exc, identity={"question_cycle": _value(question, "cycle_id")})
 
+    progress("enter_stage", "Q71_PLUS")
     try:
         qkwargs = dict(q71_kwargs or {})
         qkwargs.setdefault("snapshot_id", str(_value(frontier, "snapshot_id")))
@@ -161,11 +409,15 @@ def run_continuous_research_cycle(
         qkwargs.setdefault("state_path", root / "q71_state.json")
         q71 = q71_runner(**qkwargs)
         stages["Q71_PLUS"] = str(q71.get("status", "COMPLETED"))
+        progress("exit_stage", "Q71_PLUS", status=stages["Q71_PLUS"])
     except Exception as exc:
         q71 = {"status": "FAILED_OPTIONAL", "failure_reason": f"{type(exc).__name__}:{exc}",
                "generated_questions": [], "queue": []}
         stages["Q71_PLUS"] = "FAILED_OPTIONAL"
+        progress("exit_stage", "Q71_PLUS", status="FAILED_OPTIONAL", details={
+            "failure": f"{type(exc).__name__}:{exc}"})
 
+    progress("enter_stage", "VALIDATION_QUEUE", details={"max_jobs": max_validation_jobs})
     try:
         validation_store = ValidationQueueStore(root / "validation_queue.json")
         registry = OptimisationRegistry(str(registry_dir))
@@ -204,9 +456,16 @@ def run_continuous_research_cycle(
         queue_version = hashlib.sha256(canonical_json(
             [job.to_dict() for job in validation_store.ordered()]).encode("utf-8")).hexdigest()
         stages["VALIDATION_QUEUE"] = "COMPLETED"
+        progress("exit_stage", "VALIDATION_QUEUE", status="COMPLETED", details={
+            "transition_count": len(processed["transitions"]),
+            "shadow_eligibility_count": len(processed["shadow_eligibility"]),
+        })
     except Exception as exc:
+        progress("exit_stage", "VALIDATION_QUEUE", status="FAILED", details={
+            "failure": f"{type(exc).__name__}:{exc}"})
         return failed("VALIDATION_QUEUE", exc, identity={"bridge": _value(bridge, "bridge_run_id")})
 
+    progress("enter_stage", "PROJECTION")
     try:
         if validation_store is None:  # pragma: no cover - guarded by validation stage
             raise ContinuousResearchLoopError("VALIDATION_QUEUE_NOT_INITIALISED")
@@ -219,7 +478,8 @@ def run_continuous_research_cycle(
             "bridge": _value(bridge, "bridge_run_id"), "agenda": q71.get("agenda_id"),
             "validation_queue_version": queue_version, "predecessor": predecessor_id,
         }
-        cycle_id = _cycle_id(cycle_material)
+        identity = _cycle_id(cycle_material)
+        cycle_id = _attempt_cycle_id(cycle_attempt_id, identity)
         projection = build_unified_research_projection(
             continuous_cycle_id=cycle_id, frontier=frontier,
             question_projection=question_projection, bridge=bridge,
@@ -229,7 +489,13 @@ def run_continuous_research_cycle(
         )
         projection_path = str(projection_store.save(projection))
         stages["PROJECTION"] = "COMPLETED"
+        progress("exit_stage", "PROJECTION", status="COMPLETED", details={
+            "projection_version": projection["projection_version"],
+            "projection_path": projection_path,
+        })
     except Exception as exc:
+        progress("exit_stage", "PROJECTION", status="FAILED", details={
+            "failure": f"{type(exc).__name__}:{exc}"})
         return failed("PROJECTION", exc, identity={"bridge": _value(bridge, "bridge_run_id")})
 
     completed = str(_value(question, "completed_at", started))
@@ -246,11 +512,14 @@ def run_continuous_research_cycle(
         validation_transitions=tuple(processed["transitions"]),
         shadow_eligibility=tuple(processed["shadow_eligibility"]),
         projection_path=projection_path,
+        cycle_attempt_id=cycle_attempt_id,
+        evidence_identity=str(_value(frontier, "snapshot_id")),
     )
     try:
         cycle_store.save(result, successful=True)
     except Exception as exc:
         raise ContinuousResearchLoopError("CHECKPOINT_PERSISTENCE_FAILED") from exc
+    progress("finish", "COMPLETED")
     return result
 
 

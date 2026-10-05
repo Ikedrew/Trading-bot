@@ -9,6 +9,11 @@ from pathlib import Path
 import pytest
 
 from core.production_data_contract import current_schema, s3_base_prefix
+import research_engine.v10.continuous.canonical_question_cycle as question_cycle_module
+from research_engine.control_plane.evidence_resolver import (
+    EvidenceSnapshot,
+    resolve_question_evidence,
+)
 from research_engine.data_access.s3_source import S3ResearchDataSource, get_default_source
 from research_engine.registry.research_question_registry import REGISTRY
 from research_engine.v10.continuous.canonical_question_cycle import (
@@ -232,7 +237,10 @@ def test_first_snapshot_binds_all_evaluated_questions_and_accounts_for_all_70(tm
     fake = MemoryS3(_objects())
     snapshot, manifests = _freeze(tmp_path, fake)
     executor = RecordingExecutor()
-    cycle = _run(tmp_path, fake, snapshot, manifests, runner_executor=executor)
+    progress = []
+    cycle = _run(
+        tmp_path, fake, snapshot, manifests, runner_executor=executor,
+        progress_callback=progress.append)
     projection = _projection(tmp_path)
 
     assert cycle.total_questions == 70
@@ -240,13 +248,50 @@ def test_first_snapshot_binds_all_evaluated_questions_and_accounts_for_all_70(tm
     assert set(projection["questions"]) == {question.id for question in REGISTRY}
     assert len(executor.snapshot_ids) > 0
     assert set(executor.snapshot_ids) == {snapshot.snapshot_id}
-    assert cycle.evaluated_count == 68
+    assert cycle.evaluated_count == 69
     assert cycle.retained_count == 0
     assert all(cycle.planning[q.id] == AFFECTED
-               for q in REGISTRY if q.id not in {"S1", "L6"})
+               for q in REGISTRY if q.id != "S1")
+    assert any(item.get("phase") == "SNAPSHOT_LOADED" for item in progress)
+    completed = [item for item in progress if item.get("phase") == "QUESTION_COMPLETED"]
+    assert len(completed) == 70
+    assert completed[-1]["questions_completed"] == 70
+    assert len(completed[-1]["slowest_questions"]) == 5
 
 
-def test_s1_is_owner_alias_and_l6_is_explicitly_unimplemented(tmp_path):
+def test_cycle_scoped_population_cache_preserves_representative_scientific_outputs(
+    tmp_path, monkeypatch,
+):
+    fake = MemoryS3(_objects())
+    snapshot, manifests = _freeze(tmp_path, fake)
+    _run(tmp_path / "cached", fake, snapshot, manifests)
+    cached = _projection(tmp_path / "cached")["questions"]
+
+    def uncached_resolver(question, evidence_snapshot):
+        # Emulate the former per-question EvidenceSnapshot construction so the
+        # optimized shared-cache path is checked against its actual predecessor.
+        fresh = EvidenceSnapshot(datasets=evidence_snapshot._datasets)
+        return resolve_question_evidence(question, fresh)
+
+    monkeypatch.setattr(
+        question_cycle_module, "resolve_question_evidence", uncached_resolver)
+    _run(tmp_path / "uncached", fake, snapshot, manifests)
+    uncached = _projection(tmp_path / "uncached")["questions"]
+
+    fields = (
+        "status", "sample_n", "key_metrics", "evidence_datasets",
+        "evidence_references", "limitations", "missing_evidence",
+        "substantive_answer",
+    )
+    for question_id in ("E1", "E3", "M1", "X1"):
+        cached_result = cached[question_id]["result"]
+        uncached_result = uncached[question_id]["result"]
+        assert {name: cached_result[name] for name in fields} == {
+            name: uncached_result[name] for name in fields
+        }
+
+
+def test_s1_is_owner_alias_and_l6_has_registered_runner(tmp_path):
     fake = MemoryS3(_objects())
     snapshot, manifests = _freeze(tmp_path, fake)
     cycle = _run(tmp_path, fake, snapshot, manifests)
@@ -259,8 +304,11 @@ def test_s1_is_owner_alias_and_l6_is_explicitly_unimplemented(tmp_path):
     assert s1["definition"]["registered_runner"] is None
 
     l6 = questions["L6"]
-    assert l6["result"]["status"] == "UNIMPLEMENTED"
-    assert l6["result"]["failure_reason"] == "NO_REGISTERED_RUNNER:L6"
+    assert cycle.planning["L6"] == AFFECTED
+    assert l6["definition"]["registered_runner"] == (
+        "research_engine.experiments.learning_cycle_validation.run_l6")
+    assert l6["result"]["status"] != "UNIMPLEMENTED"
+    assert l6["result"]["failure_reason"] != "NO_REGISTERED_RUNNER:L6"
     assert l6["result"]["snapshot_id"] == snapshot.snapshot_id
 
 
@@ -479,10 +527,37 @@ def test_delta_detects_every_governed_change_dimension_and_no_change():
         "key_metrics_changed": True,
         "evidence_availability_changed": True,
         "implementation_state_changed": True,
+        "confidence_changed": False,
+        "statistical_output_changed": False,
+        "limitations_changed": False,
+        "failure_reason_changed": False,
+        "authority_changed": False,
         "unchanged": False,
     }
     unchanged = question_result_delta(previous, _result(snapshot_id="ISNAP-Z"))
     assert unchanged["unchanged"] is True
+    evaluator_refresh = question_result_delta(
+        previous,
+        _result(
+            snapshot_id="ISNAP-Z",
+            evaluation_identity={"evaluation_identity_digest": "new"},
+            evaluation_identity_digest="new",
+        ),
+    )
+    assert evaluator_refresh["unchanged"] is True
+
+
+def test_delta_includes_scientific_confidence_limitations_and_blockers():
+    previous = _result()
+    current = _result(
+        confidence="LOW", statistical_output={"p": 0.1},
+        limitations=("limited",), failure_reason="BLOCKED")
+    delta = question_result_delta(previous, current)
+    assert delta["confidence_changed"] is True
+    assert delta["statistical_output_changed"] is True
+    assert delta["limitations_changed"] is True
+    assert delta["failure_reason_changed"] is True
+    assert delta["unchanged"] is False
 
 
 def test_runner_failure_is_isolated_loud_and_all_70_remain(tmp_path):
@@ -574,4 +649,8 @@ def test_real_canonical_runner_discovery_path_remains_all_70_and_failure_isolate
     assert cycle.total_questions == 70
     assert len(projection["questions"]) == 70
     assert projection["questions"]["S1"]["result"]["status"] == ALIAS_OR_SUPERSEDED
-    assert projection["questions"]["L6"]["result"]["status"] == "UNIMPLEMENTED"
+    l6 = projection["questions"]["L6"]["result"]
+    assert l6["status"] != "UNIMPLEMENTED"
+    assert l6["runner"] == (
+        "research_engine.experiments.learning_cycle_validation.run_l6")
+    assert l6["failure_reason"] != "NO_REGISTERED_RUNNER:L6"

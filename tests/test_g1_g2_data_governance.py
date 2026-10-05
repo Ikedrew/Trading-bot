@@ -56,14 +56,14 @@ def test_g1_waiting_blocked_unknown_and_negative_completion_semantics():
     statuses = {item["status"] for item in report["overall"]["assessments"]}
     assert "WAITING_DATA" in statuses
     assert "BLOCKED" in statuses
-    assert report["status"] == "COMPLETE"  # valid negative/non-suitable finding
+    assert report["status"] == "BLOCKED"  # UNKNOWN is fail-closed under HD13
     unsuitable = deepcopy(report)
     target = next(item for item in unsuitable["overall"]["assessments"] if item["status"] == "WAITING_DATA")
     next(row for row in target["requirements"] if row["category"] != "SCIENCE_CONTRACT")["status"] = "FAIL"
     target["status"] = "UNSUITABLE"
     unsuitable_statuses = [item["status"] for item in unsuitable["overall"]["assessments"]]
     unsuitable["overall"]["status_counts"] = dict(Counter(unsuitable_statuses))
-    assert unsuitable["status"] == "COMPLETE"
+    assert unsuitable["status"] == "BLOCKED"
     assert validate_g1_report(unsuitable)[0]
     unknown = deepcopy(report)
     target = unknown["overall"]["assessments"][0]
@@ -144,10 +144,13 @@ def test_g2_readiness_threshold_negative_completion_and_no_interval():
     assert exact["overall"]["threshold_result"] == "LINEAGE_THRESHOLD_MET"
 
 
-def test_g1_g2_unique_integration_is_unchanged_after_g3_and_count_63():
+def test_g1_g2_unique_integration_tracks_derived_governance_baseline():
     assert canonical_report_owner("g1_dataset_suitability.json") == "G1"
     assert canonical_report_owner("g2_lineage_coverage.json") == "G2"
-    assert operational_baseline() == (63, 7)
-    assert STRUCTURALLY_NON_OPERATIONAL_IDS == {"EX5", "EX6", "EX8", "L2", "L3", "L6", "L7"}
+    assert operational_baseline() == (
+        len(REGISTRY_BY_ID) - len(STRUCTURALLY_NON_OPERATIONAL_IDS),
+        len(STRUCTURALLY_NON_OPERATIONAL_IDS),
+    )
+    assert STRUCTURALLY_NON_OPERATIONAL_IDS == {"EX5", "EX6", "EX8", "L2", "L6", "L7"}
     assert REGISTRY_BY_ID["G3"].runner_module == "research_engine.experiments.research_validity"
     assert REGISTRY_BY_ID["G3"].report_filename == "g3_research_validity.json"

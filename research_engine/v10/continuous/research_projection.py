@@ -165,6 +165,82 @@ def build_unified_research_projection(
     return {"projection_schema": PROJECTION_SCHEMA, "projection_version": version, **material}
 
 
+def build_evaluation_refresh_projection(
+    *, continuous_cycle_id: str, frontier: Any,
+    question_projection: Mapping[str, Any],
+    predecessor_projection: Mapping[str, Any],
+    refreshed_question_ids: Sequence[str],
+) -> dict[str, Any]:
+    """Publish new evaluator authority without replaying scientific stages.
+
+    The prior projection's scientific state is retained verbatim.  Only the
+    canonical question read model, frontier/cycle authority, and an explicit
+    evaluation-refresh diagnostic change.  No finding, hypothesis, candidate,
+    or validation transition is manufactured.
+    """
+    prior_rows = {
+        str(row.get("question_id")): row
+        for row in predecessor_projection.get("canonical_questions", ())
+        if isinstance(row, Mapping)
+    }
+    question_rows: list[dict[str, Any]] = []
+    questions = question_projection.get("questions") or {}
+    if not isinstance(questions, Mapping) or len(questions) != 70:
+        raise ResearchProjectionError("CANONICAL_70_PROJECTION_INVARIANT_FAILED")
+    for question_id, raw in sorted(questions.items()):
+        row = dict(raw)
+        row.setdefault("question_id", question_id)
+        prior = prior_rows.get(str(question_id), {})
+        for name in ("linked_findings", "linked_hypotheses", "linked_candidates"):
+            row[name] = list(prior.get(name) or ())
+        row["changed_this_cycle"] = False
+        question_rows.append(row)
+
+    prior_frontier = predecessor_projection.get("data_frontier") or {}
+    data_frontier = {
+        **dict(prior_frontier),
+        "snapshot_id": _value(frontier, "snapshot_id"),
+        "fingerprint": _value(frontier, "fingerprint"),
+        "investigation_epoch": _value(frontier, "investigation_epoch"),
+        "frontier_start": _value(frontier, "frontier_start"),
+        "frontier_end": _value(frontier, "frontier_end"),
+        "predecessor_snapshot_id": _value(frontier, "predecessor_snapshot_id"),
+        "changed_datasets": list(_value(frontier, "changed_datasets", ())),
+        "stale_datasets": list(_value(frontier, "stale_datasets", ())),
+        "missing_optional_datasets": list(_value(frontier, "missing_optional_datasets", ())),
+        "status": _value(frontier, "status"),
+        "last_successful_research_cycle": continuous_cycle_id,
+        "freshness": "FROZEN_AT_FRONTIER",
+    }
+    changed = {
+        "new_data": [], "questions_changed": [], "new_answers": [],
+        "newly_sufficient_questions": [], "new_findings": [],
+        "weakened_findings": [], "new_hypotheses": [],
+        "invalidated_hypotheses": [], "proposed_candidates": [],
+        "validation_transitions": [], "shadow_transitions": [],
+        "new_q71_questions": [], "retired_questions": [], "new_blockers": [],
+        "evaluation_refresh": sorted(set(str(item) for item in refreshed_question_ids)),
+    }
+    material = {
+        key: value for key, value in predecessor_projection.items()
+        if key not in {
+            "projection_schema", "projection_version", "continuous_cycle_id",
+            "data_frontier", "canonical_questions", "what_changed",
+            "predecessor_projection_version",
+        }
+    }
+    material.update({
+        "continuous_cycle_id": continuous_cycle_id,
+        "data_frontier": data_frontier,
+        "canonical_questions": question_rows,
+        "what_changed": changed,
+        "predecessor_projection_version": predecessor_projection.get("projection_version"),
+    })
+    version = "RPROJ-" + hashlib.sha256(
+        canonical_json(material).encode("utf-8")).hexdigest()[:32].upper()
+    return {"projection_schema": PROJECTION_SCHEMA, "projection_version": version, **material}
+
+
 class ResearchProjectionStore:
     def __init__(self, directory: Path | str = DEFAULT_PROJECTION_DIRECTORY):
         self.directory = Path(directory)
@@ -213,4 +289,4 @@ class ResearchProjectionStore:
 
 
 __all__ = ["PROJECTION_SCHEMA", "ResearchProjectionError", "ResearchProjectionStore",
-           "build_unified_research_projection"]
+           "build_evaluation_refresh_projection", "build_unified_research_projection"]

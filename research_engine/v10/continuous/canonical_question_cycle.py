@@ -7,11 +7,13 @@ imported nor consulted.
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 import builtins
+import gc
 import importlib
 import inspect
 from pathlib import Path
+import time
 from typing import Any, Callable, Mapping, Sequence
 from unittest.mock import patch
 
@@ -19,7 +21,6 @@ from research_engine.control_plane.evidence_resolver import (
     EvidenceResolution,
     EvidenceSnapshot,
     resolve_question_evidence,
-    resolve_question_population,
 )
 from research_engine.control_plane.stage4_dataset_snapshot import fingerprint
 from research_engine.data_access.shadow_runtime_ingestion import (
@@ -40,6 +41,14 @@ from research_engine.v10.continuous.question_cycle_state import (
     atomic_json,
     immutable_json,
 )
+from research_engine.v10.continuous.evaluation_identity import (
+    REQUIRES_REEVALUATION as REQUIRES_REEVALUATION_VALUE,
+    evaluation_identities,
+    explain_staleness,
+    is_result_current,
+    stale_question_ids,
+)
+from research_engine.v10.continuous.cycle_state import process_memory_bytes
 from research_engine.v10.investigation_snapshot import (
     BOUND_DATASETS,
     MANIFEST_DIRECTORY,
@@ -55,6 +64,7 @@ EXPECTED_QUESTION_COUNT = 70
 AFFECTED = "AFFECTED"
 UNAFFECTED = "UNAFFECTED"
 REQUIRES_RECHECK = "REQUIRES_RECHECK"
+REQUIRES_REEVALUATION = REQUIRES_REEVALUATION_VALUE
 UNRUNNABLE = "UNRUNNABLE"
 ALIAS_OR_SUPERSEDED = "ALIAS_OR_SUPERSEDED"
 
@@ -123,6 +133,7 @@ class SnapshotQuestionExecutionContext:
     changed_datasets_known: bool
     datasets: dict[str, list[dict[str, Any]]]
     reader: SnapshotBoundDatasetReader
+    runner_artifacts: dict[str, Any] = field(default_factory=dict, compare=False, repr=False)
 
     def evidence_references(self, question: ResearchQuestion) -> tuple[dict[str, Any], ...]:
         references: list[dict[str, Any]] = []
@@ -209,17 +220,17 @@ def _build_context(
     for dataset in BOUND_DATASETS:
         binding = bindings[dataset]
         if binding.presence == "PRESENT":
-            physical[dataset] = reader.read_dataset(dataset)
+            physical[dataset] = reader.cycle_cached_dataset(dataset)
             status[dataset] = "READY"
         else:
             status[dataset] = "MISSING"
 
     datasets: dict[str, list[dict[str, Any]]] = {}
     for dataset, rows in physical.items():
-        datasets[dataset] = [dict(row) for row in rows]
+        datasets[dataset] = rows
     for alias, physical_name in _SOURCE_TO_SNAPSHOT_DATASET.items():
         if physical_name is not None and physical_name in physical:
-            datasets[alias] = [dict(row) for row in physical[physical_name]]
+            datasets[alias] = physical[physical_name]
     if "shadow_runtime" in physical:
         datasets["shadow_trades"] = reconstruct_completed_shadow_trades(
             [dict(row) for row in physical["shadow_runtime"]])
@@ -260,10 +271,23 @@ def plan_affected_questions(
     questions: Sequence[ResearchQuestion],
     context: SnapshotQuestionExecutionContext,
     previous_projection: Mapping[str, Any] | None,
+    identities: Mapping[str, Mapping[str, Any]] | None = None,
+    evaluation_only_question_ids: Sequence[str] | None = None,
 ) -> dict[str, str]:
-    """Classify all 70 questions from registry dependencies and Block 1 delta."""
+    """Classify all 70 questions from registry dependencies and Block 1 delta.
+
+    A question whose recorded result is no longer current under the authoritative
+    governed evaluator is REQUIRES_REEVALUATION even when its evidence snapshot
+    did not change.  This is the distinction between evidence identity and
+    evaluation identity: unchanged evidence does not imply an unchanged
+    interpretation.
+    """
     previous_questions = (previous_projection or {}).get("questions") or {}
     first_snapshot = not previous_questions
+    evaluation_only = (
+        None if evaluation_only_question_ids is None
+        else frozenset(str(item) for item in evaluation_only_question_ids)
+    )
     plan: dict[str, str] = {}
     for question in questions:
         if question.scientific_owner_id:
@@ -272,12 +296,26 @@ def plan_affected_questions(
         if not question.runner_module or not question.runner_function:
             plan[question.id] = UNRUNNABLE
             continue
+        previous_entry = previous_questions.get(question.id) or {}
+        previous_result = previous_entry.get("result") or {}
+        if not first_snapshot and evaluation_only is not None:
+            plan[question.id] = (
+                REQUIRES_REEVALUATION
+                if question.id in evaluation_only else UNAFFECTED
+            )
+            continue
+        if not first_snapshot and identities is not None:
+            current = identities.get(question.id)
+            if current is not None:
+                is_current, _ = is_result_current(
+                    previous_result.get("evaluation_identity"), current)
+                if not is_current:
+                    plan[question.id] = REQUIRES_REEVALUATION
+                    continue
         if first_snapshot:
             plan[question.id] = AFFECTED
             continue
         dependencies, ambiguous = _question_dependencies(question)
-        previous_entry = previous_questions.get(question.id) or {}
-        previous_result = previous_entry.get("result") or {}
         previous_status = str(previous_result.get("status") or "")
         if not context.changed_datasets_known:
             plan[question.id] = REQUIRES_RECHECK
@@ -350,15 +388,21 @@ def _runner_kwargs(
 ) -> dict[str, Any]:
     signature = inspect.signature(runner)
     kwargs: dict[str, Any] = {}
+    shadow_population = context.datasets.get("shadow_trades", [])
     common: dict[str, Any] = {
-        "shadow_trades": context.datasets.get("shadow_trades", []),
-        "records": population,
-        "governed_records": population,
+        "shadow_trades": shadow_population,
+        "records": population if question.id in {"L3", "L6", "EX2"} else shadow_population,
+        "governed_records": population if question.id in {"L3", "L6", "EX2"} else shadow_population,
         "decision_records": context.datasets.get("decision_trace", []),
-        "outcome_records": context.datasets.get("shadow_trades", []),
+        "outcome_records": shadow_population,
+        "execution_results": context.datasets.get("execution_results", []),
+        "execution_contexts": context.datasets.get("execution_context", []),
+        "decision_traces": context.datasets.get("decision_trace", []),
         "datasets": context.datasets,
         "source": context.reader,
         "persist": False,
+        "governed_evidence": context.runner_artifacts.get(
+            "governed_execution_evidence"),
     }
     unresolved: list[str] = []
     for name, parameter in signature.parameters.items():
@@ -477,6 +521,7 @@ def _base_result(
     question: ResearchQuestion, definition: Any,
     context: SnapshotQuestionExecutionContext,
     previous: CanonicalQuestionResult | None,
+    evaluation_identity: Mapping[str, Any] | None = None,
     **overrides: Any,
 ) -> CanonicalQuestionResult:
     minimum = _minimum_required(question, definition)
@@ -497,6 +542,15 @@ def _base_result(
             f"{question.runner_module}.{question.runner_function}"
             if question.runner_module and question.runner_function else None),
         "runner_version": f"{REGISTRY_VERSION}:{definition.definition_version}",
+        # Governed evaluation identity: the authoritative interpretation that
+        # produced this result.  Distinct from snapshot/evidence identity.
+        # The digest is carried inside the identity so the sub-object is
+        # self-contained and directly comparable against current identity.
+        "evaluation_identity": (
+            None if evaluation_identity is None else dict(evaluation_identity)),
+        "evaluation_identity_digest": (
+            None if evaluation_identity is None
+            else evaluation_identity.get("evaluation_identity_digest")),
     }
     values.update(overrides)
     return CanonicalQuestionResult(**values)
@@ -527,6 +581,11 @@ def question_result_delta(
             "key_metrics_changed": bool(current.key_metrics),
             "evidence_availability_changed": bool(current.missing_evidence),
             "implementation_state_changed": True,
+            "confidence_changed": current.confidence is not None,
+            "statistical_output_changed": current.statistical_output is not None,
+            "limitations_changed": bool(current.limitations),
+            "failure_reason_changed": current.failure_reason is not None,
+            "authority_changed": True,
             "unchanged": False,
         }
     delta = {
@@ -541,6 +600,16 @@ def question_result_delta(
             or previous.evidence_datasets != current.evidence_datasets),
         "implementation_state_changed": (
             previous.implementation_status != current.implementation_status),
+        "confidence_changed": previous.confidence != current.confidence,
+        "statistical_output_changed": (
+            previous.statistical_output != current.statistical_output),
+        "limitations_changed": previous.limitations != current.limitations,
+        "failure_reason_changed": previous.failure_reason != current.failure_reason,
+        # Evaluation identity is deliberately excluded: a new evaluator may
+        # reproduce the same scientific state without causing downstream churn.
+        "authority_changed": (
+            previous.question_version != current.question_version
+            or previous.runner_version != current.runner_version),
     }
     delta["unchanged"] = not any(delta.values())
     return delta
@@ -550,6 +619,7 @@ def _result_from_evidence_gap(
     question: ResearchQuestion, definition: Any,
     resolution: EvidenceResolution, context: SnapshotQuestionExecutionContext,
     previous: CanonicalQuestionResult | None,
+    evaluation_identity: Mapping[str, Any] | None = None,
 ) -> CanonicalQuestionResult:
     missing = _missing_evidence(resolution)
     unavailable_datasets = [
@@ -561,7 +631,7 @@ def _result_from_evidence_gap(
     minimum = _minimum_required(question, definition)
     deficit = None if minimum is None or sample is None else max(0, minimum - sample)
     return _base_result(
-        question, definition, context, previous,
+        question, definition, context, previous, evaluation_identity,
         status=status,
         sample_n=sample,
         sample_deficit=deficit,
@@ -580,6 +650,7 @@ def _normalise_report(
     report: Mapping[str, Any], resolution: EvidenceResolution,
     context: SnapshotQuestionExecutionContext,
     previous: CanonicalQuestionResult | None,
+    evaluation_identity: Mapping[str, Any] | None = None,
 ) -> CanonicalQuestionResult:
     sample = _sample_n(report, resolution)
     minimum = _minimum_required(question, definition)
@@ -591,11 +662,13 @@ def _normalise_report(
     )
     status = _normalise_status(report)
     failure = None
-    if status == INVALID:
+    if status in {IMPLEMENTATION_BLOCKED, INVALID}:
         failure = str(report.get("failure_reason") or report.get("error") or
-                      "RUNNER_STATUS_UNKNOWN_OR_INVALID")
+                      report.get("reason") or report.get("blocked_reason") or
+                      ("RUNNER_STATUS:BLOCKED" if status == IMPLEMENTATION_BLOCKED
+                       else "RUNNER_STATUS_UNKNOWN_OR_INVALID"))
     return _base_result(
-        question, definition, context, previous,
+        question, definition, context, previous, evaluation_identity,
         status=status,
         substantive_answer=_substantive_answer(report),
         sample_n=sample,
@@ -645,12 +718,21 @@ def run_canonical_question_cycle(
                                list[dict[str, Any]], SnapshotQuestionExecutionContext],
                               Mapping[str, Any]] | None = None,
     store: QuestionCycleStore | None = None,
+    progress_callback: Callable[[Mapping[str, Any]], None] | None = None,
+    evaluation_only_question_ids: Sequence[str] | None = None,
 ) -> CanonicalQuestionCycleResult:
     """Execute/retain exactly one result for every canonical question."""
+    stage_started = time.perf_counter()
+
+    def emit(**values: Any) -> None:
+        if progress_callback is not None:
+            progress_callback(values)
+
     snapshot_id, predecessor_hint, changed_datasets, changed_known = _frontier_input(
         frontier_result_or_snapshot_id)
     if not snapshot_id:
         raise CanonicalQuestionCycleError("BLOCK1_HANDOFF_WITHOUT_SNAPSHOT_ID")
+    emit(phase="LOADING_SNAPSHOT", snapshot_id=snapshot_id)
     try:
         snapshot = load_investigation_snapshot_id(
             snapshot_id, manifest_directory=Path(manifest_directory))
@@ -658,6 +740,15 @@ def run_canonical_question_cycle(
     except Exception as exc:
         raise CanonicalQuestionCycleError(
             "VERIFIED_SNAPSHOT_RESOLUTION_FAILED:" + f"{type(exc).__name__}:{exc}") from exc
+    rss, peak = process_memory_bytes()
+    emit(
+        phase="SNAPSHOT_LOADED",
+        snapshot_load_elapsed_seconds=round(time.perf_counter() - stage_started, 6),
+        snapshot_records_by_dataset=reader.reads_by_dataset,
+        snapshot_records_materialized=sum(reader.reads_by_dataset.values()),
+        process_rss_bytes=rss,
+        process_peak_rss_bytes=peak,
+    )
     supplied_fingerprint = _value(frontier_result_or_snapshot_id, "fingerprint")
     supplied_epoch = _value(frontier_result_or_snapshot_id, "investigation_epoch")
     if supplied_fingerprint and str(supplied_fingerprint) != snapshot.snapshot_fingerprint:
@@ -675,11 +766,21 @@ def run_canonical_question_cycle(
             "CANONICAL_QUESTION_REGISTRY_LOAD_FAILED:" + f"{type(exc).__name__}:{exc}") from exc
     if set(definitions) != BASELINE_QUESTION_SET:
         raise CanonicalQuestionCycleError("CANONICAL_DEFINITION_SET_MISMATCH")
+    identities = evaluation_identities(
+        questions, definitions, registry_version=REGISTRY_VERSION)
     registry_fingerprint = _registry_identity(questions, definitions)
+    # The cycle identity covers evaluation identity, so re-evaluating the same
+    # immutable snapshot under a changed evaluator produces a NEW governed cycle
+    # instead of silently replaying the historical one.
+    evaluation_identity_fingerprint = fingerprint({
+        qid: identities[qid]["evaluation_identity_digest"]
+        for qid in sorted(identities)
+    })
     cycle_id = "QCYCLE-" + fingerprint({
         "snapshot_id": snapshot.snapshot_id,
         "snapshot_fingerprint": snapshot.snapshot_fingerprint,
         "registry_fingerprint": registry_fingerprint,
+        "evaluation_identity_fingerprint": evaluation_identity_fingerprint,
     })[:32].upper()
     resolved_store = store or QuestionCycleStore(state_directory)
     existing = resolved_store.load_cycle(cycle_id)
@@ -701,7 +802,18 @@ def run_canonical_question_cycle(
         changed_datasets=changed_datasets,
         changed_datasets_known=changed_known,
     )
-    plan = plan_affected_questions(questions, context, previous_projection)
+    rss, peak = process_memory_bytes()
+    emit(
+        phase="CONTEXT_READY",
+        context_elapsed_seconds=round(time.perf_counter() - stage_started, 6),
+        context_records_by_dataset={name: len(rows) for name, rows in context.datasets.items()},
+        process_rss_bytes=rss,
+        process_peak_rss_bytes=peak,
+    )
+    plan = plan_affected_questions(
+        questions, context, previous_projection, identities,
+        evaluation_only_question_ids=evaluation_only_question_ids,
+    )
     if set(plan) != BASELINE_QUESTION_SET:
         raise CanonicalQuestionCycleError("AFFECTED_PLAN_ACCOUNTING_MISMATCH")
 
@@ -718,12 +830,29 @@ def run_canonical_question_cycle(
     evaluated_ids: list[str] = []
     retained_ids: list[str] = []
     failed_ids: list[str] = []
+    question_timings: list[dict[str, Any]] = []
+    evidence_snapshot = EvidenceSnapshot(datasets=context.datasets)
 
-    for question in questions:
+    for question_index, question in enumerate(questions, start=1):
         qid = question.id
+        question_started = time.perf_counter()
+        resolution_seconds = 0.0
+        population_seconds = 0.0
+        runner_seconds = 0.0
+        datasets_opened: dict[str, int] = {}
+        population_count = 0
+        rss, peak = process_memory_bytes()
+        emit(
+            phase="QUESTION_RUNNING", current_question_id=qid,
+            questions_entered=question_index,
+            questions_completed=question_index - 1,
+            required_datasets=[source.value for source in question.data_sources],
+            process_rss_bytes=rss, process_peak_rss_bytes=peak,
+        )
         definition = definitions[qid]
         previous = previous_results.get(qid)
         classification = plan[qid]
+        identity = identities.get(qid)
         retained = False
         runner_failed = False
 
@@ -750,7 +879,7 @@ def run_canonical_question_cycle(
             if owner is None:
                 raise CanonicalQuestionCycleError("ALIAS_OWNER_RESULT_MISSING:" + qid + ":" + owner_id)
             result = _base_result(
-                question, definition, context, previous,
+                question, definition, context, previous, identity,
                 status=ALIAS_OR_SUPERSEDED,
                 substantive_answer={
                     "scientific_owner_id": owner_id,
@@ -774,7 +903,7 @@ def run_canonical_question_cycle(
         elif classification == UNRUNNABLE:
             reason = "NO_REGISTERED_RUNNER:" + qid
             result = _base_result(
-                question, definition, context, previous,
+                question, definition, context, previous, identity,
                 status=UNIMPLEMENTED,
                 evidence_datasets=tuple(source.value for source in question.data_sources),
                 evidence_references=context.evidence_references(question),
@@ -786,20 +915,30 @@ def run_canonical_question_cycle(
             delta = question_result_delta(previous, result)
         else:
             evaluated_ids.append(qid)
-            evidence_snapshot = EvidenceSnapshot(datasets=context.datasets)
             try:
+                context.runner_artifacts.clear()
+                resolution_started = time.perf_counter()
                 resolution = resolve_question_evidence(question, evidence_snapshot)
-                population = resolve_question_population(question, evidence_snapshot)
+                context.runner_artifacts.update(resolution.runner_artifacts)
+                resolution_seconds = time.perf_counter() - resolution_started
+                datasets_opened = {
+                    str(item["source"]): int(item["total_records"])
+                    for item in resolution.sources
+                }
+                population_started = time.perf_counter()
+                population = list(resolution.usable_records)
+                population_seconds = time.perf_counter() - population_started
+                population_count = len(population)
                 blocking = bool(resolution.error) or any(
                     requirement.blocking and requirement.satisfied is not True
                     for requirement in resolution.requirements)
                 if blocking or not population:
                     result = _result_from_evidence_gap(
-                        question, definition, resolution, context, previous)
+                        question, definition, resolution, context, previous, identity)
                 elif qid in discovery_failures or qid not in runner_map:
                     reason = discovery_failures.get(qid, "REGISTERED_RUNNER_NOT_IMPORTABLE")
                     result = _base_result(
-                        question, definition, context, previous,
+                        question, definition, context, previous, identity,
                         status=IMPLEMENTATION_BLOCKED,
                         sample_n=resolution.usable_count,
                         key_metrics=dict(sorted(resolution.metrics.items())),
@@ -811,16 +950,25 @@ def run_canonical_question_cycle(
                     )
                     runner_failed = True
                 else:
+                    runner_started = time.perf_counter()
                     report = executor(runner_map[qid], question, population, context)
+                    runner_seconds = time.perf_counter() - runner_started
                     result = _normalise_report(
-                        question, definition, report, resolution, context, previous)
+                        question, definition, report, resolution, context, previous,
+                        identity)
                     runner_failed = result.status in {IMPLEMENTATION_BLOCKED, INVALID}
             except Exception as exc:
                 reason = f"{type(exc).__name__}:{exc}"
-                status = IMPLEMENTATION_BLOCKED if isinstance(
-                    exc, (SnapshotEscapeError, TypeError, ImportError, ModuleNotFoundError)) else INVALID
+                if isinstance(exc, MemoryError):
+                    # Resource exhaustion is neither a scientific verdict nor an
+                    # INVALID question: the next governed cycle may re-attempt on a
+                    # new snapshot. Keep the exact exception text for diagnosis.
+                    status = IMPLEMENTATION_BLOCKED
+                else:
+                    status = IMPLEMENTATION_BLOCKED if isinstance(
+                        exc, (SnapshotEscapeError, TypeError, ImportError, ModuleNotFoundError)) else INVALID
                 result = _base_result(
-                    question, definition, context, previous,
+                    question, definition, context, previous, identity,
                     status=status,
                     evidence_datasets=tuple(source.value for source in question.data_sources),
                     evidence_references=context.evidence_references(question),
@@ -860,8 +1008,48 @@ def run_canonical_question_cycle(
                 "scientific_owner_id": question.scientific_owner_id or None,
                 "implementation_status": result.implementation_status,
             },
+            "evaluation_identity": identity,
+            "stale_evaluation": (
+                None if classification != REQUIRES_REEVALUATION
+                else explain_staleness(
+                    ((previous_projection or {}).get("questions") or {})
+                    .get(qid, {}).get("result", {}).get("evaluation_identity"),
+                    identity,
+                )
+            ),
             "result": result.to_dict(),
         }
+        elapsed = time.perf_counter() - question_started
+        timing = {
+            "question_id": qid,
+            "elapsed_seconds": round(elapsed, 6),
+            "resolution_seconds": round(resolution_seconds, 6),
+            "population_seconds": round(population_seconds, 6),
+            "runner_seconds": round(runner_seconds, 6),
+            "datasets_opened": datasets_opened,
+            "records_materialized": sum(datasets_opened.values()),
+            "population_records": population_count,
+            "status": result.status,
+        }
+        question_timings.append(timing)
+        slowest = sorted(
+            question_timings, key=lambda item: item["elapsed_seconds"], reverse=True)[:5]
+        rss, peak = process_memory_bytes()
+        emit(
+            phase="QUESTION_COMPLETED", current_question_id=None,
+            questions_entered=question_index, questions_completed=question_index,
+            last_question=timing, slowest_questions=slowest,
+            cumulative_question_elapsed_seconds=round(sum(
+                item["elapsed_seconds"] for item in question_timings), 6),
+            process_rss_bytes=rss, process_peak_rss_bytes=peak,
+        )
+        # Do not retain question-local resolver/report graphs across intervening
+        # retained questions.  Shared immutable evidence remains owned by the
+        # cycle-scoped EvidenceSnapshot cache and is therefore still reused.
+        context.runner_artifacts.clear()
+        if classification not in {UNAFFECTED, ALIAS_OR_SUPERSEDED, UNRUNNABLE}:
+            resolution = population = report = None
+            gc.collect()
 
     if len(results) != EXPECTED_QUESTION_COUNT or set(results) != BASELINE_QUESTION_SET:
         raise CanonicalQuestionCycleError("ALL_70_ACCOUNTING_INVARIANT_FAILED")
@@ -883,6 +1071,9 @@ def run_canonical_question_cycle(
         "predecessor_snapshot_id": predecessor_snapshot_id,
         "registry_version": REGISTRY_VERSION,
         "registry_fingerprint": registry_fingerprint,
+        "evaluation_identity_fingerprint": evaluation_identity_fingerprint,
+        "stale_evaluation_question_ids": tuple(sorted(
+            qid for qid, value in plan.items() if value == REQUIRES_REEVALUATION)),
         "total_questions": EXPECTED_QUESTION_COUNT,
         "questions": entries,
     }
@@ -918,6 +1109,9 @@ def run_canonical_question_cycle(
         question_history_root=str(resolved_store.question_history_directory),
         planning=plan,
         question_deltas=deltas,
+        evaluation_identity_fingerprint=evaluation_identity_fingerprint,
+        stale_evaluation_question_ids=tuple(sorted(
+            qid for qid, value in plan.items() if value == REQUIRES_REEVALUATION)),
         result_ids={qid: results[qid].result_id for qid in BASELINE_QUESTION_IDS},
     )
     try:

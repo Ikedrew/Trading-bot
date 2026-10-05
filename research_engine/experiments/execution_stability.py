@@ -57,6 +57,11 @@ from research_engine.experiments.strategy_identity_expectancy import (
 from research_engine.experiments.x3_session_quality import rejection_interval
 
 
+# Governed evaluator semantic identity; see component_reward for the contract.
+EVALUATOR_SEMANTIC_VERSIONS = {
+    "run_x6": "x6_governed_execution_evidence_reuse_v2",
+}
+
 REPORT_FILENAME = "x6_execution_stability.json"
 ALPHA = 0.05
 MIN_OVERALL_RESULTS = 100
@@ -526,15 +531,28 @@ def build_x6_report(
     execution_results: list[dict[str, Any]],
     execution_contexts: list[dict[str, Any]],
     decision_traces: list[dict[str, Any]],
+    *,
+    governed_evidence: Any | None = None,
 ) -> dict[str, Any]:
     """Build the canonical X6 report from supplied producer evidence."""
     raw_results = list(execution_results)
     raw_contexts = list(execution_contexts)
     raw_traces = list(decision_traces)
     try:
-        evidence = build_governed_execution_evidence(
+        evidence = governed_evidence or build_governed_execution_evidence(
             raw_results, raw_contexts, raw_traces,
             require_decision_trace=True,
+        )
+        records_loaded = (
+            sum(
+                int(item.get(
+                    "input_records_including_malformed",
+                    item.get("input_records", 0),
+                ))
+                for item in evidence.component_accounting.values()
+            )
+            if governed_evidence is not None
+            else len(raw_results) + len(raw_contexts) + len(raw_traces)
         )
         overall_sufficient = (
             evidence.account_result_count >= MIN_OVERALL_RESULTS
@@ -702,7 +720,7 @@ def build_x6_report(
             "sample_size": evidence.account_result_count,
             "analysed_row_count": len(union),
             "source": "execution_results_v1 + execution_context + decision_trace_v1",
-            "records_loaded": len(raw_results) + len(raw_contexts) + len(raw_traces),
+            "records_loaded": records_loaded,
         },
         fingerprint=fingerprint,
         recommendation=classification if status == "COMPLETE" else "WAIT_FOR_EVIDENCE",
@@ -746,8 +764,11 @@ def run_x6(
     execution_results: list[dict[str, Any]] | None = None,
     execution_contexts: list[dict[str, Any]] | None = None,
     decision_traces: list[dict[str, Any]] | None = None,
+    governed_evidence: Any | None = None,
 ) -> dict[str, Any]:
     """Canonical X6 entry point over the shared governed evidence foundation."""
+    if governed_evidence is not None:
+        return build_x6_report([], [], [], governed_evidence=governed_evidence)
     results = _load_results() if execution_results is None else execution_results
     contexts = _load_context() if execution_contexts is None else execution_contexts
     traces = _load_decision_trace() if decision_traces is None else decision_traces

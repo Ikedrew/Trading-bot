@@ -41,14 +41,16 @@ def test_d_crosscut():
  assert "never defaulted to zero" in A.CROSS_MISSING
  assert A.CROSS_NULL.startswith("Sufficient") and "production" in A.CROSS_PROD
  assert A.SELF_STATUS_FORBIDDEN is True
-def test_e_l1_and_l4_implemented_only():
- assert _base() == (60, 10)
+def test_e_l1_l3_and_l4_implemented():
+ assert _base() == (len(_R) - len(_N), len(_N))
  assert "L1" not in _N
- assert set(A.TARGETS) - {"L1", "L4"} <= set(_N)
- assert "L6" not in _disc() and _R["L6"].runner_module == ""
+ assert "L3" not in _N
+ assert set(A.TARGETS) - {"L1", "L3", "L4"} <= set(_N)
+ assert "L6" in _disc()
+ assert _R["L6"].runner_module == "research_engine.experiments.learning_cycle_validation"
  assert _R["L1"].report_filename == "l1_pattern_degradation.json"
  assert _R["L1"].runner_function == "run_l1"
- assert _R["L3"].report_filename == "q1_component_reward.json"
+ assert _R["L3"].report_filename == "l3_architecture_assumption_validity.json"
 def test_f_l3_weight_contract_frozen():
  assert A.L3_WEIGHT_QUESTION.startswith("Does the historically applied")
  assert "canonical-opportunity grain" in A.L3_WEIGHT_QUESTION
@@ -95,7 +97,7 @@ def test_g_l3_weight_family_and_status():
  assert "forbidden for L3" in A.L3_WEIGHT_D1_BOUNDARY
  assert A.L3_WEIGHT_DECISION_LEDGER_NOT_AUTHORITY is True
  assert "no new authority is added here" in A.L3_WEIGHT_DECISION_LEDGER_RULE
-def test_h_l3_weight_deterministic_and_nonoperational():
+def test_h_l3_weight_deterministic_and_fail_closed():
  import math
  def _rank_avg(xs):
   order = sorted(range(len(xs)), key=lambda i: xs[i])
@@ -236,13 +238,13 @@ def test_k_l3_three_test_holm_and_completion_frozen():
  assert _status([True, False, False], [False, True, False]) == "BLOCKED"
  assert _status([False, False, False], [False, True, False]) == "WAITING_DATA"
  assert _status([False, False, False], [False, False, False]) == "EVALUATE"
- assert "L3" in _N
+ assert "L3" not in _N
  import importlib.util as _ilu
- assert _ilu.find_spec(A.FUTURE_L3["module"]) is None
- assert _R["L3"].runner_module == "research_engine.experiments.component_reward"
- assert _R["L3"].report_filename == "q1_component_reward.json"
+ assert _ilu.find_spec(A.FUTURE_L3["module"]) is not None
+ assert _R["L3"].runner_module == "research_engine.experiments.architecture_assumption_validity"
+ assert _R["L3"].report_filename == "l3_architecture_assumption_validity.json"
  assert _W["RW10"].implemented is False
- assert _base() == (60, 10)
+ assert _base() == (len(_R) - len(_N), len(_N))
 def test_l_l4_join_windows_and_grain_frozen():
  assert "market_context_v1.regime" in A.L4_JOIN_AUTHORITY
  assert "PRIMARY_HORIZON_SIMULATION" in A.L4_JOIN_AUTHORITY
@@ -306,5 +308,5 @@ def test_n_l4_status_completion_and_operation_frozen():
  assert _R["L4"].runner_module == A.FUTURE_L4["module"]
  assert _R["L4"].runner_function == "run_l4"
  assert _R["L4"].report_filename == "l4_market_behaviour_stability.json"
- assert _base() == (60, 10)
+ assert _base() == (len(_R) - len(_N), len(_N))
 

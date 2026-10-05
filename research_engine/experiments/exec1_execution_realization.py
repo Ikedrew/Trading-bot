@@ -161,13 +161,15 @@ def build_exec1_report(
     execution_results: list[dict[str, Any]],
     execution_contexts: list[dict[str, Any]],
     decision_traces: list[dict[str, Any]],
+    *,
+    governed_evidence: Any | None = None,
 ) -> dict[str, Any]:
     """Build the canonical EXEC1 report from the frozen three-source contract."""
     raw_results = list(execution_results)
     raw_contexts = list(execution_contexts)
     raw_traces = list(decision_traces)
     try:
-        evidence = build_governed_execution_evidence(
+        evidence = governed_evidence or build_governed_execution_evidence(
             raw_results, raw_contexts, raw_traces, require_decision_trace=True,
         )
         execute_rows = [row for row in evidence.observations if _is_execute(row)]
@@ -305,7 +307,17 @@ def build_exec1_report(
             "sample_size": evidence.account_result_count,
             "analysed_row_count": len(analytical),
             "source": "execution_results_v1 + execution_context + decision_trace_v1",
-            "records_loaded": len(raw_results) + len(raw_contexts) + len(raw_traces),
+            "records_loaded": (
+                sum(
+                    int(item.get(
+                        "input_records_including_malformed",
+                        item.get("input_records", 0),
+                    ))
+                    for item in evidence.component_accounting.values()
+                )
+                if governed_evidence is not None
+                else len(raw_results) + len(raw_contexts) + len(raw_traces)
+            ),
         },
         fingerprint=fingerprint,
         recommendation=classification if status == "COMPLETE" else "WAIT_FOR_EVIDENCE",

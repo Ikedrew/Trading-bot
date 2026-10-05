@@ -135,6 +135,7 @@ def test_optional_secondary_remains_non_blocking_and_scientifically_bounded():
 def test_runner_and_structural_state_advance_only_after_implementation():
     assert tuple(inspect.signature(run_exec1).parameters) == (
         "execution_results", "execution_contexts", "decision_traces",
+        "governed_evidence",
     )
     assert run_exec1.__module__ == (
         "research_engine.experiments.execution_protection_research"

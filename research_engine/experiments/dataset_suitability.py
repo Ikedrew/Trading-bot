@@ -15,6 +15,17 @@ from research_engine.registry.definition_validator import (
 )
 from research_engine.registry.research_question_registry import REGISTRY
 
+# Governed evaluator semantic identity; see component_reward for the contract.
+EVALUATOR_SEMANTIC_VERSIONS = {
+    "run_g1": "g1_bounded_metadata_record_validation_v2",
+}
+EVALUATOR_GOVERNANCE_CONTRACT_VERSIONS = {
+    "run_g1": {
+        "HD13_VERSION": A.HD13_VERSION,
+        "ADJUDICATION_VERSION": A.ADJUDICATION_VERSION,
+    },
+}
+
 REPORT_FILENAME = "g1_dataset_suitability.json"
 _REQ_STATUSES = frozenset(A.G1_REQUIREMENT_STATUSES)
 _QUESTION_STATUSES = frozenset(A.G1_QUESTION_STATUSES)
@@ -30,7 +41,12 @@ def _load_persisted(source: str) -> list[dict[str, Any]]:
     return list(get_default_source().read_dataset(physical))
 
 
-def _snapshot(datasets: Mapping[str, list[dict[str, Any]]] | None, as_of_utc: str | None) -> CurrentSnapshot:
+def _snapshot(
+    datasets: Mapping[str, list[dict[str, Any]]] | None,
+    as_of_utc: str | None,
+    *,
+    retain_record_payloads: bool | None = None,
+) -> CurrentSnapshot:
     definitions = build_definitions_from_registry(REGISTRY)
     from research_engine.control_plane.evidence_resolver import authoritative_evidence_schema
     sources = sorted(
@@ -39,7 +55,10 @@ def _snapshot(datasets: Mapping[str, list[dict[str, Any]]] | None, as_of_utc: st
         | {authority.dataset for definition in definitions.values() for authority in definition.evidence_authorities
            if authoritative_evidence_schema(authority.dataset) is not None}
     )
-    loaded = {source: list(datasets[source]) if datasets is not None and source in datasets else [] for source in sources}
+    loaded = {
+        source: datasets[source] if datasets is not None and source in datasets else []
+        for source in sources
+    }
     if datasets is None:
         loaded = {source: _load_persisted(source) for source in sources}
     return freeze_current_snapshot(
@@ -48,6 +67,14 @@ def _snapshot(datasets: Mapping[str, list[dict[str, Any]]] | None, as_of_utc: st
         definition_material={key: value.to_dict() for key, value in definitions.items()},
         contract_material={"HD13": A.HD13_VERSION, "snapshot": A.G1_SNAPSHOT_CONTRACT},
         as_of_utc=as_of_utc,
+        # The canonical-cycle datasets are already held by its verified reader.
+        # Retain only G1's authoritative counts/digests and defensively borrow
+        # one source at a time while requirements are evaluated.
+        retain_record_payloads=(
+            datasets is None
+            if retain_record_payloads is None
+            else retain_record_payloads
+        ),
     )
 
 
@@ -107,10 +134,12 @@ def assess_g1(snapshot: CurrentSnapshot) -> list[dict[str, Any]]:
     """Assess each canonical definition once without reading any G1 report/state."""
     definitions = build_definitions_from_registry(REGISTRY)
     health = validate_all_definitions(definitions)
-    evidence_snapshot = EvidenceSnapshot(datasets={source: snapshot.records(source) for source in snapshot.sources})
     assessments: list[dict[str, Any]] = []
     for question in REGISTRY:
         qid = question.id
+        # A question needs at most its declared sources.  A short-lived cache
+        # prevents G1 from retaining the complete record bodies of all sources.
+        evidence_snapshot = EvidenceSnapshot(loader=snapshot.records)
         resolution = resolve_question_evidence(question, evidence_snapshot)
         rows: list[dict[str, Any]] = []
         science = health[qid]

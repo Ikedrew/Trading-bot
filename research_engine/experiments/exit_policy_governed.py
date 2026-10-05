@@ -46,8 +46,21 @@ from research_engine.registry.exit_policy_adjudication import (
     SAMPLE_AND_READINESS_CONTRACT,
 )
 
+# Governed evaluator semantic identity; see component_reward for the contract.
 REPORT_SCHEMA_VERSION = "hd09_governed_exit_research_v1"
 INFERENCE_SCHEMA_VERSION = "hd09_clustered_cr0_normal_v1"
+EVALUATOR_SEMANTIC_VERSIONS = {
+    "run_ex2": "ex2_snapshot_scoped_population_closure_v2",
+}
+EVALUATOR_REPORT_SCHEMA_VERSIONS = {
+    "run_ex2": {
+        "REPORT_SCHEMA_VERSION": REPORT_SCHEMA_VERSION,
+        "INFERENCE_SCHEMA_VERSION": INFERENCE_SCHEMA_VERSION,
+    },
+}
+EVALUATOR_GOVERNANCE_CONTRACT_VERSIONS = {
+    "run_ex2": {"HD09_ADJUDICATION_VERSION": HD09_ADJUDICATION_VERSION},
+}
 TARGETS = ("EX1", "EX2", "EX9")
 TRAILING_POLICY_IDS = tuple(
     item["policy_id"] for item in CANDIDATE_POLICIES_V1
@@ -601,36 +614,43 @@ def run_ex1() -> dict[str, Any]:
 
 
 def run_ex2(*, governed_records=None) -> dict[str, Any]:
-    if governed_records is None:
-        raise GovernedAnalysisError("EX2_GOVERNED_POPULATION_REQUIRED")
-    from research_engine.control_plane.stage4_impl_population2 import enforce_exact_population
-    governed = enforce_exact_population("EX2", governed_records)
-    from research_engine.control_plane.stage4_ex2_l7_blocker_adjudication import adjudicate_ex2
+    # EX2 is a permanently closed historical question. CURRENT snapshot rows
+    # are not a replacement roster and must not be forced to equal the frozen
+    # historical denominator.
+    from research_engine.control_plane.stage4_ex2_l7_blocker_adjudication import (
+        EX2_POPULATION, adjudicate_ex2,
+    )
     audit = adjudicate_ex2()
     if audit["historically_unobserved"]:
         provenance = {
             "question_id": "EX2",
-            "runner_analytical_population": len(governed),
+            "runner_analytical_population": EX2_POPULATION,
+            "population_authority": "HISTORICAL_HD09_EX2_ROSTER",
+            "population_version": "stage4_impl_repairs_v2",
+            "current_snapshot_rows_not_substituted": len(governed_records or ()),
             "observation_gap_adjudication": audit,
             "readiness": {
                 "state": "HISTORICALLY_UNANSWERABLE",
                 "required_governed_coverage": 1.0,
-                "current_governed_coverage": audit["exact_authoritative_match"] / len(governed),
+                "historical_governed_coverage": audit["exact_authoritative_match"] / EX2_POPULATION,
                 "remaining_path_observations": audit["historically_unobserved"],
             },
         }
         provenance["analytical_digest"] = evidence_digest((provenance,))
         report = {
             "question_id": "EX2", "report_schema_version": REPORT_SCHEMA_VERSION,
-            "status": "BLOCKED", "epoch": "CURRENT",
+            "status": "BLOCKED", "epoch": "HISTORICAL",
             "scientific_state": "HISTORICALLY_UNANSWERABLE",
             "overall": {
                 "finding": "Contract-required ordered M5 OHLC exit paths were not historically retained for every governed lifecycle",
-                "sample_size": len(governed),
+                "sample_size": EX2_POPULATION,
                 "observation_gap": "ordered events_v1 M5 OHLC path from entry through exit",
             },
-            "dataset": {"source": "frozen governed EX2 lifecycle roster", "sample_size": len(governed)},
-            "fingerprint": {"analytical_digest": provenance["analytical_digest"], "epoch": "CURRENT"},
+            "failure_reason": "EX2_HISTORICAL_M5_PATHS_UNRECOVERABLE",
+            "missing_evidence": ["2844 governed lifecycle M5 OHLC paths were not retained"],
+            "confidence": "NOT_ESTIMABLE",
+            "dataset": {"source": "frozen historical governed EX2 lifecycle roster", "sample_size": EX2_POPULATION},
+            "fingerprint": {"analytical_digest": provenance["analytical_digest"], "epoch": "HISTORICAL"},
             "provenance": provenance,
             "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
@@ -638,8 +658,11 @@ def run_ex2(*, governed_records=None) -> dict[str, Any]:
         material.pop("generated", None)
         report["provenance"]["report_digest"] = evidence_digest((material,))
         return report
-    path, reproduction, candidate = load_governed_foundations(
-        governed_records=governed)
+    if governed_records is None:
+        raise GovernedAnalysisError("EX2_GOVERNED_POPULATION_REQUIRED")
+    from research_engine.control_plane.stage4_impl_population2 import enforce_exact_population
+    governed = enforce_exact_population("EX2", governed_records)
+    path, reproduction, candidate = load_governed_foundations(governed_records=governed)
     report = analyse_ex2(candidate, reproduction, path)
     report.setdefault("provenance", {})["runner_analytical_population"] = len(governed_records)
     return report

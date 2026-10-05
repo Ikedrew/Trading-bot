@@ -134,7 +134,9 @@ def test_req1_q1_component_reward_belongs_to_d1():
     assert canonical_report_owner(D1_ARTIFACT) == "D1"
     assert canonical_report_owner("analysis/reports/q1_component_reward.json") == "D1"
     assert canonical_report_owner("analysis\\reports\\q1_component_reward.json") == "D1"
-    assert declared_co_claimants(D1_ARTIFACT) == ("L3",)
+    # L3's later Pass-A ownership repair removed the stale registry co-claim;
+    # the historical D1 denial contract remains authoritative.
+    assert declared_co_claimants(D1_ARTIFACT) == ()
 
     decision = resolve_report_ownership(D1_ARTIFACT, "D1")
     assert decision.allowed is True
@@ -192,7 +194,7 @@ def test_req3_d1_canonical_resolution_succeeds_for_its_current_report(rw1_report
         assert validity == ReportValidity.VALID_CURRENT, identity
 
 
-def test_req4_l3_is_missing_and_fail_closed_when_only_d1_report_exists(rw1_reports):
+def test_req4_l3_does_not_inherit_when_only_d1_report_exists(rw1_reports):
     state = build_question_state("L3", reports_dir=rw1_reports, evidence_source={})
 
     assert state.report_validity == ReportValidity.MISSING
@@ -203,7 +205,7 @@ def test_req4_l3_is_missing_and_fail_closed_when_only_d1_report_exists(rw1_repor
     assert state.authoritative_report is None
     assert state.report_history_count == 0
     assert state.state_status != "COMPLETE"
-    assert any(FAIL_CLOSED_STATE in warning for warning in state.warnings)
+    assert all(FAIL_CLOSED_STATE not in warning for warning in state.warnings)
 
     # The artifact is not even loaded for L3.
     report, path = load_report_for_question("L3", D1_ARTIFACT, reports_dir=rw1_reports)
@@ -583,16 +585,16 @@ def test_req17_l1_is_now_structurally_operational():
     assert "L1" in STRUCTURALLY_OPERATIONAL_IDS
 
 
-def test_req18_l3_remains_structurally_non_operational():
+def test_req18_l3_later_pass_a_implementation_preserves_rw1_separation():
     entry = MASTER_REPAIR_LEDGER["L3"]
-    assert entry.structurally_operational is False
-    assert entry.to_dict()["structurally_operational"] is False
-    assert entry.gates.report_ownership == "FAIL"
-    assert entry.primary_blocker_category == "runner mismatch"
-    assert entry.proposed_repair_wave == "RW10"
-    assert entry.repair_actions
-    assert "L3" in STRUCTURALLY_NON_OPERATIONAL_IDS
-    assert "L3" not in STRUCTURALLY_OPERATIONAL_IDS
+    assert entry.structurally_operational is True
+    assert entry.to_dict()["structurally_operational"] is True
+    assert entry.gates.report_ownership == "PASS"
+    assert entry.primary_blocker_category == ""
+    assert entry.proposed_repair_wave == ""
+    assert not entry.repair_actions
+    assert "L3" not in STRUCTURALLY_NON_OPERATIONAL_IDS
+    assert "L3" in STRUCTURALLY_OPERATIONAL_IDS
 
 
 def test_req19_d1_becomes_structurally_operational():
@@ -646,9 +648,7 @@ def test_req23_no_other_question_changes_structurally_operational_state():
     assert wave.implemented is True
     assert wave.implementation_evidence
     assert set(wave.unlocked_not_yet_operational) == {"E3", "S1", "R1", "R2", "L1", "L3"}
-    for qid in {"L3"}:
-        assert not MASTER_REPAIR_LEDGER[qid].structurally_operational, qid
-    for qid in {"E3", "S1", "R1", "R2", "L1"}:
+    for qid in {"E3", "S1", "R1", "R2", "L1", "L3"}:
         assert MASTER_REPAIR_LEDGER[qid].structurally_operational, qid
 
 
@@ -712,10 +712,10 @@ def test_req25_multi_account_and_scientific_contracts_are_unchanged():
         assert gates.epoch_contract == "PASS", qid
         assert gates.metric_contract == "PASS", qid
 
-    # No registry declaration for the RW1 questions was edited to achieve the repair.
+    # D1/E2 remain unchanged by RW1; L3 retains the later Pass-A owner/runner.
     expected = {
         "D1": ("research_engine.experiments.component_reward", "run", D1_ARTIFACT, ("Q1",)),
-        "L3": ("research_engine.experiments.component_reward", "run", D1_ARTIFACT, ("Q1",)),
+        "L3": ("research_engine.experiments.architecture_assumption_validity", "run_l3", "l3_architecture_assumption_validity.json", ("Q1",)),
         "E2": ("research_engine.experiments.legacy_canonical", "run_q05", E2_ARTIFACT, ("Q5", "Q24")),
         "L1": ("research_engine.experiments.pattern_degradation", "run_l1", "l1_pattern_degradation.json", ()),
         "E3": ("research_engine.experiments.strategy_expectancy", "run_e3", "e3_strategy_family_expectancy.json", ()),

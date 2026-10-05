@@ -109,6 +109,30 @@ def _population(*, reliable=True, decisions=40, accounts=3):
     return results, contexts, traces
 
 
+def test_trusted_immutable_execution_inputs_are_scientifically_equivalent():
+    results, contexts, traces = _population(decisions=12, accounts=2)
+    defensive = build_governed_execution_evidence(
+        results, contexts, traces, require_decision_trace=True)
+    trusted = build_governed_execution_evidence(
+        results, contexts, traces, require_decision_trace=True,
+        trusted_immutable_inputs=True)
+
+    assert trusted.account_result_count == defensive.account_result_count
+    assert trusted.distinct_decision_count == defensive.distinct_decision_count
+    assert trusted.clusters == defensive.clusters
+    assert trusted.component_accounting == defensive.component_accounting
+    assert trusted.exclusion_accounting == defensive.exclusion_accounting
+    assert trusted.provenance == defensive.provenance
+    assert [item.result_fields for item in trusted.observations] == [
+        item.result_fields for item in defensive.observations
+    ]
+    cached_report = build_x6_report([], [], [], governed_evidence=trusted)
+    defensive_report = build_x6_report(results, contexts, traces)
+    cached_report.pop("generated", None)
+    defensive_report.pop("generated", None)
+    assert cached_report == defensive_report
+
+
 def _state(tmp_path, report, evidence):
     if report is not None:
         (tmp_path / REPORT_FILENAME).write_text(json.dumps(report), encoding="utf-8")

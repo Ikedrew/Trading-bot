@@ -42,7 +42,7 @@ def _recs(n, key="canonical_opportunity_id"):
     return [{key: f"OPP-{i:06d}"} for i in range(n)]
 @pytest.mark.parametrize("qid,n,forbidden", [
     ("R1", 635, 10803), ("R2", 635, 10803),
-    ("G2", 261, 22521), ("EX2", 8760, 9045),
+    ("EX2", 8760, 9045),
 ])
 def test_01_exact_governed_population_admitted(qid, n, forbidden):
     assert len(enforce_exact_population(qid, _recs(n))) == n
@@ -52,8 +52,11 @@ def test_02_r1_r2_cannot_fall_back_to_10803():
             enforce_exact_population(qid, _recs(10803))
         with pytest.raises(R.Stage4RepairError, match="POPULATION_MISMATCH"):
             enforce_exact_population(qid, _recs(634))
-def test_03_g2_cannot_consume_22521_denominator():
-    with pytest.raises(R.Stage4RepairError, match="FORBIDDEN_RUNNER_POPULATION"):
+def test_03_g2_current_exact_gate_is_retired_for_all_denominators():
+    assert R.HISTORICAL_GOVERNED_USABLE["G2"] == 261
+    with pytest.raises(R.Stage4RepairError, match="CURRENT_EXACT_POPULATION_RETIRED:G2"):
+        enforce_exact_population("G2", _recs(261))
+    with pytest.raises(R.Stage4RepairError, match="CURRENT_EXACT_POPULATION_RETIRED:G2"):
         enforce_exact_population("G2", _recs(22521))
 def test_04_ex2_cannot_reconstruct_9045_event_rows():
     with pytest.raises(R.Stage4RepairError, match="FORBIDDEN_RUNNER_POPULATION"):
@@ -92,14 +95,15 @@ def test_09_ambiguous_l3_d1_authority_fails_closed():
     meta = resolve_l3_ownership("L3", R.L3_OWNED_REPORT, {"question_id": "D1"})
     assert meta["allowed"] is False
     assert resolve_l3_ownership("L3", "")["allowed"] is False
-def test_10_l3_v1_is_preserved_and_v2_has_independent_authority():
+def test_10_l3_active_registry_and_successor_use_independent_authority():
     import importlib.util as _ilu
     from research_engine.registry.learning_adaptation_adjudication import (
         FORBIDDEN_L3,
     )
     from research_engine.registry.research_question_registry import REGISTRY_BY_ID
     from research_engine.control_plane.stage4_registry_successor import REGISTRY_V2_BY_ID
-    assert REGISTRY_BY_ID["L3"].report_filename == R.D1_OWNED_REPORT
+    assert REGISTRY_BY_ID["L3"].report_filename == R.L3_OWNED_REPORT
+    assert REGISTRY_BY_ID["L3"].runner_function == "run_l3"
     assert FORBIDDEN_L3 == (R.D1_OWNED_REPORT,)
     assert _ilu.find_spec("research_engine.experiments.architecture_assumption_validity") is not None
     assert REGISTRY_V2_BY_ID["L3"].report_filename == R.L3_OWNED_REPORT
@@ -110,9 +114,11 @@ def test_10_l3_v1_is_preserved_and_v2_has_independent_authority():
     # L3's own identity is reserved and remains uniquely resolvable.
     assert resolve_l3_ownership("L3", R.L3_OWNED_REPORT)["allowed"] is True
     assert resolve_l3_ownership("L6", R.L3_OWNED_REPORT)["allowed"] is False
-    # Governed L3 population accounting (Gate 1 usable = 95) is enforced.
-    assert len(enforce_exact_population("L3", _recs(95))) == 95
-    with pytest.raises(R.Stage4RepairError, match="POPULATION_MISMATCH"):
+    # Gate-1 n=95 remains historical assurance and is not a CURRENT selector.
+    assert R.HISTORICAL_GOVERNED_USABLE["L3"] == 95
+    with pytest.raises(R.Stage4RepairError, match="CURRENT_EXACT_POPULATION_RETIRED:L3"):
+        enforce_exact_population("L3", _recs(95))
+    with pytest.raises(R.Stage4RepairError, match="CURRENT_EXACT_POPULATION_RETIRED:L3"):
         enforce_exact_population("L3", _recs(96))
 
 def test_11_l6_governed_historical_runner_exists():

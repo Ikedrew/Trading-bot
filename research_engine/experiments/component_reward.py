@@ -31,6 +31,15 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+# Governed evaluator semantic identity.  Bump ONLY when this evaluator's
+# scientific interpretation of the same immutable snapshot changes (population
+# semantics, admissibility, blocker attribution, readiness).  A bump makes every
+# published result stale and eligible for governed re-evaluation on the same
+# snapshot; it never implies that new market evidence exists.
+EVALUATOR_SEMANTIC_VERSIONS = {
+    "run": "d1_component_reward_governed_attribution_v2",
+}
+
 MINIMUM_GOVERNED_SAMPLE = 50
 
 
@@ -684,6 +693,23 @@ def run() -> dict:
             "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
         },
     )
+
+    if conflicts:
+        duplicate_decisions = len(result.duplicate_decision_opportunities)
+        duplicate_outcomes = len(result.duplicate_outcome_opportunities)
+        report["failure_reason"] = (
+            "D1_CANONICAL_OPPORTUNITY_ID_CONFLICT:"
+            f"duplicate_decision_opportunities={duplicate_decisions}:"
+            f"duplicate_outcome_opportunities={duplicate_outcomes}"
+        )
+        report["key_metrics"] = {
+            "duplicate_decision_opportunity_count": duplicate_decisions,
+            "duplicate_outcome_opportunity_count": duplicate_outcomes,
+            "identity_contract": "canonical_opportunity_id",
+        }
+        report["missing_evidence"] = [
+            "one unambiguous decision and primary outcome per canonical_opportunity_id"
+        ]
 
     # Persist
     try:

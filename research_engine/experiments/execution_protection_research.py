@@ -62,6 +62,11 @@ from research_engine.control_plane.evidence_resolver import (
     normalise_evidence_record,
 )
 
+# Governed evaluator semantic identity; see component_reward for the contract.
+EVALUATOR_SEMANTIC_VERSIONS = {
+    "run_exec1": "exec1_governed_execution_evidence_reuse_v2",
+}
+
 logger = logging.getLogger(__name__)
 
 _MIN_SAMPLE = 30   # overall status gate (engine convention)
@@ -783,10 +788,13 @@ def run_exec1(
     execution_results: list[dict[str, Any]] | None = None,
     execution_contexts: list[dict[str, Any]] | None = None,
     decision_traces: list[dict[str, Any]] | None = None,
+    governed_evidence: Any | None = None,
 ) -> dict[str, Any]:
     """Canonical EXEC1 entry point over governed three-component evidence."""
     from research_engine.experiments.exec1_execution_realization import build_exec1_report
 
+    if governed_evidence is not None:
+        return build_exec1_report([], [], [], governed_evidence=governed_evidence)
     results = _load_results() if execution_results is None else execution_results
     contexts = _load_context() if execution_contexts is None else execution_contexts
     traces = _load_decision_trace() if decision_traces is None else decision_traces

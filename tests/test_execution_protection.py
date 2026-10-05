@@ -49,6 +49,8 @@ def _fake_result(
         "decision_id": f"DEC-{correlation_id}",
         "canonical_opportunity_id": f"OPP-{correlation_id}",
         "entity_id": f"entity_{correlation_id}",
+        "account_id": "METAQUOTES",
+        "order_ticket": f"ORDER-{correlation_id}",
         "symbol": symbol,
         "result_ok": result_ok,
         "retcode": retcode,
@@ -73,6 +75,7 @@ def _fake_context(
     latency_ms: float = 5.0,
     drawdown_pct: float = 2.0,
     open_positions: int = 3,
+    spread_atr_ratio: float | None = None,
 ) -> dict[str, Any]:
     return {
         "schema_version": "execution_context_v1",
@@ -82,7 +85,7 @@ def _fake_context(
         "market_access": {
             "session_state": session_state,
             "spread": spread,
-            "spread_atr_ratio": None,
+            "spread_atr_ratio": spread_atr_ratio,
             "bid": 1.0995,
             "ask": 1.1005,
         },
@@ -159,12 +162,20 @@ def _fake_decision_trace(
     canonical_opportunity_id: str = "OPP-COR-0001",
     ev: float = 0.5,
     symbol: str = "EURUSD",
+    correlation_id: str | None = None,
+    action: str = "EXECUTE",
 ) -> dict[str, Any]:
+    correlation = correlation_id or canonical_opportunity_id.removeprefix("OPP-")
     return {
+        "schema_version": "decision_trace_v1",
+        "data_epoch": "CURRENT",
+        "correlation_id": correlation,
         "canonical_opportunity_id": canonical_opportunity_id,
+        "decision_id": f"DEC-{correlation}",
         "ev": ev,
         "symbol": symbol,
         "entity_id": f"e_{canonical_opportunity_id}",
+        "action": action,
     }
 
 
@@ -390,26 +401,38 @@ class TestX3:
         assert r["overall"]["n"] == 0
 
     def test_complete_session_quality(self, monkeypatch):
-        ctx = [_fake_context(correlation_id=f"COR-{i:04d}",
-                             session_state="LONDON")
-               for i in range(35)]
-        res = [_fake_result(correlation_id=f"COR-{i:04d}",
-                            slippage=0.1 + i * 0.01)
-               for i in range(35)]
+        ctx = [
+            _fake_context(
+                correlation_id=f"COR-{session}-{i:04d}", session_state=session,
+            )
+            for session in ("LONDON", "NY") for i in range(35)
+        ]
+        res = [
+            _fake_result(
+                correlation_id=f"COR-{session}-{i:04d}",
+                slippage=(0.1 if session == "LONDON" else 0.4) + i * 0.01,
+            )
+            for session in ("LONDON", "NY") for i in range(35)
+        ]
         _patch_loaders(monkeypatch, results=res, contexts=ctx)
         from research_engine.experiments.execution_protection_research import run_x3
         r = run_x3()
         assert r["status"] == "COMPLETE"
-        assert r["overall"]["sessions_analysed"] >= 1
-        assert "per_session_slippage" in r["overall"]
+        assert r["overall"]["evaluated_primary_sessions"] == ["LONDON", "NY"]
+        assert set(r["overall"]["sessions"]) == {"LONDON", "NY"}
 
     def test_ambiguous_multiplicity_excluded(self, monkeypatch):
-        ctx = [_fake_context(correlation_id="COR-0001") for _ in range(2)]
+        ctx = [
+            _fake_context(correlation_id="COR-0001", session_state="LONDON"),
+            _fake_context(correlation_id="COR-0001", session_state="NY"),
+        ]
         res = [_fake_result(correlation_id="COR-0001")]
         _patch_loaders(monkeypatch, results=res, contexts=ctx)
         from research_engine.experiments.execution_protection_research import run_x3
         r = run_x3()
-        assert r["overall"]["ambiguous"] >= 1
+        assert r["overall"]["evidence_accounting"]["join_and_identity_exclusions"][
+            "ambiguous_conflicting_context"
+        ] >= 1
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -487,34 +510,72 @@ class TestExec1:
         results = [_fake_result(correlation_id=f"COR-{i:04d}",
                                 result_ok=(i % 3 != 0))
                    for i in range(35)]
-        _patch_loaders(monkeypatch, results=results)
+        contexts = [
+            _fake_context(
+                correlation_id=f"COR-{i:04d}", spread_atr_ratio=0.05 + i * 0.01,
+            ) for i in range(35)
+        ]
+        traces = [
+            _fake_decision_trace(
+                canonical_opportunity_id=f"OPP-COR-{i:04d}",
+                correlation_id=f"COR-{i:04d}",
+            ) for i in range(35)
+        ]
+        _patch_loaders(monkeypatch, results=results, contexts=contexts, dt=traces)
         from research_engine.experiments.execution_protection_research import run_exec1
         r = run_exec1()
         assert r["status"] == "COMPLETE"
         assert r["overall"]["n"] == 35
-        assert r["overall"]["success_rate"] is not None
+        assert r["overall"]["descriptive_execution_reliability"][
+            "successful_realization_rate"
+        ] is not None
 
     def test_context_join_when_available(self, monkeypatch):
         results = [_fake_result(correlation_id=f"COR-{i:04d}",
-                                slippage=0.1 + i * 0.01)
+                                slippage=0.1 + i * 0.01,
+                                result_ok=(i % 2 == 0))
                    for i in range(35)]
         contexts = [_fake_context(correlation_id=f"COR-{i:04d}",
-                                   spread=1.0 + i * 0.1)
+                                   spread=1.0 + i * 0.1,
+                                   spread_atr_ratio=0.05 + i * 0.01)
                     for i in range(35)]
-        _patch_loaders(monkeypatch, results=results, contexts=contexts)
+        traces = [
+            _fake_decision_trace(
+                canonical_opportunity_id=f"OPP-COR-{i:04d}",
+                correlation_id=f"COR-{i:04d}",
+            ) for i in range(35)
+        ]
+        _patch_loaders(monkeypatch, results=results, contexts=contexts, dt=traces)
         from research_engine.experiments.execution_protection_research import run_exec1
         r = run_exec1()
         assert r["status"] == "COMPLETE"
-        assert "context_join" in r["overall"]
+        assert r["overall"]["primary_association"]["exposure"] == (
+            "execution_context.market_access.spread_atr_ratio"
+        )
 
-    def test_per_symbol(self, monkeypatch):
-        results = [_fake_result(symbol="EURUSD") for _ in range(20)] + \
-                  [_fake_result(symbol="GBPUSD") for _ in range(5)]
-        _patch_loaders(monkeypatch, results=results)
+    def test_failure_counts_are_descriptive_not_the_exposure(self, monkeypatch):
+        results = [
+            _fake_result(
+                correlation_id=f"COR-{i:04d}", result_ok=(i % 2 == 0),
+            ) for i in range(35)
+        ]
+        contexts = [
+            _fake_context(
+                correlation_id=f"COR-{i:04d}", spread_atr_ratio=0.05 + i * 0.01,
+            ) for i in range(35)
+        ]
+        traces = [
+            _fake_decision_trace(
+                canonical_opportunity_id=f"OPP-COR-{i:04d}",
+                correlation_id=f"COR-{i:04d}",
+            ) for i in range(35)
+        ]
+        _patch_loaders(monkeypatch, results=results, contexts=contexts, dt=traces)
         from research_engine.experiments.execution_protection_research import run_exec1
         r = run_exec1()
-        assert "EURUSD" in r["overall"]["per_symbol"]
-        assert "GBPUSD" not in r["overall"]["per_symbol"]
+        reliability = r["overall"]["descriptive_execution_reliability"]
+        assert reliability["failures"] == 17
+        assert reliability["inferential_exposure"] is False
 
 
 # ═══════════════════════════════════════════════════════════════════

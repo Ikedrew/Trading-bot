@@ -10,8 +10,9 @@ from typing import Any, Mapping
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json, fingerprint
 
 
-QUESTION_RESULT_SCHEMA = "canonical_question_result_v1"
+QUESTION_RESULT_SCHEMA = "canonical_question_result_v2"
 QUESTION_CYCLE_SCHEMA = "canonical_question_cycle_v1"
+LEGACY_QUESTION_RESULT_SCHEMAS = ("canonical_question_result_v1",)
 DEFAULT_QUESTION_CYCLE_DIRECTORY = Path("reports/research/questions/_canonical_cycle")
 
 
@@ -73,11 +74,23 @@ class CanonicalQuestionResult:
     runner: str | None = None
     runner_version: str | None = None
     failure_reason: str | None = None
+    # Governed evaluation identity.  Absent (None) on results published before
+    # governed evaluator identity existed; those remain byte-for-byte
+    # verifiable under their original identity material.
+    evaluation_identity: dict[str, Any] | None = None
+    evaluation_identity_digest: str | None = None
     result_id: str = ""
 
     def identity_material(self) -> dict[str, Any]:
         value = asdict(self)
         value.pop("result_id", None)
+        if value.get("evaluation_identity") is None and value.get(
+                "evaluation_identity_digest") is None:
+            # Legacy result: reproduce its original identity material exactly so
+            # historical result_ids remain verifiable and no historical payload
+            # needs mutation.
+            value.pop("evaluation_identity", None)
+            value.pop("evaluation_identity_digest", None)
         return value
 
     def derived_id(self) -> str:
@@ -92,16 +105,34 @@ class CanonicalQuestionResult:
         object.__setattr__(self, "result_id", expected)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"result_schema": QUESTION_RESULT_SCHEMA, **asdict(self)}
+        payload = asdict(self)
+        # A legacy result is re-emitted under its original schema so historical
+        # payloads stay byte-identical on disk; it is never upgraded in place.
+        schema = (
+            LEGACY_QUESTION_RESULT_SCHEMAS[0]
+            if payload.get("evaluation_identity") is None
+            and payload.get("evaluation_identity_digest") is None
+            else QUESTION_RESULT_SCHEMA
+        )
+        return {"result_schema": schema, **payload}
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> "CanonicalQuestionResult":
-        if value.get("result_schema") != QUESTION_RESULT_SCHEMA:
+        schema = value.get("result_schema")
+        if schema not in (QUESTION_RESULT_SCHEMA, *LEGACY_QUESTION_RESULT_SCHEMAS):
             raise QuestionCycleStateError("UNKNOWN_QUESTION_RESULT_SCHEMA")
         fields = dict(value)
         fields.pop("result_schema", None)
         for name in ("evidence_datasets", "evidence_references", "limitations", "missing_evidence"):
             fields[name] = tuple(fields.get(name) or ())
+        # Deterministic migration: a legacy record simply has no governed
+        # evaluation identity.  It is not invalidated merely for lacking the
+        # field; it is evaluated against current identity by the invalidation
+        # rule.
+        if fields.get("evaluation_identity") is None:
+            fields["evaluation_identity"] = None
+        if fields.get("evaluation_identity_digest") is None:
+            fields["evaluation_identity_digest"] = None
         return cls(**fields)
 
 
@@ -137,6 +168,11 @@ class CanonicalQuestionCycleResult:
     planning: dict[str, str] = field(default_factory=dict)
     question_deltas: dict[str, dict[str, Any]] = field(default_factory=dict)
     result_ids: dict[str, str] = field(default_factory=dict)
+    # Governed evaluation identity of this cycle.  Distinct from the evidence
+    # snapshot identity above: the same snapshot may legitimately be re-read by a
+    # changed evaluator.
+    evaluation_identity_fingerprint: str = ""
+    stale_evaluation_question_ids: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {"cycle_schema": QUESTION_CYCLE_SCHEMA, **asdict(self)}
@@ -147,7 +183,8 @@ class CanonicalQuestionCycleResult:
             raise QuestionCycleStateError("UNKNOWN_QUESTION_CYCLE_SCHEMA")
         fields = dict(value)
         fields.pop("cycle_schema", None)
-        for name in ("changed_question_ids", "unchanged_question_ids", "failed_question_ids"):
+        for name in ("changed_question_ids", "unchanged_question_ids", "failed_question_ids",
+                     "stale_evaluation_question_ids"):
             fields[name] = tuple(fields.get(name) or ())
         result = cls(**fields)
         if not result.cycle_id.startswith("QCYCLE-") or result.total_questions != 70:
@@ -168,7 +205,24 @@ class QuestionCycleStore:
     def cycle_path(self, cycle_id: str) -> Path:
         return self.cycles_directory / f"{cycle_id}.json"
 
-    def question_result_path(self, question_id: str, snapshot_id: str) -> Path:
+    def question_result_path(
+        self, question_id: str, snapshot_id: str,
+        evaluation_identity_digest: str | None = None,
+    ) -> Path:
+        """History path for one governed result.
+
+        Results are keyed by question, evidence snapshot AND evaluation
+        identity.  A re-evaluation of the *same* immutable snapshot under a
+        changed evaluator is a new governed result and must not overwrite or
+        collide with the historical one; the evaluation-identity digest
+        separates them.  Legacy paths (no digest) remain readable.
+        """
+        directory = self.question_history_directory / question_id
+        if not evaluation_identity_digest:
+            return directory / f"{snapshot_id}.json"
+        return directory / f"{snapshot_id}__{evaluation_identity_digest}.json"
+
+    def legacy_question_result_path(self, question_id: str, snapshot_id: str) -> Path:
         return self.question_history_directory / question_id / f"{snapshot_id}.json"
 
     def projection_path(self, cycle_id: str) -> Path:
@@ -199,24 +253,41 @@ class QuestionCycleStore:
         return value
 
     def save_question_result(self, result: CanonicalQuestionResult) -> Path:
-        path = self.question_result_path(result.question_id, result.snapshot_id)
+        path = self.question_result_path(
+            result.question_id, result.snapshot_id,
+            result.evaluation_identity_digest or None,
+        )
         immutable_json(path, result.to_dict())
         return path
 
     def load_question_result(
         self, question_id: str, snapshot_id: str,
+        evaluation_identity_digest: str | None = None,
     ) -> CanonicalQuestionResult | None:
-        path = self.question_result_path(question_id, snapshot_id)
-        if not path.exists():
-            return None
-        try:
-            value = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, TypeError, ValueError) as exc:
-            raise QuestionCycleStateError("QUESTION_RESULT_HISTORY_UNREADABLE") from exc
-        result = CanonicalQuestionResult.from_dict(value)
-        if result.question_id != question_id or result.snapshot_id != snapshot_id:
-            raise QuestionCycleStateError("QUESTION_RESULT_HISTORY_IDENTITY_MISMATCH")
-        return result
+        """Load one immutable result.
+
+        When an evaluation-identity digest is supplied, the governed
+        identity-specific result is preferred; a legacy (digest-less) result is
+        accepted only as an explicit legacy fallback so historical queries keep
+        working without ever being silently treated as current.
+        """
+        candidates = []
+        if evaluation_identity_digest:
+            candidates.append(self.question_result_path(
+                question_id, snapshot_id, evaluation_identity_digest))
+        candidates.append(self.legacy_question_result_path(question_id, snapshot_id))
+        for path in candidates:
+            if not path.exists():
+                continue
+            try:
+                value = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, TypeError, ValueError) as exc:
+                raise QuestionCycleStateError("QUESTION_RESULT_HISTORY_UNREADABLE") from exc
+            result = CanonicalQuestionResult.from_dict(value)
+            if result.question_id != question_id or result.snapshot_id != snapshot_id:
+                raise QuestionCycleStateError("QUESTION_RESULT_HISTORY_IDENTITY_MISMATCH")
+            return result
+        return None
 
     def load_projection(self, cycle_id: str) -> dict[str, Any]:
         path = self.projection_path(cycle_id)
@@ -243,6 +314,7 @@ __all__ = [
     "CanonicalQuestionCycleResult",
     "CanonicalQuestionResult",
     "DEFAULT_QUESTION_CYCLE_DIRECTORY",
+    "LEGACY_QUESTION_RESULT_SCHEMAS",
     "QUESTION_CYCLE_SCHEMA",
     "QUESTION_RESULT_SCHEMA",
     "QuestionCycleStateError",
