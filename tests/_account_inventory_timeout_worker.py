@@ -29,7 +29,7 @@ from tests._account_fake_mt5 import FakeMT5
 
 
 def _inventory_times_out(_command, **kwargs):
-    raise subprocess.TimeoutExpired('powershell.exe', kwargs.get('timeout', 10))
+    raise terminal.TerminalInventoryTimeout(terminal.TERMINAL_INVENTORY_TIMEOUT)
 
 
 # Mirrors the healthy broker view: suffixed names for the explicit symbol map,
@@ -41,7 +41,7 @@ TICK_VALUE = {'METAQUOTES': 1.0, 'ADMIRALS': 2.0, 'VANTAGE': 4.0}
 def main():
     payload = json.load(sys.stdin)
     # The incident: the terminal inventory query never returns in budget.
-    terminal.subprocess.run = _inventory_times_out
+    terminal._native_terminal_processes = _inventory_times_out
     config = AccountConfig(**payload['account'])
     fake = FakeMT5(config, suffix=SUFFIX.get(config.account_id, ''))
     tick_value = TICK_VALUE.get(config.account_id, 1.0)

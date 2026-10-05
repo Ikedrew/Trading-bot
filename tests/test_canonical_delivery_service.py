@@ -406,6 +406,9 @@ def test_expired_credentials_retry_durably_while_healthy_row_progresses(tmp_path
 
     box = CanonicalDeliveryOutbox(
         tmp_path / "outbox.sqlite3", canonical_bucket="test-bucket",
+        # Equal timestamps exercise the documented outbox_id tie-break rather
+        # than assuming enqueue order determines background delivery order.
+        clock=lambda: "2026-10-02T12:00:00+00:00",
     )
     blocked = box.enqueue(
         dataset="events",
@@ -430,7 +433,8 @@ def test_expired_credentials_retry_durably_while_healthy_row_progresses(tmp_path
 
     def observe_healthy_delivery(*args, **kwargs):
         result = original_run_once(*args, **kwargs)
-        if box.get(healthy.outbox_id).delivery_state is DeliveryState.ACKNOWLEDGED:
+        if (box.get(healthy.outbox_id).delivery_state is DeliveryState.ACKNOWLEDGED
+                and box.get(blocked.outbox_id).delivery_state is DeliveryState.RETRYABLE_FAILURE):
             delivered.set()
         return result
 

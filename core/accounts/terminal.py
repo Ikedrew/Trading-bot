@@ -3,11 +3,11 @@
 from collections import namedtuple
 from contextlib import contextmanager
 import hashlib
-import json
 import os
 from pathlib import Path
 import subprocess
 import tempfile
+import time
 
 from .config import terminal_key
 
@@ -70,38 +70,78 @@ def running_terminal_processes(*, timeout: float | None = None) -> list[Terminal
     if os.name != 'nt':
         return []
     budget = terminal_inventory_timeout() if timeout is None else float(timeout)
-    # Constant command, no interpolated account values, secrets or command lines.
-    command = ('@(Get-Process terminal64 -ErrorAction SilentlyContinue | '
-               'ForEach-Object { $p = $_.Path; if ($p) { '
-               '[pscustomobject]@{ Id = $_.Id; Path = $p } } }) | ConvertTo-Json -Compress')
+    # The process inventory is local OS work. Starting PowerShell per pinned
+    # worker adds seconds before the authoritative MT5 attach/identity checks.
     try:
-        result = subprocess.run(
-            ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', command],
-            capture_output=True, text=True, timeout=budget, creationflags=hidden_process_flags(),
-        )
-    except subprocess.TimeoutExpired:
-        # Host-load budget exhaustion: an inventory timeout must NEVER be
-        # reported as "no terminal is running". Callers treat this as
-        # inconclusive and keep the authoritative attach/identity check as the
-        # decider (see terminal_process_inventory).
-        raise TerminalInventoryTimeout(TERMINAL_INVENTORY_TIMEOUT) from None
-    if result.returncode:
-        raise TerminalInventoryError(TERMINAL_INVENTORY_UNAVAILABLE)
-    try:
-        data = json.loads(result.stdout or '[]')
-    except (TypeError, ValueError):
+        return _native_terminal_processes(budget)
+    except TerminalInventoryError:
+        raise
+    except (OSError, ValueError, TypeError):
         raise TerminalInventoryError(TERMINAL_INVENTORY_UNAVAILABLE) from None
-    if isinstance(data, dict):
-        data = [data]
+
+
+def _native_terminal_processes(budget: float) -> list[TerminalProcess]:
+    """Read PIDs and executable paths directly, retaining duplicate terminals."""
+    import ctypes
+    from ctypes import wintypes
+
+    class ProcessEntry(ctypes.Structure):
+        _fields_ = [('dwSize', wintypes.DWORD), ('cntUsage', wintypes.DWORD),
+                    ('th32ProcessID', wintypes.DWORD),
+                    ('th32DefaultHeapID', ctypes.c_size_t),
+                    ('th32ModuleID', wintypes.DWORD), ('cntThreads', wintypes.DWORD),
+                    ('th32ParentProcessID', wintypes.DWORD),
+                    ('pcPriClassBase', wintypes.LONG), ('dwFlags', wintypes.DWORD),
+                    ('szExeFile', wintypes.WCHAR * 260)]
+
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    kernel.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    for name in ('Process32FirstW', 'Process32NextW'):
+        function = getattr(kernel, name)
+        function.argtypes = [wintypes.HANDLE, ctypes.POINTER(ProcessEntry)]
+        function.restype = wintypes.BOOL
+    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.QueryFullProcessImageNameW.argtypes = [
+        wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]
+    kernel.QueryFullProcessImageNameW.restype = wintypes.BOOL
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.CloseHandle.restype = wintypes.BOOL
+    deadline = time.perf_counter() + budget
+
+    def check_budget():
+        if time.perf_counter() >= deadline:
+            raise TerminalInventoryTimeout(TERMINAL_INVENTORY_TIMEOUT)
+
+    snapshot = kernel.CreateToolhelp32Snapshot(2, 0)  # TH32CS_SNAPPROCESS
+    if snapshot == ctypes.c_void_p(-1).value or snapshot is None:
+        raise TerminalInventoryError(TERMINAL_INVENTORY_UNAVAILABLE)
     processes = []
-    for item in data or []:
-        if not isinstance(item, dict):
-            continue
-        pid = item.get('Id')
-        path = item.get('Path')
-        if pid and path:
-            processes.append(TerminalProcess(int(pid), str(path)))
-    return processes
+    try:
+        entry = ProcessEntry()
+        entry.dwSize = ctypes.sizeof(entry)
+        found = kernel.Process32FirstW(snapshot, ctypes.byref(entry))
+        while found:
+            check_budget()
+            if entry.szExeFile.casefold() == 'terminal64.exe':
+                handle = kernel.OpenProcess(0x1000, False, entry.th32ProcessID)
+                if handle:
+                    try:
+                        path = ctypes.create_unicode_buffer(32768)
+                        length = wintypes.DWORD(len(path))
+                        if kernel.QueryFullProcessImageNameW(
+                                handle, 0, path, ctypes.byref(length)) and path.value:
+                            processes.append(TerminalProcess(entry.th32ProcessID, path.value))
+                    finally:
+                        kernel.CloseHandle(handle)
+            found = kernel.Process32NextW(snapshot, ctypes.byref(entry))
+        if ctypes.get_last_error() != 18:  # ERROR_NO_MORE_FILES
+            raise TerminalInventoryError(TERMINAL_INVENTORY_UNAVAILABLE)
+        check_budget()
+        return processes
+    finally:
+        kernel.CloseHandle(snapshot)
 
 
 def running_terminals(*, timeout: float | None = None) -> list[str]:

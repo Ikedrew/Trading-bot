@@ -89,8 +89,11 @@ def _decision():
 
 
 def _timeout_run(*args, **kwargs):
-    raise subprocess.TimeoutExpired(args[0] if args else "powershell.exe",
-                                    kwargs.get("timeout", 10))
+    raise TerminalInventoryTimeout(TERMINAL_INVENTORY_TIMEOUT)
+
+
+def _inventory_unavailable(*args, **kwargs):
+    raise OSError("inventory unavailable")
 
 
 def _exiting(returncode, *, stdout="", stderr=""):
@@ -145,11 +148,11 @@ def test_inventory_timeout_is_inconclusive_never_absent():
 def test_inventory_budget_is_configurable(monkeypatch):
     seen = {}
 
-    def run(command, **kwargs):
-        seen["timeout"] = kwargs["timeout"]
-        raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+    def run(budget):
+        seen["timeout"] = budget
+        raise TerminalInventoryTimeout(TERMINAL_INVENTORY_TIMEOUT)
 
-    monkeypatch.setattr(terminal.subprocess, "run", run)
+    monkeypatch.setattr(terminal, "_native_terminal_processes", run)
     monkeypatch.delenv(INVENTORY_TIMEOUT_ENV, raising=False)
     assert terminal_inventory_timeout() == DEFAULT_INVENTORY_TIMEOUT_SECONDS
     with pytest.raises(TerminalInventoryTimeout) as exc:
@@ -183,7 +186,7 @@ def test_inventory_budget_is_configurable(monkeypatch):
 def test_worker_snapshot_survives_inventory_timeout(accounts, monkeypatch):
     """The incident's first failure: a frozen inventory poisoned the snapshot."""
     account = accounts[0]
-    monkeypatch.setattr(terminal.subprocess, "run", _timeout_run)
+    monkeypatch.setattr(terminal, "_native_terminal_processes", _timeout_run)
     monkeypatch.setitem(sys.modules, "MetaTrader5",
                         FakeMT5(account, suffix=BROKER_SUFFIX[account.account_id]))
 
@@ -207,7 +210,7 @@ def test_worker_identity_verification_still_authoritative_after_timeout(accounts
     account = accounts[0]
     fake = FakeMT5(account)
     fake.account.login = accounts[1].login          # wrong account behind the path
-    monkeypatch.setattr(terminal.subprocess, "run", _timeout_run)
+    monkeypatch.setattr(terminal, "_native_terminal_processes", _timeout_run)
     monkeypatch.setitem(sys.modules, "MetaTrader5", fake)
 
     report = worker_mod.run_worker(account)
@@ -221,7 +224,7 @@ def test_worker_identity_verification_still_authoritative_after_timeout(accounts
 def test_worker_reports_real_inventory_failure_and_fails_closed(accounts, monkeypatch):
     """A readable-inventory failure keeps its real code, never WORKER_READ_FAILED."""
     account = accounts[0]
-    monkeypatch.setattr(terminal.subprocess, "run", _exiting(1))
+    monkeypatch.setattr(terminal, "_native_terminal_processes", _inventory_unavailable)
     monkeypatch.setitem(sys.modules, "MetaTrader5", FakeMT5(account))
 
     report = worker_mod.run_worker(account)
@@ -232,8 +235,8 @@ def test_worker_reports_real_inventory_failure_and_fails_closed(accounts, monkey
 
 
 @requires_windows_inventory
-def test_unparseable_inventory_output_fails_closed(monkeypatch):
-    monkeypatch.setattr(terminal.subprocess, "run", _exiting(0, stdout="not-json"))
+def test_native_inventory_os_failure_fails_closed(monkeypatch):
+    monkeypatch.setattr(terminal, "_native_terminal_processes", _inventory_unavailable)
     with pytest.raises(TerminalInventoryError) as exc:
         terminal.running_terminal_processes()
     assert str(exc.value) == TERMINAL_INVENTORY_UNAVAILABLE
@@ -477,7 +480,7 @@ def test_healthy_snapshot_reaches_order_send(accounts, monkeypatch):
 @requires_windows_inventory
 def test_order_path_survives_inventory_timeout(accounts, monkeypatch):
     """An inventory timeout at execution time must not block a verified order."""
-    monkeypatch.setattr(terminal.subprocess, "run", _timeout_run)
+    monkeypatch.setattr(terminal, "_native_terminal_processes", _timeout_run)
     sent = {}
     outcomes = route_executions(routed=_routes(accounts, _snapshots(accounts)),
                                 execute_one=_execute_one_in_process(sent))

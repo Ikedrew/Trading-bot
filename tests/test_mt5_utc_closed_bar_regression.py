@@ -12,6 +12,15 @@ from data import mt5_data
 from data.mt5_data import Candle, _persist_candles_to_cache, _rows_to_candles
 
 
+@pytest.fixture(autouse=True)
+def isolated_restart_state():
+    # Each restart fixture owns a different durable directory; process-local
+    # watermarks from the preceding test must not stand in for its cold start.
+    mt5_data.reset_candle_dedup_for_tests()
+    yield
+    mt5_data.reset_candle_dedup_for_tests()
+
+
 def bar(ts: int) -> Candle:
     return Candle(ts, 1.0, 1.1, 0.9, 1.0, 10)
 

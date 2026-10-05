@@ -8,6 +8,7 @@ writer to map onto its established return semantics.
 """
 from __future__ import annotations
 
+from contextlib import nullcontext
 from dataclasses import dataclass
 from enum import Enum
 import json
@@ -281,18 +282,22 @@ def prepare_local_jsonl_handoffs(
     target = outbox or get_delivery_outbox()
     handoffs = []
     _slowest_ms = 0
-    for line, payload in payloads:
-        _rec_t0 = time.perf_counter()
-        identity = governed_identity(dataset, payload)
-        obligation_id = _existing_obligation_id(dataset, identity)
-        handoffs.append(target.prepare_local_handoff(
-            dataset=dataset, payload=payload, symbol=symbol,
-            partition_date=partition_date, local_path=local_path,
-            local_line=line,
-            identity=identity,
-            lifecycle_obligation_id=(lifecycle_obligation_id or obligation_id),
-        ))
-        _slowest_ms = max(_slowest_ms, int((time.perf_counter() - _rec_t0) * 1000))
+    # A single prepare already commits atomically in the outbox method. Only
+    # multiple records need an outer batch; otherwise it unnecessarily encloses
+    # identity lookup, payload serialization, validation, and path resolution.
+    with (target.durable_batch() if len(payloads) > 1 else nullcontext()):
+        for line, payload in payloads:
+            _rec_t0 = time.perf_counter()
+            identity = governed_identity(dataset, payload)
+            obligation_id = _existing_obligation_id(dataset, identity)
+            handoffs.append(target.prepare_local_handoff(
+                dataset=dataset, payload=payload, symbol=symbol,
+                partition_date=partition_date, local_path=local_path,
+                local_line=line,
+                identity=identity,
+                lifecycle_obligation_id=(lifecycle_obligation_id or obligation_id),
+            ))
+            _slowest_ms = max(_slowest_ms, int((time.perf_counter() - _rec_t0) * 1000))
     _elapsed_ms = int((time.perf_counter() - _t_handoff_start) * 1000)
     if _elapsed_ms >= SLOW_HANDOFF_WARN_MS:
         # Hot-path visibility: a durable outbox write that stalls for hundreds of
@@ -327,7 +332,23 @@ def try_prepare_local_jsonl_handoffs(**kwargs: Any) -> tuple[LocalHandoff, ...]:
         )
         if not local_only_invalid_identity:
             raise
-        return ()
+        # A batch rollback must not discard valid mandatory intents merely
+        # because another forensic row lacks a governed identity.
+        recovered = []
+        for line in kwargs.get("content", "").splitlines():
+            if not line.strip():
+                continue
+            try:
+                recovered.extend(prepare_local_jsonl_handoffs(
+                    **{**kwargs, "content": line},
+                ))
+            except ValueError as row_exc:
+                if not str(row_exc).startswith((
+                    "EXACT_IDENTITY_FIELD_REQUIRED:",
+                    "EXACT_IDENTITY_FIELD_NOT_SCALAR:",
+                )):
+                    raise
+        return tuple(recovered)
 
 
 def recover_local_handoffs(
@@ -336,6 +357,8 @@ def recover_local_handoffs(
     """Recover only exact writer-registered JSONL lines; never scan arbitrary logs."""
     if max_items < 0:
         raise ValueError("MAX_ITEMS_MUST_BE_NON_NEGATIVE")
+    if max_items == 0:
+        return LocalHandoffRecoveryResult(0, 0, 0, 0)
     target = outbox or get_delivery_outbox()
     pending = target.pending_local_handoffs(limit=max_items)
     recovered = waiting = failed = 0
@@ -393,16 +416,17 @@ def enqueue_canonical_batch(
 ) -> BatchEnqueueResult:
     """Enqueue a producer batch as deterministic per-record obligations."""
     target = outbox or get_delivery_outbox()
-    results = tuple(
-        enqueue_canonical_delivery(
-            dataset=dataset,
-            payload=payload,
-            symbol=symbol,
-            partition_date=partition_date,
-            outbox=target,
+    with target.durable_batch():
+        results = tuple(
+            enqueue_canonical_delivery(
+                dataset=dataset,
+                payload=payload,
+                symbol=symbol,
+                partition_date=partition_date,
+                outbox=target,
+            )
+            for payload in payloads
         )
-        for payload in payloads
-    )
     return BatchEnqueueResult(results)
 
 

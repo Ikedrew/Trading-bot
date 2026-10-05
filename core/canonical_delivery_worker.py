@@ -453,11 +453,14 @@ class CanonicalDeliveryWorker:
     def run_once(
         self, *, reconciliation_only: bool = False,
         exclude_outbox_ids: tuple[str, ...] = (),
+        recover_handoffs: bool = True,
     ) -> DeliveryResult | None:
         self._last_run_at = _iso(self.clock())
         try:
             from core.canonical_delivery import recover_local_handoffs
-            recovery = recover_local_handoffs(outbox=self.outbox, max_items=100)
+            recovery = recover_local_handoffs(
+                outbox=self.outbox, max_items=100 if recover_handoffs else 0,
+            )
             self._recovered_local_handoffs += recovery.recovered
             self._local_handoff_recovery_failures += recovery.failed
             if recovery.failed:

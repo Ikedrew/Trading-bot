@@ -136,7 +136,11 @@ class CanonicalDeliveryService:
                 if self._stop.is_set():
                     break
                 try:
-                    result = self.worker.run_once()
+                    if isinstance(self.worker, CanonicalDeliveryWorker):
+                        # Recovery is a bounded pass, not per delivered record.
+                        result = self.worker.run_once(recover_handoffs=(_ == 0))
+                    else:
+                        result = self.worker.run_once()
                 except Exception as exc:
                     self._last_error = f"{type(exc).__name__}:{exc}"
                     logger.exception("[CANONICAL_DELIVERY_WORKER_ERROR]")

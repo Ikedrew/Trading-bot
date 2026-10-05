@@ -325,6 +325,12 @@ class CanonicalDeliveryOutbox:
             self._db.execute("PRAGMA busy_timeout=30000")
             self._db.execute("PRAGMA journal_mode=WAL")
             self._db.execute("PRAGMA synchronous=FULL")
+            # Keep the complete startup integrity scan, but read database pages
+            # through a bounded mapping instead of repeated buffered page I/O.
+            # WAL writes, commit fsyncs, and all row validation stay unchanged.
+            # SQLite falls back to buffered reads beyond the mapped range (or
+            # when this build/platform does not support memory mapping).
+            self._db.execute("PRAGMA mmap_size=268435456")
             self._db.execute("PRAGMA foreign_keys=ON")
             self._create_schema()
             if not existed:
@@ -445,6 +451,11 @@ class CanonicalDeliveryOutbox:
     @contextmanager
     def _transaction(self) -> Iterator[sqlite3.Connection]:
         with self._lock:
+            # An outer durable batch owns the commit. The RLock remains held
+            # throughout that batch, so another thread cannot join it.
+            if self._db.in_transaction:
+                yield self._db
+                return
             _t0 = time.perf_counter()
             _begin_ms = 0
             _commit_ms = 0
@@ -471,6 +482,16 @@ class CanonicalDeliveryOutbox:
                     "[OUTBOX_TXN_SLOW] total_ms=%d begin_ms=%d commit_ms=%d",
                     _total_ms, _begin_ms, _commit_ms,
                 )
+
+    @contextmanager
+    def durable_batch(self) -> Iterator[None]:
+        """Commit an ordered producer batch once, before returning to its writer.
+
+        Any exception rolls back the whole batch. Local append must occur only
+        after preparation returns; network delivery never runs in this scope.
+        """
+        with self._transaction():
+            yield
 
     def _validate_all_rows(self) -> None:
         try:
