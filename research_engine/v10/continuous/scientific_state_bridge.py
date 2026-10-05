@@ -373,9 +373,20 @@ def _changed_results(
         if not isinstance(entry, Mapping) or not isinstance(entry.get("result"), Mapping):
             raise ScientificStateBridgeError("MISSING_IMMUTABLE_QUESTION_RESULT:" + qid)
         result = CanonicalQuestionResult.from_dict(entry["result"])
-        immutable_result = store.load_question_result(qid, cycle.snapshot_id)
+        # The projection's governed evaluation identity selects the exact
+        # immutable artifact.  A same-snapshot result published under a
+        # different (or absent) evaluator identity is a different immutable
+        # result and is never an acceptable substitute.
+        immutable_result = store.load_question_result(
+            qid, cycle.snapshot_id,
+            result.evaluation_identity_digest or None,
+        )
         if immutable_result is None or immutable_result.to_dict() != result.to_dict():
             raise ScientificStateBridgeError("MISSING_IMMUTABLE_QUESTION_RESULT:" + qid)
+        if (immutable_result.evaluation_identity_digest
+                != result.evaluation_identity_digest):
+            raise ScientificStateBridgeError(
+                "QUESTION_EVALUATION_IDENTITY_MISMATCH:" + qid)
         if result.result_id != cycle.result_ids.get(qid):
             raise ScientificStateBridgeError("QUESTION_RESULT_IDENTITY_MISMATCH:" + qid)
         if result.snapshot_id != cycle.snapshot_id:

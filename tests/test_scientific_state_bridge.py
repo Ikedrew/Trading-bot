@@ -363,6 +363,225 @@ def test_missing_immutable_result_and_invalid_cycle_fail_loud(tmp_path):
             scientific_state_directory=tmp_path / "scientific")
 
 
+# --------------------------------------------------------------------------- #
+# D0 regression: evaluation-aware immutable result identity in the bridge.     #
+#                                                                              #
+# D0 introduced evaluation-aware immutable question result identity.  A result #
+# is keyed by question + snapshot + governed evaluation identity, so a bridge #
+# that looks up only (question, snapshot) can silently resolve a superseded    #
+# legacy artifact and then fail closed with                                    #
+# MISSING_IMMUTABLE_QUESTION_RESULT for a result that is in fact present.      #
+# --------------------------------------------------------------------------- #
+
+DIGEST_A = "a" * 64
+DIGEST_B = "b" * 64
+
+
+def _identity(digest: str, version: str) -> dict:
+    return {
+        "evaluation_identity_digest": digest,
+        "evaluation_identity_schema": "question_evaluation_identity_v1",
+        "evaluator_semantic_version": version,
+        "governance_contract_versions": {},
+        "question_definition_version": "research_question_registry_v1:1",
+        "question_id": "E1",
+        "report_schema_versions": {},
+        "runner_identity": "fake.runner",
+    }
+
+
+def _governed_result(snapshot: str, digest: str, version: str,
+                     **overrides) -> CanonicalQuestionResult:
+    """An evaluation-aware result for an already-established snapshot."""
+    fields = _result(snapshot).identity_material()
+    fields.update({
+        "evaluation_identity": _identity(digest, version),
+        "evaluation_identity_digest": digest,
+        "changed_since_previous": True,
+    })
+    fields.update(overrides)
+    return CanonicalQuestionResult(**fields)
+
+
+def test_legacy_same_snapshot_result_still_bridges(tmp_path):
+    """A: historical digest-less cycles keep working through the legacy path."""
+    qstore = QuestionCycleStore(tmp_path / "questions")
+    legacy = _result("ISNAP-1")
+    cycle = _cycle(qstore, 1, legacy)
+    assert legacy.evaluation_identity_digest is None
+
+    bridge, _ = _run(tmp_path, cycle, qstore)
+
+    assert bridge.status != NO_SCIENTIFIC_STATE_CHANGE
+    assert bridge.question_changes_processed == ("E1",)
+    assert bridge.findings_created
+
+
+def test_bridge_resolves_exact_digest_specific_immutable_result(tmp_path):
+    """B: refreshed evaluation-aware result resolves its exact artifact."""
+    qstore = QuestionCycleStore(tmp_path / "questions")
+    refreshed = _governed_result("ISNAP-1", DIGEST_A, "evaluator_v2")
+    cycle = _cycle(qstore, 1, refreshed)
+
+    exact = qstore.question_result_path("E1", "ISNAP-1", DIGEST_A)
+    assert exact.exists()
+    assert not qstore.legacy_question_result_path("E1", "ISNAP-1").exists()
+
+    bridge, _ = _run(tmp_path, cycle, qstore)
+
+    assert bridge.question_changes_processed == ("E1",)
+    assert bridge.findings_created
+
+
+def test_refreshed_artifact_wins_over_legacy_artifact_same_snapshot(tmp_path):
+    """C: with both artifacts present, the digest-specific one is chosen."""
+    qstore = QuestionCycleStore(tmp_path / "questions")
+    legacy = _result("ISNAP-1")
+    qstore.save_question_result(legacy)
+    refreshed = _governed_result("ISNAP-1", DIGEST_A, "evaluator_v2")
+    cycle = _cycle(qstore, 1, refreshed)
+
+    assert qstore.legacy_question_result_path("E1", "ISNAP-1").exists()
+    assert qstore.question_result_path("E1", "ISNAP-1", DIGEST_A).exists()
+
+    bridge, _ = _run(tmp_path, cycle, qstore)
+
+    assert bridge.findings_created
+    loaded = qstore.load_question_result("E1", "ISNAP-1", DIGEST_A)
+    assert loaded.result_id == refreshed.result_id
+    assert loaded.evaluation_identity_digest == DIGEST_A
+    # The superseded legacy artifact is untouched and still resolvable.
+    legacy_after = qstore.load_question_result("E1", "ISNAP-1")
+    assert legacy_after.result_id == legacy.result_id
+    assert legacy_after.evaluation_identity_digest is None
+
+
+def test_projection_with_digest_but_only_legacy_artifact_fails_closed(tmp_path):
+    """D: a legacy artifact is never accepted as the current evaluator result."""
+    qstore = QuestionCycleStore(tmp_path / "questions")
+    legacy = _result("ISNAP-1")
+    qstore.save_question_result(legacy)
+    refreshed = _governed_result("ISNAP-1", DIGEST_A, "evaluator_v2")
+    cycle = _cycle(qstore, 1, refreshed)
+    # Only the superseded legacy artifact survives the failed evaluation write.
+    qstore.question_result_path("E1", "ISNAP-1", DIGEST_A).unlink()
+    assert qstore.legacy_question_result_path("E1", "ISNAP-1").exists()
+    assert not qstore.question_result_path("E1", "ISNAP-1", DIGEST_A).exists()
+
+    with pytest.raises(ScientificStateBridgeError, match="MISSING_IMMUTABLE"):
+        _run(tmp_path, cycle, qstore)
+
+
+def test_wrong_digest_artifact_fails_closed(tmp_path):
+    """E: a different evaluator's artifact for the same snapshot is not ours."""
+    qstore = QuestionCycleStore(tmp_path / "questions")
+    other = _governed_result("ISNAP-1", DIGEST_B, "evaluator_v3")
+    cycle = _cycle(qstore, 1, _governed_result("ISNAP-1", DIGEST_A, "evaluator_v2"))
+    qstore.save_question_result(other)
+    # The only same-snapshot artifact available is a *different* evaluator's.
+    qstore.question_result_path("E1", "ISNAP-1", DIGEST_A).unlink()
+    assert qstore.question_result_path("E1", "ISNAP-1", DIGEST_B).exists()
+
+    with pytest.raises(ScientificStateBridgeError, match="MISSING_IMMUTABLE"):
+        _run(tmp_path, cycle, qstore)
+
+    # And the reverse direction: the digest-specific path is honoured exactly.
+    exact = _governed_result("ISNAP-1", DIGEST_B, "evaluator_v3")
+    bridge, _ = _run(tmp_path, _cycle(qstore, 2, exact), qstore)
+    assert bridge.question_changes_processed == ("E1",)
+
+
+def test_result_id_mismatch_fails_closed(tmp_path):
+    """F: projection result_id must equal cycle.result_ids.
+
+    The projection carries a self-consistent but *different* immutable result
+    whose artifact exists on disk.  Identity is therefore not rejected by
+    fingerprinting; the bridge's own result_id check must reject it.
+    """
+    qstore = QuestionCycleStore(tmp_path / "questions")
+    cycle = _cycle(qstore, 1, _governed_result("ISNAP-1", DIGEST_A, "evaluator_v2"))
+
+    # Same snapshot, different evaluator identity -> different, valid artifact.
+    other = _governed_result(
+        "ISNAP-1", DIGEST_B, "evaluator_v3", sample_n=999)
+    qstore.save_question_result(other)
+    projection = json.loads(qstore.projection_path(cycle.cycle_id).read_text("utf-8"))
+    projection["questions"]["E1"]["result"] = other.to_dict()
+    qstore.projection_path(cycle.cycle_id).write_text(
+        json.dumps(projection), encoding="utf-8")
+
+    with pytest.raises(ScientificStateBridgeError,
+                       match="QUESTION_RESULT_IDENTITY_MISMATCH"):
+        _run(tmp_path, cycle, qstore)
+
+
+def test_snapshot_mismatch_fails_closed(tmp_path):
+    """G: a projection result from another snapshot never satisfies the cycle."""
+    qstore = QuestionCycleStore(tmp_path / "questions")
+    cycle = _cycle(qstore, 1, _governed_result("ISNAP-1", DIGEST_A, "evaluator_v2"))
+
+    projection = json.loads(qstore.projection_path(cycle.cycle_id).read_text("utf-8"))
+    projection["questions"]["E1"]["result"]["snapshot_id"] = "ISNAP-OTHER"
+    qstore.projection_path(cycle.cycle_id).write_text(
+        json.dumps(projection), encoding="utf-8")
+
+    # Tampered payloads are rejected by result fingerprinting before the bridge
+    # can compare them; either way the cycle fails closed and never succeeds.
+    with pytest.raises(Exception):
+        _run(tmp_path, cycle, qstore)
+
+
+def test_unchanged_results_are_not_processed_or_rewritten(tmp_path):
+    """H/I: only changed ids are bridged; history is never rewritten."""
+    qstore = QuestionCycleStore(tmp_path / "questions")
+    refreshed = _governed_result("ISNAP-1", DIGEST_A, "evaluator_v2")
+    cycle = _cycle(qstore, 1, refreshed)
+
+    before = {
+        path: path.read_bytes()
+        for path in qstore.question_history_directory.rglob("*.json")
+    }
+
+    bridge, _ = _run(tmp_path, cycle, qstore)
+
+    assert bridge.question_changes_processed == ("E1",)
+    after = {
+        path: path.read_bytes()
+        for path in qstore.question_history_directory.rglob("*.json")
+    }
+    assert before == after
+
+    # Unchanged questions were never resolved as immutable artifacts.
+    for qid in cycle.unchanged_question_ids:
+        assert qid not in bridge.question_changes_processed
+
+
+def test_evaluation_aware_history_never_collides_with_legacy(tmp_path):
+    """I: same snapshot under two evaluators yields two distinct artifacts."""
+    qstore = QuestionCycleStore(tmp_path / "questions")
+    legacy = _result("ISNAP-1")
+    qstore.save_question_result(legacy)
+    first = _governed_result("ISNAP-1", DIGEST_A, "evaluator_v2")
+    qstore.save_question_result(first)
+    second = _governed_result("ISNAP-1", DIGEST_B, "evaluator_v3")
+    qstore.save_question_result(second)
+
+    assert first.result_id != second.result_id
+    assert first.result_id != legacy.result_id
+    files = sorted(p.name for p in (
+        qstore.question_history_directory / "E1").glob("*.json"))
+    assert files == [
+        "ISNAP-1.json",
+        f"ISNAP-1__{DIGEST_A}.json",
+        f"ISNAP-1__{DIGEST_B}.json",
+    ]
+    # Re-saving an identical governed result is a no-op, not a rewrite.
+    governed = qstore.question_history_directory / "E1" / f"ISNAP-1__{DIGEST_A}.json"
+    stamp = governed.read_bytes()
+    qstore.save_question_result(first)
+    assert governed.read_bytes() == stamp
+
+
 def test_persistence_failure_rolls_back_registry_and_no_success_receipt(tmp_path):
     qstore = QuestionCycleStore(tmp_path / "questions")
     result = _result("ISNAP-1", metrics={"governed_policy_id": POLICY["policy_id"]})
