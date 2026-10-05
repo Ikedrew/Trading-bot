@@ -874,6 +874,13 @@ def test_producer_persists_both_grains_through_canonical_delivery(
     assert len(cluster_files) == 1
     datasets = {r.dataset for r in get_delivery_outbox().records()}
     assert datasets == {DATASET, CLUSTER_DATASET}
+    from core.lifecycle_evidence_obligations import obligation_ledger
+    for record in get_delivery_outbox().records():
+        assert record.lifecycle_obligation_id
+        obligation = obligation_ledger().get(record.lifecycle_obligation_id)
+        assert obligation is not None
+        assert obligation.expected_dataset == record.dataset
+        assert dict(obligation.expected_identity) == dict(record.record_identity)
     # Both grains provably share ONE observation cycle.
     rows = [json.loads(line) for line in cluster_files[0].read_text().splitlines()]
     assert {r["portfolio_exposure_id"] for r in rows} == \
@@ -1117,8 +1124,13 @@ def test_cross_account_exposure_persists_through_canonical_delivery(
         store, [ACCOUNT_A.account_id], model=ACCEPTANCE_MODEL)
     persist_cross_account_exposure(
         aggregate, base_dir=tmp_path / "xacc")
-    assert CROSS_ACCOUNT_DATASET in {
-        r.dataset for r in get_delivery_outbox().records()}
+    record = next(r for r in get_delivery_outbox().records()
+                  if r.dataset == CROSS_ACCOUNT_DATASET)
+    assert record.lifecycle_obligation_id
+    from core.lifecycle_evidence_obligations import obligation_ledger
+    obligation = obligation_ledger().get(record.lifecycle_obligation_id)
+    assert obligation is not None
+    assert dict(obligation.expected_identity) == dict(record.record_identity)
     rows = [json.loads(line)
             for path in (tmp_path / "xacc").rglob("*.jsonl")
             for line in path.read_text().splitlines()]

@@ -18,7 +18,7 @@ from pathlib import Path
 import threading
 from typing import Any, Iterable, Mapping, Sequence
 
-from core.production_data_contract import current_schema
+from core.production_data_contract import current_schema, is_symbol_scoped
 
 logger = logging.getLogger(__name__)
 
@@ -289,7 +289,7 @@ class EvidenceObligation:
                            ObligationStatus.PRODUCER_FAILED.value} \
             and self.expected_dataset in ACCOUNT_SCOPED_DATASETS and not self.account_id:
             raise ValueError(f"ACCOUNT_ID_REQUIRED:{self.expected_dataset}")
-        if not self.symbol:
+        if is_symbol_scoped(self.expected_dataset) and not self.symbol:
             raise ValueError("OBLIGATION_SYMBOL_REQUIRED")
         if self.revision < 1:
             raise ValueError("INVALID_OBLIGATION_REVISION")

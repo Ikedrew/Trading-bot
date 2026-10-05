@@ -684,3 +684,22 @@ def test_genuinely_conflicting_obligation_identity_still_fails_closed(tmp_path):
     ledger.create(due_after="MATERIAL_CHANGE_GATE", **common)
     with pytest.raises(ValueError, match="OBLIGATION_IDENTITY_CONFLICT"):
         ledger.create(due_after="DIFFERENT_TRIGGER", **common)
+
+
+def test_date_scoped_account_evidence_does_not_invent_a_symbol(tmp_path):
+    ledger = _ledger(tmp_path)
+    obligation = create_dataset_obligation(
+        ledger,
+        event_id="account-state:ACC_A:asnap-1",
+        lifecycle_stage="ACCOUNT_STATE_OBSERVATION",
+        dataset="account_snapshots",
+        identity={"account_id": "ACC_A", "snapshot_id": "asnap-1"},
+        timestamp=TS,
+        producer="core.risk.account_snapshot.persist_account_snapshot",
+        trigger="ACCOUNT_STATE_LOCAL_FSYNC",
+    )
+
+    assert obligation.symbol == ""
+    assert obligation.expected_identity == {
+        "account_id": "ACC_A", "snapshot_id": "asnap-1",
+    }

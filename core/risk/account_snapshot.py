@@ -863,6 +863,26 @@ def persist_account_snapshot(
     path = _local_path(base_dir, snapshot)
     path.parent.mkdir(parents=True, exist_ok=True)
 
+    from core.lifecycle_evidence_obligations import (
+        create_dataset_obligation,
+        obligation_ledger,
+        record_producer_outcome,
+    )
+    ledger = obligation_ledger()
+    obligation = create_dataset_obligation(
+        ledger,
+        event_id=f"account-state:{snapshot.account_id}:{snapshot.snapshot_id}",
+        lifecycle_stage="ACCOUNT_STATE_OBSERVATION",
+        dataset=DATASET,
+        identity={
+            "account_id": snapshot.account_id,
+            "snapshot_id": snapshot.snapshot_id,
+        },
+        timestamp=snapshot.observed_at_utc,
+        producer="core.risk.account_snapshot.persist_account_snapshot",
+        trigger="ACCOUNT_STATE_LOCAL_FSYNC",
+    )
+
     from core.canonical_delivery import (
         enqueue_canonical_delivery,
         try_prepare_local_jsonl_handoffs,
@@ -871,6 +891,7 @@ def persist_account_snapshot(
     try_prepare_local_jsonl_handoffs(
         dataset=DATASET, content=line + "\n", symbol="",
         partition_date=partition_date, local_path=path, outbox=outbox,
+        lifecycle_obligation_id=obligation.obligation_id,
     )
     fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
     try:
@@ -879,9 +900,16 @@ def persist_account_snapshot(
     finally:
         os.close(fd)
 
+    record_producer_outcome(
+        ledger, obligation, succeeded=True,
+        observed_record_id=snapshot.snapshot_id,
+        provenance={"persistence_scope": "LOCAL_FSYNC"},
+    )
+
     enqueue_canonical_delivery(
         dataset=DATASET, payload=payload, symbol="",
         partition_date=partition_date, outbox=outbox,
+        lifecycle_obligation_id=obligation.obligation_id,
     )
     return True
 

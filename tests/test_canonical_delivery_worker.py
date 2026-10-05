@@ -898,6 +898,32 @@ def test_live_ack_without_obligation_link_records_anomaly(tmp_path):
     assert current.reconciliation_state == "ANOMALY"
 
 
+def test_historical_unlinked_duplicate_is_not_silently_rewritten(tmp_path):
+    clock = Clock()
+    box = outbox(tmp_path, clock)
+    historical = enqueue(box, lifecycle_obligation_id=None)
+    ledger = LifecycleEvidenceLedger(tmp_path / "historical-ledger.jsonl")
+    obligation = create_dataset_obligation(
+        ledger, event_id="decision:D-1", lifecycle_stage="DECISION",
+        dataset="decision_ledger",
+        identity={"decision_id": "D-1", "symbol": "EURUSD"},
+        timestamp=clock.iso(), producer="test", trigger="DECISION_WRITTEN",
+    )
+
+    duplicate = box.enqueue(
+        dataset=historical.dataset, payload=historical.payload,
+        identity=historical.record_identity, symbol="EURUSD",
+        partition_date=DATE,
+        lifecycle_obligation_id=obligation.obligation_id,
+    ).record
+
+    assert duplicate.outbox_id == historical.outbox_id
+    assert duplicate.lifecycle_obligation_id is None
+    result = worker(box, FakeS3(), clock, lifecycle_ledger=ledger).run_once()
+    assert result.reconciliation_anomaly == "LIFECYCLE_OBLIGATION_NOT_LINKED"
+    assert box.get(historical.outbox_id).reconciliation_state == "ANOMALY"
+
+
 def test_lifecycle_storage_failure_does_not_undo_verified_ack(tmp_path, monkeypatch):
     clock = Clock()
     ledger = LifecycleEvidenceLedger(tmp_path / "lifecycle-failure.jsonl")

@@ -1306,6 +1306,26 @@ def _append_durable_jsonl(
     partition_date: str, path: Path, outbox: Any | None,
 ) -> None:
     """Shared certified write: handoff journal FIRST, then local fsync."""
+    from core.lifecycle_evidence_obligations import (
+        EXACT_IDENTITY_FIELDS,
+        create_dataset_obligation,
+        obligation_ledger,
+        record_producer_outcome,
+    )
+    identity = {name: payload.get(name) for name in EXACT_IDENTITY_FIELDS[dataset]}
+    identity_token = ":".join(str(identity[name]) for name in EXACT_IDENTITY_FIELDS[dataset])
+    ledger = obligation_ledger()
+    obligation = create_dataset_obligation(
+        ledger,
+        event_id=f"portfolio-risk:{dataset}:{identity_token}",
+        lifecycle_stage="PORTFOLIO_RISK_OBSERVATION",
+        dataset=dataset,
+        identity=identity,
+        timestamp=str(payload.get("observed_at_utc") or ""),
+        producer="core.risk.portfolio_exposure._append_durable_jsonl",
+        trigger="PORTFOLIO_RISK_LOCAL_FSYNC",
+    )
+
     from core.canonical_delivery import (
         enqueue_canonical_delivery,
         try_prepare_local_jsonl_handoffs,
@@ -1313,6 +1333,7 @@ def _append_durable_jsonl(
     try_prepare_local_jsonl_handoffs(
         dataset=dataset, content=line + "\n", symbol="",
         partition_date=partition_date, local_path=path, outbox=outbox,
+        lifecycle_obligation_id=obligation.obligation_id,
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
@@ -1321,9 +1342,15 @@ def _append_durable_jsonl(
         os.fsync(fd)
     finally:
         os.close(fd)
+    record_producer_outcome(
+        ledger, obligation, succeeded=True,
+        observed_record_id=identity_token,
+        provenance={"persistence_scope": "LOCAL_FSYNC"},
+    )
     enqueue_canonical_delivery(
         dataset=dataset, payload=payload, symbol="",
         partition_date=partition_date, outbox=outbox,
+        lifecycle_obligation_id=obligation.obligation_id,
     )
 
 

@@ -255,6 +255,7 @@ def prepare_local_handoff(
 def prepare_local_jsonl_handoffs(
     *, dataset: str, content: str, symbol: str, partition_date: str,
     local_path: str | Path, outbox: CanonicalDeliveryOutbox | None = None,
+    lifecycle_obligation_id: str | None = None,
 ) -> tuple[LocalHandoff, ...]:
     """Prepare each exact JSONL record before a writer appends the batch."""
     try:
@@ -266,6 +267,10 @@ def prepare_local_jsonl_handoffs(
         ) from exc
     if not all(isinstance(payload, dict) for _, payload in payloads):
         raise CanonicalDeliveryHandoffError(f"LOCAL_HANDOFF_OBJECT_REQUIRED:{dataset}")
+    if lifecycle_obligation_id is not None and len(payloads) != 1:
+        raise CanonicalDeliveryHandoffError(
+            f"LOCAL_HANDOFF_SINGLE_OBLIGATION_REQUIRES_ONE_RECORD:{dataset}"
+        )
     target = outbox or get_delivery_outbox()
     handoffs = []
     for line, payload in payloads:
@@ -275,7 +280,8 @@ def prepare_local_jsonl_handoffs(
             dataset=dataset, payload=payload, symbol=symbol,
             partition_date=partition_date, local_path=local_path,
             local_line=line,
-            identity=identity, lifecycle_obligation_id=obligation_id,
+            identity=identity,
+            lifecycle_obligation_id=(lifecycle_obligation_id or obligation_id),
         ))
     return tuple(handoffs)
 

@@ -736,6 +736,16 @@ def test_canonical_ack_does_not_change_the_numeric_payload(
 
     after = outbox.records()[0]
     assert after.delivery_state is DeliveryState.ACKNOWLEDGED
+    assert after.lifecycle_obligation_id
+    assert after.reconciliation_state == "RECONCILED"
+    from core.lifecycle_evidence_obligations import (
+        ObligationStatus,
+        obligation_ledger,
+    )
+    obligation = obligation_ledger().get(after.lifecycle_obligation_id)
+    assert obligation is not None
+    assert dict(obligation.expected_identity) == dict(after.record_identity)
+    assert obligation.current_status == ObligationStatus.PRESENT.value
     for key in ("balance", "equity", "floating_pnl", "margin", "free_margin",
                 "margin_level", "leverage", "currency"):
         assert after.payload[key] == before[key]

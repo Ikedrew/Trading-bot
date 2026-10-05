@@ -1377,6 +1377,12 @@ def test_canonical_ack_does_not_change_the_payload(tmp_path, isolated_outbox):
     for record in outbox.records():
         assert record.delivery_state is DeliveryState.ACKNOWLEDGED
         assert record.canonical_ack is not None
+        assert record.lifecycle_obligation_id
+        assert record.reconciliation_state == "RECONCILED"
+        from core.lifecycle_evidence_obligations import obligation_ledger
+        obligation = obligation_ledger().get(record.lifecycle_obligation_id)
+        assert obligation is not None
+        assert dict(obligation.expected_identity) == dict(record.record_identity)
         # The numeric payload is untouched by the acknowledgement.
         assert record.payload == before[record.idempotency_key]
     aggregate = next(r for r in outbox.records()
