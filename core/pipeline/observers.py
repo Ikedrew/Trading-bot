@@ -28,6 +28,7 @@ Design: pure dispatcher — no business logic, no return values consumed.
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -99,6 +100,8 @@ class ObserverRegistry:
         Args:
             ctx: ObserverContext with all required inputs.
         """
+        _t_prev = time.perf_counter()
+        _marks: list[tuple[str, int]] = []
         # ─── 1. Event observer: emit on meaningful state change ───────
         try:
             from core.pipeline.event_observer import observe_engine_output
@@ -106,6 +109,7 @@ class ObserverRegistry:
         except Exception:
             pass
 
+        _marks.append(("event_observer", int((time.perf_counter() - _t_prev) * 1000))); _t_prev = time.perf_counter()
         # ─── 2. Forensic logger: full gate trace to pair channel ──────
         try:
             from core.pipeline.forensic_logger import log_full_cycle
@@ -119,6 +123,7 @@ class ObserverRegistry:
         except Exception:
             pass
 
+        _marks.append(("forensic_logger", int((time.perf_counter() - _t_prev) * 1000))); _t_prev = time.perf_counter()
         # ─── 3. Entity tracker: continuous state logging ──────────────
         try:
             from core.pipeline.entity_tracker import track_opportunity
@@ -131,6 +136,7 @@ class ObserverRegistry:
         except Exception:
             pass
 
+        _marks.append(("entity_tracker", int((time.perf_counter() - _t_prev) * 1000))); _t_prev = time.perf_counter()
         # ─── 4. Visibility layer: design vs reality gap trace ─────────
         try:
             from core.pipeline.visibility_layer import emit_visibility_trace
@@ -144,6 +150,7 @@ class ObserverRegistry:
         except Exception:
             pass
 
+        _marks.append(("visibility_layer", int((time.perf_counter() - _t_prev) * 1000))); _t_prev = time.perf_counter()
         # ─── 5. Shadow rooms: full parallel compute ───────────────────
         try:
             from core.pipeline.shadow_rooms import run_shadow_rooms
@@ -165,6 +172,7 @@ class ObserverRegistry:
         except Exception:
             pass
 
+        _marks.append(("shadow_rooms", int((time.perf_counter() - _t_prev) * 1000))); _t_prev = time.perf_counter()
         # ─── 6. Decision trace: build + persist + funnel record ───────
         _trace_ledger = None
         _trace_obligation = None
@@ -220,6 +228,7 @@ class ObserverRegistry:
                     pass
             pass
 
+        _marks.append(("decision_trace", int((time.perf_counter() - _t_prev) * 1000))); _t_prev = time.perf_counter()
         # ─── 7. Strategy observer: strategy intelligence observation ──
         # READ ONLY. Evaluates which strategies match current context.
         # Creates StrategyObservation records for research evidence.
@@ -271,6 +280,15 @@ class ObserverRegistry:
                 except Exception:
                     pass
             pass
+
+        _marks.append(("strategy_observer", int((time.perf_counter() - _t_prev) * 1000)))
+        _total_ms = sum(ms for _, ms in _marks)
+        if _total_ms >= 500:
+            logger.warning(
+                "[OBSERVER_DISPATCH_SLOW] symbol=%s total_ms=%d breakdown=%s",
+                ctx.symbol, _total_ms,
+                [(n, ms) for n, ms in _marks if ms >= 20],
+            )
 
         # NOTE (Production V1 canonical cleanup): the retired V2/V3 opportunity
         # observers (#8, #9) and the V3 shadow observer (#10) were removed. They

@@ -227,6 +227,7 @@ def _persist_candles_to_cache(
 
     Never raises — failures are logged and swallowed.
     """
+    _t_persist0 = _time.perf_counter()
     try:
         from core import config as _cfg
         if not getattr(_cfg, "ENABLE_CANDLE_REPLAY_CACHE", False):
@@ -251,8 +252,14 @@ def _persist_candles_to_cache(
         marker_path = out_dir / "dedup_initialized"
         utc_marker_path = out_dir / "dedup_timestamp_utc_v1"
 
-        # Get last persisted timestamp for deduplication (persistent across dates)
-        last_ts = _get_last_cached_timestamp(filepath)
+        # Get last persisted timestamp for deduplication (persistent across dates).
+        # Resolved from the in-memory mirror once this process has read or written
+        # the watermark; the durable file remains the source of truth on first use.
+        _ts_key = (symbol, timeframe)
+        if _ts_key in _last_persisted_ts:
+            last_ts = _last_persisted_ts[_ts_key]
+        else:
+            last_ts = _get_last_cached_timestamp(filepath)
 
         # Fail-safe: persistent dedup state lost/corrupt AFTER prior
         # initialization. Never reinterpret this as a first-ever startup.
@@ -278,6 +285,12 @@ def _persist_candles_to_cache(
         # untouched. The sidecar prevents subtracting the offset again later.
         if last_ts is not None and not utc_marker_path.exists():
             last_ts -= int(source_utc_offset_seconds) * 1000
+        # Remember the resolved watermark (including "no durable state yet") so
+        # subsequent fetches in this process skip the file read. The fail-safe
+        # dedup-state-loss branch above returns before this point, so a lost
+        # watermark is never masked by the cache.
+        if _ts_key not in _last_persisted_ts:
+            _last_persisted_ts[_ts_key] = last_ts
 
         # Select by the actual UTC close boundary, not a positional assumption.
         from core.constants.timeframes import TIMEFRAME_SECONDS
@@ -330,6 +343,7 @@ def _persist_candles_to_cache(
         if not new_candles:
             return
 
+        _t_emit0 = _time.perf_counter()
         # Append one JSONL record per candle (compact schema, ts in UTC millis)
         with open(filepath, "a", encoding="utf-8") as f:
             for c in new_candles:
@@ -366,6 +380,21 @@ def _persist_candles_to_cache(
             last_ts if last_ts else "none",
             filepath,
         )
+        # Advance the in-memory watermark to the newest candle just written so
+        # the next fetch in this process neither re-reads the file nor re-emits.
+        try:
+            _last_persisted_ts[_ts_key] = candle_ts_to_ms(new_candles[-1].time)
+        except Exception:
+            _last_persisted_ts.pop(_ts_key, None)
+
+        _persist_ms = int((_time.perf_counter() - _t_persist0) * 1000)
+        if _persist_ms >= 500:
+            logger.warning(
+                "[CANDLE_PERSIST_SLOW] symbol=%s timeframe=%d new_candles=%d total_ms=%d "
+                "emit_ms=%d",
+                symbol, timeframe, len(new_candles), _persist_ms,
+                int((_time.perf_counter() - _t_emit0) * 1000),
+            )
 
     except Exception as exc:
         logger.warning("[DATA_REPLAY] failed_to_persist symbol=%s error=%s", symbol, exc)
@@ -380,11 +409,71 @@ _candle_emitted_set: set[tuple[str, int, int]] = set()
 # state CRITICAL has already been reported this session (log-once semantics).
 _dedup_state_loss_reported: set[tuple[str, int]] = set()
 
+# In-memory mirror of the last persisted candle timestamp per (symbol, timeframe).
+# The durable JSONL file remains the source of truth (read once per process, and
+# again only if the process never wrote it), but every subsequent fetch in the
+# same process resolves the watermark from memory instead of re-opening and
+# reverse-scanning the file. This removes ~7 file reads per symbol per cycle on
+# the hot path without changing what is persisted.
+_last_persisted_ts: dict[tuple[str, int], int | None] = {}
+
 
 def reset_candle_dedup_for_tests() -> None:
     """Reset in-memory dedup tracker and state-loss reporting (test isolation)."""
     _candle_emitted_set.clear()
     _dedup_state_loss_reported.clear()
+    _last_persisted_ts.clear()
+
+
+# ─── CYCLE-SCOPED FETCH CACHE ─────────────────────────────────────────────────
+# Within a single scanner cycle, the same (broker_symbol, timeframe, count)
+# rate request is issued more than once (e.g. the D1 new-bar probe and the
+# D1-bias probe both request the identical MT5 timeframe; the D1 regime fetch
+# and the D1-bias fetch request the identical count). Each MT5 rate request also
+# triggers the replay-cache persist/emit path, so duplicates are not free.
+#
+# The cache is ONLY active between begin_data_cycle() and the next
+# begin_data_cycle()/end_data_cycle(). Outside a cycle it is inert, so replay,
+# tests, and one-off fetches keep their existing always-fresh semantics.
+#
+# Closed-bar semantics are preserved: the cache key includes the exact request
+# tuple, and the cached value is the same immutable Candle list the first caller
+# received. Because the cache is cleared at the start of every cycle, no bar
+# data can survive a cycle boundary.
+_CYCLE_FETCH_CACHE: dict[tuple[str, int, int], list[Candle]] = {}
+_CYCLE_OPEN: bool = False
+_CYCLE_FETCH_STATS: dict[str, int] = {"hits": 0, "misses": 0}
+
+
+def begin_data_cycle() -> None:
+    """Open a new data cycle: clear per-cycle caches (no cross-cycle reuse)."""
+    global _CYCLE_OPEN
+    _CYCLE_FETCH_CACHE.clear()
+    _CYCLE_FETCH_STATS["hits"] = 0
+    _CYCLE_FETCH_STATS["misses"] = 0
+    _CYCLE_OPEN = True
+
+
+def end_data_cycle() -> None:
+    """Close the data cycle: drop the cache so nothing leaks past it."""
+    global _CYCLE_OPEN
+    _CYCLE_OPEN = False
+    _CYCLE_FETCH_CACHE.clear()
+
+
+def cycle_fetch_stats() -> dict[str, int]:
+    """Return {hits, misses} for the current cycle (observability)."""
+    return dict(_CYCLE_FETCH_STATS)
+
+
+def reset_data_cycle_cache_for_tests() -> None:
+    """Test isolation helper — full reset of cycle-cache state."""
+    global _CYCLE_OPEN
+    _CYCLE_OPEN = False
+    _CYCLE_FETCH_CACHE.clear()
+    _CYCLE_FETCH_STATS["hits"] = 0
+    _CYCLE_FETCH_STATS["misses"] = 0
+
 
 
 class MT5DataFeed:
@@ -483,9 +572,21 @@ class MT5DataFeed:
         timeframe: int,
         count: int,
     ) -> list[Candle]:
-        """Return last `count` bars (last bar may still be forming)."""
-        t0 = _time.perf_counter()
+        """Return last `count` bars (last bar may still be forming).
+
+        Within an open data cycle (begin_data_cycle), an identical
+        (broker_symbol, timeframe, count) request is served from the cycle
+        cache so the same rate window is never fetched twice in one cycle.
+        """
         mt5_symbol = self._broker_symbol or symbol
+        _cache_key = (mt5_symbol, int(timeframe), int(count))
+        if _CYCLE_OPEN:
+            cached = _CYCLE_FETCH_CACHE.get(_cache_key)
+            if cached is not None:
+                _CYCLE_FETCH_STATS["hits"] += 1
+                return list(cached)
+        _t_crc0 = _time.perf_counter()
+        t0 = _time.perf_counter()
         rates = mt5_call(mt5.copy_rates_from_pos, mt5_symbol, timeframe, 0, count)
         latency_ms = int((_time.perf_counter() - t0) * 1000)
 
@@ -553,10 +654,24 @@ class MT5DataFeed:
             pass  # Audit log must never affect data delivery
         # ─── END MARKET_INGEST_AUDIT ──────────────────────────────────
 
+        _t_persist_start = _time.perf_counter()
         _persist_candles_to_cache(
             symbol, timeframe, candles,
             source_utc_offset_seconds=utc_offset_seconds,
         )
+        _persist_ms = int((_time.perf_counter() - _t_persist_start) * 1000)
+        if _CYCLE_OPEN:
+            _CYCLE_FETCH_CACHE[_cache_key] = candles
+            _CYCLE_FETCH_STATS["misses"] += 1
+        _crc_ms = int((_time.perf_counter() - _t_crc0) * 1000)
+        if _crc_ms >= 300:
+            # Break down a slow candle fetch so the exact hot-path phase (MT5
+            # IPC vs local replay-persist/emit) is visible in production.
+            logger.warning(
+                "[CANDLE_FETCH_SLOW] symbol=%s tf=%d count=%d total_ms=%d mt5_ms=%d "
+                "persist_ms=%d bars=%d",
+                symbol, timeframe, count, _crc_ms, latency_ms, _persist_ms, len(candles),
+            )
         return candles
 
     def last_tick(self, symbol: str) -> tuple[float, float, int]:

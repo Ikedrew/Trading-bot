@@ -42,6 +42,7 @@ DEFAULT_TIMEOUT_SECONDS: float = 10.0
 CIRCUIT_BREAKER_THRESHOLD: int = 3
 CIRCUIT_BREAKER_RECOVERY_SECONDS: float = 60.0
 _POOL_SIZE: int = 2  # MT5 is single-threaded internally; 2 workers is sufficient
+SLOW_MT5_CALL_WARN_MS: int = 500  # log MT5 calls that stall the scanner path
 
 
 # ─── CIRCUIT BREAKER STATE ────────────────────────────────────────────────────
@@ -142,6 +143,14 @@ class _CircuitBreaker:
 _breaker = _CircuitBreaker()
 _executor: ThreadPoolExecutor | None = None
 _executor_lock = threading.Lock()
+# Workers abandoned in un-cancellable calls (a timed-out MT5 call cannot be
+# interrupted — the worker thread stays blocked until the terminal responds).
+# When every worker is abandoned the pool can no longer serve ANY call, so every
+# subsequent call would "time out" purely because no worker is free. That is a
+# self-inflicted liveness failure, not a broker failure, and it must not be
+# reported as one. See `_retire_saturated_executor`.
+_abandoned_workers: int = 0
+_executor_rebuilds: int = 0
 
 
 def _get_executor() -> ThreadPoolExecutor:
@@ -155,6 +164,38 @@ def _get_executor() -> ThreadPoolExecutor:
                     thread_name_prefix="mt5_worker",
                 )
     return _executor
+
+
+def _retire_saturated_executor() -> None:
+    """Replace a pool whose workers are all stuck in un-cancellable calls.
+
+    A timed-out MT5 call cannot be cancelled: `future.cancel()` is a no-op once
+    the task has started, so the worker thread remains blocked until the terminal
+    responds. With a fixed pool this means `_POOL_SIZE` hangs permanently starve
+    every later call, which then reports as a *timeout* even though MT5 was never
+    actually asked. Retiring the saturated pool restores liveness immediately.
+
+    Safety is preserved:
+      - the abandoned threads are left to drain on their own (wait=False);
+      - the circuit breaker is NOT reset, so a genuinely unresponsive terminal
+        still trips it and the runtime still fails closed.
+    """
+    global _executor, _abandoned_workers, _executor_rebuilds
+    with _executor_lock:
+        old = _executor
+        _executor = None
+        _abandoned_workers = 0
+        _executor_rebuilds += 1
+        rebuilds = _executor_rebuilds
+    if old is not None:
+        try:
+            old.shutdown(wait=False)
+        except Exception:  # pragma: no cover - shutdown must never raise here
+            pass
+    logger.critical(
+        "[MT5_TIMEOUT] executor_rebuilt reason=all_workers_abandoned pool_size=%d rebuilds=%d",
+        _POOL_SIZE, rebuilds,
+    )
 
 
 # ─── TIMEOUT WRAPPER ──────────────────────────────────────────────────────────
@@ -202,6 +243,7 @@ def call_with_timeout(
         else:
             return func(*args)
 
+    _call_t0 = time.perf_counter()
     future: Future = executor.submit(_task)
 
     try:
@@ -209,7 +251,13 @@ def call_with_timeout(
     except (FuturesTimeoutError, TimeoutError):
         # Future did not complete within timeout
         _breaker.record_timeout(func_name, timeout_seconds)
-        future.cancel()
+        future.cancel()  # no-op once running; the worker stays blocked
+        global _abandoned_workers
+        _abandoned_workers += 1
+        if _abandoned_workers >= _POOL_SIZE:
+            # Every worker is now blocked on a call MT5 never answered. Rebuild
+            # so later calls are actually attempted instead of being starved.
+            _retire_saturated_executor()
         return None
     except BaseException as exc:
         # Function raised an exception — propagate it
@@ -217,6 +265,14 @@ def call_with_timeout(
         raise
 
     _breaker.record_success()
+    _elapsed_ms = int((time.perf_counter() - _call_t0) * 1000)
+    if _elapsed_ms >= SLOW_MT5_CALL_WARN_MS:
+        # A single MT5 API call that takes hundreds of ms to seconds is the
+        # dominant scanner-liveness risk (terminal IPC stall / queue backlog).
+        logger.warning(
+            "[MT5_SLOW_CALL] function=%s elapsed_ms=%d timeout_s=%.1f",
+            func_name, _elapsed_ms, timeout_seconds,
+        )
     return result
 
 

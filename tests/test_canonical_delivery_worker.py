@@ -1205,3 +1205,61 @@ def test_worker_can_deliver_all_active_production_v1_datasets(tmp_path):
         else:
             assert item.lifecycle_reconciled is False
             assert box.get(item.outbox_id).reconciliation_state == "NOT_APPLICABLE"
+
+
+def test_historical_backlog_triage_parks_unreconcilable_rows_without_anomaly_spam(
+    tmp_path, caplog,
+):
+    clock = Clock()
+    box = outbox(tmp_path, clock)
+    historical = enqueue(box, lifecycle_obligation_id=None)
+    executor = worker(box, FakeS3(), clock)
+
+    # The live pass records the anomaly exactly as before the repair.
+    assert executor.run_once().state_after is DeliveryState.ACKNOWLEDGED
+    assert box.get(historical.outbox_id).reconciliation_state == "ANOMALY"
+
+    caplog.clear()
+    with caplog.at_level("ERROR"):
+        triage = executor.triage_historical_backlog(
+            horizon="2026-10-03T00:00:00+00:00",
+        )
+
+    assert triage.scanned == 1
+    assert triage.skipped_terminal_historical == 1
+    assert triage.deferred_to_active_pass == 0
+    parked = box.get(historical.outbox_id)
+    assert parked.reconciliation_state == "TERMINAL_HISTORICAL"
+    assert parked.reconciliation_error == "LIFECYCLE_OBLIGATION_NOT_LINKED"
+    # Historical triage must never emit a per-row anomaly.
+    assert "[CANONICAL_RECONCILIATION_ANOMALY]" not in caplog.text
+    # Parked rows are never re-selected as active reconciliation work.
+    assert box.acknowledged_needing_reconciliation(limit=10) == ()
+    assert executor.reconcile_acknowledged(max_items=10) == ()
+    assert box.reconciliation_state_counts()["TERMINAL_HISTORICAL"] == 1
+
+
+def test_historical_backlog_triage_defers_active_work_unchanged(tmp_path, monkeypatch):
+    clock = Clock()
+    box = outbox(tmp_path, clock)
+    record = enqueue(box, dataset="events")  # operational -> NOT_APPLICABLE
+    executor = worker(box, FakeS3(), clock)
+
+    # Simulate an ACK committing before its reconciliation pass (crash gap).
+    monkeypatch.setattr(
+        executor, "_safe_reconcile_lifecycle", lambda _record: (False, None),
+    )
+    assert executor.run_once().state_after is DeliveryState.ACKNOWLEDGED
+    monkeypatch.undo()
+    assert box.get(record.outbox_id).reconciliation_state == "NOT_LINKED"
+
+    triage = executor.triage_historical_backlog(
+        horizon="2026-10-03T00:00:00+00:00",
+    )
+    assert triage.scanned == 1
+    assert triage.skipped_terminal_historical == 0
+    assert triage.deferred_to_active_pass == 1
+    # Deferred rows keep their state and are completed by the normal pass.
+    assert box.get(record.outbox_id).reconciliation_state == "NOT_LINKED"
+    executor.reconcile_acknowledged(max_items=1)
+    assert box.get(record.outbox_id).reconciliation_state == "NOT_APPLICABLE"

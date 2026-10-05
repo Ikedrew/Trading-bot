@@ -533,6 +533,8 @@ def emit(
         date_str = utc_ms_to_date(ts)
         line = json.dumps(event, separators=(",", ":"), default=str) + "\n"
 
+        _emit_t0 = _time.perf_counter()
+        _t_write = _time.perf_counter()
         with _lock:
             fh = _get_file_handle(date_str)
             from core.canonical_delivery import try_prepare_local_jsonl_handoffs
@@ -543,14 +545,27 @@ def emit(
             fh.write(line)
             fh.flush()
             os.fsync(fh.fileno())
+        _write_ms = int((_time.perf_counter() - _t_write) * 1000)
 
         _total_emitted += 1
 
         from core.canonical_delivery import enqueue_canonical_delivery
+        _t_enq = _time.perf_counter()
         enqueue_canonical_delivery(
             dataset="events", payload=event,
             symbol=event["symbol"], partition_date=date_str,
         )
+        _enq_ms = int((_time.perf_counter() - _t_enq) * 1000)
+
+        _emit_ms = int((_time.perf_counter() - _emit_t0) * 1000)
+        if _emit_ms >= 250:
+            # The unified stream performs a durable outbox handoff + an explicit
+            # local fsync per event. On a slow/throttled disk a single event can
+            # stall for seconds; make that visible instead of silent.
+            logger.warning(
+                "[EVENT_EMIT_SLOW] type=%s symbol=%s total_ms=%d write_fsync_ms=%d enqueue_ms=%d",
+                event_type_str, event["symbol"], _emit_ms, _write_ms, _enq_ms,
+            )
 
         return True
 

@@ -483,3 +483,44 @@ def test_main_owns_live_delivery_startup_and_shutdown():
     assert "stop_canonical_delivery_service" in source
     assert "if not config.REPLAY_MODE" in source
     assert "CANONICAL_DELIVERY_SERVICE_START_FAILED" in source
+
+
+def test_startup_triage_parks_historical_backlog_and_reports_skipped(
+    tmp_path, monkeypatch,
+):
+    import core.canonical_delivery_service as svc
+
+    clock_value = "2026-10-02T12:00:00+00:00"
+    box = CanonicalDeliveryOutbox(
+        tmp_path / "outbox.sqlite3", canonical_bucket="test-bucket",
+        clock=lambda: clock_value,
+    )
+    historical = box.enqueue(
+        dataset="decision_ledger",
+        payload={"decision_id": "D-HIST", "symbol": "EURUSD"},
+        symbol="EURUSD", partition_date="2026-10-02",
+    ).record
+    s3 = ServiceS3()
+    worker = CanonicalDeliveryWorker(box, s3_client=s3, owner_id="triage-test")
+    # ACK the row, leaving the unlinked-anomaly reconciliation in place.
+    assert worker.run_once().state_after is DeliveryState.ACKNOWLEDGED
+    assert box.get(historical.outbox_id).reconciliation_state == "ANOMALY"
+
+    monkeypatch.setattr(svc, "_utc_now", lambda: "2026-10-03T00:00:00+00:00")
+    service = CanonicalDeliveryService(
+        worker=worker, poll_interval_seconds=0.01, batch_size=2,
+        shutdown_timeout_seconds=2,
+    )
+    assert service.start() is True
+    try:
+        triage = service.status().historical_triage
+        assert triage.scanned == 1
+        assert triage.skipped_terminal_historical == 1
+        assert triage.deferred_to_active_pass == 0
+        parked = box.get(historical.outbox_id)
+        assert parked.reconciliation_state == "TERMINAL_HISTORICAL"
+        # The parked historical row is never re-selected as active work.
+        assert box.acknowledged_needing_reconciliation(limit=10) == ()
+    finally:
+        assert service.stop() is True
+        box.close()

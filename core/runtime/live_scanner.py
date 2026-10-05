@@ -45,6 +45,8 @@ from core.runtime.fanout_execution import dispatch_execution, multi_account_fano
 from core.runtime.scanner_init import initialize_symbol_states
 from core.runtime.runtime_state_classifier import RuntimeStateClassifier
 from core.runtime.tick_monitor import TickMonitor
+from core.runtime.cycle_profiler import CycleProfiler
+from core.runtime.startup_warmup import warm_runtime_dependencies
 from core.stale_monitor import StaleDataMonitor
 from core.trade_management import (
     TradeManagementConfig,
@@ -52,7 +54,7 @@ from core.trade_management import (
 )
 from core.event_bus import emit_event
 
-from data.mt5_data import MT5DataFeed
+from data.mt5_data import MT5DataFeed, begin_data_cycle, end_data_cycle, cycle_fetch_stats
 from execution.mt5_execution import MT5Execution
 from risk.models import OrderIntent
 from strategy.signals import Side
@@ -118,6 +120,18 @@ def run_live_scanner(
             return  # Startup incident already logged CRITICAL; fail closed.
         logger.critical("[LIVE_SCANNER] no symbols initialized — aborting")
         return
+
+    # ─── STARTUP WARM-UP (pay one-time lazy-init costs BEFORE the loop) ──
+    # The canonical delivery outbox, lifecycle obligation ledger, and shadow
+    # runtime are constructed lazily on first use. Without this warm-up the
+    # first scanner cycle absorbs their one-time construction (~60 s measured)
+    # inside the per-symbol candle handoff, tripping the liveness threshold.
+    # Warm-up constructs exactly the same singletons the hot path would have.
+    try:
+        warm_runtime_dependencies()
+    except Exception as _warm_exc:  # never abort startup on warm-up
+        logger.warning("[STARTUP_WARMUP] unexpected failure: %s", _warm_exc)
+    # ─── END STARTUP WARM-UP ─────────────────────────────────────────
 
     _mode = "PAPER" if getattr(execution, "DRY_RUN", True) else "LIVE"
     logger.info("[LIVE_SCANNER] ENGINE_START | mode=%s | symbols=%d", _mode, len(states))
@@ -289,6 +303,8 @@ def run_live_scanner(
 
             cycle_id += 1
             cycle_start = time.time()
+            _prof = CycleProfiler(cycle_id)
+            begin_data_cycle()
             _cycle_had_trade = False
 
             # ─── LIFECYCLE TRACKING (cycle reporting migration) ────────
@@ -378,9 +394,13 @@ def run_live_scanner(
 
             for sym_state in states:
               try:
+                _sym_t0 = time.perf_counter()
+                _t_engine = None
+                _t_sub = time.perf_counter()
                 set_active_symbol(sym_state.symbol)
 
                 # Fetch tick
+                _t_tick = time.perf_counter()
                 try:
                     bid, ask, tick_time = sym_state.feed.last_tick(sym_state.symbol)
                 except MT5ConnectionError:
@@ -396,15 +416,19 @@ def run_live_scanner(
                     tick_time=tick_time,
                 )
                 if not _tick_result.valid:
+                    _prof.add("tick_fetch", time.perf_counter() - _t_tick)
                     continue
                 # ─── END TICK FRESHNESS ────────────────────────────────
 
                 # Trade management tick update (paused when kill switch active)
                 drive_tick(sym_state.trade_manager, sym_state.symbol, bid, ask, _kill_active)
+                _prof.add("tick_fetch", time.perf_counter() - _t_tick)
 
                 # ─── BAR PROVISION (R5+R21 — extracted to core.runtime.bar_provider) ─
+                _t_bar = time.perf_counter()
                 _bar_result = _bar_provider.fetch_bar(sym_state)
                 if _bar_result is None:
+                    _prof.add("bar_provision", time.perf_counter() - _t_bar)
                     continue  # Symbol skipped (fetch fail, stale, duplicate, etc.)
                 candles = _bar_result.candles
                 closed_i = _bar_result.closed_i
@@ -412,6 +436,7 @@ def run_live_scanner(
                 _closed_time_utc = _bar_result.closed_time_utc
                 _feed_state = _bar_result.feed_state
                 _this_cycle_new_bars.append(sym_state.symbol)
+                _prof.add("bar_provision", time.perf_counter() - _t_bar)
                 # ─── END BAR PROVISION ────────────────────────────────────
 
                 # ─── PER-CYCLE EXECUTION CONTEXT (R12 — extracted) ─────
@@ -512,6 +537,7 @@ def run_live_scanner(
 
                 # ─── HTF CONTEXT + MARKET CONTEXT (built BEFORE engine) ───
                 # Both V10 and legacy engine consume these. Must be fresh per symbol per cycle.
+                _t_ctx = time.perf_counter()
                 _new_engine_htf = None
                 if sym_state.tf_cache is not None:
                     try:
@@ -537,8 +563,10 @@ def run_live_scanner(
                         )
                     except Exception:
                         pass  # Market context failure must never affect trading
+                _prof.add("htf_and_market_context", time.perf_counter() - _t_ctx)
                 # ─── END HTF + MARKET CONTEXT ─────────────────────────────
 
+                _t_v10 = time.perf_counter()
                 # ─── V10 ENGINE MODE CHECK ────────────────────────────
                 _engine_mode = getattr(config, "ENGINE_MODE", "LEGACY")
                 if _engine_mode == "V10":
@@ -599,6 +627,7 @@ def run_live_scanner(
                     except Exception as _v10_exc:
                         logger.warning("[V10] fallback to legacy: %s", _v10_exc)
                         _engine_mode = "LEGACY"  # Fall through to legacy below
+                _prof.add("v10_engine", time.perf_counter() - _t_v10)
                 # ─── END V10 ENGINE MODE ──────────────────────────────
                 if _engine_mode != "V10":
                     # LEGACY ENGINE PATH — only runs when ENGINE_MODE != "V10"
@@ -608,6 +637,7 @@ def run_live_scanner(
                 # ─── SHADOW OPPORTUNITY LAYER (Phase 2A — observation only) ─
                 # Create Opportunity objects for ALL detected patterns.
                 # Purely observational: never affects trading decisions.
+                _t_opp = time.perf_counter()
                 _cycle_opportunities: list = []
                 _opportunity_stage_failed = False
                 try:
@@ -671,8 +701,11 @@ def run_live_scanner(
                         )
                     except Exception:
                         pass
+                _prof.add("opportunity_layer", time.perf_counter() - _t_opp)
                 # ─── END SHADOW OPPORTUNITY LAYER ─────────────────────────
                 try:
+                    _t_engine = time.perf_counter()
+                    _t_sub = time.perf_counter()
                     from core.pipeline.new_engine import run_new_engine
                     if _engine_mode == "V10":
                         # V10 already computed _new_result above — skip legacy engine
@@ -712,6 +745,7 @@ def run_live_scanner(
                             print(f"[BIAS FSM] {sym_state.symbol} | {_fsm_log['transition']} | strength={_fsm_log['new_strength']:.1f} | bias={_fsm_log['new_bias']}")
                     except Exception:
                         pass  # FSM failure must never block execution
+                    _prof.add("ENGINE:bias_fsm+lineage", time.perf_counter() - _t_sub); _t_sub = time.perf_counter()
                     # ─── END BIAS FSM ─────────────────────────────────
                     # Record candidate for opportunity ranking (passive observation)
                     _new_result["symbol"] = sym_state.symbol
@@ -782,7 +816,8 @@ def run_live_scanner(
                     # DecisionRecorder ledger row — never a second row.
                     if not _cycle_decision.get("v10"):
                         _cycle_decision["v10"] = _new_result.get("v10_payload")
-                    # ─── END CANONICAL LINEAGE ────────────────────────────
+                    _prof.add("ENGINE:canonical_lineage", time.perf_counter() - _t_sub); _t_sub = time.perf_counter()
+                # ─── END CANONICAL LINEAGE ────────────────────────────
 
                     # ─── ASSESSMENT + HORIZON INTELLIGENCE (Phase 2B+4B) ─────
                     # Build assessment, enrich with horizon classification,
@@ -793,7 +828,7 @@ def run_live_scanner(
                     try:
                         from core.assessment.builder import build_assessment
                         _assessment_record = build_assessment(
-                            engine_result=_new_result,
+                    engine_result=_new_result,
                             symbol=sym_state.symbol,
                             cycle_id=cycle_id,
                             bar_time=int(closed_time),
@@ -951,7 +986,8 @@ def run_live_scanner(
                             persist_assessment(_assessment_record)
                     except Exception:
                         pass  # Assessment persistence must NEVER affect trading
-                    # ─── END ASSESSMENT + HORIZON ──────────────────────────
+                    _prof.add("ENGINE:assessment_horizon", time.perf_counter() - _t_sub); _t_sub = time.perf_counter()
+                # ─── END ASSESSMENT + HORIZON ──────────────────────────
 
                     # ─── HORIZON SHADOW TRADES (Phase 4C.3 — ALL opportunities) ─
                     # Create shadow trades for each eligible horizon, regardless of
@@ -962,7 +998,7 @@ def run_live_scanner(
                             # ─── NEW Shadow Runtime path (gated) ──────────
                             # Pre-verdict branch into the NEW per-opportunity
                             # Shadow lineage. Fire-and-forget: any failure is
-                            # contained by this block's existing except.
+                    # contained by this block's existing except.
                             from core.shadow.integration import (
                                 ShadowV2Handled,
                                 handle_live_opportunity_shadow,
@@ -1339,7 +1375,8 @@ def run_live_scanner(
                     ))
                     _cycle_decision["decision_trace_observer_reached"] = True
                     _cycle_decision["strategy_observer_reached"] = True
-                    # ─── END OBSERVER DISPATCH ────────────────────────────────
+                    _prof.add("ENGINE:observer_dispatch", time.perf_counter() - _t_sub); _t_sub = time.perf_counter()
+                # ─── END OBSERVER DISPATCH ────────────────────────────────
                     if _new_result["action"] == "NO_TRADE":
                         # ─── LIFECYCLE: Decision drop ─────────────────────
                         _cycle_decision_drops.append((sym_state.symbol, "V10", _new_result.get("reason", "?")))
@@ -1350,7 +1387,7 @@ def run_live_scanner(
                             engine_state=sym_state.engine_state,
                             risk=sym_state.risk,
                             cycle_id=cycle_id,
-                            closed_time=closed_time,
+                    closed_time=closed_time,
                             candles=candles,
                             closed_i=closed_i,
                             bid=bid,
@@ -1464,6 +1501,7 @@ def run_live_scanner(
                     except Exception:
                         pass  # Exception persistence must never cause a second failure
                     continue  # Skip this symbol entirely — no trading
+                _prof.add("ENGINE:engine_a_tail", time.perf_counter() - _t_sub); _t_sub = time.perf_counter()
                 # ─── END ENGINE A ─────────────────────────────────────
 
                 # ═══════════════════════════════════════════════════════
@@ -1591,6 +1629,7 @@ def run_live_scanner(
                     new_engine_action="EXECUTE",
                 ))
                 _eval_unified = _eval_result.legacy_unified
+                _prof.add("ENGINE:evaluation", time.perf_counter() - _t_sub); _t_sub = time.perf_counter()
                 # ─── END EVALUATION ───────────────────────────────────
 
                 # Emit events (observability only — must never block execution)
@@ -1694,6 +1733,7 @@ def run_live_scanner(
                             continue
                   except Exception:
                     pass  # Authority must NEVER block execution on internal error
+                _prof.add("ENGINE:horizon_authority", time.perf_counter() - _t_sub); _t_sub = time.perf_counter()
                 # ─── END HORIZON EXECUTION AUTHORITY ───────────────────
 
                 _guard_chain_result = evaluate_runtime_guards(
@@ -1801,6 +1841,7 @@ def run_live_scanner(
                         pass  # Opportunity layer must NEVER affect trading
                     # ─── END OPPORTUNITY GUARD REJECTION ───────────────
                     continue
+                _prof.add("ENGINE:runtime_guard_chain", time.perf_counter() - _t_sub); _t_sub = time.perf_counter()
                 # ─── END RUNTIME GUARD CHAIN ──────────────────────────
 
                 # ─── EXECUTION (R14+R15 — extracted to execution_orchestrator) ─
@@ -1885,6 +1926,7 @@ def run_live_scanner(
                     continue
                 result = _exec_outcome.result
                 _decision_ts = _exec_outcome.decision_ts_utc_ms
+                _prof.add("ENGINE:execution", time.perf_counter() - _t_sub); _t_sub = time.perf_counter()
                 # ─── END EXECUTION ────────────────────────────────────
 
                 if result.ok:
@@ -2092,6 +2134,7 @@ def run_live_scanner(
                             "[PROTECTION_VERIFICATION_ERROR] symbol=%s error=%s",
                             sym_state.symbol, _prot_exc,
                         )
+                    _prof.add("ENGINE:protection_verification", time.perf_counter() - _t_sub); _t_sub = time.perf_counter()
                     # ─── END PROTECTION VERIFICATION ──────────────────────
 
                     # ─── POST-EXECUTION EFFECTS (extracted) ───────────────
@@ -2161,6 +2204,14 @@ def run_live_scanner(
                 except Exception:
                     pass  # Finalization failure must not cause a second crash
                 continue
+              finally:
+                try:
+                    _now = time.perf_counter()
+                    if _t_engine is not None:
+                        _prof.add("engine_execution_persistence", _now - _t_engine)
+                    _prof.symbol(sym_state.symbol, _now - _sym_t0)
+                except Exception:
+                    pass  # profiling must never affect runtime
             # ─── END PER-SYMBOL PROCESSING ────────────────────────────
 
             if mt5_state != MT5_CONNECTED:
@@ -2376,6 +2427,13 @@ def run_live_scanner(
             # ─── HEARTBEAT + LIVENESS (delegated to HealthMonitor) ─────
             _cycle_latency_s = time.time() - cycle_start
             _health_monitor.tick(cycle_id, _cycle_latency_s, mt5_state, _cycle_had_trade, cycle_had_fill=_cycle_had_fill)
+            # Ranked per-stage wall-clock breakdown (printed when profiling is
+            # enabled, or automatically for any cycle that stalls).
+            _prof.note("mt5_rate_fetch", cycle_fetch_stats())
+            _prof.emit(
+                _cycle_latency_s,
+                force=_cycle_latency_s > float(getattr(config, "LIVENESS_STALL_THRESHOLD_SECONDS", 10.0)),
+            )
 
             # ─── PIPELINE DIAGNOSTICS (extracted to core.pipeline.pipeline_diagnostics) ─
             emit_pipeline_diagnostics(
@@ -2409,6 +2467,7 @@ def run_live_scanner(
             interruptible_sleep(config.POLL_SECONDS)
 
     finally:
+        end_data_cycle()
         for s in states:
             try:
                 s.feed.disconnect()

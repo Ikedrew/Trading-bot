@@ -15,6 +15,7 @@ import logging
 import os
 from pathlib import Path
 import threading
+import time
 from typing import Any, Mapping, Sequence
 
 from core.canonical_delivery_outbox import (
@@ -27,6 +28,11 @@ from core.canonical_delivery_outbox import (
 from core.production_data_contract import PRODUCTION_SCHEMA_REGISTRY
 
 logger = logging.getLogger(__name__)
+
+# A durable canonical handoff that takes longer than this on the scanner thread
+# is logged so intermittent outbox stalls (WAL checkpoint / fsync / lock wait)
+# are visible instead of silently tripping the liveness threshold.
+SLOW_HANDOFF_WARN_MS: int = 250
 
 
 class MigrationClassification(str, Enum):
@@ -258,6 +264,7 @@ def prepare_local_jsonl_handoffs(
     lifecycle_obligation_id: str | None = None,
 ) -> tuple[LocalHandoff, ...]:
     """Prepare each exact JSONL record before a writer appends the batch."""
+    _t_handoff_start = time.perf_counter()
     try:
         source_lines = [line for line in content.splitlines() if line.strip()]
         payloads = [(line, json.loads(line)) for line in source_lines]
@@ -273,7 +280,9 @@ def prepare_local_jsonl_handoffs(
         )
     target = outbox or get_delivery_outbox()
     handoffs = []
+    _slowest_ms = 0
     for line, payload in payloads:
+        _rec_t0 = time.perf_counter()
         identity = governed_identity(dataset, payload)
         obligation_id = _existing_obligation_id(dataset, identity)
         handoffs.append(target.prepare_local_handoff(
@@ -283,6 +292,15 @@ def prepare_local_jsonl_handoffs(
             identity=identity,
             lifecycle_obligation_id=(lifecycle_obligation_id or obligation_id),
         ))
+        _slowest_ms = max(_slowest_ms, int((time.perf_counter() - _rec_t0) * 1000))
+    _elapsed_ms = int((time.perf_counter() - _t_handoff_start) * 1000)
+    if _elapsed_ms >= SLOW_HANDOFF_WARN_MS:
+        # Hot-path visibility: a durable outbox write that stalls for hundreds of
+        # ms (WAL checkpoint / fsync / lock wait) is a scanner liveness risk.
+        logger.warning(
+            "[CANONICAL_HANDOFF_SLOW] dataset=%s records=%d total_ms=%d slowest_record_ms=%d",
+            dataset, len(payloads), _elapsed_ms, _slowest_ms,
+        )
     return tuple(handoffs)
 
 

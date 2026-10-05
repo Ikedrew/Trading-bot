@@ -209,6 +209,31 @@ def test_multiple_exact_matches_are_ambiguous_and_timestamps_are_not_join_keys(t
     assert timestamp_only.current_status == S.EXPECTED_BUT_MISSING.value
 
 
+def test_find_exact_index_matches_full_scan_and_tracks_revisions(tmp_path):
+    ledger = _ledger(tmp_path)
+    obligation = create_dataset_obligation(
+        ledger, event_id="decision:D-IDX", lifecycle_stage="DECISION",
+        dataset="decision_ledger",
+        identity={"decision_id": "D-IDX", "symbol": "EURUSD"},
+        timestamp=TS, producer="test", trigger="DECISION_WRITTEN",
+    )
+    # Exact match resolves through the index; unrelated identity does not.
+    assert ledger.find_exact(
+        "decision_ledger", {"decision_id": "D-IDX"}) == (obligation,)
+    assert ledger.find_exact("decision_ledger", {"decision_id": "OTHER"}) == ()
+
+    # A revision is reflected by the index (never a stale object).
+    ledger.update(obligation.obligation_id, S.PRESENT)
+    indexed, = ledger.find_exact("decision_ledger", {"decision_id": "D-IDX"})
+    assert indexed.current_status == S.PRESENT.value
+    assert indexed.revision == 2
+
+    # Restart rebuilds the same index from the append-only history.
+    reloaded = LifecycleEvidenceLedger(ledger.path)
+    assert reloaded.find_exact(
+        "decision_ledger", {"decision_id": "D-IDX"}) == (indexed,)
+
+
 def test_duplicate_creation_is_idempotent_and_restart_reloads_latest_revision(tmp_path):
     ledger = _ledger(tmp_path)
     first, _ = begin_active_cycle(

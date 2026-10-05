@@ -13,6 +13,7 @@ import logging
 import os
 import random
 import socket
+import time
 import uuid
 from typing import Any, Callable, Mapping
 
@@ -91,6 +92,16 @@ class WorkerStatus:
     last_run_at: str | None
     last_successful_ack_at: str | None
     last_worker_error: str | None
+    last_reconciliation_pass_seconds: float | None
+
+
+@dataclass(frozen=True)
+class HistoricalTriageResult:
+    """Outcome of one bounded historical backlog triage pass."""
+
+    scanned: int
+    skipped_terminal_historical: int
+    deferred_to_active_pass: int
 
 
 def _utc_now() -> datetime:
@@ -206,6 +217,7 @@ class CanonicalDeliveryWorker:
         self._last_run_at: str | None = None
         self._last_successful_ack_at: str | None = None
         self._last_worker_error: str | None = None
+        self._last_reconciliation_pass_seconds: float | None = None
 
     @staticmethod
     def _default_s3_client() -> Any:
@@ -313,49 +325,38 @@ class CanonicalDeliveryWorker:
         }
         return self.outbox.acknowledge(record.outbox_id, evidence)
 
-    def _reconcile_lifecycle(self, record: OutboxRecord) -> tuple[bool, str | None]:
+    def _evaluate_lifecycle(
+        self, record: OutboxRecord, *, mutate: bool = True,
+    ) -> tuple[bool, str | None]:
+        """Lifecycle classification, with an optional PRESENT promotion.
+
+        Returns ``(reconcilable, anomaly)``. ``reconcilable`` is True only when
+        the exact linked obligation exists and matches. ``anomaly`` is None both
+        for a reconcilable record and for operational datasets that are
+        deliberately NOT_APPLICABLE; callers distinguish those by
+        ``reconcilable``. With ``mutate=True`` a reconcilable obligation is
+        promoted to PRESENT (the active pass); with ``mutate=False`` the ledger
+        is only read, so a triage caller can classify without side effects.
+        """
         disposition = DATASET_DISPOSITIONS[record.dataset]["class"]
         if disposition not in {"A_LIVE_REQUIRED", "B_LIVE_CONDITIONAL"}:
-            self.outbox.record_reconciliation(
-                record.outbox_id, state="NOT_APPLICABLE",
-            )
             return False, None
         if not record.lifecycle_obligation_id:
-            anomaly = "LIFECYCLE_OBLIGATION_NOT_LINKED"
-            self._reconciliation_anomalies += 1
-            self.outbox.record_reconciliation(
-                record.outbox_id, state="ANOMALY", error=anomaly,
-            )
-            logger.error(
-                "[CANONICAL_RECONCILIATION_ANOMALY] outbox=%s reason=%s",
-                record.outbox_id, anomaly,
-            )
-            return False, anomaly
+            return False, "LIFECYCLE_OBLIGATION_NOT_LINKED"
         ledger = self.lifecycle_ledger
         if ledger is None:
             from core.lifecycle_evidence_obligations import obligation_ledger
             ledger = obligation_ledger()
         obligation = ledger.get(record.lifecycle_obligation_id)
-        anomaly = None
         if obligation is None:
-            anomaly = "LINKED_LIFECYCLE_OBLIGATION_NOT_FOUND"
-        elif obligation.expected_dataset != record.dataset:
-            anomaly = "LIFECYCLE_DATASET_MISMATCH"
-        elif dict(obligation.expected_identity) != dict(record.record_identity):
-            anomaly = "LIFECYCLE_EXACT_IDENTITY_MISMATCH"
-        elif obligation.expected_schema_version != record.schema_version:
-            anomaly = "LIFECYCLE_SCHEMA_MISMATCH"
-        if anomaly:
-            self._reconciliation_anomalies += 1
-            self.outbox.record_reconciliation(
-                record.outbox_id, state="ANOMALY", error=anomaly,
-            )
-            logger.error(
-                "[CANONICAL_RECONCILIATION_ANOMALY] outbox=%s reason=%s",
-                record.outbox_id, anomaly,
-            )
-            return False, anomaly
-        if obligation.current_status != ObligationStatus.PRESENT.value:
+            return False, "LINKED_LIFECYCLE_OBLIGATION_NOT_FOUND"
+        if obligation.expected_dataset != record.dataset:
+            return False, "LIFECYCLE_DATASET_MISMATCH"
+        if dict(obligation.expected_identity) != dict(record.record_identity):
+            return False, "LIFECYCLE_EXACT_IDENTITY_MISMATCH"
+        if obligation.expected_schema_version != record.schema_version:
+            return False, "LIFECYCLE_SCHEMA_MISMATCH"
+        if mutate and obligation.current_status != ObligationStatus.PRESENT.value:
             ledger.update(
                 obligation.obligation_id,
                 ObligationStatus.PRESENT,
@@ -369,8 +370,25 @@ class CanonicalDeliveryWorker:
                     "idempotency_key": record.idempotency_key,
                 },
             )
-        self.outbox.record_reconciliation(record.outbox_id, state="RECONCILED")
         return True, None
+
+    def _reconcile_lifecycle(self, record: OutboxRecord) -> tuple[bool, str | None]:
+        reconciled, anomaly = self._evaluate_lifecycle(record)
+        if anomaly:
+            self._reconciliation_anomalies += 1
+            self.outbox.record_reconciliation(
+                record.outbox_id, state="ANOMALY", error=anomaly,
+            )
+            logger.error(
+                "[CANONICAL_RECONCILIATION_ANOMALY] outbox=%s reason=%s",
+                record.outbox_id, anomaly,
+            )
+            return False, anomaly
+        self.outbox.record_reconciliation(
+            record.outbox_id,
+            state=("RECONCILED" if reconciled else "NOT_APPLICABLE"),
+        )
+        return reconciled, None
 
     def _safe_reconcile_lifecycle(
         self, record: OutboxRecord,
@@ -567,6 +585,7 @@ class CanonicalDeliveryWorker:
         """Retry bounded lifecycle reconciliation for durable ACK rows only."""
         if max_items < 0:
             raise ValueError("MAX_ITEMS_MUST_BE_NON_NEGATIVE")
+        started = time.perf_counter()
         records = self.outbox.acknowledged_needing_reconciliation(limit=max_items)
         results = []
         for record in records:
@@ -578,7 +597,44 @@ class CanonicalDeliveryWorker:
                 record.canonical_bucket, record.canonical_key, True, False,
                 None, reconciled, anomaly,
             ))
+        self._last_reconciliation_pass_seconds = time.perf_counter() - started
         return tuple(results)
+
+    def triage_historical_backlog(
+        self, *, horizon: str, max_items: int = 100000,
+    ) -> HistoricalTriageResult:
+        """One bounded pass that parks unreconcilable historical ACK rows.
+
+        "Historical" means ACKNOWLEDGED rows created before ``horizon`` that
+        still need reconciliation -- the pre-existing backlog. Each is
+        classified once without side effects: a row whose reconciliation can
+        never complete is parked TERMINAL_HISTORICAL, so it is never re-selected
+        as active work and never emits a per-row anomaly again. Reconcilable and
+        operational rows are deferred to the normal active pass, so existing
+        repair and observability semantics are unchanged. No per-row anomaly is
+        logged; the caller reports the aggregate.
+        """
+        if max_items < 0:
+            raise ValueError("MAX_ITEMS_MUST_BE_NON_NEGATIVE")
+        records = self.outbox.historical_acknowledged_needing_reconciliation(
+            horizon=horizon, limit=max_items,
+        )
+        skipped = deferred = 0
+        for record in records:
+            try:
+                reconcilable, anomaly = self._evaluate_lifecycle(record, mutate=False)
+            except Exception as exc:
+                reconcilable = False
+                anomaly = f"LIFECYCLE_RECONCILIATION_FAILED:{type(exc).__name__}"
+            if anomaly:
+                self.outbox.mark_terminal_historical(record.outbox_id, error=anomaly)
+                skipped += 1
+            else:
+                deferred += 1
+        return HistoricalTriageResult(
+            scanned=len(records), skipped_terminal_historical=skipped,
+            deferred_to_active_pass=deferred,
+        )
 
     def status(self) -> WorkerStatus:
         outbox = self.outbox.status(now=self.clock())
@@ -606,6 +662,7 @@ class CanonicalDeliveryWorker:
             last_run_at=self._last_run_at,
             last_successful_ack_at=self._last_successful_ack_at,
             last_worker_error=self._last_worker_error,
+            last_reconciliation_pass_seconds=self._last_reconciliation_pass_seconds,
         )
 
 
@@ -613,6 +670,7 @@ __all__ = [
     "CanonicalDeliveryWorker",
     "DeliveryResult",
     "FailureClassification",
+    "HistoricalTriageResult",
     "WorkerStatus",
     "classify_delivery_failure",
 ]

@@ -313,6 +313,12 @@ class LifecycleEvidenceLedger:
         self.path = Path(path) if path is not None else DEFAULT_LEDGER_PATH
         self._lock = threading.RLock()
         self._latest: dict[str, EvidenceObligation] = {}
+        # Exact-identity index: (expected_dataset, expected_identity_key) ->
+        # latest revisions sharing that bucket. This keeps find_exact() off the
+        # O(N) whole-ledger scan it used to perform on the per-record write
+        # path, where it dominated first-cycle latency (measured ~47-97 ms per
+        # call over 18k+ obligations).
+        self._by_key: dict[tuple[str, str], list[EvidenceObligation]] = {}
         self._load()
 
     def _load(self) -> None:
@@ -331,8 +337,16 @@ class LifecycleEvidenceLedger:
                 elif obligation.revision != 1:
                     raise ValueError("OBLIGATION_HISTORY_MISSING_INITIAL_REVISION")
                 self._latest[obligation.obligation_id] = obligation
+            for obligation in self._latest.values():
+                self._index(obligation)
         except Exception as exc:
             raise ValueError(f"OBLIGATION_LEDGER_CORRUPT:{self.path}") from exc
+
+    def _index(self, obligation: EvidenceObligation) -> None:
+        """Register the latest revision in its exact-identity bucket."""
+        self._by_key.setdefault(
+            (obligation.expected_dataset, obligation.expected_identity_key), []
+        ).append(obligation)
 
     @staticmethod
     def obligation_id(
@@ -421,6 +435,7 @@ class LifecycleEvidenceLedger:
                 return existing
             self._append(obligation)
             self._latest[obligation_id] = obligation
+            self._index(obligation)
         return obligation
 
     @staticmethod
@@ -456,6 +471,15 @@ class LifecycleEvidenceLedger:
             )
             self._append(updated)
             self._latest[obligation_id] = updated
+            # Dataset/identity are immutable across a revision, so the bucket is
+            # stable; only the stored object reference changes.
+            bucket = self._by_key.get(
+                (updated.expected_dataset, updated.expected_identity_key))
+            if bucket is not None:
+                for position, item in enumerate(bucket):
+                    if item.obligation_id == obligation_id:
+                        bucket[position] = updated
+                        break
             return updated
 
     def _append(self, obligation: EvidenceObligation) -> None:
@@ -491,10 +515,11 @@ class LifecycleEvidenceLedger:
         self, dataset: str, identity: Mapping[str, Any],
     ) -> tuple[EvidenceObligation, ...]:
         key, values = exact_identity_key(dataset, identity)
-        return tuple(item for item in self.obligations()
-                     if item.expected_dataset == dataset
-                     and item.expected_identity_key == key
-                     and dict(item.expected_identity) == values)
+        bucket = self._by_key.get((dataset, key), ())
+        return tuple(sorted(
+            (item for item in bucket if dict(item.expected_identity) == values),
+            key=lambda item: item.obligation_id,
+        ))
 
 
 def reconcile_obligation(

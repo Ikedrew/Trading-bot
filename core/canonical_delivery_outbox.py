@@ -28,11 +28,13 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 import hashlib
 import json
+import logging
 import os
 from pathlib import Path
 import re
 import sqlite3
 import threading
+import time
 from typing import Any, Callable, Iterator, Mapping
 
 from core.lifecycle_evidence_obligations import (
@@ -50,6 +52,7 @@ from core.production_data_contract import (
 
 
 DEFAULT_OUTBOX_PATH = Path("logs/canonical_delivery_outbox.sqlite3")
+logger = logging.getLogger(__name__)
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _ACK_VERIFICATION_METHODS = frozenset({"GET_BODY_SHA256", "HEAD_METADATA_SHA256"})
 
@@ -442,16 +445,32 @@ class CanonicalDeliveryOutbox:
     @contextmanager
     def _transaction(self) -> Iterator[sqlite3.Connection]:
         with self._lock:
+            _t0 = time.perf_counter()
+            _begin_ms = 0
+            _commit_ms = 0
             try:
+                _tb = time.perf_counter()
                 self._db.execute("BEGIN IMMEDIATE")
+                _begin_ms = int((time.perf_counter() - _tb) * 1000)
                 yield self._db
+                _tc = time.perf_counter()
                 self._db.execute("COMMIT")
+                _commit_ms = int((time.perf_counter() - _tc) * 1000)
             except Exception:
                 try:
                     self._db.execute("ROLLBACK")
                 except sqlite3.Error:
                     pass
                 raise
+            _total_ms = int((time.perf_counter() - _t0) * 1000)
+            if _total_ms >= 250:
+                # BEGIN IMMEDIATE waits on the write lock (busy_timeout=30s) and
+                # COMMIT fsyncs the WAL (synchronous=FULL). Either can stall the
+                # scanner thread for seconds on a contended/slow disk.
+                logger.warning(
+                    "[OUTBOX_TXN_SLOW] total_ms=%d begin_ms=%d commit_ms=%d",
+                    _total_ms, _begin_ms, _commit_ms,
+                )
 
     def _validate_all_rows(self) -> None:
         try:
@@ -970,7 +989,10 @@ class CanonicalDeliveryOutbox:
     def record_reconciliation(
         self, outbox_id: str, *, state: str, error: str | None = None,
     ) -> OutboxRecord:
-        if state not in {"PENDING", "RECONCILED", "NOT_APPLICABLE", "NOT_LINKED", "ANOMALY"}:
+        if state not in {
+            "PENDING", "RECONCILED", "NOT_APPLICABLE", "NOT_LINKED", "ANOMALY",
+            "TERMINAL_HISTORICAL",
+        }:
             raise ValueError(f"INVALID_RECONCILIATION_STATE:{state}")
         now = _normalise_utc(self._clock())
         try:
@@ -1015,6 +1037,57 @@ class CanonicalDeliveryOutbox:
         except (sqlite3.Error, TypeError, ValueError, KeyError) as exc:
             raise OutboxPersistenceError(
                 f"RECONCILIATION_SCAN_FAILED:{exc}") from exc
+
+    def mark_terminal_historical(
+        self, outbox_id: str, *, error: str | None = None,
+    ) -> OutboxRecord:
+        """Terminally park a historical ACK row whose reconciliation cannot complete.
+
+        ``TERMINAL_HISTORICAL`` is deliberately absent from the reconciliation
+        scan whitelist, so a parked row is never re-selected as active work.
+        """
+        return self.record_reconciliation(
+            outbox_id, state="TERMINAL_HISTORICAL", error=error)
+
+    def historical_acknowledged_needing_reconciliation(
+        self, *, horizon: str, limit: int = 100,
+    ) -> tuple[OutboxRecord, ...]:
+        """Bounded ACK rows created before ``horizon`` whose reconciliation is incomplete.
+
+        ``horizon`` is an ISO-8601 UTC instant captured when the delivery
+        service starts; rows created strictly before it form the pre-existing
+        backlog. The same reconciliation-state whitelist as
+        :meth:`acknowledged_needing_reconciliation` applies.
+        """
+        if limit < 0:
+            raise ValueError("RECONCILIATION_LIMIT_MUST_BE_NON_NEGATIVE")
+        if limit == 0:
+            return ()
+        try:
+            with self._lock:
+                rows = self._db.execute(
+                    """SELECT * FROM outbox_records
+                       WHERE delivery_state=? AND reconciliation_state IN (?,?,?)
+                         AND created_at < ?
+                       ORDER BY created_at, outbox_id LIMIT ?""",
+                    (
+                        DeliveryState.ACKNOWLEDGED.value, "PENDING", "ANOMALY",
+                        "NOT_LINKED", horizon, limit,
+                    ),
+                ).fetchall()
+            return tuple(self._row_to_record(row) for row in rows)
+        except (sqlite3.Error, TypeError, ValueError, KeyError) as exc:
+            raise OutboxPersistenceError(
+                f"HISTORICAL_RECONCILIATION_SCAN_FAILED:{exc}") from exc
+
+    def reconciliation_state_counts(self) -> Mapping[str, int]:
+        """Reconciliation-state histogram for bounded aggregate reporting."""
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT reconciliation_state, COUNT(*) FROM outbox_records "
+                "GROUP BY reconciliation_state"
+            ).fetchall()
+        return {str(row[0]): int(row[1]) for row in rows}
 
     def reconciliation_contract(self, outbox_id: str) -> Mapping[str, Any]:
         """Exact future Block 1C comparison material; this does not claim ACK."""
@@ -1161,6 +1234,7 @@ class CanonicalDeliveryOutbox:
                 raise ValueError("canonical bucket mismatch")
             if row["reconciliation_state"] not in {
                 "PENDING", "RECONCILED", "NOT_APPLICABLE", "NOT_LINKED", "ANOMALY",
+                "TERMINAL_HISTORICAL",
             }:
                 raise ValueError("unknown reconciliation state")
             if _sha256_text(_canonical_json(payload)) != row["payload_sha256"]:

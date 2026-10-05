@@ -1,125 +1,174 @@
 {
-  "hypotheses": {
-    "HYP-DP1-001": {
-      "hypothesis_id": "HYP-DP1-001",
-      "source_finding": "F-DP1-002",
-      "source_question": "DIAG-PASS-1",
-      "domain": "STRATEGY",
-      "created_at": "2026-10-03T01:55:37.488236+00:00",
-      "statement": "IF TREND_CONTINUATION admissions are suppressed ON future V10 SCALP opportunities classified TREND_CONTINUATION THEN equal-opportunity expectancy and profit factor SHOULD increase versus unchanged admission BECAUSE live realised and admitted-shadow TREND_CONTINUATION are both negative in the frozen evidence.",
-      "target_component": "StrategySelection",
-      "expected_effect": "Increase expectancy by removing the measured negative admitted class while leaving MEAN_REVERSION unchanged.",
-      "confidence": "MEDIUM",
-      "evidence_strength": "Discovery: LIVE n=16 independent opportunities plus admitted shadow n=29. Held-out 2026-10-01..02 remained negative but was insufficient at n=55 overall/n=26 target; no new eligible rows exist after that validation in ISNAP-6C4F474E0999081BD11DE7C5. Confounding remains.",
-      "status": "PROPOSED"
-    },
-    "HYP-DP1-002": {
-      "hypothesis_id": "HYP-DP1-002",
-      "source_finding": "F-DP1-006",
-      "source_question": "DIAG-PASS-1",
-      "domain": "EXIT",
-      "created_at": "2026-10-03T01:55:37.488236+00:00",
-      "statement": "IF TRAIL_ACT_0_25R_DIST_0_10R_V1 replaces SHADOW_BASELINE_V1 exit handling ON a disjoint future shadow/backtest population THEN paired equal-opportunity expectancy SHOULD increase BECAUSE the governed historical paired replay estimated +0.17605R with Holm-adjusted 95% CI [0.15788, 0.19421].",
-      "target_component": "ExitManagement",
-      "expected_effect": "Positive paired expectancy delta without material drawdown or profit-factor regression.",
-      "confidence": "HIGH",
-      "evidence_strength": "Discovery: 9,601 independent paired opportunities with multiplicity control. Independently VALIDATED on 1,527 complete-path opportunities in ISNAP-2211B1EADCDDE8F6F02B59A7: mean paired delta +0.19322R, 95% CI [+0.14819,+0.23826], PF and drawdown guardrails passed.",
-      "status": "VALIDATED"
-    }
-  },
   "candidates": {
     "OPT-DP1-001": {
-      "candidate_id": "OPT-DP1-001",
-      "hypothesis_id": "HYP-DP1-001",
       "baseline_id": "ISNAP-2211B1EADCDDE8F6F02B59A7",
-      "created_at": "2026-10-03T01:55:37.488236+00:00",
-      "component": "StrategySelection",
+      "candidate_id": "OPT-DP1-001",
       "changes": {
-        "primary_causal_change": "suppress_admission",
+        "control": "current admission logic",
         "population_filter": {
           "pattern": "TREND_CONTINUATION"
         },
-        "control": "current admission logic",
-        "treatment": "return NO_TRADE for TREND_CONTINUATION only",
-        "preserve": "all non-TREND_CONTINUATION behavior, especially MEAN_REVERSION"
+        "preserve": "all non-TREND_CONTINUATION behavior, especially MEAN_REVERSION",
+        "primary_causal_change": "suppress_admission",
+        "treatment": "return NO_TRADE for TREND_CONTINUATION only"
       },
+      "component": "StrategySelection",
+      "created_at": "2026-10-03T01:55:37.488236+00:00",
       "expected_outcome": "Higher equal-opportunity expectancy and PF on a disjoint population.",
+      "hypothesis_id": "HYP-DP1-001",
+      "limitations": [],
+      "notes": "Validation pass VAL-OPT-DP1-001-POST-ISNAP-20261001-02-V1 is INSUFFICIENT_DATA: held-out shadow n=55 overall and n=26 TREND_CONTINUATION versus governed minimums 100 and 30; paired CI includes zero. ISNAP-6C4F474E0999081BD11DE7C5 contains that already-consumed 2026-10-01..02 evidence but zero new eligible rows after 2026-10-02, so deficits remain 45 overall and 4 target. Keep PROPOSED. Do not activate live.",
+      "policy_id": "",
+      "provenance": {},
       "risk_level": "MEDIUM",
+      "shadow_binding": {},
+      "source_finding_versions": [],
+      "source_question_results": [],
       "status": "PROPOSED",
-      "notes": "Validation pass VAL-OPT-DP1-001-POST-ISNAP-20261001-02-V1 is INSUFFICIENT_DATA: held-out shadow n=55 overall and n=26 TREND_CONTINUATION versus governed minimums 100 and 30; paired CI includes zero. ISNAP-6C4F474E0999081BD11DE7C5 contains that already-consumed 2026-10-01..02 evidence but zero new eligible rows after 2026-10-02, so deficits remain 45 overall and 4 target. Keep PROPOSED. Do not activate live."
+      "status_history": [
+        {
+          "status": "PROPOSED",
+          "timestamp": "2026-10-03T01:55:37.488236+00:00"
+        }
+      ],
+      "target_population": {},
+      "treatment_hash": "",
+      "validation_objective": "",
+      "validation_requirements": {}
     },
     "OPT-DP1-002": {
-      "candidate_id": "OPT-DP1-002",
-      "hypothesis_id": "HYP-DP1-002",
       "baseline_id": "SHADOW_BASELINE_V1@2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
-      "created_at": "2026-10-03T01:55:37.488236+00:00",
-      "component": "ExitManagement",
+      "candidate_id": "OPT-DP1-002",
       "changes": {
-        "primary_causal_change": "trailing_stop_policy",
+        "all_other_entry_target_risk_logic": "unchanged",
         "control": "SHADOW_BASELINE_V1",
-        "treatment": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
-        "all_other_entry_target_risk_logic": "unchanged"
+        "primary_causal_change": "trailing_stop_policy",
+        "treatment": "TRAIL_ACT_0_25R_DIST_0_10R_V1"
       },
+      "component": "ExitManagement",
+      "created_at": "2026-10-03T01:55:37.488236+00:00",
       "expected_outcome": "Positive paired equal-opportunity expectancy delta on a disjoint evidence epoch.",
-      "risk_level": "LOW",
-      "status": "SHADOW_VALIDATION_ACTIVE",
+      "hypothesis_id": "HYP-DP1-002",
+      "limitations": [],
       "notes": "Validated on 1,527 independent opportunities in frozen snapshot ISNAP-2211B1EADCDDE8F6F02B59A7 and forward-validated on 2,984 disjoint opportunities in ISNAP-6C4F474E0999081BD11DE7C5. Prospective shadow binding activated at 2026-10-03T11:28:16.389128Z; no historical replay is counted as prospective evidence and live application remains forbidden.",
       "policy_id": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
-      "treatment_hash": "7b97e5116a6186917799c566b807075159a2cef5cf63921282cc50132b6b53c9",
+      "provenance": {},
+      "risk_level": "LOW",
+      "shadow_binding": {
+        "activated_at": "2026-10-03T11:28:16.389128Z",
+        "activation_frontier_epoch_s": 1791026896,
+        "candidate_id": "OPT-DP1-002",
+        "candidate_schema_version": "shadow_candidate_v1",
+        "evaluation_schema_version": "shadow_candidate_evaluation_v1",
+        "forward_validation_record": "reports/research/validation/VAL-OPT-DP1-002-FORWARD-ISNAP-6C4F474E0999081BD11DE7C5-V1.json",
+        "live_approved": false,
+        "model_version": "candidate_model_v1",
+        "policy_authority": "research_engine.registry.exit_policy_adjudication.CANDIDATE_POLICIES_V1",
+        "policy_id": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
+        "prospective_only": true,
+        "required_experiment_arm": "CANDIDATE",
+        "runtime_version": "candidate_runtime_v1",
+        "treatment_hash": "7b97e5116a6186917799c566b807075159a2cef5cf63921282cc50132b6b53c9",
+        "validation_record": "reports/research/validation/VAL-OPT-DP1-002-ISNAP-2211B1EADCDDE8F6F02B59A7-V1.json"
+      },
+      "source_finding_versions": [],
+      "source_question_results": [],
+      "status": "SHADOW_VALIDATION_ACTIVE",
       "status_history": [
         {
           "status": "PROPOSED",
           "timestamp": "2026-10-03T01:55:37.488236+00:00"
         },
         {
+          "evidence": "reports/research/validation/VAL-OPT-DP1-002-ISNAP-2211B1EADCDDE8F6F02B59A7-V1.json",
           "status": "VALIDATED",
-          "timestamp": "2026-10-03T02:59:10.2992759Z",
-          "evidence": "reports/research/validation/VAL-OPT-DP1-002-ISNAP-2211B1EADCDDE8F6F02B59A7-V1.json"
+          "timestamp": "2026-10-03T02:59:10.2992759Z"
         },
         {
+          "evidence": "reports/research/validation/VAL-OPT-DP1-002-FORWARD-ISNAP-6C4F474E0999081BD11DE7C5-V1.json",
           "status": "FORWARD_VALIDATED",
-          "timestamp": "2026-10-03T05:42:20.934371Z",
-          "evidence": "reports/research/validation/VAL-OPT-DP1-002-FORWARD-ISNAP-6C4F474E0999081BD11DE7C5-V1.json"
+          "timestamp": "2026-10-03T05:42:20.934371Z"
         },
         {
+          "evidence": "prospective shadow bind frontier",
           "status": "SHADOW_VALIDATION_ACTIVE",
-          "timestamp": "2026-10-03T11:28:16.389128Z",
-          "evidence": "prospective shadow bind frontier"
+          "timestamp": "2026-10-03T11:28:16.389128Z"
         }
       ],
-      "shadow_binding": {
-        "candidate_id": "OPT-DP1-002",
-        "policy_id": "TRAIL_ACT_0_25R_DIST_0_10R_V1",
-        "treatment_hash": "7b97e5116a6186917799c566b807075159a2cef5cf63921282cc50132b6b53c9",
-        "activated_at": "2026-10-03T11:28:16.389128Z",
-        "activation_frontier_epoch_s": 1791026896,
-        "candidate_schema_version": "shadow_candidate_v1",
-        "evaluation_schema_version": "shadow_candidate_evaluation_v1",
-        "runtime_version": "candidate_runtime_v1",
-        "model_version": "candidate_model_v1",
-        "validation_record": "reports/research/validation/VAL-OPT-DP1-002-ISNAP-2211B1EADCDDE8F6F02B59A7-V1.json",
-        "forward_validation_record": "reports/research/validation/VAL-OPT-DP1-002-FORWARD-ISNAP-6C4F474E0999081BD11DE7C5-V1.json",
-        "policy_authority": "research_engine.registry.exit_policy_adjudication.CANDIDATE_POLICIES_V1",
-        "required_experiment_arm": "CANDIDATE",
-        "prospective_only": true,
-        "live_approved": false
-      }
+      "target_population": {},
+      "treatment_hash": "7b97e5116a6186917799c566b807075159a2cef5cf63921282cc50132b6b53c9",
+      "validation_objective": "",
+      "validation_requirements": {}
+    }
+  },
+  "hypotheses": {
+    "HYP-DP1-001": {
+      "confidence": "MEDIUM",
+      "created_at": "2026-10-03T01:55:37.488236+00:00",
+      "domain": "STRATEGY",
+      "evidence_lineage": {},
+      "evidence_strength": "Discovery: LIVE n=16 independent opportunities plus admitted shadow n=29. Held-out 2026-10-01..02 remained negative but was insufficient at n=55 overall/n=26 target; no new eligible rows exist after that validation in ISNAP-6C4F474E0999081BD11DE7C5. Confounding remains.",
+      "expected_effect": "Increase expectancy by removing the measured negative admitted class while leaving MEAN_REVERSION unchanged.",
+      "falsification_criteria": [],
+      "history": [],
+      "hypothesis_id": "HYP-DP1-001",
+      "hypothesis_type": "OBSERVATIONAL_HYPOTHESIS",
+      "mechanism": "",
+      "mechanism_unknown": true,
+      "required_evidence": [],
+      "source_finding": "F-DP1-002",
+      "source_finding_versions": [],
+      "source_question": "DIAG-PASS-1",
+      "source_question_results": [],
+      "statement": "IF TREND_CONTINUATION admissions are suppressed ON future V10 SCALP opportunities classified TREND_CONTINUATION THEN equal-opportunity expectancy and profit factor SHOULD increase versus unchanged admission BECAUSE live realised and admitted-shadow TREND_CONTINUATION are both negative in the frozen evidence.",
+      "status": "PROPOSED",
+      "target_component": "StrategySelection",
+      "target_population": {},
+      "version": 1
+    },
+    "HYP-DP1-002": {
+      "confidence": "HIGH",
+      "created_at": "2026-10-03T01:55:37.488236+00:00",
+      "domain": "EXIT",
+      "evidence_lineage": {},
+      "evidence_strength": "Discovery: 9,601 independent paired opportunities with multiplicity control. Independently VALIDATED on 1,527 complete-path opportunities in ISNAP-2211B1EADCDDE8F6F02B59A7: mean paired delta +0.19322R, 95% CI [+0.14819,+0.23826], PF and drawdown guardrails passed.",
+      "expected_effect": "Positive paired expectancy delta without material drawdown or profit-factor regression.",
+      "falsification_criteria": [],
+      "history": [],
+      "hypothesis_id": "HYP-DP1-002",
+      "hypothesis_type": "OBSERVATIONAL_HYPOTHESIS",
+      "mechanism": "",
+      "mechanism_unknown": true,
+      "required_evidence": [],
+      "source_finding": "F-DP1-006",
+      "source_finding_versions": [],
+      "source_question": "DIAG-PASS-1",
+      "source_question_results": [],
+      "statement": "IF TRAIL_ACT_0_25R_DIST_0_10R_V1 replaces SHADOW_BASELINE_V1 exit handling ON a disjoint future shadow/backtest population THEN paired equal-opportunity expectancy SHOULD increase BECAUSE the governed historical paired replay estimated +0.17605R with Holm-adjusted 95% CI [0.15788, 0.19421].",
+      "status": "VALIDATED",
+      "target_component": "ExitManagement",
+      "target_population": {},
+      "version": 1
     }
   },
   "plans": {
     "OPT-DP1-001": {
-      "candidate_id": "OPT-DP1-001",
       "baseline_id": "ISNAP-2211B1EADCDDE8F6F02B59A7",
+      "candidate_id": "OPT-DP1-001",
       "created_at": "2026-10-03T01:55:37.488236+00:00",
+      "failure_conditions": {
+        "expectancy_delta": "<= 0 or 95% CI includes 0",
+        "regime_confound": "effect disappears outside one symbol/direction",
+        "scope_regression": "any non-target decision changes"
+      },
       "metrics": [
         "paired_equal_opportunity_expectancy_r",
         "profit_factor",
         "max_drawdown_r",
         "opportunity_count"
       ],
-      "target_questions": [
-        "Does suppressing TREND_CONTINUATION improve out-of-sample admission expectancy?"
-      ],
+      "minimum_sample": 100,
+      "notes": "Use a later, frozen, disjoint shadow/backtest epoch; cluster by canonical opportunity; require at least 30 target opportunities across >=3 symbols and, when observed, both directions.",
       "regression_questions": [
         "Does MEAN_REVERSION remain unchanged?",
         "Does the effect persist across symbols and both directions?"
@@ -129,18 +178,20 @@
         "profit_factor": "> control",
         "scope_fidelity": "only TREND_CONTINUATION decisions differ"
       },
-      "failure_conditions": {
-        "expectancy_delta": "<= 0 or 95% CI includes 0",
-        "regime_confound": "effect disappears outside one symbol/direction",
-        "scope_regression": "any non-target decision changes"
-      },
-      "minimum_sample": 100,
-      "notes": "Use a later, frozen, disjoint shadow/backtest epoch; cluster by canonical opportunity; require at least 30 target opportunities across >=3 symbols and, when observed, both directions."
+      "target_questions": [
+        "Does suppressing TREND_CONTINUATION improve out-of-sample admission expectancy?"
+      ]
     },
     "OPT-DP1-002": {
-      "candidate_id": "OPT-DP1-002",
       "baseline_id": "SHADOW_BASELINE_V1@2f53c4a2c9c25cf1e6958050067b19132d1edaa3a05f82c9763c87fd0510404f",
+      "candidate_id": "OPT-DP1-002",
       "created_at": "2026-10-03T01:55:37.488236+00:00",
+      "failure_conditions": {
+        "concentration": "positive effect depends on one symbol/regime",
+        "max_drawdown": "> 1.10 * control",
+        "paired_expectancy_delta": "<= 0 or 95% CI includes 0",
+        "profit_factor": "< control"
+      },
       "metrics": [
         "paired_equal_opportunity_expectancy_delta_r",
         "profit_factor",
@@ -148,27 +199,21 @@
         "average_win_r",
         "average_loss_r"
       ],
-      "target_questions": [
-        "Does TRAIL_ACT_0_25R_DIST_0_10R_V1 retain a positive paired effect out of sample?"
-      ],
+      "minimum_sample": 300,
+      "notes": "Use a temporally later frozen population excluded from candidate discovery. Pair control/treatment on identical canonical opportunities; no parameter sweep or retuning.",
       "regression_questions": [
         "Does profit factor remain >= control?",
         "Does max drawdown avoid >10% deterioration?",
         "Does effect persist by symbol/regime?"
       ],
       "success_conditions": {
+        "max_drawdown": "<= 1.10 * control",
         "paired_expectancy_delta": "> 0 with cluster-aware 95% CI lower bound > 0",
-        "profit_factor": ">= control",
-        "max_drawdown": "<= 1.10 * control"
+        "profit_factor": ">= control"
       },
-      "failure_conditions": {
-        "paired_expectancy_delta": "<= 0 or 95% CI includes 0",
-        "profit_factor": "< control",
-        "max_drawdown": "> 1.10 * control",
-        "concentration": "positive effect depends on one symbol/regime"
-      },
-      "minimum_sample": 300,
-      "notes": "Use a temporally later frozen population excluded from candidate discovery. Pair control/treatment on identical canonical opportunities; no parameter sweep or retuning."
+      "target_questions": [
+        "Does TRAIL_ACT_0_25R_DIST_0_10R_V1 retain a positive paired effect out of sample?"
+      ]
     }
   }
 }

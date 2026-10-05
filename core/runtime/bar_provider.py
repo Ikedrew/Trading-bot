@@ -99,6 +99,18 @@ class BarProvider:
         Symbol fetch errors return None; MT5ConnectionError reaches the health owner.
         """
         # ─── 1. CANDLE FETCH ──────────────────────────────────────────
+        _t_fetch_bar = time.perf_counter()
+        _candle_ms = _shadow_ms = _research_ms = -1
+
+        def _log_slow_bar() -> None:
+            _total_ms = int((time.perf_counter() - _t_fetch_bar) * 1000)
+            if _total_ms >= 1000:
+                logger.warning(
+                    "[BAR_SLOW] symbol=%s total_ms=%d candle_ms=%d shadow_ms=%d research_ms=%d",
+                    sym_state.symbol, _total_ms, _candle_ms, _shadow_ms, _research_ms,
+                )
+
+        _t_candle = time.perf_counter()
         try:
             candles = sym_state.feed.copy_rates_closed(
                 sym_state.symbol, self._config.TIMEFRAME, self._config.CANDLE_COUNT
@@ -109,6 +121,7 @@ class BarProvider:
         except RuntimeError:
             logger.info("[LIVE_SCANNER] %s candle fetch failed — skipping", sym_state.symbol)
             return None
+        _candle_ms = int((time.perf_counter() - _t_candle) * 1000)
 
         # ─── 2. BAR INDEX SELECTION ───────────────────────────────────
         timeframe_seconds = _timeframe_seconds(self._config.TIMEFRAME)
@@ -127,6 +140,7 @@ class BarProvider:
         _closed_time_utc = closed_time
 
         # ─── 5. SHADOW TRADE EVALUATE (fire-and-forget, independent) ──
+        _t_shadow = time.perf_counter()
         try:
             if getattr(self._config, "SHADOW_RUNTIME_V2_ENABLED", False):
                 # NEW Shadow Runtime: evaluation is keyed on the authoritative
@@ -157,8 +171,10 @@ class BarProvider:
                 )
         except Exception:
             pass  # Shadow engine must never affect live pipeline
+        _shadow_ms = int((time.perf_counter() - _t_shadow) * 1000)
 
         # ─── 5b. RESEARCH SHADOW TRADE EVALUATE (fire-and-forget) ─────
+        _t_research = time.perf_counter()
         try:
             from core.research_assessment.research_shadow_engine import evaluate_research_bar
             evaluate_research_bar(
@@ -171,6 +187,7 @@ class BarProvider:
             )
         except Exception:
             pass  # Research shadow must never affect live pipeline
+        _research_ms = int((time.perf_counter() - _t_research) * 1000)
 
         # ─── 6. FEED STATE CLASSIFICATION ─────────────────────────────
         _bar_age_s = int(time.time()) - _closed_time_utc
@@ -194,6 +211,7 @@ class BarProvider:
                 except Exception:
                     pass
                 sym_state._feed_stale_alerted = True
+            _log_slow_bar()
             return None
         else:
             sym_state._feed_stale_alerted = False
@@ -242,6 +260,7 @@ class BarProvider:
                     sym_state._stale_warned = True
             elif _bar_age_s <= 600:
                 sym_state._stale_warned = False
+            _log_slow_bar()
             return None  # No new bar for this symbol
 
         # New bar detected — reset stale counter
@@ -267,6 +286,7 @@ class BarProvider:
         sym_state.last_closed_time = closed_time
         sym_state.iterations += 1
 
+        _log_slow_bar()
         return BarResult(
             candles=candles,
             closed_i=closed_i,
