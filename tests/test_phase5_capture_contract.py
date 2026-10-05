@@ -143,6 +143,40 @@ class TestMarketContextCapture:
         assert rec["bar_time"] == BAR_TIME
         assert rec["correlation_id"] == "COR-TEST-0001"
         assert rec["schema_version"] == "market_context_v1"
+    def test_pre_registered_cycle_market_obligation_does_not_drop_evidence(
+            self, tmp_path, monkeypatch):
+        """execution_context_builder pre-registers the cycle's market_context
+        obligation; the builder must fulfil it (produce evidence) instead of
+        aborting on a false OBLIGATION_IDENTITY_CONFLICT."""
+        import core.lifecycle_evidence_obligations as leo
+
+        ledger = leo.LifecycleEvidenceLedger(tmp_path / "obligations.jsonl")
+        leo.begin_active_cycle(
+            ledger, event_id=f"cycle:{SYMBOL}:{BAR_TIME}:{CYCLE_ID}",
+            symbol=SYMBOL, cycle_id=CYCLE_ID, entity_id=f"{SYMBOL}_{BAR_TIME}",
+            correlation_id="COR-TEST-0001", timestamp=str(BAR_TIME))
+        monkeypatch.setattr(leo, "obligation_ledger", lambda path=None: ledger)
+
+        class _PersistOK:
+            def __init__(self):
+                self.calls = []
+
+            def persist(self, context_dict, *, entity_id="", correlation_id="",
+                        bar_time=None):
+                self.calls.append(dict(context_dict))
+                return True
+
+        fake = _PersistOK()
+        builder = MarketContextBuilder(symbol=SYMBOL, persistence=fake)
+        builder.build(cycle_id=CYCLE_ID, current_time_s=float(BAR_TIME))
+
+        assert fake.calls, "market-context evidence must be produced"
+        market = [o for o in ledger.obligations()
+                  if o.expected_dataset == "market_context"]
+        assert len(market) == 1
+        assert market[0].current_status == "NOT_YET_DUE"
+
+
 
 
 # ─── 2. canonical timing rule ─────────────────────────────────────────────────

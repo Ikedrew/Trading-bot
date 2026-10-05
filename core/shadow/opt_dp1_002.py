@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,20 @@ from core.shadow.frozen_trailing_policy import (
     initialise_frozen_trailing,
 )
 from research_engine.control_plane.exit_candidate_replay import CANDIDATE_POLICY_BY_ID
+
+logger = logging.getLogger(__name__)
+
+
+class OptDp1002AuthorityUnavailable(RuntimeError):
+    """The governed binding-authority artifacts are not present on this host.
+
+    The OPT-DP1-002 validation and forward-validation records live under
+    ``reports/research/`` (git-ignored) and are produced by the governed
+    research pipeline. When they are absent the candidate cannot be verified and
+    MUST be treated as unavailable: fail closed by disabling it cleanly, never by
+    fabricating, recreating, or weakening evidence. A present-but-inconsistent
+    authority is a different condition and still raises.
+    """
 
 
 CANDIDATE_ID = "OPT-DP1-002"
@@ -77,7 +92,12 @@ class OptDp1002TreatmentAdapter:
 def _read(path: Path) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        # The governed authority artifact is legitimately absent on this host.
+        raise OptDp1002AuthorityUnavailable(
+            "OPT_DP1_002_AUTHORITY_UNAVAILABLE:" + str(path)) from exc
     except (OSError, ValueError) as exc:
+        # Present but unreadable/corrupt: a governance violation, not absence.
         raise RuntimeError("OPT_DP1_002_AUTHORITY_UNREADABLE:" + str(path)) from exc
     if not isinstance(value, dict):
         raise RuntimeError("OPT_DP1_002_AUTHORITY_INVALID:" + str(path))
@@ -138,8 +158,29 @@ def verify_binding_authority() -> dict[str, Any]:
             "forward": forward, "binding": binding}
 
 
+_DISABLE_LOGGED = False
+
+
 def register_opt_dp1_002(runtime) -> bool:
-    authority = verify_binding_authority()
+    """Register the candidate only when governed authority verifies.
+
+    When the governed authority artifacts are legitimately unavailable on this
+    host the candidate is disabled cleanly (returns ``False``) and the condition
+    is logged exactly once — it is never retried per bar and never raises. A
+    present-but-inconsistent authority still fails closed by raising, so a real
+    governance violation is never silently suppressed.
+    """
+    global _DISABLE_LOGGED
+    try:
+        authority = verify_binding_authority()
+    except OptDp1002AuthorityUnavailable as exc:
+        if not _DISABLE_LOGGED:
+            logger.warning(
+                "[OPT_DP1_002_CANDIDATE_UNAVAILABLE] candidate=%s disabled: %s",
+                CANDIDATE_ID, exc,
+            )
+            _DISABLE_LOGGED = True
+        return False
     registration = CandidateRegistration(
         candidate_id=CANDIDATE_ID,
         policy_id=POLICY_ID,
@@ -165,6 +206,7 @@ def register_opt_dp1_002(runtime) -> bool:
 
 __all__ = [
     "ACTIVATED_AT", "ACTIVATION_FRONTIER_EPOCH_S", "CANDIDATE_ID",
-    "OptDp1002TreatmentAdapter", "POLICY", "POLICY_ID", "READINESS_CRITERIA",
-    "TREATMENT_HASH", "register_opt_dp1_002", "verify_binding_authority",
+    "OptDp1002AuthorityUnavailable", "OptDp1002TreatmentAdapter", "POLICY",
+    "POLICY_ID", "READINESS_CRITERIA", "TREATMENT_HASH",
+    "register_opt_dp1_002", "verify_binding_authority",
 ]

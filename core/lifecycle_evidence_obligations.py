@@ -566,14 +566,16 @@ def begin_active_cycle(
         producer="core.runtime.execution_context_builder.build_cycle_context",
         producer_trigger="ACTIVE_SYMBOL_CYCLE",
     )
-    market_context = ledger.create(
-        lifecycle_event_id=event_id, lifecycle_stage="ACTIVE_CYCLE",
-        expected_dataset="market_context", identity=identity,
-        originating_timestamp=timestamp, due_state="CONDITIONALLY_EXPECTED",
-        due_after="MATERIAL_CHANGE_GATE", requirement_type="CONDITIONAL",
-        current_status=ObligationStatus.NOT_YET_DUE,
-        producer="core.market_context.builder.MarketContextBuilder.build",
-        producer_trigger="MATERIAL_CONTEXT_CHANGE",
+    # The market-context evidence obligation is owned and fulfilled by the
+    # market-context builder (MarketContextBuilder.build). Construct it through
+    # the SAME governed constructor that the builder uses so both producers of
+    # this exact obligation agree on the governed identity contract
+    # ("entity_id") and cannot emit a false OBLIGATION_IDENTITY_CONFLICT within
+    # a single cycle. The correlation id is not part of the market_context
+    # identity contract and the builder does not possess it at capture time.
+    market_context = create_market_context_obligation(
+        ledger, event_id=event_id, symbol=symbol, cycle_id=cycle_id,
+        entity_id=entity_id, timestamp=timestamp,
     )
     return execution_context, market_context
 

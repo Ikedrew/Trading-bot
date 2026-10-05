@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import copy
 import json
+import logging
 from pathlib import Path
 
 import pytest
@@ -47,6 +48,68 @@ def _event(arm="CANDIDATE", *, entry_time=None, shadow_id="shadow-1"):
     }
 
 
+_VALIDATION_RECORD = {
+    "validation_id": "VAL-OPT-DP1-002-TEST-V1",
+    "candidate_id": CANDIDATE_ID,
+    "comparison": {
+        "validation_status": "VALIDATED",
+        "treatment": {
+            "policy_id": POLICY_ID,
+            "treatment_hash": TREATMENT_HASH,
+            "activation_r": 0.25,
+            "distance_r": 0.10,
+        },
+    },
+}
+_FORWARD_RECORD = {
+    "validation_id": "VAL-OPT-DP1-002-FORWARD-TEST-V1",
+    "candidate_id": CANDIDATE_ID,
+    "forward_validation_status": "OPT_DP1_002_FORWARD_VALIDATED",
+    "treatment": {
+        "policy_id": POLICY_ID,
+        "treatment_hash": TREATMENT_HASH,
+        "activation_r": 0.25,
+        "distance_r": 0.10,
+    },
+    "governance": {"treatment_parameters_changed": False},
+}
+
+
+@pytest.fixture(autouse=True)
+def governed_authority(tmp_path, monkeypatch):
+    """Bind the runtime to governed OPT-DP1-002 authority in isolation.
+
+    The production validation records live under ``reports/research/`` which is
+    git-ignored and produced by the governed research pipeline; they are
+    intentionally absent from this checkout. These fixtures exercise the real
+    binding logic against equivalent governed records inside a temporary project
+    root, WITHOUT fabricating or recreating the production evidence.
+    """
+    import core.shadow.opt_dp1_002 as binding
+
+    root = tmp_path / "project"
+    registry = root / "data" / "research" / "optimisation" / "registry.json"
+    registry.parent.mkdir(parents=True, exist_ok=True)
+    registry.write_text(REGISTRY_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+    validation = root / "reports" / "research" / "validation" / VALIDATION_PATH.name
+    forward = root / "reports" / "research" / "validation" / FORWARD_PATH.name
+    validation.parent.mkdir(parents=True, exist_ok=True)
+    validation.write_text(json.dumps(_VALIDATION_RECORD), encoding="utf-8")
+    forward.write_text(json.dumps(_FORWARD_RECORD), encoding="utf-8")
+
+    monkeypatch.setattr(binding, "ROOT", root)
+    monkeypatch.setattr(binding, "REGISTRY_PATH", registry)
+    monkeypatch.setattr(binding, "VALIDATION_PATH", validation)
+    monkeypatch.setattr(binding, "FORWARD_PATH", forward)
+    monkeypatch.setattr(binding, "_DISABLE_LOGGED", False)
+    return {
+        "root": root,
+        "registry_path": registry,
+        "validation_path": validation,
+        "forward_path": forward,
+    }
+
+
 def _runtime(tmp_path):
     runtime = CandidateRuntime(CandidateEventWriter(str(tmp_path / "candidate")))
     assert register_opt_dp1_002(runtime)
@@ -85,11 +148,11 @@ def test_binding_identity_mismatch_fails_closed(tmp_path, monkeypatch, target):
         binding.verify_binding_authority()
 
 
-def test_not_forward_validated_cannot_register(tmp_path, monkeypatch):
+def test_not_forward_validated_cannot_register(tmp_path, monkeypatch, governed_authority):
     import core.shadow.opt_dp1_002 as binding
-    forward = json.loads(FORWARD_PATH.read_text(encoding="utf-8"))
+    forward = json.loads(governed_authority["forward_path"].read_text(encoding="utf-8"))
     forward["forward_validation_status"] = "INSUFFICIENT_DATA"
-    path = tmp_path / "forward.json"
+    path = governed_authority["forward_path"]
     path.write_text(json.dumps(forward), encoding="utf-8")
     monkeypatch.setattr(binding, "FORWARD_PATH", path)
     with pytest.raises(RuntimeError, match="FORWARD_VALIDATION_MISSING"):
@@ -261,3 +324,64 @@ def test_binding_has_no_execution_or_broker_path():
                  if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)}
         assert not any(any(token in item for token in forbidden) for item in imports)
         assert not (calls & forbidden)
+
+
+# ─── Authority availability / fail-closed focused tests ──────────────────────
+
+
+def test_valid_governed_authority_activates_candidate(tmp_path, governed_authority):
+    runtime = CandidateRuntime(CandidateEventWriter(str(tmp_path / "candidate")))
+    assert register_opt_dp1_002(runtime) is True
+    assert runtime.registered_keys() == [(CANDIDATE_ID, POLICY_ID)]
+    assert runtime.active_ids() == []
+
+
+def test_missing_authority_disables_candidate_without_raising(
+        tmp_path, monkeypatch, caplog):
+    import core.shadow.opt_dp1_002 as binding
+    missing = tmp_path / "absent-validation.json"
+    monkeypatch.setattr(binding, "VALIDATION_PATH", missing)
+    runtime = CandidateRuntime(CandidateEventWriter(str(tmp_path / "candidate")))
+    with caplog.at_level(logging.WARNING, logger="core.shadow.opt_dp1_002"):
+        assert register_opt_dp1_002(runtime) is False
+    assert runtime.registered_keys() == []
+    assert runtime.active_ids() == []
+
+
+def test_missing_authority_creates_no_fabricated_artifact(tmp_path, monkeypatch):
+    import core.shadow.opt_dp1_002 as binding
+    missing_validation = tmp_path / "absent-validation.json"
+    missing_forward = tmp_path / "absent-forward.json"
+    monkeypatch.setattr(binding, "VALIDATION_PATH", missing_validation)
+    monkeypatch.setattr(binding, "FORWARD_PATH", missing_forward)
+    runtime = CandidateRuntime(CandidateEventWriter(str(tmp_path / "candidate")))
+    assert register_opt_dp1_002(runtime) is False
+    assert not missing_validation.exists()
+    assert not missing_forward.exists()
+
+
+def test_unavailable_authority_logs_once_across_repeated_registration(
+        tmp_path, monkeypatch, caplog):
+    import core.shadow.opt_dp1_002 as binding
+    monkeypatch.setattr(binding, "VALIDATION_PATH", tmp_path / "absent-validation.json")
+    with caplog.at_level(logging.WARNING, logger="core.shadow.opt_dp1_002"):
+        for _ in range(5):
+            runtime = CandidateRuntime(CandidateEventWriter(str(tmp_path / "candidate")))
+            assert register_opt_dp1_002(runtime) is False
+    warnings = [
+        record for record in caplog.records
+        if record.levelno == logging.WARNING
+        and "OPT_DP1_002_CANDIDATE_UNAVAILABLE" in record.getMessage()
+    ]
+    assert len(warnings) == 1
+
+
+def test_present_but_inconsistent_authority_still_fails_closed(tmp_path, monkeypatch):
+    import core.shadow.opt_dp1_002 as binding
+    corrupt = tmp_path / "corrupt-validation.json"
+    corrupt.write_text("{not-json", encoding="utf-8")
+    monkeypatch.setattr(binding, "VALIDATION_PATH", corrupt)
+    runtime = CandidateRuntime(CandidateEventWriter(str(tmp_path / "candidate")))
+    with pytest.raises(RuntimeError, match="OPT_DP1_002_AUTHORITY_UNREADABLE"):
+        register_opt_dp1_002(runtime)
+    assert runtime.registered_keys() == []

@@ -15,6 +15,7 @@ from core.lifecycle_evidence_obligations import (
     create_closed_trade_obligations,
     create_dataset_obligation,
     create_filled_position_obligations,
+    create_market_context_obligation,
     create_no_trade_obligations,
     create_terminal_decision_obligations,
     record_producer_outcome,
@@ -631,3 +632,55 @@ def test_full_forward_evidence_acceptance_matrix_and_restart(tmp_path):
     reloaded = LifecycleEvidenceLedger(ledger.path)
     assert len(reloaded.obligations()) == len(ledger.obligations())
     assert {item.current_status for item in reloaded.obligations()} >= {status.value for status in S}
+
+
+# ─── market-context obligation identity: false-duplicate conflict ────────────
+
+
+def test_begin_active_cycle_and_builder_market_obligation_are_identical(tmp_path):
+    """Both producers of the cycle's market_context obligation must agree on the
+    governed identity contract so re-creation is idempotent, not a conflict."""
+    ledger = _ledger(tmp_path)
+    event_id = "cycle:EURUSD:1000:1"
+    _, market = begin_active_cycle(
+        ledger, event_id=event_id, symbol="EURUSD", cycle_id=1,
+        entity_id="EURUSD_1000", correlation_id="COR-1", timestamp=TS)
+    builder_obligation = create_market_context_obligation(
+        ledger, event_id=event_id, symbol="EURUSD", cycle_id=1,
+        entity_id="EURUSD_1000", timestamp=TS)
+
+    assert builder_obligation.obligation_id == market.obligation_id
+    # correlation_id is NOT part of the market_context identity contract.
+    assert market.correlation_id is None
+    assert builder_obligation.correlation_id is None
+    # execution_context + market_context only: no duplicate row was appended.
+    assert len(ledger.obligations()) == 2
+
+
+def test_market_context_obligation_recreation_is_idempotent(tmp_path):
+    ledger = _ledger(tmp_path)
+    first = create_market_context_obligation(
+        ledger, event_id="cycle:EURUSD:1000:1", symbol="EURUSD",
+        cycle_id=1, entity_id="EURUSD_1000", timestamp=TS)
+    again = create_market_context_obligation(
+        ledger, event_id="cycle:EURUSD:1000:1", symbol="EURUSD",
+        cycle_id=1, entity_id="EURUSD_1000", timestamp=TS)
+
+    assert again.obligation_id == first.obligation_id
+    assert len(ledger.obligations()) == 1
+    assert len(ledger.path.read_text(encoding="utf-8").splitlines()) == 1
+
+
+def test_genuinely_conflicting_obligation_identity_still_fails_closed(tmp_path):
+    ledger = _ledger(tmp_path)
+    common = dict(
+        lifecycle_event_id="cycle:EURUSD:1000:1", lifecycle_stage="ACTIVE_CYCLE",
+        expected_dataset="market_context",
+        identity={"symbol": "EURUSD", "cycle_id": 1, "entity_id": "EURUSD_1000"},
+        originating_timestamp=TS, due_state="CONDITIONALLY_EXPECTED",
+        requirement_type="CONDITIONAL", current_status=S.NOT_YET_DUE,
+        producer="core.market_context.builder.MarketContextBuilder.build",
+        producer_trigger="MATERIAL_CONTEXT_CHANGE")
+    ledger.create(due_after="MATERIAL_CHANGE_GATE", **common)
+    with pytest.raises(ValueError, match="OBLIGATION_IDENTITY_CONFLICT"):
+        ledger.create(due_after="DIFFERENT_TRIGGER", **common)
