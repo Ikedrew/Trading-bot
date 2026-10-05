@@ -14,6 +14,7 @@ from typing import Any
 import MetaTrader5 as mt5
 
 from core.mt5_timeout import mt5_call
+from core.mt5_incident import mt5_failure
 from core.constants.timeframes import timeframe_name
 
 logger = logging.getLogger(__name__)
@@ -437,7 +438,7 @@ class MT5DataFeed:
         """
         symbols = mt5.symbols_get()
         if not symbols:
-            raise RuntimeError(f"No symbols available: {mt5.last_error()}")
+            raise mt5_failure(mt5.last_error(), "No symbols available")
 
         hint = self._symbol_hint
 
@@ -445,7 +446,7 @@ class MT5DataFeed:
         for s in symbols:
             if s.name == hint:
                 if not mt5.symbol_select(s.name, True):
-                    raise RuntimeError(f"symbol_select failed for {s.name}: {mt5.last_error()}")
+                    raise mt5_failure(mt5.last_error(), f"symbol_select failed for {s.name}")
                 logger.debug("[DATA_SYMBOL] requested=%s resolved=%s match=exact", hint, s.name)
                 self._broker_symbol = s.name
                 return s.name
@@ -455,7 +456,7 @@ class MT5DataFeed:
         for s in symbols:
             if s.name.upper() == hint_upper:
                 if not mt5.symbol_select(s.name, True):
-                    raise RuntimeError(f"symbol_select failed for {s.name}: {mt5.last_error()}")
+                    raise mt5_failure(mt5.last_error(), f"symbol_select failed for {s.name}")
                 logger.debug("[DATA_SYMBOL] requested=%s resolved=%s match=case_insensitive", hint, s.name)
                 self._broker_symbol = s.name
                 return s.name
@@ -489,7 +490,7 @@ class MT5DataFeed:
         latency_ms = int((_time.perf_counter() - t0) * 1000)
 
         if rates is None or len(rates) == 0:
-            raise RuntimeError(f"copy_rates_from_pos failed: {mt5.last_error()}")
+            raise mt5_failure(mt5.last_error(), "copy_rates_from_pos failed")
 
         returned = len(rates)
         if returned < count:
@@ -562,7 +563,7 @@ class MT5DataFeed:
         mt5_symbol = self._broker_symbol or symbol
         t = mt5_call(mt5.symbol_info_tick, mt5_symbol)
         if t is None:
-            raise RuntimeError(f"No tick for {symbol}: {mt5.last_error()}")
+            raise mt5_failure(mt5.last_error(), f"No tick for {symbol}")
 
         bid, ask = float(t.bid), float(t.ask)
         tick_time = _normalise_tick_time(int(t.time))

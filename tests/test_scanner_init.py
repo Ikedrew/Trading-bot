@@ -25,6 +25,16 @@ sys.path.insert(0, str(ROOT))
 # ─── TESTS ────────────────────────────────────────────────────────────────────
 
 
+@pytest.fixture(autouse=True)
+def healthy_terminal(monkeypatch):
+    """Unit tests must not depend on an attached production terminal."""
+    import MetaTrader5 as mt5
+    from types import SimpleNamespace
+    monkeypatch.setattr(mt5, "symbols_get", lambda: (SimpleNamespace(name="EURUSD"),))
+    monkeypatch.setattr(mt5, "symbol_select", lambda *a: True)
+    monkeypatch.setattr(mt5, "last_error", lambda: (1, "Success"))
+
+
 class TestInitializeSymbolStates:
     """initialize_symbol_states creates per-symbol state objects."""
 

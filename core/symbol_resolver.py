@@ -20,6 +20,7 @@ import logging
 from typing import Any
 
 import MetaTrader5 as mt5
+from core.mt5_incident import MT5ConnectionError, mt5_failure
 
 logger = logging.getLogger(__name__)
 
@@ -100,15 +101,13 @@ def resolve_broker_symbol(
     """
     symbols = mt5.symbols_get()
     if not symbols:
-        raise RuntimeError(
-            f"MT5 returned no symbols — connection not ready: {mt5.last_error()}"
-        )
+        raise mt5_failure(mt5.last_error(), "MT5 returned no symbols")
 
     names = [s.name for s in symbols]
 
     def _finish(name: str) -> str:
         if select and not mt5.symbol_select(name, True):
-            raise RuntimeError(f"symbol_select failed for {name}: {mt5.last_error()}")
+            raise mt5_failure(mt5.last_error(), f"symbol_select failed for {name}")
         register_resolved_symbol(canonical, name)
         return name
 
@@ -188,6 +187,9 @@ def resolve_all(
             resolved = resolve_broker_symbol(canonical)
             mapping[canonical] = resolved
             logger.info("[SYMBOL_MAP] canonical=%s → broker=%s", canonical, resolved)
+        except MT5ConnectionError:
+            # Shared IPC loss is not a separate missing symbol for every hint.
+            raise
         except (ValueError, RuntimeError) as exc:
             if fail_mode == "raise":
                 raise

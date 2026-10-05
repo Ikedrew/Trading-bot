@@ -36,6 +36,7 @@ from core.state_persistence import load_engine_state
 from core.stale_monitor import StaleDataMonitor
 from core.trade_management import TradeStateManager
 from data.mt5_data import MT5DataFeed
+from core.mt5_incident import MT5ConnectionError, MT5ConnectionIncident, is_connection_error
 
 from core.runtime.runtime_utils import (
     _build_risk_manager,
@@ -77,6 +78,7 @@ def initialize_symbol_states(
     *,
     symbols: list[str] | None,
     execution: Any,
+    incident: MT5ConnectionIncident | None = None,
 ) -> list[Any]:
     """
     Resolve symbols and create per-symbol state objects.
@@ -91,6 +93,7 @@ def initialize_symbol_states(
     from core.runtime.live_scanner import _LiveSymbolState
 
     symbol_list = symbols or getattr(config, "CANONICAL_SYMBOLS", None) or getattr(config, "SYMBOLS", [])
+    incident = incident or MT5ConnectionIncident(len(symbol_list), logger)
     _canonical_by_broker: dict[str, str] = {}
 
     # ─── SYMBOL RESOLUTION (canonical → broker) ──────────────────────
@@ -110,6 +113,9 @@ def initialize_symbol_states(
             else:
                 logger.warning("[SYMBOL_RESOLUTION] no symbols resolved — falling back to config.SYMBOLS")
                 symbol_list = getattr(config, "SYMBOLS", [])
+        except MT5ConnectionError as exc:
+            incident.lost(exc.error, startup_abort=True)
+            return []
         except Exception as _res_exc:
             logger.warning("[SYMBOL_RESOLUTION] resolver failed: %s — using config.SYMBOLS as-is", _res_exc)
             symbol_list = getattr(config, "SYMBOLS", [])
@@ -119,6 +125,16 @@ def initialize_symbol_states(
     try:
         import MetaTrader5 as _mt5_diag
         _all_mt5_symbols = _mt5_diag.symbols_get()
+        if not _all_mt5_symbols:
+            error = _mt5_diag.last_error()
+            if is_connection_error(error):
+                incident.lost(error, startup_abort=True)
+                return []
+            from core.mt5_connection import mt5_health_error
+            health_error = mt5_health_error()
+            if health_error is not None:
+                incident.lost(health_error, startup_abort=True)
+                return []
         if _all_mt5_symbols:
             _mt5_names = {s.name for s in _all_mt5_symbols}
             logger.info("[MT5_SYMBOLS_COUNT] total_available=%d", len(_mt5_names))
@@ -130,6 +146,9 @@ def initialize_symbol_states(
                     logger.info("[SYMBOL_EXISTS] %s = FOUND", sym_hint)
         else:
             logger.warning("[MT5_SYMBOLS_COUNT] symbols_get() returned None/empty — MT5 may not be connected")
+    except MT5ConnectionError as exc:
+        incident.lost(exc.error, startup_abort=True)
+        return []
     except Exception as _diag_exc:
         logger.warning("[MT5_SYMBOLS_DIAG] diagnostic failed: %s", _diag_exc)
     # ─── END SYMBOL UNIVERSE VISIBILITY ───────────────────────────────
@@ -197,6 +216,10 @@ def initialize_symbol_states(
                 attach_manager(canonical, tm)
 
             logger.info("[LIVE_SCANNER] initialized symbol=%s", resolved)
+        except MT5ConnectionError as exc:
+            # Discard partial startup states too: no trading on a lost session.
+            incident.lost(exc.error, startup_abort=True)
+            return []
         except Exception as exc:
             logger.error(
                 "[SYMBOL_INIT_FAIL] hint=%s → %s: %s (type=%s)",

@@ -31,9 +31,10 @@ from core.mt5_connection import (
     MT5_CONNECTED,
     MT5_DISCONNECTED,
     attempt_reconnect,
-    is_mt5_healthy,
+    mt5_health_error,
     resync_positions,
 )
+from core.mt5_incident import MT5ConnectionError, MT5ConnectionIncident
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ class MT5HealthManager:
             continue
     """
 
-    def __init__(self, states: list[Any], config: Any) -> None:
+    def __init__(self, states: list[Any], config: Any, *, incident: MT5ConnectionIncident | None = None) -> None:
         self._states = states
         self._magic = getattr(config, "BOT_MAGIC", 0)
         self._base_cooldown = float(getattr(config, "MT5_RECONNECT_COOLDOWN_SECONDS", 10.0))
@@ -59,6 +60,12 @@ class MT5HealthManager:
         self.mt5_state: str = MT5_CONNECTED
         self._last_reconnect_attempt: float = 0.0
         self._reconnect_fail_count: int = 0
+        self.incident = incident or MT5ConnectionIncident(len(states), logger)
+
+    def mark_unavailable(self, error: tuple) -> None:
+        """Feed failures enter the same degraded state as the health probe."""
+        self.mt5_state = MT5_DISCONNECTED
+        self.incident.lost(error)
 
     def check_and_reconnect(self) -> bool:
         """
@@ -72,6 +79,7 @@ class MT5HealthManager:
         """
         # ─── DISCONNECTED STATE: attempt reconnect with backoff ───────
         if self.mt5_state != MT5_CONNECTED:
+            self.incident.check_prolonged()
             now = time.time()
             effective_cooldown = min(
                 self._base_cooldown * (2 ** min(self._reconnect_fail_count, 4)),
@@ -83,22 +91,26 @@ class MT5HealthManager:
             self._last_reconnect_attempt = now
 
             # Try first symbol for reconnect (any symbol works — shared MT5 connection)
-            if attempt_reconnect(self._states[0].symbol):
+            if attempt_reconnect(self._states[0].symbol, on_failure=self.mark_unavailable):
                 self.mt5_state = MT5_CONNECTED
                 self._reconnect_fail_count = 0
-                logger.info("[LIVE_SCANNER] RECONNECT SUCCESS — resuming all symbols")
                 # Re-select all symbols and resync positions after reconnect
                 self._resync_all_symbols()
+                # Resync can discover a new IPC loss; never announce a false recovery.
+                error = mt5_health_error()
+                if error is not None:
+                    self.mark_unavailable(error)
+                elif self.mt5_state == MT5_CONNECTED:
+                    self.incident.restored()
             else:
                 self._reconnect_fail_count += 1
-                logger.info("[LIVE_SCANNER] RECONNECT FAILED — fail_count=%d", self._reconnect_fail_count)
 
             return False  # Even on success, skip this cycle (let next iteration proceed normally)
 
         # ─── CONNECTED STATE: validate health ─────────────────────────
-        if not is_mt5_healthy():
-            self.mt5_state = MT5_DISCONNECTED
-            logger.info("[LIVE_SCANNER] MT5 DISCONNECTED — entering degraded mode")
+        error = mt5_health_error()
+        if error is not None:
+            self.mark_unavailable(error)
             return False
 
         return True  # Healthy — proceed with trading
@@ -114,6 +126,9 @@ class MT5HealthManager:
                     symbol=sym_state.symbol,
                     magic=self._magic,
                 )
+            except MT5ConnectionError as exc:
+                self.mark_unavailable(exc.error)
+                break
             except Exception as _resync_exc:
                 logger.error(
                     "[RECONNECT_RESYNC_ERROR] symbol=%s error=%s",

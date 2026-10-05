@@ -5,6 +5,7 @@ import time
 from dataclasses import dataclass
 
 from core import config
+from core.mt5_incident import MT5ConnectionError, MT5ConnectionIncident
 from core.engine import EngineState
 from core.engine_state import validate_engine_state
 from core.decision_audit import persist_decision_audit, persist_risk_rejection
@@ -109,9 +110,12 @@ def run_live_scanner(
     _exec_orchestrator = ExecutionOrchestrator(execution, config)
 
     # ─── SCANNER INITIALIZATION (extracted to core.runtime.scanner_init) ─
-    states = initialize_symbol_states(symbols=symbols, execution=execution)
+    _mt5_incident = MT5ConnectionIncident(len(symbol_list), logger)
+    states = initialize_symbol_states(symbols=symbols, execution=execution, incident=_mt5_incident)
 
     if not states:
+        if _mt5_incident.active:
+            return  # Startup incident already logged CRITICAL; fail closed.
         logger.critical("[LIVE_SCANNER] no symbols initialized — aborting")
         return
 
@@ -206,7 +210,7 @@ def run_live_scanner(
     # ─── END MACRO CONTEXT ────────────────────────────────────────────
 
     # ─── SYSTEM-LEVEL STATE ───────────────────────────────────────────
-    _mt5_health = MT5HealthManager(states, config)
+    _mt5_health = MT5HealthManager(states, config, incident=_mt5_incident)
     mt5_state = _mt5_health.mt5_state  # Alias for observability references
     cycle_id = 0
     last_reconcile_time: float = time.time()
@@ -379,6 +383,8 @@ def run_live_scanner(
                 # Fetch tick
                 try:
                     bid, ask, tick_time = sym_state.feed.last_tick(sym_state.symbol)
+                except MT5ConnectionError:
+                    raise
                 except RuntimeError:
                     logger.info("[LIVE_SCANNER] %s tick fetch failed — skipping", sym_state.symbol)
                     continue
@@ -2133,6 +2139,10 @@ def run_live_scanner(
                         score_value=score_value,
                     )
 
+              except MT5ConnectionError as exc:
+                _mt5_health.mark_unavailable(exc.error)
+                mt5_state = _mt5_health.mt5_state
+                break  # Shared outage: stop remaining symbols and execution work.
               except Exception as exc:
                 log_runtime_exception(exc, "UNKNOWN_STAGE", mt5_state)
                 try:
@@ -2152,6 +2162,11 @@ def run_live_scanner(
                     pass  # Finalization failure must not cause a second crash
                 continue
             # ─── END PER-SYMBOL PROCESSING ────────────────────────────
+
+            if mt5_state != MT5_CONNECTED:
+                _write_heartbeat("mt5_disconnected", cycle_id, 0, len(states), "DISCONNECTED")
+                interruptible_sleep(config.POLL_SECONDS)
+                continue
 
             # ═══════════════════════════════════════════════════════════
             # SHADOW RANKING: Observe, rank, log, compare (never execute)

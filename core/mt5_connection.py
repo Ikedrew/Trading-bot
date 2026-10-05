@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Callable
 
 import MetaTrader5 as mt5
 
 from core import config
 from core.mt5_timeout import mt5_call
+from core.mt5_incident import MT5ConnectionError, mt5_failure
 from core.symbol_resolver import broker_symbol_for
 from core.trade_management.position import PositionStatus
 
@@ -31,50 +32,60 @@ MT5_RECONNECTING = "RECONNECTING"
 
 # ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 
+def mt5_health_error() -> tuple | None:
+    """Return the observed connection failure, or None when connected.
+
+    No logging here: the scanner health owner deduplicates state transitions.
+    """
+    try:
+        info = mt5_call(mt5.terminal_info, timeout=5.0)
+        if info is None:
+            error = mt5.last_error()
+            return error if error and error[0] < 0 else ("TERMINAL_UNAVAILABLE", "terminal_info returned None")
+        if not info.connected:
+            return ("TERMINAL_DISCONNECTED", "terminal reports disconnected")
+        return None
+    except Exception as exc:
+        return ("HEALTH_PROBE_FAILED", f"{type(exc).__name__}: {exc}")
+
+
 def is_mt5_healthy() -> bool:
     """
     Lightweight MT5 connection health probe.
     Returns True if terminal is accessible and connected.
     Never raises — catches all failures internally.
     """
-    try:
-        info = mt5_call(mt5.terminal_info, timeout=5.0)
-        if info is None:
-            logger.info("[MT5_HEALTH] terminal_info returned None — terminal unavailable")
-            return False
-        if not info.connected:
-            logger.info("[MT5_HEALTH] terminal reports disconnected")
-            return False
-        return True
-    except Exception as exc:
-        logger.info("[MT5_HEALTH] probe failed: %s", exc)
-        return False
+    return mt5_health_error() is None
 
 
 # ─── RECONNECT ────────────────────────────────────────────────────────────────
 
-def attempt_reconnect(symbol: str) -> bool:
+def attempt_reconnect(symbol: str, *, on_failure: Callable[[tuple], None] | None = None) -> bool:
     """
     Attempt MT5 reconnect: shutdown → initialize → health check → symbol restore.
     Returns True on success, False on failure. Never raises.
     """
+    def failed(error: tuple) -> bool:
+        if on_failure is not None:
+            on_failure(error)
+        else:
+            logger.info("[MT5_STATE] RECONNECT FAILED error=%s", error)
+        return False
+
     try:
         mt5.shutdown()
         if not mt5.initialize(path=getattr(config, "MT5_TERMINAL_PATH", "")):
             if not mt5.initialize():
-                logger.info("[MT5_STATE] RECONNECT FAILED — initialize returned False")
-                return False
-        if not is_mt5_healthy():
-            logger.info("[MT5_STATE] RECONNECT FAILED — post-init health check failed")
-            return False
+                return failed(mt5.last_error())
+        error = mt5_health_error()
+        if error is not None:
+            return failed(error)
         # Re-select symbol
         if not mt5.symbol_select(symbol, True):
-            logger.info("[MT5_STATE] RECONNECT FAILED — symbol_select failed for %s", symbol)
-            return False
+            return failed(("SYMBOL_REACTIVATION_FAILED", f"{symbol}: {mt5.last_error()}"))
         return True
     except Exception as exc:
-        logger.info("[MT5_STATE] RECONNECT FAILED — exception: %s", exc)
-        return False
+        return failed(("RECONNECT_EXCEPTION", f"{type(exc).__name__}: {exc}"))
 
 
 # ─── POSITION RESYNC ──────────────────────────────────────────────────────────
@@ -82,7 +93,8 @@ def attempt_reconnect(symbol: str) -> bool:
 def resync_positions(trade_manager: "TradeStateManager | None", symbol: str, magic: int) -> None:
     """
     Post-reconnect reconciliation: align internal TradeStateManager state with MT5 broker truth.
-    READ-ONLY — does not modify broker state. Never raises.
+    READ-ONLY — does not modify broker state. Shared IPC failures propagate
+    to the health owner; unavailable evidence never closes internal positions.
     """
     if trade_manager is None:
         return
@@ -94,7 +106,8 @@ def resync_positions(trade_manager: "TradeStateManager | None", symbol: str, mag
         # Fetch broker positions for this symbol + magic
         broker_positions = mt5_call(mt5.positions_get, symbol=broker_symbol_for(symbol))
         if broker_positions is None:
-            broker_positions = []
+            # Unavailable broker evidence is not an empty position set.
+            raise mt5_failure(mt5.last_error(), "Position resync unavailable")
 
         # Filter to our magic number
         broker_by_ticket: dict[int, Any] = {}
@@ -145,8 +158,10 @@ def resync_positions(trade_manager: "TradeStateManager | None", symbol: str, mag
         total = len(broker_by_ticket)
         logger.info("[MT5_RESYNC_COMPLETE] total_broker_positions=%d duration=%.2fs", total, duration)
 
+    except MT5ConnectionError:
+        raise
     except Exception as exc:
-        logger.info("[MT5_RESYNC] failed — exception: %s", exc)
+        logger.error("[MT5_RESYNC] failed — exception: %s", exc)
 
 
 # ─── STATE RECONCILIATION ─────────────────────────────────────────────────────

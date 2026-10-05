@@ -23,10 +23,12 @@ This module does NOT own:
     - Cycle control (no sleep/continue/break — returns None to signal skip)
     - Runtime decisions
 
-Design: returns BarResult on success, None on skip. Never raises to caller.
+Design: returns BarResult on success, None on symbol skip. Shared connection
+failures propagate to the scanner health owner so remaining symbols stop.
 """
 
 from __future__ import annotations
+from core.mt5_incident import MT5ConnectionError
 
 import logging
 import time
@@ -94,13 +96,16 @@ class BarProvider:
             None if the symbol should be skipped this cycle (fetch fail,
             no valid bar, feed stale, duplicate bar, candle critically stale).
 
-        Never raises. All errors result in None (skip symbol).
+        Symbol fetch errors return None; MT5ConnectionError reaches the health owner.
         """
         # ─── 1. CANDLE FETCH ──────────────────────────────────────────
         try:
             candles = sym_state.feed.copy_rates_closed(
                 sym_state.symbol, self._config.TIMEFRAME, self._config.CANDLE_COUNT
             )
+        except MT5ConnectionError:
+            # The health owner must see shared IPC loss and stop this cycle.
+            raise
         except RuntimeError:
             logger.info("[LIVE_SCANNER] %s candle fetch failed — skipping", sym_state.symbol)
             return None
