@@ -55,7 +55,13 @@ _FIELD_ALIASES = {
     "evaluated_horizon": ("evaluated_horizon", "trade_horizon", "horizon"),
     "h4_regime": ("h4_regime", "regime"),
     "regime": ("regime", "h4_regime"),
-    "entry_time": ("entry_time", "entry_timestamp", "opened_at", "bar_time"),
+    # ``timestamp_decision_utc`` is the canonical decision-time timestamp on
+    # reconstructed shadow_runtime evidence.  It is resolved to the historic
+    # semantic name here, never copied into persisted source records.
+    "entry_time": (
+        "entry_time", "entry_timestamp", "opened_at", "bar_time",
+        "timestamp_decision_utc",
+    ),
     "exit_timestamp": ("exit_timestamp", "closed_at", "exit_time"),
     "session_state": ("session_state", "session"),
     "slippage": ("slippage", "slippage_points"),
@@ -129,6 +135,8 @@ class EvidenceResolution:
     metrics: dict[str, Any]
     requirements: list[RequirementResult]
     error: str = ""
+    usable_records: list[dict[str, Any]] = field(default_factory=list, repr=False)
+    runner_artifacts: dict[str, Any] = field(default_factory=dict, repr=False)
 
     def requirements_dict(self) -> list[dict[str, Any]]:
         return [item.to_dict() for item in self.requirements]
@@ -145,7 +153,79 @@ class EvidenceSnapshot:
         self._datasets = dict(datasets) if datasets is not None else None
         self._loader = loader or self._load_live
         self._cache: dict[str, DatasetSlice] = {}
+        self._population_cache: dict[
+            tuple[str, ...], tuple[list[dict[str, Any]], int, dict[str, Any]]
+        ] = {}
+        self._diagnostics_cache: dict[tuple[str, ...], dict[str, Any]] = {}
+        self._artifact_cache: dict[str, Any] = {}
         self.load_counts: Counter[str] = Counter()
+
+    def generic_population(
+        self,
+        slices: list[DatasetSlice],
+    ) -> tuple[list[dict[str, Any]], int, dict[str, Any], tuple[str, ...]]:
+        """Return one immutable cycle-scoped generic analytical population.
+
+        Generic questions with the same ordered sources previously repeated the
+        expensive recursive normalisation work.  The cached rows are private to
+        the resolver; callers receive copies of usable rows before runner use.
+        """
+        key = tuple(dataset.source for dataset in slices)
+        cached = self._population_cache.get(key)
+        if cached is None:
+            # Bound cycle-lifetime retention.  A generic population can contain
+            # tens of thousands of wide nested rows; retaining every distinct
+            # source combination until question 70 caused multi-gigabyte RSS.
+            # Keep only the active family while preserving reuse for adjacent
+            # questions with the same governed source identity.
+            self._population_cache.clear()
+            self._diagnostics_cache.clear()
+            rows, ambiguous = _merge_population(slices)
+            cached = (rows, ambiguous, {})
+            self._population_cache[key] = cached
+        rows, excluded, metrics = cached
+        return rows, excluded, dict(metrics), key
+
+    def invariant_diagnostics(
+        self,
+        key: tuple[str, ...],
+        rows: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Cache diagnostics determined solely by an immutable population."""
+        cached = self._diagnostics_cache.get(key)
+        if cached is None:
+            cached = {
+                metric_name: _coverage(rows, fields)
+                for metric_name, fields in _COVERAGE_FIELDS.items()
+            }
+            cached["covered_days"] = _covered_days(rows)
+            cached["covered_sessions"] = len({
+                str(value)
+                for row in rows
+                if _present(value := _value(row, "session_state"))
+            })
+            self._diagnostics_cache[key] = cached
+        return dict(cached)
+
+    def governed_execution_evidence(
+        self,
+        by_source: Mapping[str, DatasetSlice],
+    ) -> Any:
+        """Build the strict execution join once from immutable snapshot rows."""
+        key = "governed_execution_evidence:decision_trace_required"
+        if key not in self._artifact_cache:
+            from research_engine.control_plane.execution_evidence import (
+                build_governed_execution_evidence,
+            )
+
+            self._artifact_cache[key] = build_governed_execution_evidence(
+                by_source["execution_results_v1"].current_records,
+                by_source["execution_context"].current_records,
+                by_source["decision_trace"].current_records,
+                require_decision_trace=True,
+                trusted_immutable_inputs=True,
+            )
+        return self._artifact_cache[key]
 
     def get(self, source: str) -> DatasetSlice:
         if source in self._cache:
@@ -222,11 +302,76 @@ def _recursive_value(record: Any, names: tuple[str, ...]) -> Any:
     return None
 
 
+def _recursive_values(record: Any, names: frozenset[str]) -> list[Any]:
+    """Collect governed aliases without depending on dictionary traversal order."""
+    if not isinstance(record, dict):
+        return []
+    values = [
+        value for name, value in record.items()
+        if name in names and _present(value)
+    ]
+    for value in record.values():
+        if isinstance(value, dict):
+            values.extend(_recursive_values(value, names))
+    return values
+
+
+def _timestamp_identity(value: Any) -> float | str | None:
+    """Return a comparison identity for a valid instant, without rewriting it."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        numeric = float(value)
+        return numeric if math.isfinite(numeric) and numeric > 0 else None
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return None
+        return value.timestamp()
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            numeric = float(text)
+        except ValueError:
+            try:
+                parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            except ValueError:
+                return None
+            if parsed.tzinfo is None:
+                return None
+            return parsed.timestamp()
+        return numeric if math.isfinite(numeric) and numeric > 0 else None
+    return None
+
+
+def _entry_time(record: dict[str, Any]) -> Any:
+    """Resolve entry time fail-closed when legacy and canonical facts conflict."""
+    legacy_names = frozenset({"entry_time", "entry_timestamp", "opened_at", "bar_time"})
+    canonical_names = frozenset({"timestamp_decision_utc"})
+    legacy = _recursive_values(record, legacy_names)
+    canonical = _recursive_values(record, canonical_names)
+    candidates = [*legacy, *canonical]
+    if not candidates:
+        return None
+    identities = [_timestamp_identity(value) for value in candidates]
+    if any(identity is None for identity in identities):
+        return None
+    first = identities[0]
+    if any(identity != first for identity in identities[1:]):
+        return None
+    # Preserve an explicit supported entry_time representation when present;
+    # otherwise expose the canonical decision timestamp non-destructively.
+    return legacy[0] if legacy else canonical[0]
+
+
 def _value(record: dict[str, Any], field_name: str) -> Any:
     if field_name == "slippage" and record.get("slippage_provenance") in {
         "derived_compatibility", "unknown",
     }:
         return None
+    if field_name == "entry_time":
+        return _entry_time(record)
     return _recursive_value(record, _FIELD_ALIASES.get(field_name, (field_name,)))
 
 
@@ -360,6 +505,16 @@ def _normalise(record: dict[str, Any], source: str) -> dict[str, Any]:
         value = _value(record, name)
         if _present(value):
             result.setdefault(name, value)
+        elif name == "entry_time" and _recursive_values(
+                record, frozenset({
+                    "entry_time", "entry_timestamp", "opened_at", "bar_time",
+                    "timestamp_decision_utc",
+                })):
+            # A present-but-unresolvable timestamp set is a conflict/invalid
+            # value, not permission to leave a convenient legacy top-level
+            # field visible to runners.
+            for alias in ("entry_time", "entry_timestamp", "opened_at", "bar_time"):
+                result.pop(alias, None)
     r_value = _value(record, "r_multiple")
     if _present(r_value):
         result.setdefault("r_multiple", r_value)
@@ -668,13 +823,14 @@ def _execution_population(
 
 def _exec1_population(
     by_source: Mapping[str, DatasetSlice],
+    governed_evidence: Any | None = None,
 ) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
     """Resolve EXEC1 through the same strict three-component research join."""
     from research_engine.control_plane.execution_evidence import (
         build_governed_execution_evidence,
     )
 
-    evidence = build_governed_execution_evidence(
+    evidence = governed_evidence or build_governed_execution_evidence(
         by_source["execution_results_v1"].current_records,
         by_source["execution_context"].current_records,
         by_source["decision_trace"].current_records,
@@ -702,13 +858,14 @@ def _exec1_population(
 
 def _x6_population(
     by_source: Mapping[str, DatasetSlice],
+    governed_evidence: Any | None = None,
 ) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
     """Resolve X6 through the same strict three-component research join."""
     from research_engine.control_plane.execution_evidence import (
         build_governed_execution_evidence,
     )
 
-    evidence = build_governed_execution_evidence(
+    evidence = governed_evidence or build_governed_execution_evidence(
         by_source["execution_results_v1"].current_records,
         by_source["execution_context"].current_records,
         by_source["decision_trace"].current_records,
@@ -817,7 +974,11 @@ def _management_population(
     return rows, excluded, metrics
 
 
-def _population(question: Any, slices: list[DatasetSlice]) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
+def _population(
+    question: Any,
+    slices: list[DatasetSlice],
+    snapshot: EvidenceSnapshot | None = None,
+) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
     by_source = {dataset.source: dataset for dataset in slices}
     metrics: dict[str, Any] = {}
     if question.id == "D2":
@@ -923,9 +1084,11 @@ def _population(question: Any, slices: list[DatasetSlice]) -> tuple[list[dict[st
     if question.id in {"X1", "X3"}:
         return _execution_population(by_source)
     if question.id == "EXEC1":
-        return _exec1_population(by_source)
+        governed = snapshot.governed_execution_evidence(by_source) if snapshot else None
+        return _exec1_population(by_source, governed)
     if question.id == "X6":
-        return _x6_population(by_source)
+        governed = snapshot.governed_execution_evidence(by_source) if snapshot else None
+        return _x6_population(by_source, governed)
     if question.id == "PROT1":
         rows = [
             _normalise(row, "protection_audit_v1")
@@ -936,6 +1099,13 @@ def _population(question: Any, slices: list[DatasetSlice]) -> tuple[list[dict[st
         return _management_population(question.id, by_source)
     rows, ambiguous = _merge_population(slices)
     return rows, ambiguous, metrics
+
+
+_SPECIAL_POPULATION_QUESTIONS = frozenset({
+    "D2", "M1", "M3", "M7", "M8", "M11", "D6", "PORT-1",
+    "HORIZON-1", "STRAT-1", "OPP-1", "X1", "X2", "X3", "EXEC1",
+    "X6", "PROT1", "MGMT-1", "MGMT-2",
+})
 
 
 def _coverage(rows: list[dict[str, Any]], fields: tuple[str, ...]) -> float:
@@ -1062,7 +1232,13 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
             error="; ".join(errors),
         )
 
-    rows, population_excluded, metrics = _population(question, slices)
+    population_cache_key: tuple[str, ...] | None = None
+    if question.id in _SPECIAL_POPULATION_QUESTIONS:
+        rows, population_excluded, metrics = _population(question, slices, snapshot)
+    else:
+        rows, population_excluded, metrics, population_cache_key = (
+            snapshot.generic_population(slices)
+        )
     base_count = len(rows)
     if metrics.get("rw2_blocker") or metrics.get("d2_blocker"):
         requirements.append(RequirementResult(
@@ -1078,10 +1254,17 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
     metrics["transitional_excluded"] = sum(item.transitional_count for item in slices)
     metrics["legacy_excluded"] = sum(item.legacy_count for item in slices)
     metrics["ambiguous_or_unmatched_excluded"] = population_excluded
-    for metric_name, fields in _COVERAGE_FIELDS.items():
-        metrics[metric_name] = _coverage(rows, fields)
-    metrics["covered_days"] = _covered_days(rows)
-    metrics["covered_sessions"] = len({str(_value(row, "session_state")) for row in rows if _present(_value(row, "session_state"))})
+    if population_cache_key is None:
+        for metric_name, fields in _COVERAGE_FIELDS.items():
+            metrics[metric_name] = _coverage(rows, fields)
+        metrics["covered_days"] = _covered_days(rows)
+        metrics["covered_sessions"] = len({
+            str(value)
+            for row in rows
+            if _present(value := _value(row, "session_state"))
+        })
+    else:
+        metrics.update(snapshot.invariant_diagnostics(population_cache_key, rows))
 
     required_fields = (
         ("selection_status", "simulated_outcome.pnl_r_multiple")
@@ -1117,7 +1300,9 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
         if all(_known(_value(row, field_name)) for field_name in required_fields)
     ]
     metrics["excluded_missing_required_fields"] = len(sizing_safe) - len(field_eligible)
-    usable = field_eligible
+    # Runners may treat their population as mutable working data.  Keep the
+    # cycle cache private and preserve the former per-question isolation.
+    usable = [dict(row) for row in field_eligible]
     predicate_excluded = 0
     if question.id == "EX2":
         before_predicate = len(usable)
@@ -1179,6 +1364,12 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
         excluded_count=excluded,
         metrics=dict(sorted(metrics.items())),
         requirements=requirements,
+        usable_records=usable,
+        runner_artifacts=(
+            {"governed_execution_evidence": snapshot.governed_execution_evidence(
+                {dataset.source: dataset for dataset in slices})}
+            if question.id in {"X6", "EXEC1"} else {}
+        ),
     )
 
 

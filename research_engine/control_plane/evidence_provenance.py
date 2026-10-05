@@ -126,8 +126,10 @@ class EvidenceSelection:
     records: tuple[dict[str, Any], ...]
     component: dict[str, Any]
 
-    def records_for_analysis(self) -> list[dict[str, Any]]:
+    def records_for_analysis(self, *, trusted_immutable: bool = False) -> list[dict[str, Any]]:
         """Return an isolated copy of the exact population represented here."""
+        if trusted_immutable:
+            return list(self.records)
         return deepcopy(list(self.records))
 
 
@@ -137,8 +139,13 @@ def _select(
     *,
     schema: str | None,
     current_only: bool,
+    trusted_immutable_inputs: bool = False,
 ) -> EvidenceSelection:
-    supplied = [deepcopy(dict(record)) for record in records]
+    supplied = [
+        record if trusted_immutable_inputs and isinstance(record, dict)
+        else deepcopy(dict(record))
+        for record in records
+    ]
     expected_schema = authoritative_evidence_schema(source)
     declared_schema = str(schema or expected_schema or "")
     classified: list[tuple[dict[str, Any], str]] = []
@@ -184,9 +191,13 @@ def select_current_evidence(
     records: Iterable[Mapping[str, Any]],
     *,
     schema: str | None = None,
+    trusted_immutable_inputs: bool = False,
 ) -> EvidenceSelection:
     """Select only proven CURRENT records and account for every exclusion."""
-    return _select(source, records, schema=schema, current_only=True)
+    return _select(
+        source, records, schema=schema, current_only=True,
+        trusted_immutable_inputs=trusted_immutable_inputs,
+    )
 
 
 def use_evidence_as_supplied(
@@ -205,6 +216,7 @@ def attest_current_subset(
     selected_records: Iterable[Mapping[str, Any]],
     *,
     schema: str | None = None,
+    trusted_immutable_inputs: bool = False,
 ) -> EvidenceSelection:
     """Attest an exact analytical subset of an authoritative CURRENT input.
 
@@ -213,8 +225,16 @@ def attest_current_subset(
     conflict rejection to happen after epoch classification while preventing
     callers from attaching CURRENT provenance to fabricated or stale rows.
     """
-    supplied = [deepcopy(dict(record)) for record in input_records]
-    selected = [deepcopy(dict(record)) for record in selected_records]
+    supplied = [
+        record if trusted_immutable_inputs and isinstance(record, dict)
+        else deepcopy(dict(record))
+        for record in input_records
+    ]
+    selected = [
+        record if trusted_immutable_inputs and isinstance(record, dict)
+        else deepcopy(dict(record))
+        for record in selected_records
+    ]
     expected_schema = authoritative_evidence_schema(source)
     declared_schema = str(schema or expected_schema or "")
     counts = _empty_counts()
@@ -226,9 +246,9 @@ def attest_current_subset(
         label = epoch.value if isinstance(epoch, DataEpoch) else INCOMPATIBLE
         counts[label] += 1
         if label == CURRENT:
-            current_material[_canonical_json(record)] += 1
+            current_material[evidence_digest((record,))] += 1
 
-    selected_material = Counter(_canonical_json(record) for record in selected)
+    selected_material = Counter(evidence_digest((record,)) for record in selected)
     if selected_material - current_material:
         raise ValueError(
             "Selected evidence must be a duplicate-preserving subset of the "

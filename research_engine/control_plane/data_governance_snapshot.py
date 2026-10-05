@@ -1,7 +1,8 @@
 """Immutable, run-scoped CURRENT snapshots for the HD13/HD14 audits."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from copy import deepcopy
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -53,22 +54,41 @@ class CurrentSnapshot:
     components: tuple[Mapping[str, Any], ...]
     _payloads: tuple[tuple[str, tuple[str, ...]], ...]
     _input_payloads: tuple[tuple[str, tuple[str, ...]], ...]
+    _borrowed_datasets: Mapping[str, Iterable[Mapping[str, Any]]] | None = field(
+        default=None, compare=False, repr=False,
+    )
 
     def records(self, source: str) -> list[dict[str, Any]]:
         payload = dict(self._payloads).get(source, ())
-        return [json.loads(item) for item in payload]
+        if payload or self._borrowed_datasets is None:
+            return [json.loads(item) for item in payload]
+        schema = authoritative_evidence_schema(source)
+        return [
+            deepcopy(dict(record))
+            for record in self._borrowed_datasets.get(source, ())
+            if classify_authoritative_evidence_record(
+                record, source, schema=schema,
+            ) == DataEpoch.CURRENT
+        ]
 
     def input_records(self, source: str) -> list[dict[str, Any]]:
         """Return copies of all frozen input rows for fail-closed orphan audits."""
         payload = dict(self._input_payloads).get(source, ())
-        return [json.loads(item) for item in payload]
+        if payload or self._borrowed_datasets is None:
+            return [json.loads(item) for item in payload]
+        return [
+            deepcopy(dict(record))
+            for record in self._borrowed_datasets.get(source, ())
+        ]
 
     def component(self, source: str) -> Mapping[str, Any] | None:
         return next((item for item in self.components if item["source"] == source), None)
 
     @property
     def sources(self) -> tuple[str, ...]:
-        return tuple(source for source, _ in self._payloads)
+        if self._payloads:
+            return tuple(source for source, _ in self._payloads)
+        return tuple(str(component["source"]) for component in self.components)
 
     def manifest(self) -> dict[str, Any]:
         return {
@@ -93,6 +113,7 @@ def freeze_current_snapshot(
     definition_material: Any,
     contract_material: Mapping[str, Any],
     as_of_utc: str | None = None,
+    retain_record_payloads: bool = True,
 ) -> CurrentSnapshot:
     """Freeze supplied persisted evidence once, accounting for every input row."""
     as_of = as_of_utc or datetime.now(timezone.utc).isoformat()
@@ -103,7 +124,11 @@ def freeze_current_snapshot(
         schema = authoritative_evidence_schema(source)
         if schema is None:
             raise ValueError(f"No persisted canonical authority exists for source {source!r}")
-        supplied = [dict(record) for record in datasets[source]]
+        supplied = [
+            dict(record) if retain_record_payloads or not isinstance(record, dict)
+            else record
+            for record in datasets[source]
+        ]
         current: list[dict[str, Any]] = []
         counts = {"CURRENT": 0, "TRANSITIONAL": 0, "LEGACY": 0, "INCOMPATIBLE": 0}
         for record in supplied:
@@ -112,8 +137,20 @@ def freeze_current_snapshot(
             counts[label] += 1
             if label == "CURRENT":
                 current.append(record)
-        encoded = tuple(sorted(_canonical(record) for record in current))
-        input_encoded = tuple(sorted(_canonical(record) for record in supplied))
+        # A metadata-only canonical-cycle snapshot must not retain a second
+        # serialized copy of every record merely to obtain an order-insensitive
+        # digest.  Hash each canonical row, sort the fixed-width hashes, and
+        # retain full payloads only for callers that explicitly request them.
+        current_hashes = sorted(
+            hashlib.sha256(_canonical(record).encode("utf-8")).hexdigest()
+            for record in current
+        )
+        if retain_record_payloads:
+            encoded = tuple(sorted(_canonical(record) for record in current))
+            input_encoded = tuple(sorted(_canonical(record) for record in supplied))
+        else:
+            encoded = ()
+            input_encoded = ()
         component = {
             "source": source,
             "schema": schema,
@@ -125,11 +162,13 @@ def freeze_current_snapshot(
             "included_counts": {"CURRENT": len(current)},
             "excluded_counts": {key: value for key, value in counts.items() if key != "CURRENT"},
             "digest_algorithm": "sha256",
-            "digest": hashlib.sha256("\n".join(encoded).encode("utf-8")).hexdigest(),
+            "digest": hashlib.sha256(
+                "\n".join(current_hashes).encode("utf-8")).hexdigest(),
         }
         components.append(_freeze(component))
-        payloads.append((source, encoded))
-        input_payloads.append((source, input_encoded))
+        if retain_record_payloads:
+            payloads.append((source, encoded))
+            input_payloads.append((source, input_encoded))
     registry_digest = _digest(registry_material)
     definition_digest = _digest(definition_material)
     contract_digests = {key: _digest(value) for key, value in sorted(contract_material.items())}
@@ -147,6 +186,7 @@ def freeze_current_snapshot(
         contract_digests=MappingProxyType(contract_digests),
         components=tuple(components), _payloads=tuple(payloads),
         _input_payloads=tuple(input_payloads),
+        _borrowed_datasets=(None if retain_record_payloads else datasets),
     )
 
 

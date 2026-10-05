@@ -47,6 +47,8 @@ class MemoryS3:
     def __init__(self, objects: dict[str, str], versions: dict[str, str] | None = None):
         self.objects = dict(objects)
         self.versions = dict(versions or {})
+        self.get_calls = 0
+        self.head_calls = 0
 
     def list_objects_v2(self, **kwargs):
         import hashlib
@@ -68,17 +70,42 @@ class MemoryS3:
     def get_object(self, **kwargs):
         import hashlib
 
+        self.get_calls += 1
         key = str(kwargs["Key"])
         if key not in self.objects:
             raise KeyError(key)
         body = self.objects[key]
 
         class Body:
-            def read(self):
-                return body.encode()
+            def __init__(self):
+                self.remaining = body.encode()
+
+            def read(self, amount=-1):
+                if not self.remaining:
+                    return b""
+                size = len(self.remaining) if amount < 0 else min(amount, 17)
+                chunk, self.remaining = self.remaining[:size], self.remaining[size:]
+                return chunk
 
         response = {
             "Body": Body(),
+            "ETag": '"' + hashlib.md5(body.encode()).hexdigest() + '"',
+            "ContentLength": len(body.encode()),
+            "LastModified": "2026-09-25T13:00:00Z",
+        }
+        if key in self.versions:
+            response["VersionId"] = self.versions[key]
+        return response
+
+    def head_object(self, **kwargs):
+        import hashlib
+
+        self.head_calls += 1
+        key = str(kwargs["Key"])
+        if key not in self.objects:
+            raise KeyError(key)
+        body = self.objects[key]
+        response = {
             "ETag": '"' + hashlib.md5(body.encode()).hexdigest() + '"',
             "ContentLength": len(body.encode()),
             "LastModified": "2026-09-25T13:00:00Z",
@@ -144,12 +171,15 @@ def test_first_cycle_freezes_exact_membership_updates_pointer_and_rerun_is_noop(
     assert state["last_successful_snapshot_id"] == first.snapshot_id
     assert state["latest_success_pointer"]["frontier_id"] == first.frontier_id
 
+    gets_after_first = fake.get_calls
     second = _run(tmp_path, fake, freezer=freezer)
     assert second.status == NO_NEW_GOVERNED_EVIDENCE
     assert second.snapshot_id == first.snapshot_id
     assert second.changed_datasets == ()
     assert set(second.unchanged_datasets) == set(BOUND_DATASETS)
     assert len(calls) == 1
+    assert fake.get_calls == gets_after_first
+    assert fake.head_calls == len(BOUND_DATASETS)
     assert FrontierStateStore(tmp_path / "state").load_latest_success() == state
 
 
@@ -206,6 +236,11 @@ def test_new_partition_is_detected_but_not_consumed_until_required_frontier_catc
     pending = _run(tmp_path, fake)
     assert pending.status == FRONTIER_INCOMPLETE
     assert pending.snapshot_id == first.snapshot_id
+    assert pending.verification_status == "RETAINED_VERIFIED"
+    assert pending.candidate_status == "CANDIDATE_INCOMPLETE"
+    assert pending.candidate_frontier_end == "2026-09-26"
+    assert pending.pending_missing_datasets == tuple(sorted(
+        set(REQUIRED_DATASETS) - {"trade_truth"}))
     assert pending.failure_reason.startswith(
         "REQUIRED_DATASETS_NOT_YET_COHERENT_AT_NEWEST_COVERAGE:")
     assert FrontierStateStore(tmp_path / "state").load_latest_success()[
@@ -218,6 +253,47 @@ def test_new_partition_is_detected_but_not_consumed_until_required_frontier_catc
     assert advanced.status == SNAPSHOT_READY
     assert advanced.frontier_end == "2026-09-26"
     assert advanced.predecessor_snapshot_id == first.snapshot_id
+    candidate = FrontierStateStore(tmp_path / "state").load_latest_candidate()
+    assert candidate["candidate_status"] == "PROMOTED"
+    assert candidate["promoted_snapshot_id"] == advanced.snapshot_id
+    assert candidate["missing_required_datasets"] == []
+
+
+def test_short_runtime_partial_delivery_retains_coherent_snapshot_and_objects(tmp_path):
+    fake = MemoryS3(_objects())
+    first = _run(tmp_path, fake)
+    manifest = tmp_path / "manifests" / f"{first.snapshot_id}.json"
+    before = manifest.read_bytes()
+    shadow_key = _key("shadow_runtime", "2026-09-26")
+    context_key = _key("execution_context", "2026-09-26")
+    fake.objects[shadow_key] = _body("shadow_runtime", "short-session")
+    fake.objects[context_key] = _body("execution_context", "short-session")
+
+    pending = _run(tmp_path, fake)
+
+    assert pending.status == FRONTIER_INCOMPLETE
+    assert pending.snapshot_id == first.snapshot_id
+    assert pending.changed_datasets == ()
+    assert pending.pending_missing_datasets == tuple(sorted(
+        set(REQUIRED_DATASETS) - {"shadow_runtime", "execution_context"}))
+    assert set(pending.pending_required_objects) == {
+        "shadow_runtime", "execution_context"}
+    assert fake.objects[shadow_key]
+    assert fake.objects[context_key]
+    assert manifest.read_bytes() == before
+    candidate = FrontierStateStore(tmp_path / "state").load_latest_candidate()
+    assert candidate["candidate_status"] == "CANDIDATE_INCOMPLETE"
+    assert candidate["last_coherent_snapshot_id"] == first.snapshot_id
+
+    for dataset in REQUIRED_DATASETS:
+        fake.objects.setdefault(
+            _key(dataset, "2026-09-26"), _body(dataset, "delayed-member"))
+    promoted = _run(tmp_path, fake)
+    assert promoted.status == SNAPSHOT_READY
+    assert promoted.predecessor_snapshot_id == first.snapshot_id
+    assert promoted.frontier_end == "2026-09-26"
+    assert FrontierStateStore(tmp_path / "state").load_latest_candidate()[
+        "candidate_status"] == "PROMOTED"
 
 
 def test_unchanged_optional_dataset_causes_no_false_positive(tmp_path):

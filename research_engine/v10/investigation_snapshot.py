@@ -533,8 +533,9 @@ def freeze_investigation_snapshot(
         if not before[name]:
             raise InvestigationSnapshotError("REQUIRED_DATASET_ABSENT:" + name)
 
-    first_rows: dict[str, list[dict[str, Any]]] = {}
     first_objects: dict[str, tuple[BoundObject, ...]] = {}
+    first_row_counts: dict[str, int] = {}
+    bindings: list[DatasetBinding] = []
     for name in BOUND_DATASETS:
         rows = resolved.read_objects_for_freeze(
             name, before[name], expected_schema_version=schema_by_dataset[name],
@@ -543,12 +544,16 @@ def freeze_investigation_snapshot(
         if malformed and malformed.malformed_lines:
             raise InvestigationSnapshotError(
                 f"MALFORMED_BOUND_OBJECT_ROWS:{name}:{malformed.malformed_lines}")
-        first_rows[name] = rows
         first_objects[name] = tuple(
             BoundObject.from_metadata(item)
             for item in resolved.object_metadata(name))
         if name in REQUIRED_DATASETS and not rows:
             raise InvestigationSnapshotError("REQUIRED_DATASET_EMPTY:" + name)
+        first_row_counts[name] = len(rows)
+        requirement = "REQUIRED" if name in REQUIRED_DATASETS else "OPTIONAL"
+        bindings.append(_child_snapshot(
+            name, requirement, start, end, rows, first_objects[name], authority))
+        del rows
 
     between = {
         name: resolved.discover_dataset_objects(
@@ -567,9 +572,10 @@ def freeze_investigation_snapshot(
         second_objects = tuple(
             BoundObject.from_metadata(item)
             for item in resolved.object_metadata(name))
-        if second_objects != first_objects[name] or len(second_rows) != len(first_rows[name]):
+        if second_objects != first_objects[name] or len(second_rows) != first_row_counts[name]:
             raise InvestigationSnapshotError(
                 "OBJECT_CONTENT_CHANGED_DURING_FREEZE:" + name)
+        del second_rows
 
     after = {
         name: resolved.discover_dataset_objects(
@@ -579,14 +585,6 @@ def freeze_investigation_snapshot(
     if any(_listing_material(before[name]) != _listing_material(after[name])
            for name in BOUND_DATASETS):
         raise InvestigationSnapshotError("OBJECT_POPULATION_CHANGED_DURING_FREEZE")
-
-    bindings: list[DatasetBinding] = []
-    for name in BOUND_DATASETS:
-        requirement = "REQUIRED" if name in REQUIRED_DATASETS else "OPTIONAL"
-        binding = _child_snapshot(
-            name, requirement, start, end, first_rows[name], first_objects[name],
-            authority)
-        bindings.append(binding)
 
     material = _identity_material(
         start_date=start, end_date=end, source_authority=authority,
@@ -686,6 +684,17 @@ class SnapshotBoundDatasetReader:
     @property
     def reads_by_dataset(self) -> dict[str, int]:
         return {name: len(rows) for name, rows in self._cache.items()}
+
+    def cycle_cached_dataset(self, dataset: str) -> list[dict[str, Any]]:
+        """Borrow the verified cycle-scoped population without copying records.
+
+        This is intentionally narrower than ``read_dataset`` and is used only
+        while constructing one immutable-snapshot question context.  External
+        consumers continue to receive defensive copies from ``read_dataset``.
+        """
+        if dataset not in self._bindings:
+            raise InvestigationSnapshotError("DATASET_NOT_BOUND:" + str(dataset))
+        return self._cache[dataset]
 
     def read_dataset(self, dataset: str, **kwargs: Any) -> list[dict[str, Any]]:
         if dataset not in self._bindings:

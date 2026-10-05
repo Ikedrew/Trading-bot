@@ -368,6 +368,8 @@ def _observation_token(observation: ExecutionObservation) -> str:
 def attest_execution_analytical_subset(
     evidence: GovernedExecutionEvidence,
     observations: Iterable[ExecutionObservation],
+    *,
+    trusted_immutable_inputs: bool = False,
 ) -> dict[str, Any]:
     """Attest an exact duplicate-preserving subset of the governed join output."""
     selected = list(observations)
@@ -382,8 +384,12 @@ def attest_execution_analytical_subset(
         for item in selected
     }
     selections = [
-        attest_current_subset(RESULT_SOURCE, evidence._result_inputs, result_records),
-        attest_current_subset(CONTEXT_SOURCE, evidence._context_inputs, context_by_digest.values()),
+        attest_current_subset(
+            RESULT_SOURCE, evidence._result_inputs, result_records,
+            trusted_immutable_inputs=trusted_immutable_inputs),
+        attest_current_subset(
+            CONTEXT_SOURCE, evidence._context_inputs, context_by_digest.values(),
+            trusted_immutable_inputs=trusted_immutable_inputs),
     ]
     if evidence.decision_trace_required:
         trace_by_digest = {
@@ -391,7 +397,9 @@ def attest_execution_analytical_subset(
             for item in selected if item._trace_source_record is not None
         }
         selections.append(
-            attest_current_subset(TRACE_SOURCE, evidence._trace_inputs, trace_by_digest.values())
+            attest_current_subset(
+                TRACE_SOURCE, evidence._trace_inputs, trace_by_digest.values(),
+                trusted_immutable_inputs=trusted_immutable_inputs)
         )
     return build_evidence_provenance(*selections)
 
@@ -402,22 +410,41 @@ def build_governed_execution_evidence(
     decision_traces: Iterable[Mapping[str, Any]] | None = None,
     *,
     require_decision_trace: bool = False,
+    trusted_immutable_inputs: bool = False,
 ) -> GovernedExecutionEvidence:
     """Select CURRENT execution evidence and construct the strict joined population."""
-    supplied_results = tuple(deepcopy(dict(item)) for item in execution_results)
-    supplied_contexts = tuple(deepcopy(dict(item)) for item in execution_contexts)
-    supplied_traces = tuple(deepcopy(dict(item)) for item in (decision_traces or ()))
+    def materialize(records: Iterable[Mapping[str, Any]]) -> tuple[dict[str, Any], ...]:
+        if trusted_immutable_inputs:
+            return tuple(
+                item if isinstance(item, dict) else dict(item)
+                for item in records
+            )
+        return tuple(deepcopy(dict(item)) for item in records)
+
+    supplied_results = materialize(execution_results)
+    supplied_contexts = materialize(execution_contexts)
+    supplied_traces = materialize(decision_traces or ())
     exclusions: Counter[str] = Counter()
     result_inputs = _digestible_records(supplied_results, exclusions, label="result")
     context_inputs = _digestible_records(supplied_contexts, exclusions, label="context")
     trace_inputs = _digestible_records(supplied_traces, exclusions, label="decision_trace")
-    result_selection = select_current_evidence(RESULT_SOURCE, result_inputs)
-    context_selection = select_current_evidence(CONTEXT_SOURCE, context_inputs)
-    trace_selection = select_current_evidence(TRACE_SOURCE, trace_inputs) if require_decision_trace else None
+    result_selection = select_current_evidence(
+        RESULT_SOURCE, result_inputs,
+        trusted_immutable_inputs=trusted_immutable_inputs)
+    context_selection = select_current_evidence(
+        CONTEXT_SOURCE, context_inputs,
+        trusted_immutable_inputs=trusted_immutable_inputs)
+    trace_selection = select_current_evidence(
+        TRACE_SOURCE, trace_inputs,
+        trusted_immutable_inputs=trusted_immutable_inputs,
+    ) if require_decision_trace else None
 
-    current_results = result_selection.records_for_analysis()
-    current_contexts = context_selection.records_for_analysis()
-    current_traces = trace_selection.records_for_analysis() if trace_selection else []
+    current_results = result_selection.records_for_analysis(
+        trusted_immutable=trusted_immutable_inputs)
+    current_contexts = context_selection.records_for_analysis(
+        trusted_immutable=trusted_immutable_inputs)
+    current_traces = trace_selection.records_for_analysis(
+        trusted_immutable=trusted_immutable_inputs) if trace_selection else []
     deduplicated_results = _deduplicate_results(current_results, exclusions)
     contexts = _group_single_authority(current_contexts, exclusions, label="context")
     traces = (
@@ -462,9 +489,11 @@ def build_governed_execution_evidence(
         # normaliser can derive requested-vs-fill slippage; this foundation is
         # deliberately stricter and exposes only producer-measured slippage via
         # ``absolute_measured_slippage``.
-        result = deepcopy(raw_result)
-        context = deepcopy(raw_context)
-        trace = deepcopy(raw_trace) if raw_trace is not None else None
+        result = raw_result if trusted_immutable_inputs else deepcopy(raw_result)
+        context = raw_context if trusted_immutable_inputs else deepcopy(raw_context)
+        trace = (
+            raw_trace if trusted_immutable_inputs else deepcopy(raw_trace)
+        ) if raw_trace is not None else None
         market_access = raw_context.get("market_access") if isinstance(raw_context.get("market_access"), Mapping) else {}
         observations.append(ExecutionObservation(
             observation_identity=identity,
@@ -485,9 +514,9 @@ def build_governed_execution_evidence(
                 if raw_trace is not None else None
             ),
             result_fields=_result_fields(raw_result),
-            _result_source_record=deepcopy(raw_result),
-            _context_source_record=deepcopy(raw_context),
-            _trace_source_record=deepcopy(raw_trace),
+            _result_source_record=(result if trusted_immutable_inputs else deepcopy(raw_result)),
+            _context_source_record=(context if trusted_immutable_inputs else deepcopy(raw_context)),
+            _trace_source_record=(trace if trusted_immutable_inputs else deepcopy(raw_trace)),
         ))
 
     observations.sort(key=lambda item: item.observation_identity)
@@ -529,7 +558,9 @@ def build_governed_execution_evidence(
         _context_inputs=context_inputs,
         _trace_inputs=trace_inputs,
     )
-    provenance = attest_execution_analytical_subset(placeholder, observations)
+    provenance = attest_execution_analytical_subset(
+        placeholder, observations,
+        trusted_immutable_inputs=trusted_immutable_inputs)
     return GovernedExecutionEvidence(
         **{**placeholder.__dict__, "provenance": provenance}
     )

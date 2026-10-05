@@ -77,10 +77,26 @@ def load_shadow_trades(
     records: list[dict[str, Any]] = []
     # Canonical production shadow source: S3 shadow_runtime_v1 event stream
     # reconstructed into completed shadow outcomes (internal research shape).
-    # research_shadow_trades is a separate live-written research dataset and
-    # is appended unchanged. The legacy shadow_trades dataset is never read.
+    # research_shadow_trades is a separate live-written research dataset; it is
+    # appended only when bound in the active snapshot. A snapshot that excludes
+    # it by design must not fail a runner with DATASET_NOT_BOUND: the bound
+    # shadow_runtime population is already present via ingestion above.
     records.extend(ingest_completed_shadow_trades())
-    records.extend(_source.read_dataset(_RESEARCH_SHADOW_DATASET))
+    try:
+        records.extend(_source.read_dataset(_RESEARCH_SHADOW_DATASET))
+    except Exception as exc:
+        from research_engine.v10.investigation_snapshot import (
+            InvestigationSnapshotError,
+        )
+
+        # The canonical question-cycle snapshot deliberately excludes this
+        # legacy supplemental dataset.  Tolerate that one exact binding miss;
+        # every other reader/snapshot failure must remain loud.
+        if (
+            not isinstance(exc, InvestigationSnapshotError)
+            or str(exc) != f"DATASET_NOT_BOUND:{_RESEARCH_SHADOW_DATASET}"
+        ):
+            raise
 
     # Epoch filtering (default: CURRENT only)
     if include_all_epochs or epoch == "ALL":

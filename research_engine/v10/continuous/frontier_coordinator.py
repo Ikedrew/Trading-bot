@@ -31,6 +31,7 @@ from research_engine.v10.investigation_snapshot import (
 
 COORDINATOR_SCHEMA = "canonical_research_frontier_v1"
 STATE_SCHEMA = "canonical_research_frontier_state_v1"
+CANDIDATE_SCHEMA = "canonical_research_frontier_candidate_v1"
 DEFAULT_STATE_DIRECTORY = MANIFEST_DIRECTORY.parent / "research_frontier"
 
 _EVENT_TIMESTAMP_ALIASES: dict[str, tuple[str, ...]] = {
@@ -287,6 +288,10 @@ class FrontierCycleResult:
     failure_reason: str | None = None
     dataset_status: dict[str, str] = field(default_factory=dict)
     delta: dict[str, Any] = field(default_factory=dict)
+    candidate_status: str | None = None
+    candidate_frontier_end: str | None = None
+    pending_required_objects: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    pending_missing_datasets: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -299,7 +304,9 @@ class FrontierStateStore:
         self.directory = Path(directory)
         self.history_directory = self.directory / "history"
         self.failure_directory = self.directory / "failures"
+        self.candidate_history_directory = self.directory / "candidates"
         self.latest_path = self.directory / "latest_success.json"
+        self.latest_candidate_path = self.directory / "latest_candidate.json"
 
     def load_latest_success(self) -> dict[str, Any] | None:
         if not self.latest_path.exists():
@@ -391,6 +398,76 @@ class FrontierStateStore:
             return
         _write_immutable(path, payload)
 
+    def load_latest_candidate(self) -> dict[str, Any] | None:
+        if not self.latest_candidate_path.exists():
+            return None
+        try:
+            value = json.loads(self.latest_candidate_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError) as exc:
+            raise FrontierCoordinatorError(
+                FRONTIER_INVALID, "LATEST_CANDIDATE_STATE_UNREADABLE"
+            ) from exc
+        if value.get("candidate_schema") != CANDIDATE_SCHEMA:
+            raise FrontierCoordinatorError(
+                FRONTIER_INVALID, "LATEST_CANDIDATE_STATE_INVALID")
+        return value
+
+    def save_incomplete_candidate(
+        self, result: FrontierCycleResult, frontier: FrontierSelection,
+    ) -> None:
+        material = {
+            "candidate_schema": CANDIDATE_SCHEMA,
+            "candidate_status": "CANDIDATE_INCOMPLETE",
+            "last_coherent_snapshot_id": result.snapshot_id,
+            "last_coherent_snapshot_fingerprint": result.fingerprint,
+            "candidate_frontier_start": frontier.selected_start_time,
+            "candidate_frontier_end": result.candidate_frontier_end,
+            "pending_required_objects": {
+                name: list(items)
+                for name, items in sorted(result.pending_required_objects.items())
+            },
+            "missing_required_datasets": list(result.pending_missing_datasets),
+            "coherence_decision": "INCOMPLETE_NOT_PROMOTABLE_RETAIN_LAST_COHERENT",
+        }
+        candidate_id = "RFRONTIER-CANDIDATE-" + fingerprint(material)[:24].upper()
+        payload = {
+            **material,
+            "candidate_id": candidate_id,
+            "observed_at": _utc_now().isoformat(),
+        }
+        history_path = self.candidate_history_directory / f"{candidate_id}.json"
+        if not history_path.exists():
+            _write_immutable(history_path, payload)
+        _atomic_json(self.latest_candidate_path, payload)
+
+    def save_candidate_promotion(
+        self, *, snapshot: InvestigationSnapshot, frontier: FrontierSelection,
+    ) -> None:
+        previous = self.load_latest_candidate()
+        payload = {
+            "candidate_schema": CANDIDATE_SCHEMA,
+            "candidate_status": "PROMOTED",
+            "candidate_id": "RFRONTIER-CANDIDATE-" + fingerprint({
+                "snapshot_id": snapshot.snapshot_id,
+                "frontier_id": frontier.frontier_id,
+            })[:24].upper(),
+            "promoted_snapshot_id": snapshot.snapshot_id,
+            "promoted_snapshot_fingerprint": snapshot.snapshot_fingerprint,
+            "frontier_id": frontier.frontier_id,
+            "candidate_frontier_start": frontier.selected_start_time,
+            "candidate_frontier_end": frontier.selected_end_time,
+            "pending_required_objects": {},
+            "missing_required_datasets": [],
+            "coherence_decision": "COHERENT_CANDIDATE_ATOMICALLY_PROMOTED",
+            "predecessor_candidate_id": (
+                None if previous is None else previous.get("candidate_id")),
+            "observed_at": _utc_now().isoformat(),
+        }
+        history_path = self.candidate_history_directory / f"{payload['candidate_id']}.json"
+        if not history_path.exists():
+            _write_immutable(history_path, payload)
+        _atomic_json(self.latest_candidate_path, payload)
+
 
 def _discover_verified(
     source: S3ResearchDataSource, *, as_of_date: date,
@@ -424,7 +501,120 @@ def _discover_verified(
                 FRONTIER_INVALID, "OBJECT_DISCOVERY_VERIFICATION_COUNT_MISMATCH:" + dataset
             )
         verified[dataset] = tuple(sorted(metadata, key=lambda item: item["s3_key"]))
+        # Assignment evaluates the next read before releasing this local.  Drop
+        # it explicitly so two large parsed datasets never overlap in memory.
+        del rows
     return verified, event_coverage
+
+
+def _frontier_from_state(previous: Mapping[str, Any]) -> FrontierSelection:
+    value = previous["frontier"]
+    return FrontierSelection(
+        frontier_id=str(value["frontier_id"]),
+        selected_start_time=str(value["selected_start_time"]),
+        selected_end_time=str(value["selected_end_time"]),
+        dataset_membership=dict(value["dataset_membership"]),
+        dataset_status=dict(value["dataset_status"]),
+        stale_datasets=tuple(value.get("stale_datasets") or ()),
+        missing_optional_datasets=tuple(value.get("missing_optional_datasets") or ()),
+        gap_diagnostics={
+            name: tuple(items)
+            for name, items in (value.get("gap_diagnostics") or {}).items()
+        },
+        pending_required_objects={
+            name: tuple(items)
+            for name, items in (value.get("pending_required_objects") or {}).items()
+        },
+        coherence_decision=str(value["coherence_decision"]),
+        predecessor_snapshot_id=value.get("predecessor_snapshot_id"),
+    )
+
+
+def _reuse_unchanged_frontier(
+    source: S3ResearchDataSource,
+    previous: Mapping[str, Any] | None,
+    *,
+    as_of_date: date,
+) -> FrontierSelection | None:
+    """Reuse consumed state only after exact current S3 identities match."""
+    if previous is None:
+        return None
+    prior = _frontier_from_state(previous)
+    listed: dict[str, tuple[dict[str, Any], ...]] = {}
+    for dataset in BOUND_DATASETS:
+        items = source.discover_dataset_objects(dataset)
+        if dataset in REQUIRED_DATASETS and not items:
+            return None
+        enriched = tuple(
+            {**dict(item), "partition_date": _key_date(str(item["identifier"]))}
+            for item in items
+        )
+        if any(str(item["partition_date"]) > as_of_date.isoformat() for item in enriched):
+            return None
+        listed[dataset] = enriched
+
+    required_dates = {
+        name: sorted({str(item["partition_date"]) for item in listed[name]})
+        for name in REQUIRED_DATASETS
+    }
+    if any(not values for values in required_dates.values()):
+        return None
+    start = max(values[0] for values in required_dates.values())
+    end = min(values[-1] for values in required_dates.values())
+    if start > end or start != prior.selected_start_time or end != prior.selected_end_time:
+        return None
+    # Preserve the existing fail-closed handling for a required dataset that
+    # has advanced beyond its peers.
+    if any(any(str(item["partition_date"]) > end for item in listed[name])
+           for name in REQUIRED_DATASETS):
+        return None
+
+    selected_by_dataset: dict[str, tuple[dict[str, Any], ...]] = {}
+    for dataset in BOUND_DATASETS:
+        selected = tuple(
+            item for item in listed[dataset]
+            if start <= str(item["partition_date"]) <= end
+        )
+        old = tuple(prior.dataset_membership[dataset]["objects"])
+        current_listing = [
+            (str(item["identifier"]), str(item.get("etag") or ""),
+             int(item.get("size") or 0))
+            for item in selected
+        ]
+        prior_listing = [
+            (str(item["s3_key"]), str(item.get("etag") or ""),
+             int(item.get("listed_byte_count") or item.get("byte_count") or 0))
+            for item in old
+        ]
+        if current_listing != prior_listing:
+            return None
+        selected_by_dataset[dataset] = selected
+
+    # HEAD resolves VersionId, which list_objects_v2 omits.  This retains the
+    # existing exact-version replacement semantics without downloading bodies.
+    for dataset in BOUND_DATASETS:
+        headed = source.head_bound_objects(
+            dataset,
+            selected_by_dataset[dataset],
+            expected_schema_version=current_schema(dataset),
+        )
+        old = tuple(prior.dataset_membership[dataset]["objects"])
+        current_identity = [
+            (str(item["identifier"]), item.get("version_id"),
+             str(item.get("etag") or ""), int(item.get("size") or 0),
+             str(item.get("last_modified") or ""))
+            for item in headed
+        ]
+        prior_identity = [
+            (str(item["s3_key"]), item.get("version_id"),
+             str(item.get("etag") or ""),
+             int(item.get("listed_byte_count") or item.get("byte_count") or 0),
+             str(item.get("last_modified") or ""))
+            for item in old
+        ]
+        if current_identity != prior_identity:
+            return None
+    return prior
 
 
 def _select_frontier(
@@ -609,6 +799,29 @@ def _compute_delta(
     }
 
 
+def _pending_candidate(
+    frontier: FrontierSelection,
+) -> tuple[str | None, tuple[str, ...]]:
+    """Describe the newest unpromotable required-date candidate.
+
+    ``pending_required_objects`` contains only required datasets already seen
+    beyond the common coherent end.  Required datasets absent at the newest
+    observed date are therefore the exact members still needed for promotion.
+    """
+    dates_by_dataset = {
+        name: {_key_date(key) for key in items}
+        for name, items in frontier.pending_required_objects.items()
+    }
+    candidate_dates = set().union(*dates_by_dataset.values()) if dates_by_dataset else set()
+    if not candidate_dates:
+        return None, ()
+    newest = max(candidate_dates)
+    present = {
+        name for name, dates in dates_by_dataset.items() if newest in dates
+    }
+    return newest, tuple(sorted(set(REQUIRED_DATASETS) - present))
+
+
 def _failure_result(
     error: FrontierCoordinatorError,
     previous: Mapping[str, Any] | None,
@@ -666,22 +879,51 @@ def run_frontier_snapshot_cycle(
             previous["last_successful_snapshot_id"])
         resolved_source = source or get_default_source()
         resolved_as_of = as_of_date or _utc_now().date()
-        discovered, event_coverage = _discover_verified(
-            resolved_source, as_of_date=resolved_as_of)
-        frontier = _select_frontier(
-            discovered,
-            event_coverage=event_coverage,
-            predecessor_snapshot_id=predecessor,
-            as_of_date=resolved_as_of,
-        )
+        frontier = _reuse_unchanged_frontier(
+            resolved_source, previous, as_of_date=resolved_as_of)
+        if frontier is None:
+            discovered, event_coverage = _discover_verified(
+                resolved_source, as_of_date=resolved_as_of)
+            frontier = _select_frontier(
+                discovered,
+                event_coverage=event_coverage,
+                predecessor_snapshot_id=predecessor,
+                as_of_date=resolved_as_of,
+            )
         delta = _compute_delta(frontier, previous)
         if not delta["changed_datasets"]:
             if frontier.pending_required_objects:
-                raise FrontierCoordinatorError(
-                    FRONTIER_INCOMPLETE,
+                candidate_end, missing = _pending_candidate(frontier)
+                reason = (
                     "REQUIRED_DATASETS_NOT_YET_COHERENT_AT_NEWEST_COVERAGE:"
-                    + canonical_json(frontier.pending_required_objects),
+                    + canonical_json(frontier.pending_required_objects)
                 )
+                result = FrontierCycleResult(
+                    status=FRONTIER_INCOMPLETE,
+                    snapshot_id=predecessor,
+                    fingerprint=(None if previous is None else str(
+                        previous["last_successful_snapshot_fingerprint"])),
+                    investigation_epoch=(None if previous is None else str(
+                        previous["last_successful_investigation_epoch"])),
+                    frontier_id=frontier.frontier_id,
+                    frontier_start=frontier.selected_start_time,
+                    frontier_end=frontier.selected_end_time,
+                    predecessor_snapshot_id=predecessor,
+                    changed_datasets=(),
+                    unchanged_datasets=tuple(delta["unchanged_datasets"]),
+                    missing_optional_datasets=frontier.missing_optional_datasets,
+                    stale_datasets=frontier.stale_datasets,
+                    verification_status="RETAINED_VERIFIED",
+                    failure_reason=reason,
+                    dataset_status=frontier.dataset_status,
+                    delta=delta,
+                    candidate_status="CANDIDATE_INCOMPLETE",
+                    candidate_frontier_end=candidate_end,
+                    pending_required_objects=frontier.pending_required_objects,
+                    pending_missing_datasets=missing,
+                )
+                store.save_incomplete_candidate(result, frontier)
+                return result
             return FrontierCycleResult(
                 status=NO_NEW_GOVERNED_EVIDENCE,
                 snapshot_id=predecessor,
@@ -747,6 +989,7 @@ def run_frontier_snapshot_cycle(
             },
         }
         store.save_success(state)
+        store.save_candidate_promotion(snapshot=snapshot, frontier=frontier)
         return FrontierCycleResult(
             status=SNAPSHOT_READY,
             snapshot_id=snapshot.snapshot_id,
@@ -780,6 +1023,7 @@ def run_frontier_snapshot_cycle(
 
 
 __all__ = [
+    "CANDIDATE_SCHEMA",
     "COORDINATOR_SCHEMA",
     "DATASET_SCOPE",
     "DEFAULT_STATE_DIRECTORY",

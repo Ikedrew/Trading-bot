@@ -36,6 +36,7 @@ import json
 import hashlib
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -450,6 +451,50 @@ class S3ResearchDataSource:
                 seen.add(key)
         return tuple(dict(self._listed_objects[key]) for key in sorted(seen))
 
+    def head_bound_objects(
+        self,
+        dataset: str,
+        objects: Sequence[Mapping[str, Any]],
+        *,
+        expected_schema_version: str,
+        max_workers: int = 16,
+    ) -> tuple[dict[str, Any], ...]:
+        """Resolve exact current object versions without downloading bodies."""
+        if expected_schema_version != current_schema(dataset):
+            raise ResearchDataSourceError(
+                f"SNAPSHOT_SCHEMA_MISMATCH:{dataset}:{expected_schema_version}"
+                f"!={current_schema(dataset)}")
+        prefixes = self._list_prefixes(dataset, symbol=None, all_schemas=False)
+        listed = [dict(item) for item in objects]
+        for item in listed:
+            key = str(item.get("identifier") or "")
+            if not key or not any(key.startswith(prefix) for prefix in prefixes):
+                raise ResearchDataSourceError(
+                    f"SNAPSHOT_OBJECT_OUTSIDE_CANONICAL_DATASET:{dataset}:{key}")
+
+        client = self._get_client()
+
+        def inspect(item: Mapping[str, Any]) -> dict[str, Any]:
+            key = str(item["identifier"])
+            try:
+                response = client.head_object(Bucket=self._bucket, Key=key)
+            except Exception as exc:
+                raise self._diagnose(exc, operation=f"head_object key='{key}'") from exc
+            modified = response.get("LastModified")
+            return {
+                **dict(item),
+                "etag": str(response.get("ETag") or item.get("etag") or "").strip('"'),
+                "size": int(response.get("ContentLength") or item.get("size") or 0),
+                "last_modified": (
+                    modified.isoformat() if hasattr(modified, "isoformat")
+                    else str(modified or item.get("last_modified") or "")
+                ),
+                "version_id": response.get("VersionId"),
+            }
+
+        with ThreadPoolExecutor(max_workers=max(1, min(max_workers, len(listed) or 1))) as pool:
+            return tuple(pool.map(inspect, listed))
+
     def read_bound_objects(
         self,
         dataset: str,
@@ -542,32 +587,57 @@ class S3ResearchDataSource:
     def _read_object(self, dataset: str, key: str) -> list[dict[str, Any]]:
         client = self._get_client()
         response: Mapping[str, Any] = {}
-        try:
-            resp = client.get_object(Bucket=self._bucket, Key=key)
-            response = resp
-            raw_body = resp["Body"].read()
-            body_bytes = raw_body.encode("utf-8") if isinstance(raw_body, str) else bytes(raw_body)
-            body = body_bytes.decode("utf-8")
-        except Exception as exc:
-            raise self._diagnose(
-                exc, operation=f"get_object key='{key}'"
-            ) from exc
-
         out: list[dict[str, Any]] = []
         report = self._malformed.setdefault(dataset, MalformedReport(dataset=dataset))
-        for line in body.splitlines():
-            line = line.strip()
+        byte_size = 0
+        content_hasher = hashlib.sha256()
+        pending = b""
+
+        def decode_line(raw_line: bytes) -> None:
+            line = raw_line.decode("utf-8").strip()
             if not line:
-                continue
+                return
             try:
                 rec = json.loads(line)
             except json.JSONDecodeError:
                 report.malformed_lines += 1
                 if key not in report.keys_with_errors:
                     report.keys_with_errors.append(key)
-                continue
+                return
             if isinstance(rec, dict):
                 out.append(rec)
+
+        try:
+            resp = client.get_object(Bucket=self._bucket, Key=key)
+            response = resp
+            stream = resp["Body"]
+            while True:
+                one_shot = False
+                try:
+                    chunk = stream.read(1024 * 1024)
+                except TypeError:  # minimal test doubles may only expose read()
+                    chunk = stream.read()
+                    one_shot = True
+                if not chunk:
+                    break
+                chunk_bytes = chunk.encode("utf-8") if isinstance(chunk, str) else bytes(chunk)
+                byte_size += len(chunk_bytes)
+                content_hasher.update(chunk_bytes)
+                pending += chunk_bytes
+                lines = pending.split(b"\n")
+                pending = lines.pop()
+                for raw_line in lines:
+                    decode_line(raw_line.rstrip(b"\r"))
+                if one_shot:
+                    break
+            if pending:
+                decode_line(pending.rstrip(b"\r"))
+        except MemoryError:
+            raise
+        except Exception as exc:
+            raise self._diagnose(
+                exc, operation=f"get_object key='{key}'"
+            ) from exc
         listed = dict(self._listed_objects.get(key, {"identifier": key}))
         response_etag = str(response.get("ETag") or "").strip('"')
         response_last_modified = response.get("LastModified")
@@ -579,11 +649,11 @@ class S3ResearchDataSource:
         self._read_objects[(dataset, key)] = {
             **listed,
             "etag": response_etag or listed.get("etag", ""),
-            "size": int(response.get("ContentLength") or len(body_bytes)),
+            "size": int(response.get("ContentLength") or byte_size),
             "last_modified": response_last_modified_text or listed.get("last_modified", ""),
             "version_id": response.get("VersionId"),
-            "content_sha256": hashlib.sha256(body_bytes).hexdigest(),
-            "byte_size": len(body_bytes),
+            "content_sha256": content_hasher.hexdigest(),
+            "byte_size": byte_size,
             "row_count": len(out),
         }
         return out

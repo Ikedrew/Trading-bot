@@ -185,20 +185,14 @@ def compute_content_hash(records: list[dict[str, Any]]) -> str:
     - Same records with different JSON formatting → same hash
     - Different records → different hash
     """
-    # Canonicalise each record
-    canonical_records = []
-    for record in records:
-        canonical = _canonicalise_value(record)
-        sort_key = _canonical_sort_key(record)
-        canonical_json = json.dumps(canonical, separators=(",", ":"), sort_keys=True, ensure_ascii=True)
-        canonical_records.append((sort_key, canonical_json))
-
-    # Sort by canonical key for deterministic ordering
-    canonical_records.sort(key=lambda x: x[0])
-
-    # Hash the sorted canonical content
+    # Sort references first, then canonicalise/hash one record at a time.  This
+    # preserves the stable ordering while avoiding a second full population of
+    # canonical dictionaries and JSON strings in memory.
+    ordered_records = sorted(records, key=_canonical_sort_key)
     hasher = hashlib.sha256()
-    for _, canonical_json in canonical_records:
+    for record in ordered_records:
+        canonical = _canonicalise_value(record)
+        canonical_json = json.dumps(canonical, separators=(",", ":"), sort_keys=True, ensure_ascii=True)
         hasher.update(canonical_json.encode("utf-8"))
         hasher.update(b"\n")
 
