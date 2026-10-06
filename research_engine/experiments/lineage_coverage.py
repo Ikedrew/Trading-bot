@@ -200,31 +200,24 @@ def run_g2(*, decision_records: list[dict[str, Any]] | None = None,
            outcome_records: list[dict[str, Any]] | None = None,
            datasets: Mapping[str, list[dict[str, Any]]] | None = None,
            snapshot: CurrentSnapshot | None = None, as_of_utc: str | None = None,
-           governed_records: list[dict[str, Any]] | None = None) -> dict[str, Any]:
-    if governed_records is not None:
-        from research_engine.control_plane.stage4_impl_population2 import (
-            enforce_exact_population, filter_sources_to_governed_population,
-        )
-        governed = enforce_exact_population("G2", governed_records)
-        decisions, outcomes = filter_sources_to_governed_population(
-            "G2", governed, decision_records or (), outcome_records or ())
-        result = classify_lineage(decisions, outcomes)
-        if result["denominator"] != len(governed):
-            raise ValueError(
-                f"G2_RUNNER_POPULATION_MISMATCH:{result['denominator']}!={len(governed)}")
-        frozen = _snapshot({"decision_trace": decisions, "shadow_trades": outcomes}, as_of_utc)
-    else:
-        result = None
-    if decision_records is not None or outcome_records is not None:
+           governed_lineage_population: Any | None = None) -> dict[str, Any]:
+    if governed_lineage_population is not None:
+        # Governed snapshot-bound meta population: the exact HD14 lineage
+        # authority (decision_trace + shadow_runtime) from one bound snapshot.
+        # This replaces the retired exact-count ``governed_records`` path.
+        datasets = {
+            "decision_trace": list(governed_lineage_population.decision_records),
+            "shadow_runtime": list(governed_lineage_population.outcome_records),
+        }
+    elif decision_records is not None or outcome_records is not None:
         if datasets is not None or snapshot is not None:
             raise ValueError("Supply either explicit records, datasets, or a snapshot")
         datasets = {"decision_trace": decision_records or [], "shadow_trades": outcome_records or []}
-    frozen = frozen if governed_records is not None else (snapshot or _snapshot(datasets, as_of_utc))
-    if result is None:
-        decisions = _current_audit_inputs(frozen, "decision_trace")
-        outcome_source = "shadow_runtime" if frozen.component("shadow_runtime") else "shadow_trades"
-        outcomes = _current_audit_inputs(frozen, outcome_source)
-        result = classify_lineage(decisions, outcomes)
+    frozen = snapshot or _snapshot(datasets, as_of_utc)
+    decisions = _current_audit_inputs(frozen, "decision_trace")
+    outcome_source = "shadow_runtime" if frozen.component("shadow_runtime") else "shadow_trades"
+    outcomes = _current_audit_inputs(frozen, outcome_source)
+    result = classify_lineage(decisions, outcomes)
     denominator = result["denominator"]
     unresolved = result["unresolved_orphan_count"]
     if unresolved:

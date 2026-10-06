@@ -309,7 +309,7 @@ CANONICAL_INTENT_M2 = (
 )
 
 
-def run_m2() -> dict[str, Any]:
+def run_m2(*, shadow_trades=None) -> dict[str, Any]:
     """
     Run M2: H4 regime × strategy segmentation.
 
@@ -320,7 +320,10 @@ def run_m2() -> dict[str, Any]:
     of whether trades were actually executed.
     """
     question_id = "M2"
-    all_records = load_shadow_trades()
+    if shadow_trades is not None:
+        all_records = list(shadow_trades)
+    else:
+        all_records = load_shadow_trades()
 
     selection = select_current_evidence("shadow_trades", all_records)
     current = selection.records_for_analysis()

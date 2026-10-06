@@ -6,9 +6,9 @@ from typing import Any, Mapping
 from research_engine.control_plane.risk_policy_evidence import RiskPolicyEvidence
 from research_engine.experiments.risk_simulation_governed import (
     R4_SCHEMA_VERSION,
+    RiskSimulationError,
+    analyse_r3,
     analyse_r4,
-    load_governed_risk_evidence,
-    load_upstream_report,
     persist_report,
     validate_report,
 )
@@ -25,12 +25,15 @@ def run_drawdown_threshold(
     evidence: RiskPolicyEvidence | None = None,
     r3_report: Mapping[str, Any] | None = None,
     *,
+    governed_risk_evidence: RiskPolicyEvidence | None = None,
     persist: bool = True,
 ) -> dict[str, Any]:
-    report = analyse_r4(
-        evidence or load_governed_risk_evidence(),
-        r3_report or load_upstream_report(REPORT_OWNERSHIP["R3"]),
-    )
+    evidence = governed_risk_evidence or evidence
+    if evidence is None:
+        raise RiskSimulationError("GOVERNED_RISK_EVIDENCE_REQUIRED:R4")
+    if r3_report is None:
+        r3_report = analyse_r3(evidence)
+    report = analyse_r4(evidence, r3_report)
     if persist:
         persist_report(report, REPORT_FILENAME)
     return report

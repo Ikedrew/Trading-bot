@@ -73,6 +73,9 @@ class CanonicalQuestionResult:
     previous_result_id: str | None = None
     runner: str | None = None
     runner_version: str | None = None
+    reason_code: str | None = None
+    reason: str | None = None
+    reason_details: Any = None
     failure_reason: str | None = None
     # Governed evaluation identity.  Absent (None) on results published before
     # governed evaluator identity existed; those remain byte-for-byte
@@ -84,6 +87,12 @@ class CanonicalQuestionResult:
     def identity_material(self) -> dict[str, Any]:
         value = asdict(self)
         value.pop("result_id", None)
+        for name in ("reason_code", "reason", "reason_details"):
+            if value.get(name) is None:
+                # Results written before Repair 5 had no governed-reason
+                # transport.  Absence stays absence and their IDs remain
+                # verifiable; historical records are never enriched.
+                value.pop(name, None)
         if value.get("evaluation_identity") is None and value.get(
                 "evaluation_identity_digest") is None:
             # Legacy result: reproduce its original identity material exactly so
@@ -106,6 +115,9 @@ class CanonicalQuestionResult:
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
+        for name in ("reason_code", "reason", "reason_details"):
+            if payload.get(name) is None:
+                payload.pop(name, None)
         # A legacy result is re-emitted under its original schema so historical
         # payloads stay byte-identical on disk; it is never upgraded in place.
         schema = (

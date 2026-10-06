@@ -40,6 +40,9 @@ from research_engine.experiments.strategy_identity_expectancy import (
 
 
 REPORT_FILENAME = "s6_horizon_expectancy.json"
+EVALUATOR_REPORT_SCHEMA_VERSIONS = {
+    "run_s6": {"GOVERNED_REASON_SCHEMA": "governed_reason_v1"},
+}
 
 S6_SUFFICIENCY_CONTRACT = {
     **S5_SUFFICIENCY_CONTRACT,
@@ -264,6 +267,7 @@ def run_s6(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         recommendation=(
             "STRATEGY_ADJUSTED_HORIZONS_CLASSIFIED" if complete else "WAIT_FOR_EVIDENCE"
         ),
+        reason_code=(None if complete else "INSUFFICIENT_EVIDENCE"),
         assumptions=[
             "Eligible rows are completed PRIMARY_HORIZON_SIMULATION or HORIZON_ALTERNATIVE simulations.",
             "identity.strategy_id and identity.evaluated_horizon are frozen pre-outcome authorities.",

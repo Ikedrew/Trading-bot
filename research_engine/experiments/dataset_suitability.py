@@ -19,6 +19,9 @@ from research_engine.registry.research_question_registry import REGISTRY
 EVALUATOR_SEMANTIC_VERSIONS = {
     "run_g1": "g1_bounded_metadata_record_validation_v2",
 }
+EVALUATOR_REPORT_SCHEMA_VERSIONS = {
+    "run_g1": {"GOVERNED_REASON_SCHEMA": "governed_reason_v1"},
+}
 EVALUATOR_GOVERNANCE_CONTRACT_VERSIONS = {
     "run_g1": {
         "HD13_VERSION": A.HD13_VERSION,
@@ -223,6 +226,11 @@ def run_g1(*, datasets: Mapping[str, list[dict[str, Any]]] | None = None,
         confidence="INSUFFICIENT_DATA" if has_unknown else "HIGH",
         dataset={"source": "immutable CURRENT canonical evidence snapshot", "sample_size": 70},
         fingerprint=fingerprint, recommendation=overall_status,
+        reason_code=("HD13_UNKNOWN_REQUIREMENTS" if has_unknown else None),
+        reason=(
+            "HD13 assessment contains UNKNOWN requirements; completion is blocked."
+            if has_unknown else None
+        ),
         assumptions=["G1 is evaluated nonrecursively and its own result is never evidence."],
         provenance={"experiment_module": __name__, "registry_id": "G1", "scientific_owner": "G1",
                     "contract_version": A.HD13_VERSION, "report_identity": REPORT_FILENAME, "snapshot": manifest},

@@ -608,15 +608,78 @@ def run_governed_exit_research(*, persist: bool = False) -> dict[str, dict[str, 
     return reports
 
 
-def run_ex1() -> dict[str, Any]:
+def _governed_missing_evidence_report(question_id: str, evidence: Any) -> dict[str, Any]:
+    """Fail closed when the governed snapshot cannot bind the M5 exit path.
+
+    The HD09 exit evaluator requires the ordered ``events_v1`` M5 OHLC candle
+    path from entry to exit.  The common investigation snapshot does not bind
+    that dataset, so the rebuilt foundations carry an explicit observation gap.
+    Surfacing it here keeps the runner snapshot-bound instead of reopening the
+    filesystem to find the historical candles.
+    """
+    missing = list(evidence.missing_evidence)
+    provenance = {
+        "question_id": question_id,
+        "completed_lifecycles": evidence.completed_lifecycles,
+        "eligible_path_lifecycles": evidence.eligible_path_lifecycles,
+        "missing_evidence": missing,
+    }
+    report = {
+        "report_schema_version": REPORT_SCHEMA_VERSION,
+        "question_id": question_id,
+        "status": "INSUFFICIENT_DATA",
+        "epoch": "CURRENT",
+        "scientific_state": "INSUFFICIENT_GOVERNED_EVIDENCE",
+        "overall": {
+            "finding": (
+                "Governed snapshot does not bind the ordered M5 OHLC exit path "
+                "required by the HD09 contract; exit policy cannot be evaluated"),
+            "sample_size": evidence.completed_lifecycles,
+            "observation_gap": "; ".join(missing),
+        },
+        "failure_reason": "GOVERNED_EXIT_EVIDENCE_INCOMPLETE",
+        "missing_evidence": missing,
+        "confidence": "NOT_ESTIMABLE",
+        "dataset": {
+            "source": "governed_exit_evidence",
+            "sample_size": evidence.completed_lifecycles,
+        },
+        "fingerprint": {"epoch": "CURRENT", "source": "governed_exit_evidence"},
+        "provenance": provenance,
+        "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    material = dict(report)
+    material.pop("generated", None)
+    report["provenance"]["report_digest"] = evidence_digest((material,))
+    return report
+
+
+def _governed_exit_result(question_id: str, evidence: Any) -> dict[str, Any]:
+    """Run an HD09 exit evaluator from snapshot-bound governed foundations."""
+    if evidence.missing_evidence:
+        return _governed_missing_evidence_report(question_id, evidence)
+    if question_id == "EX1":
+        return analyse_ex1(evidence.candidate, evidence.reproduction, evidence.path)
+    if question_id == "EX2":
+        return analyse_ex2(evidence.candidate, evidence.reproduction, evidence.path)
+    if question_id == "EX9":
+        return analyse_ex9(evidence.candidate, evidence.reproduction, evidence.path)
+    raise GovernedAnalysisError("unknown governed exit question")
+
+
+def run_ex1(*, governed_exit_evidence=None) -> dict[str, Any]:
+    if governed_exit_evidence is not None:
+        return _governed_exit_result("EX1", governed_exit_evidence)
     path, reproduction, candidate = load_governed_foundations()
     return analyse_ex1(candidate, reproduction, path)
 
 
-def run_ex2(*, governed_records=None) -> dict[str, Any]:
+def run_ex2(*, governed_records=None, governed_exit_evidence=None) -> dict[str, Any]:
     # EX2 is a permanently closed historical question. CURRENT snapshot rows
     # are not a replacement roster and must not be forced to equal the frozen
     # historical denominator.
+    if governed_exit_evidence is not None:
+        return _governed_exit_result("EX2", governed_exit_evidence)
     from research_engine.control_plane.stage4_ex2_l7_blocker_adjudication import (
         EX2_POPULATION, adjudicate_ex2,
     )
@@ -668,7 +731,9 @@ def run_ex2(*, governed_records=None) -> dict[str, Any]:
     return report
 
 
-def run_ex9() -> dict[str, Any]:
+def run_ex9(*, governed_exit_evidence=None) -> dict[str, Any]:
+    if governed_exit_evidence is not None:
+        return _governed_exit_result("EX9", governed_exit_evidence)
     path, reproduction, candidate = load_governed_foundations()
     return analyse_ex9(candidate, reproduction, path)
 

@@ -48,6 +48,9 @@ from research_engine.experiments.strategy_expectancy import (
 )
 
 REPORT_FILENAME = "s5_strategy_identity_expectancy.json"
+EVALUATOR_REPORT_SCHEMA_VERSIONS = {
+    "run_s5": {"GOVERNED_REASON_SCHEMA": "governed_reason_v1"},
+}
 
 # Completed legitimate horizon-simulation rows: the selected incumbent
 # horizon outcome plus the governed counterfactual horizon alternatives.
@@ -634,6 +637,7 @@ def run_s5(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
             "HORIZON_ADJUSTED_STRATEGY_FAMILY_CLASSIFIED" if complete
             else "WAIT_FOR_EVIDENCE"
         ),
+        reason_code=(None if complete else "INSUFFICIENT_EVIDENCE"),
         assumptions=[
             "Eligible rows are completed horizon simulations (shadow_type "
             "PRIMARY_HORIZON_SIMULATION or HORIZON_ALTERNATIVE) with a canonical "

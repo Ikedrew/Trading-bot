@@ -6,8 +6,8 @@ from typing import Any, Mapping
 from research_engine.control_plane.risk_policy_evidence import RiskPolicyEvidence
 from research_engine.experiments.risk_simulation_governed import (
     R3_SCHEMA_VERSION,
+    RiskSimulationError,
     analyse_r3,
-    load_governed_risk_evidence,
     persist_report,
     validate_report,
 )
@@ -21,9 +21,15 @@ REPORT_FILENAME = REPORT_OWNERSHIP["R3"]
 
 
 def run_probability_of_ruin(
-    evidence: RiskPolicyEvidence | None = None, *, persist: bool = True,
+    evidence: RiskPolicyEvidence | None = None,
+    *,
+    governed_risk_evidence: RiskPolicyEvidence | None = None,
+    persist: bool = True,
 ) -> dict[str, Any]:
-    report = analyse_r3(evidence or load_governed_risk_evidence())
+    evidence = governed_risk_evidence or evidence
+    if evidence is None:
+        raise RiskSimulationError("GOVERNED_RISK_EVIDENCE_REQUIRED:R3")
+    report = analyse_r3(evidence)
     if persist:
         persist_report(report, REPORT_FILENAME)
     return report
