@@ -23,6 +23,9 @@ from research_engine.experiments.experiment_base import (
 )
 
 REPORT_FILENAME = "e3_strategy_family_expectancy.json"
+EVALUATOR_REPORT_SCHEMA_VERSIONS = {
+    "run_e3": {"GOVERNED_REASON_SCHEMA": "governed_reason_v1"},
+}
 PRIMARY_OUTCOME = "PRIMARY_HORIZON_SIMULATION"
 MIN_FAMILY_OPPORTUNITIES = 30
 MIN_TOTAL_OBSERVATIONS = 50
@@ -248,6 +251,7 @@ def run_e3(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         },
         fingerprint=fingerprint,
         recommendation=("STRATEGY_EXPECTANCY_CLASSIFIED" if complete else "WAIT_FOR_EVIDENCE"),
+        reason_code=(None if complete else "INSUFFICIENT_EVIDENCE"),
         assumptions=[
             "Only PRIMARY_HORIZON_SIMULATION outcomes are eligible.",
             "Strategy family is identity.strategy_id frozen at shadow OPEN.",

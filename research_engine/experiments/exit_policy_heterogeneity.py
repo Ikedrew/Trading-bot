@@ -539,15 +539,60 @@ def run_governed_exit_heterogeneity(*, persist: bool = False) -> dict[str, dict[
     return reports
 
 
-def _run(question_id: str) -> dict[str, Any]:
+def _run(question_id: str, governed_exit_evidence=None) -> dict[str, Any]:
+    if governed_exit_evidence is not None:
+        return _governed_heterogeneity_result(question_id, governed_exit_evidence)
     path, reproduction, candidate = load_governed_foundations()
     dimensions = load_governed_dimensions(path)
     return _analyse(question_id, candidate, reproduction, path, dimensions)
 
 
-def run_ex5(): return _run("EX5")
-def run_ex6(): return _run("EX6")
-def run_ex7(): return _run("EX7")
+def _governed_heterogeneity_result(question_id: str, evidence: Any) -> dict[str, Any]:
+    """Run an HD09 heterogeneity evaluator from snapshot-bound foundations."""
+    if evidence.missing_evidence:
+        missing = list(evidence.missing_evidence)
+        report = {
+            "report_schema_version": REPORT_SCHEMA_VERSION,
+            "question_id": question_id, "status": "INSUFFICIENT_DATA",
+            "epoch": "CURRENT",
+            "overall": {
+                "finding": (
+                    "Governed snapshot does not bind the ordered M5 OHLC exit "
+                    "path required by the HD09 contract; heterogeneity cannot be "
+                    "evaluated"),
+                "tests": [],
+                "observation_gap": "; ".join(missing),
+            },
+            "missing_evidence": missing,
+            "failure_reason": "GOVERNED_EXIT_EVIDENCE_INCOMPLETE",
+            "dataset": {"source": "governed_exit_evidence", "sample_size": evidence.completed_lifecycles},
+            "fingerprint": {"epoch": "CURRENT", "source": "governed_exit_evidence"},
+            "confidence": "NOT_ESTIMABLE",
+            "recommendation": "WAIT",
+            "warnings": list(missing),
+            "assumptions": [],
+            "provenance": {
+                "question_id": question_id,
+                "hd09_adjudication_version": HD09_ADJUDICATION_VERSION,
+                "completed_lifecycles": evidence.completed_lifecycles,
+                "eligible_path_lifecycles": evidence.eligible_path_lifecycles,
+                "missing_evidence": missing,
+            },
+            "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        material = dict(report)
+        material.pop("generated", None)
+        report["provenance"]["report_digest"] = evidence_digest((material,))
+        return report
+    return _analyse(
+        question_id, evidence.candidate, evidence.reproduction,
+        evidence.path, evidence.dimensions,
+    )
+
+
+def run_ex5(*, governed_exit_evidence=None): return _run("EX5", governed_exit_evidence)
+def run_ex6(*, governed_exit_evidence=None): return _run("EX6", governed_exit_evidence)
+def run_ex7(*, governed_exit_evidence=None): return _run("EX7", governed_exit_evidence)
 def run_ex8(): return _run("EX8")
 
 

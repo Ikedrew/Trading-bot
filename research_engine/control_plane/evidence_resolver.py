@@ -227,6 +227,67 @@ class EvidenceSnapshot:
             )
         return self._artifact_cache[key]
 
+    def governed_exit_evidence(self) -> Any:
+        """Build HD09 exit foundations once from immutable snapshot shadow rows.
+
+        The common investigation snapshot binds ``shadow_runtime`` but does not
+        bind the ``events_v1`` M5 OHLC candle stream.  The builders therefore
+        run against the bound shadow events only, and the resulting evidence
+        object carries an explicit ``missing_evidence`` entry for the absent
+        candle path rather than reopening storage.
+        """
+        key = "governed_exit_evidence:shadow_runtime_bound"
+        if key not in self._artifact_cache:
+            from research_engine.control_plane.governed_exit_evidence import (
+                build_governed_exit_evidence,
+            )
+
+            shadow = self.get("shadow_runtime")
+            self._artifact_cache[key] = build_governed_exit_evidence(
+                shadow.records if shadow.available else [], ()
+            )
+        return self._artifact_cache[key]
+
+    def governed_risk_evidence(self) -> Any:
+        """Build the HD10 risk population once from immutable snapshot rows.
+
+        R3/R4/R5 share one risk population: CURRENT ``decision_trace`` joined to
+        completed ``shadow_runtime`` lifecycles.  The legacy
+        ``research_shadow_trades`` loader is never consulted, so missing bound
+        outcomes fail closed inside the risk evidence builder rather than
+        reopening storage.
+        """
+        key = "governed_risk_evidence:decision_trace_and_shadow_runtime_bound"
+        if key not in self._artifact_cache:
+            from research_engine.control_plane.governed_meta_risk_evidence import (
+                build_governed_risk_evidence,
+            )
+
+            decision = self.get("decision_trace")
+            shadow = self.get("shadow_runtime")
+            self._artifact_cache[key] = build_governed_risk_evidence(
+                decision.records if decision.available else [],
+                shadow.records if shadow.available else [],
+            )
+        return self._artifact_cache[key]
+
+    def governed_lineage_population(self) -> Any:
+        """Build the HD14 G2 meta population once from immutable snapshot rows."""
+        key = "governed_lineage_population:decision_trace_and_shadow_runtime_bound"
+        if key not in self._artifact_cache:
+            from research_engine.control_plane.governed_meta_risk_evidence import (
+                build_governed_lineage_population,
+            )
+
+            decision = self.get("decision_trace")
+            shadow = self.get("shadow_runtime")
+            self._artifact_cache[key] = build_governed_lineage_population(
+                decision.records if decision.available else [],
+                shadow.records if shadow.available else [],
+            )
+        return self._artifact_cache[key]
+
+
     def get(self, source: str) -> DatasetSlice:
         if source in self._cache:
             return self._cache[source]
@@ -1107,6 +1168,27 @@ _SPECIAL_POPULATION_QUESTIONS = frozenset({
     "X6", "PROT1", "MGMT-1", "MGMT-2",
 })
 
+# HD09-governed exit questions.  Their scientific readiness is enforced by the
+# governed exit evaluator (SAMPLE_AND_READINESS_CONTRACT), not by the flat
+# registry required-fields vocabulary, so the resolver reports flat coverage
+# but must not preempt the governed evaluator with a blocking field gap.
+_HD09_EXIT_QUESTIONS = frozenset({"EX1", "EX2", "EX5", "EX6", "EX7", "EX9"})
+
+# HD10-governed risk questions (R3/R4/R5).  Their readiness is enforced by the
+# governed risk evaluator over the snapshot-bound RiskPolicyEvidence, never by
+# the flat registry required-fields vocabulary, so the resolver must not
+# preempt the governed evaluator with a blocking field gap or silently empty
+# the population on fields the risk runner derives itself (win_rate,
+# position_size).
+_GOVERNED_RISK_QUESTIONS = frozenset({"R3", "R4", "R5"})
+
+# HD14-governed meta question.  G2 evaluates the exact (entity_id,
+# canonical_opportunity_id) lineage denominator from the bound decision trace
+# and completed shadow lifecycles; its governed population is injected as a
+# dedicated artifact, not approximated by the generic merged population.
+_GOVERNED_META_QUESTIONS = frozenset({"G2"})
+
+
 
 def _coverage(rows: list[dict[str, Any]], fields: tuple[str, ...]) -> float:
     if not rows:
@@ -1138,6 +1220,31 @@ def _covered_days(rows: list[dict[str, Any]]) -> int:
         except ValueError:
             continue
     return len(dates)
+
+
+def _runner_artifacts(
+    question: Any,
+    snapshot: EvidenceSnapshot,
+    slices: list[DatasetSlice],
+) -> dict[str, Any]:
+    """Collect governed runner-injection artifacts for one question.
+
+    Execution questions (X6/EXEC1) receive the strict three-component execution
+    join; HD09 exit questions receive the governed exit foundations rebuilt from
+    the bound ``shadow_runtime`` events.  Both are derived deterministically from
+    the same immutable snapshot and never reopen storage.
+    """
+    artifacts: dict[str, Any] = {}
+    if question.id in {"X6", "EXEC1"}:
+        artifacts["governed_execution_evidence"] = snapshot.governed_execution_evidence(
+            {dataset.source: dataset for dataset in slices})
+    if question.id in _HD09_EXIT_QUESTIONS:
+        artifacts["governed_exit_evidence"] = snapshot.governed_exit_evidence()
+    if question.id in _GOVERNED_RISK_QUESTIONS:
+        artifacts["governed_risk_evidence"] = snapshot.governed_risk_evidence()
+    if question.id in _GOVERNED_META_QUESTIONS:
+        artifacts["governed_lineage_population"] = snapshot.governed_lineage_population()
+    return artifacts
 
 
 def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> EvidenceResolution:
@@ -1272,32 +1379,48 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
         else question.required_fields
     )
     missing_fields: list[str] = []
-    for field_name in required_fields:
-        count = sum(1 for row in rows if _known(_value(row, field_name)))
-        satisfied = count > 0 if rows else False
-        reason = f"Required field {field_name!r} present in {count}/{base_count} CURRENT analytical rows"
-        requirements.append(RequirementResult(
-            type="required_field",
-            name=field_name,
-            required="present",
-            current=count,
-            satisfied=satisfied,
-            reason=reason,
-            blocking=bool(rows) and not satisfied,
-        ))
-        if not satisfied:
-            missing_fields.append(field_name)
+    if question.id not in _GOVERNED_RISK_QUESTIONS:
+        for field_name in required_fields:
+            count = sum(1 for row in rows if _known(_value(row, field_name)))
+            satisfied = count > 0 if rows else False
+            reason = f"Required field {field_name!r} present in {count}/{base_count} CURRENT analytical rows"
+            requirements.append(RequirementResult(
+                type="required_field",
+                name=field_name,
+                required="present",
+                current=count,
+                satisfied=satisfied,
+                reason=reason,
+                blocking=(
+                    bool(rows) and not satisfied
+                    and question.id not in _HD09_EXIT_QUESTIONS
+                ),
+            ))
+            if not satisfied:
+                missing_fields.append(field_name)
 
     from research_engine.data_quality.execution_sizing import eligible_for_fields
+    # The HD09-governed exit evaluator determines the ordered M5 OHLC bar path
+    # from the ``events_v1`` candle stream, not from the flat
+    # ``trade_state_progression`` registry field.  Sizing the governed exit
+    # population on that flat field would silently empty it and short-circuit
+    # the runner before the governed evaluator can surface its own (fail-closed)
+    # observation gap.
+    sizing_required_fields = (
+        tuple(f for f in required_fields if f != "trade_state_progression")
+        if question.id in _HD09_EXIT_QUESTIONS
+        else () if question.id in _GOVERNED_RISK_QUESTIONS
+        else required_fields
+    )
     sizing_safe = (
         list(rows)
-        if question.id == "OPP-1"
-        else [row for row in rows if eligible_for_fields(row, required_fields)]
+        if question.id in {"OPP-1"} or question.id in _GOVERNED_RISK_QUESTIONS
+        else [row for row in rows if eligible_for_fields(row, sizing_required_fields)]
     )
     metrics["excluded_sizing_quality"] = len(rows) - len(sizing_safe)
     field_eligible = [
         row for row in sizing_safe
-        if all(_known(_value(row, field_name)) for field_name in required_fields)
+        if all(_known(_value(row, field_name)) for field_name in sizing_required_fields)
     ]
     metrics["excluded_missing_required_fields"] = len(sizing_safe) - len(field_eligible)
     # Runners may treat their population as mutable working data.  Keep the
@@ -1349,7 +1472,11 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
             current=current,
             satisfied=satisfied,
             reason=reason,
-            blocking=(requirement_type == "coverage" and satisfied is False),
+            blocking=(
+                requirement_type == "coverage"
+                and satisfied is False
+                and question.id not in _GOVERNED_RISK_QUESTIONS
+            ),
         ))
 
     excluded = (
@@ -1365,11 +1492,7 @@ def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> Evid
         metrics=dict(sorted(metrics.items())),
         requirements=requirements,
         usable_records=usable,
-        runner_artifacts=(
-            {"governed_execution_evidence": snapshot.governed_execution_evidence(
-                {dataset.source: dataset for dataset in slices})}
-            if question.id in {"X6", "EXEC1"} else {}
-        ),
+        runner_artifacts=_runner_artifacts(question, snapshot, slices),
     )
 
 

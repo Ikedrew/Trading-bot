@@ -530,6 +530,7 @@ def test_delta_detects_every_governed_change_dimension_and_no_change():
         "confidence_changed": False,
         "statistical_output_changed": False,
         "limitations_changed": False,
+        "reason_changed": False,
         "failure_reason_changed": False,
         "authority_changed": False,
         "unchanged": False,

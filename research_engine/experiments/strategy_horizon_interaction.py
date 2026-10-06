@@ -39,6 +39,9 @@ from research_engine.experiments.strategy_identity_expectancy import (
 
 
 REPORT_FILENAME = "s7_strategy_horizon_interaction.json"
+EVALUATOR_REPORT_SCHEMA_VERSIONS = {
+    "run_s7": {"GOVERNED_REASON_SCHEMA": "governed_reason_v1"},
+}
 MIN_OVERALL_OPPORTUNITIES = 150
 MIN_CELL_OPPORTUNITIES = 30
 MIN_GRID_FAMILIES = 2
@@ -563,6 +566,7 @@ def run_s7(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         },
         fingerprint=fingerprint,
         recommendation=(classification if status == "COMPLETE" else "WAIT_FOR_EVIDENCE"),
+        reason_code=(None if status == "COMPLETE" else classification),
         assumptions=[
             "CURRENT completed horizon simulations are selected before analysis.",
             "Grid selection uses identity and distinct-opportunity counts only.",

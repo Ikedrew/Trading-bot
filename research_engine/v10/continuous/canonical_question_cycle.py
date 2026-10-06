@@ -74,12 +74,17 @@ INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
 WAITING_FOR_DATA = "WAITING_FOR_DATA"
 CANNOT_KNOW_YET = "CANNOT_KNOW_YET"
 IMPLEMENTATION_BLOCKED = "IMPLEMENTATION_BLOCKED"
+BLOCKED = "BLOCKED"
 UNIMPLEMENTED = "UNIMPLEMENTED"
 INVALID = "INVALID"
 
 _REENTRY_STATUSES = frozenset({
     INSUFFICIENT_DATA, WAITING_FOR_DATA, CANNOT_KNOW_YET,
-    IMPLEMENTATION_BLOCKED, INVALID,
+    BLOCKED, IMPLEMENTATION_BLOCKED, INVALID,
+})
+
+_GOVERNED_REASON_REQUIRED_QUESTION_IDS = frozenset({
+    "E3", "S2", "S3", "S5", "S6", "S7", "EXEC1", "G1",
 })
 
 # Registry logical source -> exact Block 1 physical snapshot authority. ``None``
@@ -403,6 +408,12 @@ def _runner_kwargs(
         "persist": False,
         "governed_evidence": context.runner_artifacts.get(
             "governed_execution_evidence"),
+        "governed_exit_evidence": context.runner_artifacts.get(
+            "governed_exit_evidence"),
+        "governed_risk_evidence": context.runner_artifacts.get(
+            "governed_risk_evidence"),
+        "governed_lineage_population": context.runner_artifacts.get(
+            "governed_lineage_population"),
     }
     unresolved: list[str] = []
     for name, parameter in signature.parameters.items():
@@ -461,7 +472,6 @@ def _normalise_status(report: Mapping[str, Any]) -> str:
     aliases = {
         "WAITING_DATA": WAITING_FOR_DATA,
         "WAITING": WAITING_FOR_DATA,
-        "BLOCKED": IMPLEMENTATION_BLOCKED,
         "ERROR": INVALID,
         "MALFORMED_REPORT": INVALID,
         "NO_EFFECT": NEGATIVE_RESULT,
@@ -469,7 +479,7 @@ def _normalise_status(report: Mapping[str, Any]) -> str:
     status = aliases.get(raw, raw)
     allowed = {
         COMPLETE, NEGATIVE_RESULT, INSUFFICIENT_DATA, WAITING_FOR_DATA,
-        CANNOT_KNOW_YET, IMPLEMENTATION_BLOCKED, UNIMPLEMENTED, INVALID,
+        CANNOT_KNOW_YET, BLOCKED, IMPLEMENTATION_BLOCKED, UNIMPLEMENTED, INVALID,
     }
     return status if status in allowed else INVALID
 
@@ -584,6 +594,7 @@ def question_result_delta(
             "confidence_changed": current.confidence is not None,
             "statistical_output_changed": current.statistical_output is not None,
             "limitations_changed": bool(current.limitations),
+            "reason_changed": current.reason_code is not None,
             "failure_reason_changed": current.failure_reason is not None,
             "authority_changed": True,
             "unchanged": False,
@@ -604,6 +615,11 @@ def question_result_delta(
         "statistical_output_changed": (
             previous.statistical_output != current.statistical_output),
         "limitations_changed": previous.limitations != current.limitations,
+        "reason_changed": (
+            previous.reason_code != current.reason_code
+            or previous.reason != current.reason
+            or previous.reason_details != current.reason_details
+        ),
         "failure_reason_changed": previous.failure_reason != current.failure_reason,
         # Evaluation identity is deliberately excluded: a new evaluator may
         # reproduce the same scientific state without causing downstream churn.
@@ -661,12 +677,27 @@ def _normalise_report(
         *_sequence(report.get("research_gaps")),
     )
     status = _normalise_status(report)
+    reason_code_value = report.get("reason_code")
+    legacy_reason_value = report.get("reason")
+    reason_code = str(reason_code_value).strip() if reason_code_value not in (None, "") else None
+    if reason_code is None and legacy_reason_value not in (None, ""):
+        reason_code = str(legacy_reason_value).strip()
+    reason_value = report.get("reason")
+    reason = str(reason_value).strip() if reason_value not in (None, "") else None
+    reason_details = report.get("reason_details")
+    governed_reason_required = (
+        question.id in _GOVERNED_REASON_REQUIRED_QUESTION_IDS
+        and status in {INSUFFICIENT_DATA, WAITING_FOR_DATA, CANNOT_KNOW_YET, BLOCKED}
+    )
     failure = None
     if status in {IMPLEMENTATION_BLOCKED, INVALID}:
         failure = str(report.get("failure_reason") or report.get("error") or
                       report.get("reason") or report.get("blocked_reason") or
                       ("RUNNER_STATUS:BLOCKED" if status == IMPLEMENTATION_BLOCKED
                        else "RUNNER_STATUS_UNKNOWN_OR_INVALID"))
+    if governed_reason_required and reason_code is None:
+        status = INVALID
+        failure = "RUNNER_REPORT_MISSING_GOVERNED_REASON"
     return _base_result(
         question, definition, context, previous, evaluation_identity,
         status=status,
@@ -682,6 +713,9 @@ def _normalise_report(
         missing_evidence=_missing_evidence(resolution, report),
         implementation_status=("IMPLEMENTED" if status != IMPLEMENTATION_BLOCKED
                                else "IMPLEMENTATION_BLOCKED"),
+        reason_code=reason_code,
+        reason=reason,
+        reason_details=reason_details,
         failure_reason=failure,
     )
 
@@ -700,7 +734,11 @@ def _status_counts(results: Mapping[str, CanonicalQuestionResult]) -> dict[str, 
         "negative": statuses.count(NEGATIVE_RESULT),
         "insufficient": statuses.count(INSUFFICIENT_DATA),
         "waiting": statuses.count(WAITING_FOR_DATA) + statuses.count(CANNOT_KNOW_YET),
-        "blocked": statuses.count(IMPLEMENTATION_BLOCKED) + statuses.count(INVALID),
+        "blocked": (
+            statuses.count(BLOCKED)
+            + statuses.count(IMPLEMENTATION_BLOCKED)
+            + statuses.count(INVALID)
+        ),
         "unimplemented": statuses.count(UNIMPLEMENTED),
         "alias": statuses.count(ALIAS_OR_SUPERSEDED),
     }

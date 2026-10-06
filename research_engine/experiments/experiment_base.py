@@ -22,6 +22,10 @@ from pathlib import Path
 from typing import Any
 
 from research_engine.data_access.s3_source import get_default_source
+from research_engine.experiments.strategy_family_taxonomy import (
+    normalize_strategy_family,
+)
+
 
 # Production-contract dataset names read via the shared S3 data-access layer.
 _RESEARCH_SHADOW_DATASET = "research_shadow_trades"
@@ -258,7 +262,6 @@ def check_readiness(
     lineage_count = sum(1 for r in records if (_deep_get(r, "identity", "entity_id") or ""))
     strategy_count = 0
     contaminated = 0
-    valid_strategies = {"REVERSAL", "CONTINUATION", "FALSE_BREAK"}
     combined_suffixes = {"_SCALP", "_INTRADAY", "_EXTENDED"}
 
     for r in records:
@@ -266,7 +269,7 @@ def check_readiness(
         if s:
             if any(suffix in s for suffix in combined_suffixes):
                 contaminated += 1
-            elif s in valid_strategies:
+            elif normalize_strategy_family(s) is not None:
                 strategy_count += 1
 
     coverage = {
@@ -326,6 +329,9 @@ def build_report(
     assumptions: list[str] | None = None,
     warnings: list[str] | None = None,
     provenance: dict[str, Any] | None = None,
+    reason_code: str | None = None,
+    reason: str | None = None,
+    reason_details: Any = None,
 ) -> dict[str, Any]:
     """Build a standard experiment report following the common contract."""
     # Epoch safety: warn if fingerprint indicates mixed or non-CURRENT data
@@ -358,6 +364,14 @@ def build_report(
             "pipeline": "Question → Experiment → Dataset → Output → Knowledge → Command Centre",
         },
     }
+    if reason_code is not None:
+        report["reason_code"] = reason_code
+        report["reason"] = (
+            reason if reason is not None else str(overall.get("finding") or reason_code)
+        )
+        # Preserve the evaluator's structured governed explanation verbatim.
+        # This is deliberately not reconstructed later by the question cycle.
+        report["reason_details"] = overall if reason_details is None else reason_details
 
     # Validate against canonical contract
     from research_engine.experiments.report_contract import validate_report_contract

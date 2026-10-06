@@ -148,6 +148,7 @@ def _invalid_report(exc: Exception) -> dict[str, Any]:
             "validation_score": "INVALID_GOVERNED_EVIDENCE",
         },
         recommendation="WAIT_FOR_EVIDENCE",
+        reason_code="INVALID_GOVERNED_EXECUTION_EVIDENCE",
         assumptions=["EXEC1 fails closed when governed evidence cannot be constructed."],
         provenance={
             "experiment_module": "research_engine.experiments.execution_protection_research",
@@ -321,6 +322,7 @@ def build_exec1_report(
         },
         fingerprint=fingerprint,
         recommendation=classification if status == "COMPLETE" else "WAIT_FOR_EVIDENCE",
+        reason_code=(None if status == "COMPLETE" else classification),
         assumptions=[
             "The analysis is associative, not causal.",
             "Each correlation_id contributes total estimator weight one.",

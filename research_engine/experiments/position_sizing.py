@@ -6,9 +6,10 @@ from typing import Any, Mapping
 from research_engine.control_plane.risk_policy_evidence import RiskPolicyEvidence
 from research_engine.experiments.risk_simulation_governed import (
     R5_SCHEMA_VERSION,
+    RiskSimulationError,
+    analyse_r3,
+    analyse_r4,
     analyse_r5,
-    load_governed_risk_evidence,
-    load_upstream_report,
     persist_report,
     validate_report,
 )
@@ -26,13 +27,17 @@ def run_position_sizing(
     r3_report: Mapping[str, Any] | None = None,
     r4_report: Mapping[str, Any] | None = None,
     *,
+    governed_risk_evidence: RiskPolicyEvidence | None = None,
     persist: bool = True,
 ) -> dict[str, Any]:
-    report = analyse_r5(
-        evidence or load_governed_risk_evidence(),
-        r3_report or load_upstream_report(REPORT_OWNERSHIP["R3"]),
-        r4_report or load_upstream_report(REPORT_OWNERSHIP["R4"]),
-    )
+    evidence = governed_risk_evidence or evidence
+    if evidence is None:
+        raise RiskSimulationError("GOVERNED_RISK_EVIDENCE_REQUIRED:R5")
+    if r3_report is None:
+        r3_report = analyse_r3(evidence)
+    if r4_report is None:
+        r4_report = analyse_r4(evidence, r3_report)
+    report = analyse_r5(evidence, r3_report, r4_report)
     if persist:
         persist_report(report, REPORT_FILENAME)
     return report

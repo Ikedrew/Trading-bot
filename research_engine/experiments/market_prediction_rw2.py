@@ -566,8 +566,19 @@ def _load_dataset(name: str) -> list[dict[str, Any]]:
     return get_default_source().read_dataset(name)
 
 
-def run_m1() -> dict[str, Any]:
-    return analyse("M1", load_shadow_trades(epoch="CURRENT"))
+def run_m1(*, shadow_trades=None) -> dict[str, Any]:
+    """M1: H4 regime predicts outcomes, evaluated on governed snapshot rows.
+
+    When executed under the canonical question cycle the runner receives the
+    reconstructed ``shadow_trades`` population belonging to the bound snapshot;
+    the legacy no-argument path is retained only for direct invocation outside
+    the governed cycle.
+    """
+    records = (
+        list(shadow_trades) if shadow_trades is not None
+        else load_shadow_trades(epoch="CURRENT")
+    )
+    return analyse("M1", records)
 
 
 def run_m3() -> dict[str, Any]:

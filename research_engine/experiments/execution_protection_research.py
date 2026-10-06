@@ -66,6 +66,9 @@ from research_engine.control_plane.evidence_resolver import (
 EVALUATOR_SEMANTIC_VERSIONS = {
     "run_exec1": "exec1_governed_execution_evidence_reuse_v2",
 }
+EVALUATOR_REPORT_SCHEMA_VERSIONS = {
+    "run_exec1": {"GOVERNED_REASON_SCHEMA": "governed_reason_v1"},
+}
 
 logger = logging.getLogger(__name__)
 

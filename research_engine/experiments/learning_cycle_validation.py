@@ -5,8 +5,26 @@ from typing import Any, Mapping
 from research_engine.control_plane.evidence_provenance import CURRENT, evidence_digest
 from research_engine.control_plane.stage4_impl_population2 import enforce_exact_population
 from research_engine.control_plane.stage4_impl_ownership_labels import L6_OWNED_REPORT
+from research_engine.registry import learning_adaptation_adjudication as A
 REPORT_SCHEMA_VERSION = "l6_learning_cycle_validation_v1"
 REPORT_FILENAME = L6_OWNED_REPORT
+
+# Governed evaluator semantic identity; see component_reward for the contract.
+# L6 is the sole HD12 target (per-cycle pre/post learning-cycle confidence), so
+# its evaluator binds the HD12 and full-learning governance contract versions.
+EVALUATOR_SEMANTIC_VERSIONS = {
+    "run_l6": "l6_hd12_learning_cycle_confidence_v1",
+}
+EVALUATOR_REPORT_SCHEMA_VERSIONS = {
+    "run_l6": {"REPORT_SCHEMA_VERSION": REPORT_SCHEMA_VERSION},
+}
+EVALUATOR_GOVERNANCE_CONTRACT_VERSIONS = {
+    "run_l6": {
+        "HD12_VERSION": A.HD12_VERSION,
+        "LEARNING_VERSION": A.LEARNING_VERSION,
+    },
+}
+
 class L6RepairError(ValueError):
     pass
 def run_l6(records=None, identities=None, persist=False):

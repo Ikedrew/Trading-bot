@@ -60,6 +60,11 @@ from research_engine.experiments.experiment_base import (
 
 logger = logging.getLogger(__name__)
 
+EVALUATOR_REPORT_SCHEMA_VERSIONS = {
+    "run_s2": {"GOVERNED_REASON_SCHEMA": "governed_reason_v1"},
+    "run_s3": {"GOVERNED_REASON_SCHEMA": "governed_reason_v1"},
+}
+
 _MIN_SAMPLE = 30          # overall status threshold (engine convention)
 _MIN_CELL = 10            # per-cell minimum (horizon / combo / phase cells)
 _MIN_BUCKET = 15          # per confidence bucket (STRAT-1)
@@ -166,6 +171,8 @@ def _report(
     evidence_provenance: dict[str, Any],
     assumptions: list[str] | None = None,
     warnings: list[str] | None = None,
+    reason_code: str | None = None,
+    reason: str | None = None,
 ) -> dict[str, Any]:
     """Canonical Gap-4 report for selection-research questions."""
     from research_engine.experiments.experiment_base import build_report
@@ -181,6 +188,8 @@ def _report(
         recommendation=recommendation,
         assumptions=assumptions or [],
         warnings=warnings or [],
+        reason_code=reason_code,
+        reason=reason,
         provenance={
             "experiment_module": "research_engine.experiments.selection_research",
             "registry_id": question_id,
@@ -233,6 +242,8 @@ def run_s2(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
             dataset={"sample_size": n_total,
                      "source": "shadow_runtime_v1 (simulation population)"},
             recommendation="INSUFFICIENT_DATA",
+            reason_code="INSUFFICIENT_HORIZON_OUTCOME_COVERAGE",
+            reason="Requires >=30 outcome records across >=2 horizons.",
             evidence_provenance=evidence_provenance,
             assumptions=["Requires >=30 outcome records across >=2 horizons."],
         )
@@ -347,6 +358,8 @@ def run_s3(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
             dataset={"sample_size": n_total,
                      "source": "shadow_runtime_v1 (simulation population)"},
             recommendation="INSUFFICIENT_DATA",
+            reason_code="INSUFFICIENT_STRATEGY_HORIZON_CELL_COVERAGE",
+            reason="Requires >=30 outcome records with strategy+horizon identity.",
             evidence_provenance=evidence_provenance,
             assumptions=[
                 "Requires >=30 outcome records with strategy+horizon identity."],

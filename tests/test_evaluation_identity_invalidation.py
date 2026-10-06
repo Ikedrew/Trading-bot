@@ -313,9 +313,9 @@ def test_stale_set_is_empty_when_everything_is_current():
     assert stale_question_ids({"L3": identities["L3"]}, identities) == {}
 
 
-# --- real registry: the seven known stale questions ------------------------
+# --- real registry: the eight known stale questions ------------------------
 
-KNOWN_STALE = ("L3", "G2", "EX2", "D1", "EXEC1", "G1", "X6")
+KNOWN_STALE = ("L3", "G2", "EX2", "D1", "EXEC1", "G1", "X6", "L6")
 
 
 def _live_identities():
