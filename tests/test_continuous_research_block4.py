@@ -16,6 +16,7 @@ from research_engine.v10.continuous.canonical_question_cycle import (
     REGISTRY_VERSION, _load_registry,
 )
 from research_engine.registry.definition_validator import build_definitions_from_registry
+from research_engine.registry.baseline_manifest import BASELINE_QUESTION_IDS
 from research_engine.v10.continuous.q71_orchestration import run_q71_orchestration
 from research_engine.v10.continuous.research_projection import (
     ResearchProjectionStore, build_unified_research_projection,
@@ -137,12 +138,18 @@ def test_validation_queue_dedup_review_block_and_existing_lifecycle(tmp_path):
 
 
 def _question_projection():
+    questions = _load_registry()
+    identities = evaluation_identities(
+        questions, build_definitions_from_registry(questions),
+        registry_version=REGISTRY_VERSION)
     return {"questions": {
-        f"Q{i:03d}": {"question_id": f"Q{i:03d}", "question_text": f"Question {i}",
+        question_id: {"question_id": question_id, "question_text": f"Question {i}",
                       "status": "WAITING_FOR_DATA" if i == 6 else "COMPLETE",
                       "sample_n": i, "substantive_answer": None,
-                      "last_evaluated_snapshot": "S1"}
-        for i in range(1, 71)
+                      "last_evaluated_snapshot": "S1",
+                      "result": {"question_id": question_id,
+                                 "evaluation_identity": identities[question_id]}}
+        for i, question_id in enumerate(BASELINE_QUESTION_IDS, start=1)
     }}
 
 

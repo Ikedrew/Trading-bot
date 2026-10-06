@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
+from research_engine.registry.baseline_manifest import BASELINE_QUESTION_IDS
 from research_engine.v10.continuous.scientific_state_store import ScientificStateStore
 from research_engine.v10.continuous.validation_queue import ValidationQueueStore
 from research_engine.v10.optimisation.optimisation_registry import OptimisationRegistry
@@ -19,6 +20,28 @@ DEFAULT_PROJECTION_DIRECTORY = Path("reports/research/continuous_projection")
 
 class ResearchProjectionError(RuntimeError):
     pass
+
+
+def _baseline_items(questions: Any) -> list[tuple[str, Mapping[str, Any]]]:
+    """Validate baseline membership/identity before emitting registry order.
+
+    Generated questions have their own authority and projection field.  A
+    mapping cannot repeat keys; validate embedded identities too so aliases
+    cannot silently emit duplicate question rows.
+    """
+    if (not isinstance(questions, Mapping)
+            or set(questions) != set(BASELINE_QUESTION_IDS)):
+        raise ResearchProjectionError("CANONICAL_70_PROJECTION_INVARIANT_FAILED")
+    items = []
+    for question_id in BASELINE_QUESTION_IDS:
+        raw = questions[question_id]
+        if not isinstance(raw, Mapping) or raw.get("question_id", question_id) != question_id:
+            raise ResearchProjectionError("CANONICAL_70_PROJECTION_INVARIANT_FAILED")
+        result = raw.get("result")
+        if isinstance(result, Mapping) and result.get("question_id", question_id) != question_id:
+            raise ResearchProjectionError("CANONICAL_70_PROJECTION_INVARIANT_FAILED")
+        items.append((question_id, raw))
+    return items
 
 
 def _value(source: Any, name: str, default: Any = None) -> Any:
@@ -80,8 +103,8 @@ def build_unified_research_projection(
 
     question_rows: list[dict[str, Any]] = []
     questions = (question_projection or {}).get("questions", {})
-    if isinstance(questions, Mapping):
-        for question_id, raw in sorted(questions.items()):
+    if question_projection is not None:
+        for question_id, raw in _baseline_items(questions):
             row = dict(raw)
             row.setdefault("question_id", question_id)
             linked_findings = sorted({
@@ -101,8 +124,6 @@ def build_unified_research_projection(
                         "linked_candidates": linked_candidates,
                         "changed_this_cycle": question_id in set(_value(bridge, "question_changes_processed", ()))})
             question_rows.append(row)
-    if question_rows and len(question_rows) != 70:
-        raise ResearchProjectionError("CANONICAL_70_PROJECTION_INVARIANT_FAILED")
 
     changed = {
         "new_data": list(_value(frontier, "changed_datasets", ())),
@@ -185,9 +206,7 @@ def build_evaluation_refresh_projection(
     }
     question_rows: list[dict[str, Any]] = []
     questions = question_projection.get("questions") or {}
-    if not isinstance(questions, Mapping) or len(questions) != 70:
-        raise ResearchProjectionError("CANONICAL_70_PROJECTION_INVARIANT_FAILED")
-    for question_id, raw in sorted(questions.items()):
+    for question_id, raw in _baseline_items(questions):
         row = dict(raw)
         row.setdefault("question_id", question_id)
         prior = prior_rows.get(str(question_id), {})
