@@ -284,6 +284,7 @@ class EvidenceSnapshot:
             self._artifact_cache[key] = build_governed_lineage_population(
                 decision.records if decision.available else [],
                 shadow.records if shadow.available else [],
+                trusted_immutable_inputs=True,
             )
         return self._artifact_cache[key]
 

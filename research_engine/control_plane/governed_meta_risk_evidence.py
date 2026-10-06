@@ -85,12 +85,26 @@ def _snapshot_rows(
 def build_governed_lineage_population(
     decision_records: Iterable[Mapping[str, Any]],
     shadow_runtime_records: Iterable[Mapping[str, Any]],
+    *, trusted_immutable_inputs: bool = False,
 ) -> GovernedLineagePopulation:
     """Build the snapshot-bound G2 lineage population from bound datasets."""
-    decisions, shadow, missing = _snapshot_rows(decision_records, shadow_runtime_records)
+    if trusted_immutable_inputs:
+        decisions = tuple(decision_records)
+        shadow = tuple(shadow_runtime_records)
+        missing = tuple(
+            message for records, message in (
+                (shadow, _MISSING_SHADOW_RUNTIME),
+                (decisions, _MISSING_DECISION_TRACE),
+            ) if not records
+        )
+    else:
+        decision_rows, shadow_rows, missing = _snapshot_rows(
+            decision_records, shadow_runtime_records)
+        decisions = tuple(decision_rows)
+        shadow = tuple(shadow_rows)
     return GovernedLineagePopulation(
-        decision_records=tuple(decisions),
-        outcome_records=tuple(shadow),
+        decision_records=decisions,
+        outcome_records=shadow,
         missing_evidence=missing,
     )
 

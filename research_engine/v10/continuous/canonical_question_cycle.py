@@ -23,6 +23,9 @@ from research_engine.control_plane.evidence_resolver import (
     resolve_question_evidence,
 )
 from research_engine.control_plane.stage4_dataset_snapshot import fingerprint
+from research_engine.control_plane.stage4_implementation_repairs import (
+    build_current_population_authority,
+)
 from research_engine.data_access.shadow_runtime_ingestion import (
     reconstruct_completed_shadow_trades,
 )
@@ -414,6 +417,8 @@ def _runner_kwargs(
             "governed_risk_evidence"),
         "governed_lineage_population": context.runner_artifacts.get(
             "governed_lineage_population"),
+        "population_authority": context.runner_artifacts.get(
+            "current_population_authority"),
     }
     unresolved: list[str] = []
     for name, parameter in signature.parameters.items():
@@ -965,6 +970,14 @@ def run_canonical_question_cycle(
                 }
                 population_started = time.perf_counter()
                 population = list(resolution.usable_records)
+                if qid == "L6":
+                    context.runner_artifacts["current_population_authority"] = (
+                        build_current_population_authority(
+                            qid, population, snapshot_id=context.snapshot_id,
+                            evaluation_identity_digest=str(
+                                (identity or {}).get("evaluation_identity_digest") or ""),
+                        )
+                    )
                 population_seconds = time.perf_counter() - population_started
                 population_count = len(population)
                 blocking = bool(resolution.error) or any(

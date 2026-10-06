@@ -49,6 +49,11 @@ from research_engine.experiments.market_prediction_rw2 import (
 
 P1_REPORT_FILENAME = "p1_promotion_impact.json"
 PROMOTION_POLICY_VERSION = "p1_pattern_removal_policy_v1"
+EVALUATOR_GOVERNANCE_CONTRACT_VERSIONS = {
+    "run_promotion_impact": {
+        "CANONICAL_PERSISTENCE_CONTRACT": "runner_persistence_control_v1",
+    },
+}
 
 _P1_MIN_TOTAL = 100          # valid paired canonical opportunities
 _P1_MIN_DISCOVERY = 60
@@ -375,13 +380,17 @@ def analyse(shadow_trades: list[dict[str, Any]]) -> dict[str, Any]:
     return report
 
 
-def run_promotion_impact(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+def run_promotion_impact(
+    shadow_trades: list[dict[str, Any]] | None = None, *, persist: bool = True,
+) -> dict[str, Any]:
     """Run P1 as a leakage-safe counterfactual promotion-policy evaluation."""
     if shadow_trades is None:
         shadow_trades = load_shadow_trades(epoch="CURRENT")
     report = analyse(shadow_trades)
-    persist_report(report, P1_REPORT_FILENAME)
-    update_knowledge_map("P1", report["overall"]["finding_classification"], report["recommendation"])
+    if persist:
+        persist_report(report, P1_REPORT_FILENAME)
+        update_knowledge_map(
+            "P1", report["overall"]["finding_classification"], report["recommendation"])
     return report
 
 

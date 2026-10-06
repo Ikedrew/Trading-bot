@@ -71,11 +71,15 @@ class CurrentSnapshot:
             ) == DataEpoch.CURRENT
         ]
 
-    def input_records(self, source: str) -> list[dict[str, Any]]:
+    def input_records(
+        self, source: str, *, trusted_immutable: bool = False,
+    ) -> Iterable[Mapping[str, Any]]:
         """Return copies of all frozen input rows for fail-closed orphan audits."""
         payload = dict(self._input_payloads).get(source, ())
         if payload or self._borrowed_datasets is None:
             return [json.loads(item) for item in payload]
+        if trusted_immutable:
+            return self._borrowed_datasets.get(source, ())
         return [
             deepcopy(dict(record))
             for record in self._borrowed_datasets.get(source, ())

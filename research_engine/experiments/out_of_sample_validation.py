@@ -42,6 +42,12 @@ _TRAIN_FRACTION = 0.60
 _NUM_ROLLING_WINDOWS = 5
 _STABILITY_THRESHOLD = 0.70  # 70% of windows must show positive EV
 
+EVALUATOR_GOVERNANCE_CONTRACT_VERSIONS = {
+    "run_out_of_sample_validation": {
+        "CANONICAL_PERSISTENCE_CONTRACT": "runner_persistence_control_v1",
+    },
+}
+
 
 def _temporal_key(record: dict[str, Any]) -> tuple[int, float, str]:
     """Canonical chronology for temporal validation; missing timestamps sort last."""
@@ -127,7 +133,9 @@ def _expanding_window(r_values: list[float], num_checkpoints: int = 5) -> list[d
     return results
 
 
-def run_out_of_sample_validation(shadow_trades: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+def run_out_of_sample_validation(
+    shadow_trades: list[dict[str, Any]] | None = None, *, persist: bool = True,
+) -> dict[str, Any]:
     """Run E5: Out-of-Sample Validation experiment."""
     if shadow_trades is None:
         shadow_trades = load_shadow_trades()
@@ -220,8 +228,9 @@ def run_out_of_sample_validation(shadow_trades: list[dict[str, Any]] | None = No
         provenance={"experiment_module": "research_engine.experiments.out_of_sample_validation", "registry_id": "E5", "function": "run_out_of_sample_validation", "pipeline": "Question → Experiment → Dataset → Output → Knowledge → Command Centre"},
     )
 
-    persist_report(report, "e5_out_of_sample.json")
-    update_knowledge_map("E5", finding, recommendation)
+    if persist:
+        persist_report(report, "e5_out_of_sample.json")
+        update_knowledge_map("E5", finding, recommendation)
     return report
 
 

@@ -144,6 +144,8 @@ def build_unified_research_projection(
     }
     material = {
         "continuous_cycle_id": continuous_cycle_id,
+        "canonical_question_cycle_id": (
+            None if question_projection is None else question_projection.get("cycle_id")),
         "data_frontier": {
             "snapshot_id": _value(frontier, "snapshot_id"),
             "fingerprint": _value(frontier, "fingerprint"),
@@ -244,12 +246,14 @@ def build_evaluation_refresh_projection(
         key: value for key, value in predecessor_projection.items()
         if key not in {
             "projection_schema", "projection_version", "continuous_cycle_id",
+            "canonical_question_cycle_id",
             "data_frontier", "canonical_questions", "what_changed",
             "predecessor_projection_version",
         }
     }
     material.update({
         "continuous_cycle_id": continuous_cycle_id,
+        "canonical_question_cycle_id": question_projection.get("cycle_id"),
         "data_frontier": data_frontier,
         "canonical_questions": question_rows,
         "what_changed": changed,

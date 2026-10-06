@@ -10,6 +10,7 @@ import uuid
 from typing import Any, Callable, Mapping
 
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
+from research_engine.registry.baseline_manifest import BASELINE_QUESTION_IDS
 from research_engine.v10.continuous.canonical_question_cycle import run_canonical_question_cycle
 from research_engine.v10.continuous.cycle_state import (
     ContinuousCycleProgressStore, ContinuousCycleStore, ContinuousResearchCycleResult,
@@ -59,6 +60,7 @@ def _attempt_cycle_id(cycle_attempt_id: str, identity: str) -> str:
 def _is_current_successful_projection(
     projection: Mapping[str, Any] | None, frontier: Any,
     stale_question_ids: Mapping[str, str] | None = None,
+    canonical_projection: Mapping[str, Any] | None = None,
 ) -> bool:
     """True only when the retained projection is current in BOTH identities.
 
@@ -80,7 +82,30 @@ def _is_current_successful_projection(
         and len(questions) == 70
     ):
         return False
-    return not stale_question_ids
+    if stale_question_ids:
+        return False
+    if canonical_projection is None:
+        return True
+    canonical_questions = canonical_projection.get("questions")
+    if not isinstance(canonical_questions, Mapping):
+        return False
+    if set(canonical_questions) != set(BASELINE_QUESTION_IDS):
+        return False
+    if projection.get("canonical_question_cycle_id") != canonical_projection.get("cycle_id"):
+        return False
+    published_ids = [str(row.get("question_id") or "") for row in questions]
+    if published_ids != list(BASELINE_QUESTION_IDS):
+        return False
+    for row in questions:
+        question_id = str(row.get("question_id") or "")
+        current = canonical_questions.get(question_id)
+        if not isinstance(current, Mapping):
+            return False
+        published_result = row.get("result") or {}
+        current_result = current.get("result") or {}
+        if published_result.get("result_id") != current_result.get("result_id"):
+            return False
+    return True
 
 
 def _retained_coherent_frontier_is_usable(frontier: Any) -> bool:
@@ -242,6 +267,7 @@ def run_continuous_research_cycle(
     if _retained_coherent_frontier_is_usable(frontier):
         try:
             latest = projection_store.load_latest()
+            canonical_projection = QuestionCycleStore(question_state_dir).load_current()
         except Exception as exc:
             return failed("PROJECTION", exc, identity={
                 "snapshot": _value(frontier, "snapshot_id"), "predecessor": predecessor_id})
@@ -251,7 +277,8 @@ def run_continuous_research_cycle(
         stale_questions = _stale_evaluation_questions(
             latest, question_state_dir=question_state_dir,
             registry_loader=question_registry_loader)
-        if _is_current_successful_projection(latest, frontier, stale_questions):
+        if _is_current_successful_projection(
+                latest, frontier, stale_questions, canonical_projection):
             for stage in ("QUESTIONS", "SCIENTIFIC_STATE", "Q71_PLUS", "VALIDATION_QUEUE"):
                 stages[stage] = "SKIPPED_NO_NEW_EVIDENCE"
                 progress("skip_stage", stage, "NO_NEW_EVIDENCE_WITH_CURRENT_PROJECTION")

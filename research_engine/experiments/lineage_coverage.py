@@ -21,6 +21,7 @@ EVALUATOR_GOVERNANCE_CONTRACT_VERSIONS = {
     "run_g2": {
         "HD14_VERSION": A.HD14_VERSION,
         "ADJUDICATION_VERSION": A.ADJUDICATION_VERSION,
+        "SNAPSHOT_MATERIALIZATION": "borrowed_immutable_payloads_v1",
     },
 }
 
@@ -167,7 +168,10 @@ def _load_persisted() -> dict[str, list[dict[str, Any]]]:
     }
 
 
-def _snapshot(datasets: Mapping[str, list[dict[str, Any]]] | None, as_of_utc: str | None) -> CurrentSnapshot:
+def _snapshot(
+    datasets: Mapping[str, Iterable[Mapping[str, Any]]] | None,
+    as_of_utc: str | None, *, retain_record_payloads: bool = True,
+) -> CurrentSnapshot:
     supplied = dict(datasets) if datasets is not None else _load_persisted()
     if "decision_trace" not in supplied:
         supplied["decision_trace"] = []
@@ -179,17 +183,20 @@ def _snapshot(datasets: Mapping[str, list[dict[str, Any]]] | None, as_of_utc: st
         definition_material={key: value.to_dict() for key, value in definitions.items()},
         contract_material={"HD14": A.HD14_VERSION, "snapshot": A.G2_SNAPSHOT_CONTRACT},
         as_of_utc=as_of_utc,
+        retain_record_payloads=retain_record_payloads,
     )
 
 
-def _current_audit_inputs(snapshot: CurrentSnapshot, source: str) -> list[dict[str, Any]]:
+def _current_audit_inputs(
+    snapshot: CurrentSnapshot, source: str, *, trusted_immutable: bool = False,
+) -> list[dict[str, Any]]:
     """Retain current-schema partial identities so they become visible orphans."""
     component = snapshot.component(source)
     if component is None:
         return []
     schema = component["schema"]
     rows = []
-    for record in snapshot.input_records(source):
+    for record in snapshot.input_records(source, trusted_immutable=trusted_immutable):
         epoch = str(_value(record, ("data_epoch", "epoch")) or "CURRENT").upper()
         if record.get("schema_version") == schema and epoch in {"CURRENT", "CURRENT_ONLY", "SHADOW_TRADES_CURRENT"}:
             rows.append(record)
@@ -206,17 +213,24 @@ def run_g2(*, decision_records: list[dict[str, Any]] | None = None,
         # authority (decision_trace + shadow_runtime) from one bound snapshot.
         # This replaces the retired exact-count ``governed_records`` path.
         datasets = {
-            "decision_trace": list(governed_lineage_population.decision_records),
-            "shadow_runtime": list(governed_lineage_population.outcome_records),
+            "decision_trace": governed_lineage_population.decision_records,
+            "shadow_runtime": governed_lineage_population.outcome_records,
         }
+        trusted_governed_inputs = True
     elif decision_records is not None or outcome_records is not None:
         if datasets is not None or snapshot is not None:
             raise ValueError("Supply either explicit records, datasets, or a snapshot")
         datasets = {"decision_trace": decision_records or [], "shadow_trades": outcome_records or []}
-    frozen = snapshot or _snapshot(datasets, as_of_utc)
-    decisions = _current_audit_inputs(frozen, "decision_trace")
+        trusted_governed_inputs = False
+    else:
+        trusted_governed_inputs = False
+    frozen = snapshot or _snapshot(
+        datasets, as_of_utc, retain_record_payloads=not trusted_governed_inputs)
+    decisions = _current_audit_inputs(
+        frozen, "decision_trace", trusted_immutable=trusted_governed_inputs)
     outcome_source = "shadow_runtime" if frozen.component("shadow_runtime") else "shadow_trades"
-    outcomes = _current_audit_inputs(frozen, outcome_source)
+    outcomes = _current_audit_inputs(
+        frozen, outcome_source, trusted_immutable=trusted_governed_inputs)
     result = classify_lineage(decisions, outcomes)
     denominator = result["denominator"]
     unresolved = result["unresolved_orphan_count"]
