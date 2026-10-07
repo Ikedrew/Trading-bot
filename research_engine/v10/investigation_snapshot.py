@@ -508,11 +508,16 @@ def freeze_investigation_snapshot(
     *, start_date: str, end_date: str,
     source: S3ResearchDataSource | None = None,
     manifest_path: Path | None = None,
+    object_membership: Mapping[str, Sequence[Mapping[str, Any]]] | None = None,
 ) -> InvestigationSnapshot:
     """Capture and verify all six views' exact canonical source objects.
 
-    Listing, exact-key reads, a second listing, a second exact-key read and a
-    final listing must all agree. No manifest is finalized before those checks
+    With no explicit membership, listing, exact-key reads, a second listing, a
+    second exact-key read and a final listing must all agree.  The continuous
+    frontier may instead supply the exact object roster captured at its cutoff.
+    In that mode, later keys belong to the next open epoch and do not alter the
+    closed roster, while every selected object's content is still read twice
+    and must remain identical.  No manifest is finalized before those checks
     pass. S3 provides no multi-object transaction; this procedure detects
     observed changes and fails closed rather than claiming an atomic S3 write.
     """
@@ -524,11 +529,19 @@ def freeze_investigation_snapshot(
     authority = _authority_material(resolved)
     schema_by_dataset = {name: current_schema(name) for name in BOUND_DATASETS}
 
-    before = {
-        name: resolved.discover_dataset_objects(
-            name, start_date=start, end_date=end)
-        for name in BOUND_DATASETS
-    }
+    if object_membership is None:
+        before = {
+            name: resolved.discover_dataset_objects(
+                name, start_date=start, end_date=end)
+            for name in BOUND_DATASETS
+        }
+    else:
+        if set(object_membership) != set(BOUND_DATASETS):
+            raise InvestigationSnapshotError("CLOSED_EPOCH_DATASET_SET_MISMATCH")
+        before = {
+            name: tuple(dict(item) for item in object_membership[name])
+            for name in BOUND_DATASETS
+        }
     for name in REQUIRED_DATASETS:
         if not before[name]:
             raise InvestigationSnapshotError("REQUIRED_DATASET_ABSENT:" + name)
@@ -555,14 +568,15 @@ def freeze_investigation_snapshot(
             name, requirement, start, end, rows, first_objects[name], authority))
         del rows
 
-    between = {
-        name: resolved.discover_dataset_objects(
-            name, start_date=start, end_date=end)
-        for name in BOUND_DATASETS
-    }
-    if any(_listing_material(before[name]) != _listing_material(between[name])
-           for name in BOUND_DATASETS):
-        raise InvestigationSnapshotError("OBJECT_POPULATION_CHANGED_DURING_FREEZE")
+    if object_membership is None:
+        between = {
+            name: resolved.discover_dataset_objects(
+                name, start_date=start, end_date=end)
+            for name in BOUND_DATASETS
+        }
+        if any(_listing_material(before[name]) != _listing_material(between[name])
+               for name in BOUND_DATASETS):
+            raise InvestigationSnapshotError("OBJECT_POPULATION_CHANGED_DURING_FREEZE")
 
     for name in BOUND_DATASETS:
         second_rows = resolved.read_bound_objects(
@@ -577,14 +591,15 @@ def freeze_investigation_snapshot(
                 "OBJECT_CONTENT_CHANGED_DURING_FREEZE:" + name)
         del second_rows
 
-    after = {
-        name: resolved.discover_dataset_objects(
-            name, start_date=start, end_date=end)
-        for name in BOUND_DATASETS
-    }
-    if any(_listing_material(before[name]) != _listing_material(after[name])
-           for name in BOUND_DATASETS):
-        raise InvestigationSnapshotError("OBJECT_POPULATION_CHANGED_DURING_FREEZE")
+    if object_membership is None:
+        after = {
+            name: resolved.discover_dataset_objects(
+                name, start_date=start, end_date=end)
+            for name in BOUND_DATASETS
+        }
+        if any(_listing_material(before[name]) != _listing_material(after[name])
+               for name in BOUND_DATASETS):
+            raise InvestigationSnapshotError("OBJECT_POPULATION_CHANGED_DURING_FREEZE")
 
     material = _identity_material(
         start_date=start, end_date=end, source_authority=authority,

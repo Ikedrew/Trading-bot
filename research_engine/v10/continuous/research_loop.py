@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from functools import wraps
 import hashlib
 import json
 from pathlib import Path
@@ -13,7 +14,8 @@ from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
 from research_engine.registry.baseline_manifest import BASELINE_QUESTION_IDS
 from research_engine.v10.continuous.canonical_question_cycle import run_canonical_question_cycle
 from research_engine.v10.continuous.cycle_state import (
-    ContinuousCycleProgressStore, ContinuousCycleStore, ContinuousResearchCycleResult,
+    ContinuousCycleLease, ContinuousCycleProgressStore, ContinuousCycleStore,
+    ContinuousResearchCycleResult,
 )
 from research_engine.v10.continuous.frontier_coordinator import (
     FRONTIER_INCOMPLETE, NO_NEW_GOVERNED_EVIDENCE, SNAPSHOT_READY,
@@ -40,6 +42,16 @@ STAGES = ("FRONTIER", "QUESTIONS", "SCIENTIFIC_STATE", "Q71_PLUS",
 
 class ContinuousResearchLoopError(RuntimeError):
     pass
+
+
+def _exclusive_continuous_cycle(function: Callable[..., Any]) -> Callable[..., Any]:
+    @wraps(function)
+    def guarded(*args: Any, **kwargs: Any) -> Any:
+        root = Path(kwargs.get("state_root", Path("data/research/continuous")))
+        lease_id = uuid.uuid4().hex.upper()
+        with ContinuousCycleLease(root / "active_cycle.lock", lease_id=lease_id):
+            return function(*args, **kwargs)
+    return guarded
 
 
 def _value(source: Any, name: str, default: Any = None) -> Any:
@@ -174,6 +186,7 @@ def _stale_evaluation_questions(
     return stale_question_ids(recorded, identities)
 
 
+@_exclusive_continuous_cycle
 def run_continuous_research_cycle(
     *, state_root: Path | str = Path("data/research/continuous"),
     frontier_runner: Callable[..., Any] = run_frontier_snapshot_cycle,

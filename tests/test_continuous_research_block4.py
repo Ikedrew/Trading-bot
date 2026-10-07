@@ -7,7 +7,8 @@ import json
 import pytest
 
 from research_engine.v10.continuous.cycle_state import (
-    ContinuousCycleStateError, ContinuousCycleStore, ContinuousResearchCycleResult,
+    ContinuousCycleLease, ContinuousCycleStateError, ContinuousCycleStore,
+    ContinuousResearchCycleResult,
 )
 from research_engine.v10.continuous.question_cycle_state import QuestionCycleStore
 from research_engine.v10.continuous.research_loop import run_continuous_research_cycle
@@ -335,7 +336,8 @@ def test_unchanged_frontier_with_existing_projection_is_noop(tmp_path):
     result = run_continuous_research_cycle(
         state_root=tmp_path / "continuous", frontier_runner=lambda **_: frontier,
         question_runner=lambda *_args, **_kwargs: (_ for _ in ()).throw(
-            AssertionError("questions must not run")))
+            AssertionError("questions must not run")),
+        question_kwargs={"state_directory": tmp_path / "questions"})
 
     assert result.cycle_outcome == "NO_NEW_RESEARCH_EVIDENCE"
     assert result.projection_version == "RPROJ-EXISTING"
@@ -347,13 +349,40 @@ def test_unchanged_frontier_with_existing_projection_is_noop(tmp_path):
 
     restarted = run_continuous_research_cycle(
         state_root=tmp_path / "continuous", frontier_runner=lambda **_: frontier,
-        question_runner=_unexpected_question_call)
+        question_runner=_unexpected_question_call,
+        question_kwargs={"state_directory": tmp_path / "questions"})
     assert restarted.cycle_outcome == "NO_NEW_RESEARCH_EVIDENCE"
     assert restarted.continuous_cycle_id != result.continuous_cycle_id
     assert restarted.cycle_attempt_id != result.cycle_attempt_id
     assert restarted.evidence_identity == result.evidence_identity == "S1"
     assert store.load_latest_success() == restarted
     assert store.load_latest_attempt() == restarted
+
+
+def test_active_cycle_lease_prevents_overlap_before_frontier_or_publication(tmp_path):
+    state_root = tmp_path / "continuous"
+    projection_store = ResearchProjectionStore(state_root / "projection")
+    predecessor = {
+        "projection_schema": "unified_research_projection_v1",
+        "projection_version": "RPROJ-PREDECESSOR",
+        "data_frontier": {"snapshot_id": "S0"},
+        "canonical_questions": [],
+    }
+    projection_store.save(predecessor)
+    called = []
+
+    with ContinuousCycleLease(
+            state_root / "active_cycle.lock", lease_id="FIRST-CYCLE"):
+        with pytest.raises(
+                ContinuousCycleStateError,
+                match="CONTINUOUS_RESEARCH_CYCLE_ALREADY_ACTIVE"):
+            run_continuous_research_cycle(
+                state_root=state_root,
+                frontier_runner=lambda **_: called.append("frontier"))
+
+    assert called == []
+    assert projection_store.load_latest() == predecessor
+    assert not (state_root / "cycle_progress.json").exists()
 
 
 def test_equivalent_evaluator_refresh_skips_scientific_downstream_and_publishes(tmp_path):
@@ -532,6 +561,9 @@ def test_continuous_cycle_order_noop_and_checkpoint(tmp_path):
     assert failed.cycle_outcome == "FAILED"
     assert cycle_store.load_latest_attempt() == failed
     assert cycle_store.load_latest_success() == noop
+    assert ResearchProjectionStore(
+        tmp_path / "continuous" / "projection").load_latest()[
+            "projection_version"] == result.projection_version
 
 
 def test_repeated_frontier_failure_attempts_do_not_overwrite_history(tmp_path):

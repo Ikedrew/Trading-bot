@@ -160,6 +160,8 @@ def test_first_cycle_freezes_exact_membership_updates_pointer_and_rerun_is_noop(
     assert first.new_object_count == len(BOUND_DATASETS)
     assert first.replaced_object_count == 0
     assert len(calls) == 1
+    assert set(calls[0]["object_membership"]) == set(BOUND_DATASETS)
+    assert first.membership_closed_at
 
     snapshot = load_investigation_snapshot_id(
         first.snapshot_id, manifest_directory=tmp_path / "manifests")
@@ -181,6 +183,41 @@ def test_first_cycle_freezes_exact_membership_updates_pointer_and_rerun_is_noop(
     assert fake.get_calls == gets_after_first
     assert fake.head_calls == len(BOUND_DATASETS)
     assert FrontierStateStore(tmp_path / "state").load_latest_success() == state
+
+
+def test_closed_membership_ignores_late_arrival_and_next_epoch_preserves_it(tmp_path):
+    late_key = _key("trade_truth", part="part-late.jsonl")
+
+    class LiveWriterS3(MemoryS3):
+        def get_object(self, **kwargs):
+            if self.get_calls == 0:
+                # All dataset listings have already been captured at the
+                # frontier cutoff; this write belongs to the next open epoch.
+                self.objects[late_key] = _body("trade_truth", "after-cutoff")
+            return super().get_object(**kwargs)
+
+    fake = LiveWriterS3(_objects())
+    first = _run(tmp_path, fake)
+    assert first.status == SNAPSHOT_READY
+    first_snapshot = load_investigation_snapshot_id(
+        first.snapshot_id, manifest_directory=tmp_path / "manifests")
+    first_trade_keys = [
+        item.identifier for binding in first_snapshot.datasets
+        if binding.dataset == "trade_truth" for item in binding.objects
+    ]
+    assert late_key not in first_trade_keys
+
+    second = _run(tmp_path, fake)
+    assert second.status == SNAPSHOT_READY
+    assert second.predecessor_snapshot_id == first.snapshot_id
+    assert second.changed_datasets == ("trade_truth",)
+    second_snapshot = load_investigation_snapshot_id(
+        second.snapshot_id, manifest_directory=tmp_path / "manifests")
+    second_trade_keys = [
+        item.identifier for binding in second_snapshot.datasets
+        if binding.dataset == "trade_truth" for item in binding.objects
+    ]
+    assert late_key in second_trade_keys
 
 
 def test_same_row_count_changed_digest_is_replacement_and_preserves_predecessor(tmp_path):

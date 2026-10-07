@@ -85,6 +85,9 @@ _REENTRY_STATUSES = frozenset({
     INSUFFICIENT_DATA, WAITING_FOR_DATA, CANNOT_KNOW_YET,
     BLOCKED, IMPLEMENTATION_BLOCKED, INVALID,
 })
+_SCIENTIFIC_REENTRY_STATUSES = frozenset({
+    INSUFFICIENT_DATA, WAITING_FOR_DATA, CANNOT_KNOW_YET, BLOCKED,
+})
 
 _GOVERNED_REASON_REQUIRED_QUESTION_IDS = frozenset({
     "E3", "S2", "S3", "S5", "S6", "S7", "EXEC1", "G1",
@@ -337,6 +340,22 @@ def plan_affected_questions(
             plan[question.id] = REQUIRES_RECHECK
         else:
             plan[question.id] = UNAFFECTED
+
+    # Registry ``depends_on`` is a governed dependency edge, not a heuristic.
+    # Close the plan transitively so a prerequisite selected for re-entry also
+    # rechecks its dependants, even when their direct evidence datasets did not
+    # change.  Unrelated questions remain retained.
+    selected = {AFFECTED, REQUIRES_RECHECK, REQUIRES_REEVALUATION}
+    changed = True
+    while changed:
+        changed = False
+        for question in questions:
+            if plan.get(question.id) != UNAFFECTED:
+                continue
+            if any(plan.get(dependency) in selected
+                   for dependency in question.depends_on):
+                plan[question.id] = REQUIRES_RECHECK
+                changed = True
     return plan
 
 
@@ -1053,6 +1072,7 @@ def run_canonical_question_cycle(
                 "purpose": definition.research_intent,
                 "evidence_requirements": [source.value for source in question.data_sources],
                 "required_fields": list(question.required_fields),
+                "depends_on": list(question.depends_on),
                 "registered_runner": (
                     f"{question.runner_module}.{question.runner_function}"
                     if question.runner_module and question.runner_function else None),
@@ -1067,6 +1087,20 @@ def run_canonical_question_cycle(
                     .get(qid, {}).get("result", {}).get("evaluation_identity"),
                     identity,
                 )
+            ),
+            "reentry_trigger": (
+                None if result.status not in _SCIENTIFIC_REENTRY_STATUSES else {
+                    "state": (
+                        "DORMANT_UNCHANGED"
+                        if classification == UNAFFECTED
+                        else "ELIGIBLE_GOVERNED_CHANGE"
+                    ),
+                    "evidence_datasets": sorted(_question_dependencies(question)[0]),
+                    "ambiguous_evidence_dependency": _question_dependencies(question)[1],
+                    "prerequisite_question_ids": list(question.depends_on),
+                    "missing_evidence": list(result.missing_evidence),
+                    "evaluation_identity_digest": result.evaluation_identity_digest,
+                }
             ),
             "result": result.to_dict(),
         }

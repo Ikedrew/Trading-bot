@@ -263,6 +263,7 @@ class FrontierSelection:
     pending_required_objects: dict[str, tuple[str, ...]]
     coherence_decision: str
     predecessor_snapshot_id: str | None
+    membership_closed_at: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -278,6 +279,7 @@ class FrontierCycleResult:
     frontier_start: str | None = None
     frontier_end: str | None = None
     predecessor_snapshot_id: str | None = None
+    membership_closed_at: str | None = None
     changed_datasets: tuple[str, ...] = ()
     unchanged_datasets: tuple[str, ...] = ()
     missing_optional_datasets: tuple[str, ...] = ()
@@ -474,11 +476,20 @@ def _discover_verified(
 ) -> tuple[
     dict[str, tuple[dict[str, Any], ...]],
     dict[str, dict[str, str | None]],
+    str,
 ]:
+    # Close membership before any potentially long object materialisation.
+    # Objects arriving after this point remain live and are discovered by the
+    # next cycle; they cannot expand the roster being verified below.
+    listed_by_dataset = {
+        dataset: tuple(source.discover_dataset_objects(dataset))
+        for dataset in BOUND_DATASETS
+    }
+    membership_closed_at = _utc_now().isoformat()
     verified: dict[str, tuple[dict[str, Any], ...]] = {}
     event_coverage: dict[str, dict[str, str | None]] = {}
     for dataset in BOUND_DATASETS:
-        listed = source.discover_dataset_objects(dataset)
+        listed = listed_by_dataset[dataset]
         if not listed:
             verified[dataset] = ()
             event_coverage[dataset] = {"start": None, "end": None}
@@ -504,7 +515,7 @@ def _discover_verified(
         # Assignment evaluates the next read before releasing this local.  Drop
         # it explicitly so two large parsed datasets never overlap in memory.
         del rows
-    return verified, event_coverage
+    return verified, event_coverage, membership_closed_at
 
 
 def _frontier_from_state(previous: Mapping[str, Any]) -> FrontierSelection:
@@ -527,6 +538,7 @@ def _frontier_from_state(previous: Mapping[str, Any]) -> FrontierSelection:
         },
         coherence_decision=str(value["coherence_decision"]),
         predecessor_snapshot_id=value.get("predecessor_snapshot_id"),
+        membership_closed_at=value.get("membership_closed_at"),
     )
 
 
@@ -623,6 +635,7 @@ def _select_frontier(
     event_coverage: Mapping[str, Mapping[str, str | None]],
     predecessor_snapshot_id: str | None,
     as_of_date: date,
+    membership_closed_at: str | None = None,
 ) -> FrontierSelection:
     for dataset in REQUIRED_DATASETS:
         if not discovered.get(dataset):
@@ -721,6 +734,7 @@ def _select_frontier(
         pending_required_objects=pending_required,
         coherence_decision="COHERENT_COMMON_DATE_PARTITION_INTERSECTION",
         predecessor_snapshot_id=predecessor_snapshot_id,
+        membership_closed_at=membership_closed_at,
     )
 
 
@@ -836,6 +850,8 @@ def _failure_result(
         frontier_start=None if frontier is None else frontier.selected_start_time,
         frontier_end=None if frontier is None else frontier.selected_end_time,
         predecessor_snapshot_id=(None if previous is None else previous.get("last_successful_snapshot_id")),
+        membership_closed_at=(
+            None if frontier is None else frontier.membership_closed_at),
         missing_optional_datasets=(() if frontier is None else frontier.missing_optional_datasets),
         stale_datasets=(() if frontier is None else frontier.stale_datasets),
         verification_status="FAILED",
@@ -882,13 +898,14 @@ def run_frontier_snapshot_cycle(
         frontier = _reuse_unchanged_frontier(
             resolved_source, previous, as_of_date=resolved_as_of)
         if frontier is None:
-            discovered, event_coverage = _discover_verified(
+            discovered, event_coverage, membership_closed_at = _discover_verified(
                 resolved_source, as_of_date=resolved_as_of)
             frontier = _select_frontier(
                 discovered,
                 event_coverage=event_coverage,
                 predecessor_snapshot_id=predecessor,
                 as_of_date=resolved_as_of,
+                membership_closed_at=membership_closed_at,
             )
         delta = _compute_delta(frontier, previous)
         if not delta["changed_datasets"]:
@@ -909,6 +926,7 @@ def run_frontier_snapshot_cycle(
                     frontier_start=frontier.selected_start_time,
                     frontier_end=frontier.selected_end_time,
                     predecessor_snapshot_id=predecessor,
+                    membership_closed_at=frontier.membership_closed_at,
                     changed_datasets=(),
                     unchanged_datasets=tuple(delta["unchanged_datasets"]),
                     missing_optional_datasets=frontier.missing_optional_datasets,
@@ -933,6 +951,7 @@ def run_frontier_snapshot_cycle(
                 frontier_start=frontier.selected_start_time,
                 frontier_end=frontier.selected_end_time,
                 predecessor_snapshot_id=predecessor,
+                membership_closed_at=frontier.membership_closed_at,
                 changed_datasets=(),
                 unchanged_datasets=tuple(delta["unchanged_datasets"]),
                 missing_optional_datasets=frontier.missing_optional_datasets,
@@ -946,6 +965,10 @@ def run_frontier_snapshot_cycle(
             start_date=frontier.selected_start_time,
             end_date=frontier.selected_end_time,
             source=resolved_source,
+            object_membership={
+                name: tuple(frontier.dataset_membership[name]["objects"])
+                for name in BOUND_DATASETS
+            },
         )
         _assert_snapshot_membership(snapshot, frontier)
         manifest_dir = Path(manifest_directory)
@@ -975,6 +998,7 @@ def run_frontier_snapshot_cycle(
             },
             "coherent_frontier_start": frontier.selected_start_time,
             "coherent_frontier_end": frontier.selected_end_time,
+            "membership_closed_at": frontier.membership_closed_at,
             "completion_timestamp": completed,
             "failure_information": None,
             "predecessor_snapshot_id": predecessor,
@@ -999,6 +1023,7 @@ def run_frontier_snapshot_cycle(
             frontier_start=frontier.selected_start_time,
             frontier_end=frontier.selected_end_time,
             predecessor_snapshot_id=predecessor,
+            membership_closed_at=frontier.membership_closed_at,
             changed_datasets=tuple(delta["changed_datasets"]),
             unchanged_datasets=tuple(delta["unchanged_datasets"]),
             missing_optional_datasets=frontier.missing_optional_datasets,

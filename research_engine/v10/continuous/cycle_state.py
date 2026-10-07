@@ -22,6 +22,77 @@ class ContinuousCycleStateError(RuntimeError):
     pass
 
 
+def _pid_is_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        if os.name == "nt":
+            handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+            if handle:
+                ctypes.windll.kernel32.CloseHandle(handle)
+                return True
+            return False
+        os.kill(pid, 0)
+        return True
+    except (OSError, PermissionError):
+        return False
+    except Exception:
+        # Fail closed if process liveness cannot be established.
+        return True
+
+
+class ContinuousCycleLease:
+    """Single-host exclusive lease for the authoritative continuous loop."""
+
+    def __init__(self, path: Path | str, *, lease_id: str):
+        self.path = Path(path)
+        self.lease_id = str(lease_id)
+        self._owned = False
+
+    def __enter__(self) -> "ContinuousCycleLease":
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "lease_id": self.lease_id,
+            "pid": os.getpid(),
+            "started_at": _utc_now(),
+        }
+        for _ in range(2):
+            try:
+                descriptor = os.open(
+                    str(self.path), os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+                try:
+                    os.write(descriptor, (json.dumps(payload, sort_keys=True) + "\n").encode("utf-8"))
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
+                self._owned = True
+                return self
+            except FileExistsError:
+                try:
+                    existing_text = self.path.read_text(encoding="utf-8")
+                    existing = json.loads(existing_text)
+                    stale = not _pid_is_alive(int(existing.get("pid") or 0))
+                    if stale and self.path.read_text(encoding="utf-8") == existing_text:
+                        self.path.unlink()
+                        continue
+                except (OSError, ValueError, TypeError):
+                    pass
+                raise ContinuousCycleStateError(
+                    "CONTINUOUS_RESEARCH_CYCLE_ALREADY_ACTIVE")
+        raise ContinuousCycleStateError("CONTINUOUS_RESEARCH_CYCLE_ALREADY_ACTIVE")
+
+    def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        if not self._owned:
+            return
+        try:
+            current = json.loads(self.path.read_text(encoding="utf-8"))
+            if (current.get("lease_id") == self.lease_id
+                    and int(current.get("pid") or 0) == os.getpid()):
+                self.path.unlink(missing_ok=True)
+        finally:
+            self._owned = False
+
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -305,7 +376,8 @@ class ContinuousCycleStore:
 
 
 __all__ = [
-    "CYCLE_SCHEMA", "PROGRESS_SCHEMA", "ContinuousCycleProgressStore",
+    "CYCLE_SCHEMA", "PROGRESS_SCHEMA", "ContinuousCycleLease",
+    "ContinuousCycleProgressStore",
     "ContinuousCycleStateError", "ContinuousCycleStore",
     "ContinuousResearchCycleResult", "DEFAULT_CYCLE_STATE_DIRECTORY",
     "process_memory_bytes",

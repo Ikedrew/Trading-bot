@@ -5,6 +5,8 @@ from dataclasses import replace
 import hashlib
 import json
 from pathlib import Path
+from datetime import date
+from types import SimpleNamespace
 
 import pytest
 
@@ -20,8 +22,11 @@ from research_engine.v10.continuous.canonical_question_cycle import (
     AFFECTED,
     ALIAS_OR_SUPERSEDED,
     REQUIRES_RECHECK,
+    REQUIRES_REEVALUATION,
+    SnapshotQuestionExecutionContext,
     UNAFFECTED,
     CanonicalQuestionCycleError,
+    plan_affected_questions,
     question_result_delta,
     run_canonical_question_cycle,
 )
@@ -29,6 +34,9 @@ from research_engine.v10.continuous.question_cycle_state import (
     CanonicalQuestionResult,
     QuestionCycleStore,
 )
+from research_engine.v10.continuous.research_loop import run_continuous_research_cycle
+from research_engine.v10.continuous.research_projection import ResearchProjectionStore
+from research_engine.v10.optimisation.optimisation_registry import OptimisationRegistry
 from research_engine.v10.investigation_snapshot import (
     BOUND_DATASETS,
     freeze_investigation_snapshot,
@@ -465,6 +473,95 @@ def test_previous_insufficient_question_reenters_when_required_dataset_changes(t
     assert _projection(tmp_path)["questions"]["E2"]["last_evaluated_snapshot_id"] == second_snapshot.snapshot_id
 
 
+def test_blocked_question_is_dormant_until_its_governed_evidence_changes(tmp_path):
+    class CountingExecutor(RecordingExecutor):
+        def __init__(self):
+            super().__init__()
+            self.question_ids = []
+
+        def __call__(self, runner, question, population, context):
+            self.question_ids.append(question.id)
+            return super().__call__(runner, question, population, context)
+
+    fake = MemoryS3(_objects())
+    first_snapshot, manifests = _freeze(tmp_path, fake)
+    executor = CountingExecutor()
+    runners = _runners({"E2": {
+        "status": "BLOCKED", "reason": "minimum evidence not yet available",
+        "missing_evidence": ["additional shadow outcomes"],
+    }})
+    first = _run(
+        tmp_path, fake, first_snapshot, manifests,
+        runners=runners, runner_executor=executor)
+    assert executor.question_ids.count("E2") == 1
+
+    fake.objects[_key("decision_trace")] = _jsonl(_row("decision_trace", "changed"))
+    second_snapshot, _ = _freeze(tmp_path, fake)
+    second = _run(
+        tmp_path, fake, second_snapshot, manifests,
+        predecessor_snapshot_id=first.snapshot_id,
+        changed_datasets=["decision_trace"], runners=runners,
+        runner_executor=executor)
+    e2 = _projection(tmp_path)["questions"]["E2"]
+    assert second.planning["E2"] == UNAFFECTED
+    assert executor.question_ids.count("E2") == 1
+    assert e2["retained_previous"] is True
+    assert e2["reentry_trigger"]["state"] == "DORMANT_UNCHANGED"
+
+    opened, closed = deepcopy(_shadow_events())
+    opened["shadow_trade_id"] = closed["shadow_trade_id"] = "nshadow_new"
+    opened["canonical_opportunity_id"] = closed["canonical_opportunity_id"] = "nopp_new"
+    fake.objects[_key("shadow_runtime")] += _jsonl(opened, closed)
+    third_snapshot, _ = _freeze(tmp_path, fake)
+    third = _run(
+        tmp_path, fake, third_snapshot, manifests,
+        predecessor_snapshot_id=second.snapshot_id,
+        changed_datasets=["shadow_runtime"], runners=runners,
+        runner_executor=executor)
+    assert third.planning["E2"] == AFFECTED
+    assert executor.question_ids.count("E2") == 2
+    assert _projection(tmp_path)["questions"]["E2"]["reentry_trigger"][
+        "state"] == "ELIGIBLE_GOVERNED_CHANGE"
+
+
+@pytest.mark.parametrize("changed_component", [
+    "evaluator_semantic_version", "governance_contract_versions",
+])
+def test_evaluator_or_governance_change_reenters_dependants_only(changed_component):
+    questions = tuple(q for q in REGISTRY if q.id in {"E1", "E2", "R3"})
+    base_identity = {
+        "evaluation_identity_digest": "same",
+        "evaluator_semantic_version": "v1",
+        "runner_identity": "runner.v1",
+        "governance_contract_versions": {"contract": "v1"},
+    }
+    previous = {"questions": {
+        q.id: {"result": {
+            "status": "BLOCKED" if q.id == "R3" else "COMPLETE",
+            "evaluation_identity": dict(base_identity),
+        }} for q in questions
+    }}
+    identities = {q.id: dict(base_identity) for q in questions}
+    identities["E1"] = dict(base_identity)
+    identities["E1"][changed_component] = (
+        "v2" if changed_component == "evaluator_semantic_version"
+        else {"contract": "v2"})
+    identities["E1"]["evaluation_identity_digest"] = "changed"
+    context = SnapshotQuestionExecutionContext(
+        snapshot_id="ISNAP-NEXT", fingerprint="f" * 64,
+        investigation_epoch="EPOCH-NEXT", frontier_start="2026-01-01",
+        frontier_end="2026-01-02", predecessor_snapshot_id="ISNAP-PREV",
+        exact_membership={}, dataset_status={}, changed_datasets=(),
+        changed_datasets_known=True, datasets={}, reader=None,
+    )
+
+    plan = plan_affected_questions(questions, context, previous, identities)
+
+    assert plan["E1"] == REQUIRES_REEVALUATION
+    assert plan["R3"] == REQUIRES_RECHECK
+    assert plan["E2"] == UNAFFECTED
+
+
 def test_history_is_immutable_projection_advances_and_retained_history_is_not_duplicated(tmp_path):
     fake = MemoryS3(_objects())
     first_snapshot, manifests = _freeze(tmp_path, fake)
@@ -495,6 +592,82 @@ def test_history_is_immutable_projection_advances_and_retained_history_is_not_du
     assert d1_by_snapshot[second_snapshot.snapshot_id]["previous_result_id"] == \
         d1_by_snapshot[first.snapshot_id]["result_id"]
     assert len(list((tmp_path / "cycles" / "cycles").glob("*.json"))) == 2
+
+
+def test_bounded_incremental_cycle_closes_delta_retains_and_publishes(tmp_path):
+    fake = MemoryS3(_objects())
+    source = S3ResearchDataSource(bucket="incremental-acceptance", client=fake)
+    state_root = tmp_path / "continuous"
+    question_state = tmp_path / "questions"
+    frontier_state = tmp_path / "frontier"
+    manifests = tmp_path / "manifests"
+    registry_dir = tmp_path / "registry"
+    OptimisationRegistry(str(registry_dir)).save()
+
+    def bridge(question, **_kwargs):
+        return SimpleNamespace(
+            bridge_run_id="BR-" + question.cycle_id[-12:],
+            status="NO_SCIENTIFIC_STATE_CHANGE", validation_handoff=(),
+            question_changes_processed=question.changed_question_ids,
+            findings_created=(), findings_weakened=(), hypotheses_created=(),
+            hypotheses_invalidated=(), candidates_created=(), review_required=(),
+        )
+
+    common = {
+        "state_root": state_root,
+        "frontier_kwargs": {
+            "source": source, "state_directory": frontier_state,
+            "manifest_directory": manifests, "as_of_date": date(2026, 10, 3),
+        },
+        "question_kwargs": {
+            "source": source, "manifest_directory": manifests,
+            "state_directory": question_state, "runners": _runners(),
+            "runner_executor": RecordingExecutor(),
+        },
+        "bridge_runner": bridge,
+        "bridge_kwargs": {
+            "scientific_state_directory": tmp_path / "science",
+            "optimisation_registry_directory": registry_dir,
+        },
+        "q71_runner": lambda **_: {
+            "status": "COMPLETED",
+            "generated_questions": [{"generated_question_id": "Q71-SYNTHETIC"}],
+            "queue": [],
+        },
+        "max_validation_jobs": 0,
+    }
+    first = run_continuous_research_cycle(**common)
+    assert first.cycle_outcome == "COMPLETED"
+    first_projection = ResearchProjectionStore(
+        state_root / "projection").load_latest()
+
+    fake.objects[_key("decision_trace", part="part-001.jsonl")] = _jsonl(
+        _row("decision_trace", "incremental"))
+    second = run_continuous_research_cycle(**common)
+    assert second.cycle_outcome == "COMPLETED"
+    second_projection = ResearchProjectionStore(
+        state_root / "projection").load_latest()
+    canonical = QuestionCycleStore(question_state).load_current()
+
+    assert second.frontier_snapshot_id != first.frontier_snapshot_id
+    assert second_projection["predecessor_projection_version"] == first_projection[
+        "projection_version"]
+    assert second_projection["data_frontier"]["changed_datasets"] == [
+        "decision_trace"]
+    assert second_projection["data_frontier"]["membership_closed_at"]
+    assert canonical["questions"]["E1"]["retained_previous"] is True
+    assert canonical["questions"]["D1"]["retained_previous"] is False
+    assert canonical["questions"]["E1"]["result"]["result_id"] == next(
+        row["result"]["result_id"] for row in first_projection[
+            "canonical_questions"] if row["question_id"] == "E1")
+    assert [row["question_id"] for row in second_projection[
+        "canonical_questions"]] == [question.id for question in REGISTRY]
+    assert len({row["result"]["result_id"] for row in second_projection[
+        "canonical_questions"]}) == 70
+    assert second_projection["generated_questions"] == [
+        {"generated_question_id": "Q71-SYNTHETIC"}]
+    assert "Q71-SYNTHETIC" not in {
+        row["question_id"] for row in second_projection["canonical_questions"]}
 
 
 def _result(**overrides):
