@@ -5,6 +5,7 @@ import argparse
 from functools import wraps
 import hashlib
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 import sys
 import uuid
@@ -25,7 +26,13 @@ from research_engine.v10.continuous.q71_orchestration import run_q71_orchestrati
 from research_engine.v10.continuous.question_cycle_state import QuestionCycleStore
 from research_engine.v10.continuous.research_projection import (
     ResearchProjectionStore, build_evaluation_refresh_projection,
-    build_unified_research_projection,
+    build_research_work_refresh_projection, build_unified_research_projection,
+)
+from research_engine.v10.continuous.research_work_queue import (
+    FAILED as DEEP_FAILED,
+    ResearchExecutionPolicy,
+    ResearchWorkQueueError,
+    ResearchWorkQueueStore,
 )
 from research_engine.v10.continuous.scientific_state_bridge import run_scientific_state_bridge
 from research_engine.v10.continuous.scientific_state_store import ScientificStateStore
@@ -203,6 +210,9 @@ def run_continuous_research_cycle(
     max_validation_jobs: int = 1,
     q71_capacity: int = 10,
     shadow_evidence: Mapping[str, Mapping[str, Any]] | None = None,
+    enable_deep_work: bool = True,
+    execution_policy: ResearchExecutionPolicy | None = None,
+    deep_work_queue_path: Path | str | None = None,
 ) -> ContinuousResearchCycleResult:
     """Run one external-scheduler-friendly cycle; it never promotes live state."""
     cycle_attempt_id = uuid.uuid4().hex.upper()
@@ -210,6 +220,8 @@ def run_continuous_research_cycle(
     cycle_store = ContinuousCycleStore(root / "cycles")
     progress_store = ContinuousCycleProgressStore(root / "cycle_progress.json")
     projection_store = ResearchProjectionStore(root / "projection")
+    research_work_store = ResearchWorkQueueStore(
+        deep_work_queue_path or (root / "deep_work_queue.json"))
     validation_store: ValidationQueueStore | None = None
     question_state_dir = Path((question_kwargs or {}).get(
         "state_directory", "reports/research/questions/_canonical_cycle"))
@@ -354,6 +366,10 @@ def run_continuous_research_cycle(
             progress("update_stage", "QUESTIONS", event)
 
         question_options.setdefault("progress_callback", question_progress)
+        if enable_deep_work:
+            question_options.setdefault("deep_work_store", research_work_store)
+            question_options.setdefault(
+                "execution_policy", execution_policy or ResearchExecutionPolicy())
         if evaluation_only_question_ids is not None:
             question_options.setdefault(
                 "evaluation_only_question_ids", evaluation_only_question_ids)
@@ -526,6 +542,8 @@ def run_continuous_research_cycle(
             scientific_store=scientific_store, optimisation_registry=registry,
             validation_store=validation_store, q71=q71,
             shadow_evidence=shadow_evidence, predecessor_projection=previous_projection,
+            research_work_store=research_work_store,
+            projection_generated_at=str(_value(question, "completed_at", started)),
         )
         projection_path = str(projection_store.save(projection))
         stages["PROJECTION"] = "COMPLETED"
@@ -563,6 +581,202 @@ def run_continuous_research_cycle(
     return result
 
 
+@_exclusive_continuous_cycle
+def run_deep_research_job(
+    *, state_root: Path | str = Path("data/research/continuous"),
+    question_runner: Callable[..., Any] = run_canonical_question_cycle,
+    bridge_runner: Callable[..., Any] = run_scientific_state_bridge,
+    question_kwargs: Mapping[str, Any] | None = None,
+    bridge_kwargs: Mapping[str, Any] | None = None,
+    execution_policy: ResearchExecutionPolicy | None = None,
+    deep_work_queue_path: Path | str | None = None,
+    now: str | None = None,
+) -> Mapping[str, Any]:
+    """Execute and publish at most one current governed deep-research job.
+
+    The shared cycle lease prevents publication races with ordinary refreshes.
+    The accepted unified projection is updated only after the queued snapshot,
+    evaluator identity, canonical result, and scientific bridge all validate.
+    """
+    root = Path(state_root)
+    policy = execution_policy or ResearchExecutionPolicy()
+    stamp = now or datetime.now(timezone.utc).isoformat()
+    queue = ResearchWorkQueueStore(
+        deep_work_queue_path or (root / "deep_work_queue.json"))
+    job = queue.claim_next(now=stamp, policy=policy)
+    if job is None:
+        return {
+            "status": "NO_DEEP_WORK_READY",
+            "research_lag": queue.metrics(generated_at=stamp),
+        }
+    projection_store = ResearchProjectionStore(root / "projection")
+    accepted = projection_store.load_latest()
+    try:
+        if accepted is None:
+            raise ResearchWorkQueueError("DEEP_WORK_WITHOUT_ACCEPTED_PROJECTION")
+        frontier = dict(accepted.get("data_frontier") or {})
+        if (
+            str(frontier.get("snapshot_id") or "")
+            != job.triggering_snapshot_id
+            or str(frontier.get("investigation_epoch") or "")
+            != job.triggering_epoch_id
+        ):
+            raise ResearchWorkQueueError("DEEP_WORK_TRIGGER_NOT_CURRENT")
+        accepted_questions = {
+            str(row.get("question_id") or ""): row
+            for row in accepted.get("canonical_questions", ())
+            if isinstance(row, Mapping)
+        }
+        accepted_entry = accepted_questions.get(job.question_id)
+        if (
+            accepted_entry is None
+            or accepted_entry.get("deep_work_job_id") != job.job_id
+        ):
+            raise ResearchWorkQueueError("DEEP_WORK_NOT_ACCEPTED_PENDING_AUTHORITY")
+        running_projection = build_research_work_refresh_projection(
+            continuous_cycle_id=_cycle_id({
+                "deep_work_job_id": job.job_id,
+                "state": "RUNNING",
+                "attempt": job.attempts,
+            }),
+            predecessor_projection=accepted,
+            research_work_store=queue,
+            projection_generated_at=stamp,
+        )
+        projection_store.save(running_projection)
+        accepted = running_projection
+
+        question_options = dict(question_kwargs or {})
+        question_options.update({
+            "evaluation_only_question_ids": (job.question_id,),
+            "force_inline_question_ids": (job.question_id,),
+            "execution_revision": job.job_id,
+            "deep_work_store": queue,
+            "execution_policy": policy,
+        })
+        question = question_runner(frontier, **question_options)
+        qstore = QuestionCycleStore(question_options.get(
+            "state_directory", "reports/research/questions/_canonical_cycle"))
+        question_projection = qstore.load_current()
+        if question_projection is None:
+            raise ResearchWorkQueueError("DEEP_WORK_RESULT_PROJECTION_MISSING")
+        entry = (question_projection.get("questions") or {}).get(job.question_id)
+        result = (entry or {}).get("result") or {}
+        if (
+            str(result.get("snapshot_id") or "") != job.triggering_snapshot_id
+            or str(result.get("evaluation_identity_digest") or "")
+            != job.evaluator_identity_digest
+            or str((entry or {}).get("work_state") or "") != "FRESH"
+        ):
+            raise ResearchWorkQueueError("DEEP_WORK_RESULT_AUTHORITY_MISMATCH")
+
+        bridge = bridge_runner(question, **dict(bridge_kwargs or {}))
+        if str(_value(bridge, "status")) not in {
+            "COMPLETED", "COMPLETED_WITH_REVIEW_REQUIRED",
+            "COMPLETED_WITH_ITEM_FAILURES", "NO_SCIENTIFIC_STATE_CHANGE",
+        }:
+            raise ContinuousResearchLoopError(
+                "DEEP_WORK_SCIENTIFIC_STATE_BRIDGE_NOT_COMPLETE")
+
+        queue.complete(
+            job.job_id,
+            result_id=str(result.get("result_id") or ""),
+            result_snapshot_id=str(result.get("snapshot_id") or ""),
+            evaluator_identity_digest=str(
+                result.get("evaluation_identity_digest") or ""),
+            completed_at=stamp,
+        )
+
+        scientific_state_dir = Path((bridge_kwargs or {}).get(
+            "scientific_state_directory", "data/research/scientific_state"))
+        registry_dir = Path((bridge_kwargs or {}).get(
+            "optimisation_registry_directory", "data/research/optimisation"))
+        scientific_store = ScientificStateStore(scientific_state_dir)
+        registry = OptimisationRegistry(str(registry_dir))
+        registry.load()
+        validation_store = ValidationQueueStore(root / "validation_queue.json")
+        enqueue_validation_handoff(
+            _value(bridge, "validation_handoff", ()), registry=registry,
+            store=validation_store, snapshot_id=job.triggering_snapshot_id,
+            cycle_id=str(_value(question, "cycle_id")),
+        )
+        q71 = {
+            "generated_questions": list(
+                accepted.get("generated_questions") or ()),
+            "queue": list(
+                (accepted.get("investigations_and_work_queues") or {})
+                .get("generated_question_queue") or ()),
+            "new_question_ids": [],
+            "retired_question_ids": [],
+        }
+        cycle_id = _cycle_id({
+            "deep_work_job_id": job.job_id,
+            "result_id": result["result_id"],
+            "predecessor_projection_version": accepted["projection_version"],
+        })
+        projection = build_unified_research_projection(
+            continuous_cycle_id=cycle_id,
+            frontier=frontier,
+            question_projection=question_projection,
+            bridge=bridge,
+            scientific_store=scientific_store,
+            optimisation_registry=registry,
+            validation_store=validation_store,
+            q71=q71,
+            predecessor_projection=accepted,
+            research_work_store=queue,
+            projection_generated_at=stamp,
+        )
+        projection_path = projection_store.save(projection)
+        return {
+            "status": "COMPLETED",
+            "job_id": job.job_id,
+            "question_id": job.question_id,
+            "result_id": result["result_id"],
+            "triggering_epoch_id": job.triggering_epoch_id,
+            "projection_version": projection["projection_version"],
+            "projection_path": str(projection_path),
+            "research_lag": projection["research_lag"],
+        }
+    except Exception as exc:
+        current = queue.jobs.get(job.job_id)
+        if current is not None and current.state == "RUNNING":
+            queue.fail(
+                job.job_id,
+                reason=f"{type(exc).__name__}:{exc}",
+                failed_at=stamp,
+            )
+        elif current is not None and current.state == "COMPLETED":
+            current.state = DEEP_FAILED
+            current.failure_reason = (
+                "POST_COMPLETION_PUBLICATION_FAILED:"
+                + f"{type(exc).__name__}:{exc}")
+            current.transitions.append({
+                "state": DEEP_FAILED,
+                "at": stamp,
+                "reason": current.failure_reason,
+            })
+            queue.save()
+        if accepted is not None and current is not None:
+            try:
+                failed_projection = build_research_work_refresh_projection(
+                    continuous_cycle_id=_cycle_id({
+                        "deep_work_job_id": job.job_id,
+                        "state": "FAILED",
+                        "attempt": job.attempts,
+                    }),
+                    predecessor_projection=accepted,
+                    research_work_store=queue,
+                    projection_generated_at=stamp,
+                )
+                projection_store.save(failed_projection)
+            except Exception:
+                # The queue remains the failure authority; never mask the
+                # original evaluator/publication exception.
+                pass
+        raise
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run one bounded continuous research cycle")
     parser.add_argument("--state-root", default="data/research/continuous")
@@ -580,4 +794,8 @@ if __name__ == "__main__":
     raise SystemExit(main())
 
 
-__all__ = ["ContinuousResearchLoopError", "run_continuous_research_cycle"]
+__all__ = [
+    "ContinuousResearchLoopError",
+    "run_continuous_research_cycle",
+    "run_deep_research_job",
+]

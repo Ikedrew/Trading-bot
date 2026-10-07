@@ -44,6 +44,17 @@ from research_engine.v10.continuous.question_cycle_state import (
     atomic_json,
     immutable_json,
 )
+from research_engine.v10.continuous.research_work_queue import (
+    DEEP,
+    COMPLETED as DEEP_COMPLETED,
+    FAILED as DEEP_FAILED,
+    PENDING as DEEP_PENDING_STATE,
+    RUNNING as DEEP_RUNNING_STATE,
+    SUPERSEDED as DEEP_SUPERSEDED,
+    ResearchExecutionPolicy,
+    ResearchWorkQueueStore,
+    deep_work_job,
+)
 from research_engine.v10.continuous.evaluation_identity import (
     REQUIRES_REEVALUATION as REQUIRES_REEVALUATION_VALUE,
     evaluation_identities,
@@ -278,6 +289,29 @@ def _question_dependencies(question: ResearchQuestion) -> tuple[set[str], bool]:
     return dependencies, ambiguous
 
 
+def _deep_dependency_identity(
+    question: ResearchQuestion,
+    context: SnapshotQuestionExecutionContext,
+    previous_results: Mapping[str, CanonicalQuestionResult],
+) -> tuple[str, dict[str, str]]:
+    datasets, ambiguous = _question_dependencies(question)
+    prerequisite_identities = {
+        dependency: previous_results[dependency].result_id
+        for dependency in question.depends_on
+        if dependency in previous_results
+    }
+    material = {
+        "question_id": question.id,
+        "datasets": {
+            dataset: list(context.exact_membership.get(dataset, ()))
+            for dataset in sorted(datasets)
+        },
+        "ambiguous_dependency": ambiguous,
+        "prerequisite_identities": prerequisite_identities,
+    }
+    return fingerprint(material), prerequisite_identities
+
+
 def plan_affected_questions(
     questions: Sequence[ResearchQuestion],
     context: SnapshotQuestionExecutionContext,
@@ -301,19 +335,23 @@ def plan_affected_questions(
     )
     plan: dict[str, str] = {}
     for question in questions:
+        previous_entry = previous_questions.get(question.id) or {}
+        previous_result = previous_entry.get("result") or {}
+        if (
+            not first_snapshot
+            and evaluation_only is not None
+            and question.id not in evaluation_only
+        ):
+            plan[question.id] = UNAFFECTED
+            continue
         if question.scientific_owner_id:
             plan[question.id] = ALIAS_OR_SUPERSEDED
             continue
         if not question.runner_module or not question.runner_function:
             plan[question.id] = UNRUNNABLE
             continue
-        previous_entry = previous_questions.get(question.id) or {}
-        previous_result = previous_entry.get("result") or {}
         if not first_snapshot and evaluation_only is not None:
-            plan[question.id] = (
-                REQUIRES_REEVALUATION
-                if question.id in evaluation_only else UNAFFECTED
-            )
+            plan[question.id] = REQUIRES_REEVALUATION
             continue
         if not first_snapshot and identities is not None:
             current = identities.get(question.id)
@@ -782,6 +820,10 @@ def run_canonical_question_cycle(
     store: QuestionCycleStore | None = None,
     progress_callback: Callable[[Mapping[str, Any]], None] | None = None,
     evaluation_only_question_ids: Sequence[str] | None = None,
+    deep_work_store: ResearchWorkQueueStore | None = None,
+    execution_policy: ResearchExecutionPolicy | None = None,
+    force_inline_question_ids: Sequence[str] = (),
+    execution_revision: str | None = None,
 ) -> CanonicalQuestionCycleResult:
     """Execute/retain exactly one result for every canonical question."""
     stage_started = time.perf_counter()
@@ -838,12 +880,15 @@ def run_canonical_question_cycle(
         qid: identities[qid]["evaluation_identity_digest"]
         for qid in sorted(identities)
     })
-    cycle_id = "QCYCLE-" + fingerprint({
+    cycle_identity = {
         "snapshot_id": snapshot.snapshot_id,
         "snapshot_fingerprint": snapshot.snapshot_fingerprint,
         "registry_fingerprint": registry_fingerprint,
         "evaluation_identity_fingerprint": evaluation_identity_fingerprint,
-    })[:32].upper()
+    }
+    if execution_revision:
+        cycle_identity["execution_revision"] = str(execution_revision)
+    cycle_id = "QCYCLE-" + fingerprint(cycle_identity)[:32].upper()
     resolved_store = store or QuestionCycleStore(state_directory)
     existing = resolved_store.load_cycle(cycle_id)
     if existing is not None:
@@ -892,8 +937,12 @@ def run_canonical_question_cycle(
     evaluated_ids: list[str] = []
     retained_ids: list[str] = []
     failed_ids: list[str] = []
+    deep_job_ids: list[str] = []
+    deep_pending_ids: list[str] = []
     question_timings: list[dict[str, Any]] = []
     evidence_snapshot = EvidenceSnapshot(datasets=context.datasets)
+    resolved_execution_policy = execution_policy or ResearchExecutionPolicy()
+    force_inline = frozenset(str(item) for item in force_inline_question_ids)
 
     for question_index, question in enumerate(questions, start=1):
         qid = question.id
@@ -917,13 +966,111 @@ def run_canonical_question_cycle(
         identity = identities.get(qid)
         retained = False
         runner_failed = False
+        previous_entry = (
+            ((previous_projection or {}).get("questions") or {}).get(qid) or {})
+        previous_timing = previous_entry.get("execution_timing") or {}
+        measured_runtime = previous_timing.get("runner_seconds")
+        dependency_records = sum(
+            len(context.datasets.get(source.value, ()))
+            for source in question.data_sources
+        )
+        execution = resolved_execution_policy.classify(
+            question,
+            population_records=dependency_records,
+            observed_runtime_seconds=(
+                float(measured_runtime)
+                if isinstance(measured_runtime, (int, float)) else None),
+        )
+        work_state = "FRESH"
+        deep_job = None
+        waiting_on_questions = tuple(
+            dependency for dependency in question.depends_on
+            if str((entries.get(dependency) or {}).get("work_state") or "")
+            in {"DEEP_PENDING", "DEEP_RUNNING", "DEEP_STALE", "WAITING"}
+        )
 
-        if classification == UNAFFECTED:
+        if (
+            classification in {AFFECTED, REQUIRES_RECHECK, REQUIRES_REEVALUATION}
+            and waiting_on_questions
+            and previous is not None
+        ):
+            result = previous
+            retained = True
+            retained_ids.append(qid)
+            work_state = "WAITING"
+            delta = {
+                "first_result": False,
+                "status_changed": False,
+                "substantive_answer_changed": False,
+                "sample_n_changed": False,
+                "sample_deficit_changed": False,
+                "key_metrics_changed": False,
+                "evidence_availability_changed": False,
+                "implementation_state_changed": False,
+                "unchanged": True,
+                "waiting_on_deferred_prerequisite": True,
+            }
+        elif (
+            classification in {AFFECTED, REQUIRES_RECHECK, REQUIRES_REEVALUATION}
+            and execution["execution_class"] == DEEP
+            and previous is not None
+            and deep_work_store is not None
+            and qid not in force_inline
+        ):
+            dependency_identity, prerequisite_identities = (
+                _deep_dependency_identity(
+                    question, context, {**previous_results, **results}))
+            proposed = deep_work_job(
+                question_id=qid,
+                evaluator=str(execution["evaluator"]),
+                evaluator_identity_digest=str(
+                    (identity or {}).get("evaluation_identity_digest") or ""),
+                snapshot_id=context.snapshot_id,
+                epoch_id=context.investigation_epoch,
+                dependency_identity=dependency_identity,
+                prerequisite_identities=prerequisite_identities,
+                policy=execution,
+                frontier_start=context.frontier_start,
+                frontier_end=context.frontier_end,
+                queued_at=snapshot.created_at,
+            )
+            deep_job = deep_work_store.enqueue(
+                proposed,
+                latest_scope_supersedes=bool(
+                    execution.get("latest_scope_supersedes")),
+                max_pending_jobs=resolved_execution_policy.max_pending_deep_jobs,
+            )
+            deep_job_ids.append(deep_job.job_id)
+            deep_pending_ids.append(qid)
+            result = previous
+            retained = True
+            retained_ids.append(qid)
+            work_state = {
+                DEEP_PENDING_STATE: "DEEP_PENDING",
+                DEEP_RUNNING_STATE: "DEEP_RUNNING",
+                DEEP_FAILED: "DEEP_STALE",
+                DEEP_SUPERSEDED: "DEEP_STALE",
+                DEEP_COMPLETED: "DEEP_STALE",
+            }[deep_job.state]
+            delta = {
+                "first_result": False,
+                "status_changed": False,
+                "substantive_answer_changed": False,
+                "sample_n_changed": False,
+                "sample_deficit_changed": False,
+                "key_metrics_changed": False,
+                "evidence_availability_changed": False,
+                "implementation_state_changed": False,
+                "unchanged": True,
+                "deferred_deep_work": True,
+            }
+        elif classification == UNAFFECTED:
             if previous is None:
                 raise CanonicalQuestionCycleError("UNAFFECTED_QUESTION_WITHOUT_PREVIOUS_RESULT:" + qid)
             result = previous
             retained = True
             retained_ids.append(qid)
+            work_state = "RETAINED_UNCHANGED"
             delta = {
                 "first_result": False,
                 "status_changed": False,
@@ -1053,6 +1200,13 @@ def run_canonical_question_cycle(
         if not retained:
             changed = not bool(delta.get("unchanged"))
             result = replace(result, changed_since_previous=changed, result_id="")
+            if result.status in {
+                    BLOCKED, IMPLEMENTATION_BLOCKED, INVALID, UNIMPLEMENTED}:
+                work_state = "BLOCKED"
+            elif result.status in {WAITING_FOR_DATA, CANNOT_KNOW_YET}:
+                work_state = "WAITING"
+            elif result.status == INSUFFICIENT_DATA:
+                work_state = "INSUFFICIENT_DATA"
         results[qid] = result
         deltas[qid] = delta
         if runner_failed:
@@ -1065,6 +1219,18 @@ def run_canonical_question_cycle(
             "retained_previous": retained,
             "changed_this_cycle": False if retained else result.changed_since_previous,
             "runner_failed": runner_failed,
+            "execution_class": execution["execution_class"],
+            "execution_policy": execution,
+            "work_state": work_state,
+            "execution_freshness": (
+                "DEEP_STALE" if deep_job is not None else work_state),
+            "deep_work_job_id": (
+                None if deep_job is None else deep_job.job_id),
+            "triggering_evidence_epoch": (
+                None if deep_job is None else deep_job.triggering_epoch_id),
+            "retained_result_epoch": (
+                result.investigation_epoch if retained else None),
+            "waiting_on_question_ids": list(waiting_on_questions),
             "definition": {
                 "question_version": f"{REGISTRY_VERSION}:{definition.definition_version}",
                 "title": question.title,
@@ -1117,6 +1283,7 @@ def run_canonical_question_cycle(
             "status": result.status,
         }
         question_timings.append(timing)
+        entries[qid]["execution_timing"] = timing
         slowest = sorted(
             question_timings, key=lambda item: item["elapsed_seconds"], reverse=True)[:5]
         rss, peak = process_memory_bytes()
@@ -1146,6 +1313,13 @@ def run_canonical_question_cycle(
     unchanged_ids = tuple(qid for qid in BASELINE_QUESTION_IDS
                           if not entries[qid]["changed_this_cycle"])
     counts = _status_counts(results)
+    if deep_work_store is not None:
+        deep_work_store.record_epoch(
+            epoch_id=context.investigation_epoch,
+            snapshot_id=context.snapshot_id,
+            closed_at=snapshot.created_at,
+            deep_job_ids=deep_job_ids,
+        )
     projection = {
         "cycle_schema": QUESTION_CYCLE_SCHEMA,
         "cycle_id": cycle_id,
@@ -1159,6 +1333,8 @@ def run_canonical_question_cycle(
         "evaluation_identity_fingerprint": evaluation_identity_fingerprint,
         "stale_evaluation_question_ids": tuple(sorted(
             qid for qid, value in plan.items() if value == REQUIRES_REEVALUATION)),
+        "deep_pending_question_ids": tuple(deep_pending_ids),
+        "execution_policy_id": resolved_execution_policy.policy_id,
         "total_questions": EXPECTED_QUESTION_COUNT,
         "questions": entries,
     }
@@ -1197,6 +1373,8 @@ def run_canonical_question_cycle(
         evaluation_identity_fingerprint=evaluation_identity_fingerprint,
         stale_evaluation_question_ids=tuple(sorted(
             qid for qid, value in plan.items() if value == REQUIRES_REEVALUATION)),
+        deep_pending_question_ids=tuple(deep_pending_ids),
+        execution_policy_id=resolved_execution_policy.policy_id,
         result_ids={qid: results[qid].result_id for qid in BASELINE_QUESTION_IDS},
     )
     try:

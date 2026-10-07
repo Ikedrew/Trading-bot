@@ -185,6 +185,8 @@ class CanonicalQuestionCycleResult:
     # changed evaluator.
     evaluation_identity_fingerprint: str = ""
     stale_evaluation_question_ids: tuple[str, ...] = ()
+    deep_pending_question_ids: tuple[str, ...] = ()
+    execution_policy_id: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {"cycle_schema": QUESTION_CYCLE_SCHEMA, **asdict(self)}
@@ -196,7 +198,7 @@ class CanonicalQuestionCycleResult:
         fields = dict(value)
         fields.pop("cycle_schema", None)
         for name in ("changed_question_ids", "unchanged_question_ids", "failed_question_ids",
-                     "stale_evaluation_question_ids"):
+                     "stale_evaluation_question_ids", "deep_pending_question_ids"):
             fields[name] = tuple(fields.get(name) or ())
         result = cls(**fields)
         if not result.cycle_id.startswith("QCYCLE-") or result.total_questions != 70:

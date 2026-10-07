@@ -10,6 +10,7 @@ from typing import Any, Mapping, Sequence
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
 from research_engine.registry.baseline_manifest import BASELINE_QUESTION_IDS
 from research_engine.v10.continuous.scientific_state_store import ScientificStateStore
+from research_engine.v10.continuous.research_work_queue import ResearchWorkQueueStore
 from research_engine.v10.continuous.validation_queue import ValidationQueueStore
 from research_engine.v10.optimisation.optimisation_registry import OptimisationRegistry
 
@@ -67,11 +68,27 @@ def build_unified_research_projection(
     q71: Mapping[str, Any] | None = None,
     shadow_evidence: Mapping[str, Mapping[str, Any]] | None = None,
     predecessor_projection: Mapping[str, Any] | None = None,
+    research_work_store: ResearchWorkQueueStore | None = None,
+    projection_generated_at: str | None = None,
 ) -> dict[str, Any]:
     """Compose authorities without becoming one; no status is derived from wall time."""
     document = scientific_store.document
+    question_authority = (question_projection or {}).get("questions", {})
+    pending_question_ids = {
+        str(question_id)
+        for question_id, raw in question_authority.items()
+        if isinstance(raw, Mapping)
+        and str(raw.get("work_state") or "").startswith("DEEP_")
+    }
     dependencies = document.get("dependencies", {})
     findings = _current_finding_versions(document)
+    for row in findings:
+        source_ids = set(row.get("source_question_ids") or [
+            row.get("source_question_id")])
+        pending = sorted((source_ids - {None}) & pending_question_ids)
+        row["execution_freshness"] = (
+            "DEEP_STALE" if pending else "CURRENT")
+        row["pending_question_ids"] = pending
     hypothesis_rows = []
     for hypothesis in sorted(optimisation_registry.list_hypotheses(),
                              key=lambda item: item.hypothesis_id):
@@ -81,6 +98,12 @@ def build_unified_research_projection(
             if candidate.hypothesis_id == hypothesis.hypothesis_id)
         row["review_requirement"] = (
             "REVIEW_REQUIRED" if "REVIEW_REQUIRED" in hypothesis.status else None)
+        pending = sorted(
+            {str(hypothesis.source_question)} & pending_question_ids
+            if hypothesis.source_question else ())
+        row["execution_freshness"] = (
+            "DEEP_STALE" if pending else "CURRENT")
+        row["pending_question_ids"] = pending
         hypothesis_rows.append(row)
     candidates: list[dict[str, Any]] = []
     jobs_by_candidate: dict[str, list[dict[str, Any]]] = {}
@@ -99,10 +122,14 @@ def build_unified_research_projection(
         row["shadow_evidence"] = dict(shadow_evidence.get(candidate.candidate_id, {}))
         row["live_approved"] = bool(candidate.shadow_binding.get("live_approved", False))
         row["promotion_action"] = "HUMAN_REVIEW_REQUIRED" if candidate.status == "READY_FOR_PROMOTION_REVIEW" else None
+        pending = sorted(set(row["source_question_ids"]) & pending_question_ids)
+        row["execution_freshness"] = (
+            "DEEP_STALE" if pending else "CURRENT")
+        row["pending_question_ids"] = pending
         candidates.append(row)
 
     question_rows: list[dict[str, Any]] = []
-    questions = (question_projection or {}).get("questions", {})
+    questions = question_authority
     if question_projection is not None:
         for question_id, raw in _baseline_items(questions):
             row = dict(raw)
@@ -142,6 +169,31 @@ def build_unified_research_projection(
         "retired_questions": list((q71 or {}).get("retired_question_ids", [])),
         "new_blockers": list(_value(bridge, "review_required", ())),
     }
+    research_lag = (
+        {
+            "current_epoch_id": _value(frontier, "investigation_epoch"),
+            "latest_closed_epoch_id": _value(frontier, "investigation_epoch"),
+            "latest_fast_processed_epoch_id": _value(frontier, "investigation_epoch"),
+            "latest_deep_processed_epoch_id": _value(frontier, "investigation_epoch"),
+            "pending_deep_jobs": 0,
+            "running_deep_jobs": 0,
+            "oldest_pending_seconds": 0.0,
+            "lag_epochs": 0,
+            "lag_seconds": 0.0,
+            "currently_running_deep_job": None,
+            "failed_deep_jobs": [],
+            "blocked_deep_jobs": [],
+            "max_pending_deep_jobs": 0,
+            "backpressure_active": False,
+            "projection_generated_at": _value(frontier, "membership_closed_at"),
+        }
+        if research_work_store is None else research_work_store.metrics(
+            current_epoch_id=_value(frontier, "investigation_epoch"),
+            generated_at=(
+                projection_generated_at
+                or _value(frontier, "membership_closed_at")),
+        )
+    )
     material = {
         "continuous_cycle_id": continuous_cycle_id,
         "canonical_question_cycle_id": (
@@ -181,12 +233,70 @@ def build_unified_research_projection(
                                          if row.get("status") == "SHADOW_VALIDATION_ACTIVE"],
             "review_required": [job.job_id for job in validation_store.ordered()
                                 if job.status == "REVIEW_REQUIRED"],
+            "deep_research_queue": [
+                job.to_dict() for job in (
+                    () if research_work_store is None
+                    else research_work_store.ordered())
+            ],
         },
+        "research_lag": research_lag,
         "what_changed": changed,
         "predecessor_projection_version": (predecessor_projection or {}).get("projection_version"),
     }
     version = "RPROJ-" + hashlib.sha256(canonical_json(material).encode("utf-8")).hexdigest()[:32].upper()
     return {"projection_schema": PROJECTION_SCHEMA, "projection_version": version, **material}
+
+
+def build_research_work_refresh_projection(
+    *, continuous_cycle_id: str,
+    predecessor_projection: Mapping[str, Any],
+    research_work_store: ResearchWorkQueueStore,
+    projection_generated_at: str,
+) -> dict[str, Any]:
+    """Refresh execution freshness/lag without changing scientific truth."""
+    material = {
+        key: value
+        for key, value in predecessor_projection.items()
+        if key not in {
+            "projection_schema", "projection_version", "continuous_cycle_id",
+            "predecessor_projection_version", "research_lag",
+        }
+    }
+    jobs = {job.job_id: job for job in research_work_store.ordered()}
+    question_rows = []
+    for raw in predecessor_projection.get("canonical_questions", ()):
+        row = dict(raw)
+        job = jobs.get(str(row.get("deep_work_job_id") or ""))
+        if job is not None:
+            row["work_state"] = {
+                "PENDING": "DEEP_PENDING",
+                "RUNNING": "DEEP_RUNNING",
+                "FAILED": "DEEP_STALE",
+                "SUPERSEDED": "DEEP_STALE",
+                "COMPLETED": "DEEP_STALE",
+            }[job.state]
+            row["execution_freshness"] = "DEEP_STALE"
+        question_rows.append(row)
+    queues = dict(
+        predecessor_projection.get("investigations_and_work_queues") or {})
+    queues["deep_research_queue"] = [
+        job.to_dict() for job in research_work_store.ordered()]
+    frontier = predecessor_projection.get("data_frontier") or {}
+    material.update({
+        "continuous_cycle_id": continuous_cycle_id,
+        "canonical_questions": question_rows,
+        "investigations_and_work_queues": queues,
+        "research_lag": research_work_store.metrics(
+            current_epoch_id=frontier.get("investigation_epoch"),
+            generated_at=projection_generated_at,
+        ),
+        "predecessor_projection_version": predecessor_projection.get(
+            "projection_version"),
+    })
+    version = "RPROJ-" + hashlib.sha256(
+        canonical_json(material).encode("utf-8")).hexdigest()[:32].upper()
+    return {"projection_schema": PROJECTION_SCHEMA,
+            "projection_version": version, **material}
 
 
 def build_evaluation_refresh_projection(
@@ -314,4 +424,6 @@ class ResearchProjectionStore:
 
 
 __all__ = ["PROJECTION_SCHEMA", "ResearchProjectionError", "ResearchProjectionStore",
-           "build_evaluation_refresh_projection", "build_unified_research_projection"]
+           "build_evaluation_refresh_projection",
+           "build_research_work_refresh_projection",
+           "build_unified_research_projection"]
