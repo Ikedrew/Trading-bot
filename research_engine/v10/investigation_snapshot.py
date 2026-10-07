@@ -95,15 +95,19 @@ class BoundObject:
 
     @classmethod
     def from_metadata(cls, value: Mapping[str, Any]) -> "BoundObject":
+        # The closed frontier roster may carry byte size under either the
+        # snapshot field names (``size``/``byte_size``) or the legacy frontier
+        # record names (``listed_byte_count``/``byte_count``).  Both describe
+        # the same immutable object bytes, so preserve them identically.
         return cls(
             identifier=str(value.get("identifier") or ""),
             etag=str(value.get("etag") or ""),
-            size=int(value.get("size") or 0),
+            size=int(value.get("size") or value.get("listed_byte_count") or 0),
             last_modified=str(value.get("last_modified") or ""),
             version_id=(None if value.get("version_id") is None
                         else str(value.get("version_id"))),
             content_sha256=str(value.get("content_sha256") or ""),
-            byte_size=int(value.get("byte_size") or 0),
+            byte_size=int(value.get("byte_size") or value.get("byte_count") or 0),
             row_count=int(value.get("row_count") or 0),
         )
 
@@ -408,6 +412,23 @@ def _child_snapshot(
     rows: Sequence[Mapping[str, Any]], objects: Sequence[BoundObject],
     source_authority: Mapping[str, Any],
 ) -> DatasetBinding:
+    if len(rows) != sum(item.row_count for item in objects):
+        raise InvestigationSnapshotError("DATASET_ROW_COUNT_MISMATCH")
+    return _child_snapshot_from_objects(
+        dataset, requirement, start_date, end_date, objects, source_authority)
+
+
+def _child_snapshot_from_objects(
+    dataset: str, requirement: str, start_date: str, end_date: str,
+    objects: Sequence[BoundObject], source_authority: Mapping[str, Any],
+) -> DatasetBinding:
+    """Build exact population authority from verified immutable object bytes.
+
+    Each object already carries its raw-body SHA-256, byte size and row count.
+    Binding the child snapshot to the ordered object manifest makes the digest
+    composable: unchanged objects can retain their predecessor authority while
+    only added or replaced bodies are downloaded and verified.
+    """
     presence = "PRESENT" if objects else "ABSENT"
     object_digest = _object_digest(objects)
     content_digest = D.fingerprint({
@@ -416,7 +437,8 @@ def _child_snapshot(
         "objects": [item.to_dict() for item in objects],
     })
     snapshot = None
-    if rows:
+    source_row_count = sum(item.row_count for item in objects)
+    if objects:
         key_digest = D.fingerprint([item.identifier for item in objects])
         snapshot = D.freeze_population(
             dataset_name=dataset,
@@ -444,14 +466,15 @@ def _child_snapshot(
             ),
             temporal_bounds=(start_date, end_date),
             population_class=D.AUDIT_BOUNDARY_POPULATION,
-            records=rows,
+            record_count=source_row_count,
+            content_digest=content_digest,
             producer_version=None,
             producer_fingerprint=None,
             frozen_at=datetime.now(timezone.utc).isoformat(),
             created_at=datetime.now(timezone.utc).isoformat(),
             evidence_citations=(
                 "canonical production_v1 S3 object manifest",
-                "raw-object SHA-256 verified on two exact-key reads",
+                "raw-object SHA-256, byte size and row count verified by exact-key read",
             ),
             audit_authority_fingerprint=str(
                 source_authority["stage4_versioning_policy_fingerprint"]),
@@ -466,7 +489,7 @@ def _child_snapshot(
         dataset_snapshot_json=(
             None if snapshot is None else D.canonical_json(snapshot.to_dict())),
         source_object_count=len(objects),
-        source_row_count=len(rows),
+        source_row_count=source_row_count,
         content_digest=content_digest,
         objects=tuple(objects),
         stage4_evidence_epochs=tuple(source_authority[
@@ -513,13 +536,12 @@ def freeze_investigation_snapshot(
     """Capture and verify all six views' exact canonical source objects.
 
     With no explicit membership, listing, exact-key reads, a second listing, a
-    second exact-key read and a final listing must all agree.  The continuous
-    frontier may instead supply the exact object roster captured at its cutoff.
-    In that mode, later keys belong to the next open epoch and do not alter the
-    closed roster, while every selected object's content is still read twice
-    and must remain identical.  No manifest is finalized before those checks
-    pass. S3 provides no multi-object transaction; this procedure detects
-    observed changes and fails closed rather than claiming an atomic S3 write.
+    second exact-key read and a final listing must all agree. The continuous
+    frontier may instead supply its already-verified exact object roster at the
+    cutoff; raw SHA-256, byte size, row count and schema authority are composed
+    directly without duplicate body reads. Later keys remain in the next open
+    epoch. S3 provides no multi-object transaction, so observed identity changes
+    fail closed rather than being described as an atomic S3 write.
     """
     start = _validate_date(start_date, "start_date")
     end = _validate_date(end_date, "end_date")
@@ -550,6 +572,14 @@ def freeze_investigation_snapshot(
     first_row_counts: dict[str, int] = {}
     bindings: list[DatasetBinding] = []
     for name in BOUND_DATASETS:
+        requirement = "REQUIRED" if name in REQUIRED_DATASETS else "OPTIONAL"
+        if object_membership is not None:
+            objects = tuple(BoundObject.from_metadata(item) for item in before[name])
+            if name in REQUIRED_DATASETS and not sum(item.row_count for item in objects):
+                raise InvestigationSnapshotError("REQUIRED_DATASET_EMPTY:" + name)
+            bindings.append(_child_snapshot_from_objects(
+                name, requirement, start, end, objects, authority))
+            continue
         rows = resolved.read_objects_for_freeze(
             name, before[name], expected_schema_version=schema_by_dataset[name],
             start_date=start, end_date=end)
@@ -563,7 +593,6 @@ def freeze_investigation_snapshot(
         if name in REQUIRED_DATASETS and not rows:
             raise InvestigationSnapshotError("REQUIRED_DATASET_EMPTY:" + name)
         first_row_counts[name] = len(rows)
-        requirement = "REQUIRED" if name in REQUIRED_DATASETS else "OPTIONAL"
         bindings.append(_child_snapshot(
             name, requirement, start, end, rows, first_objects[name], authority))
         del rows
@@ -579,6 +608,8 @@ def freeze_investigation_snapshot(
             raise InvestigationSnapshotError("OBJECT_POPULATION_CHANGED_DURING_FREEZE")
 
     for name in BOUND_DATASETS:
+        if object_membership is not None:
+            continue
         second_rows = resolved.read_bound_objects(
             name, [item.to_dict() for item in first_objects[name]],
             expected_schema_version=schema_by_dataset[name],
@@ -648,7 +679,7 @@ def _same_object_identity(prior: BoundObject, current: Mapping[str, Any]) -> boo
         return False
     if str(prior.etag or "") != str(current.get("etag") or ""):
         return False
-    if int(prior.size) != int(current.get("size") or 0):
+    if int(prior.size) != int(current.get("size") or current.get("listed_byte_count") or 0):
         return False
     if str(prior.last_modified or "") != str(current.get("last_modified") or ""):
         return False
@@ -659,6 +690,20 @@ def _same_object_identity(prior: BoundObject, current: Mapping[str, Any]) -> boo
     if prior_version is not None and str(prior_version) != str(current_version):
         return False
     return True
+
+
+def _same_listing_identity(
+    prior: BoundObject, current: Mapping[str, Any],
+) -> bool:
+    """Compare every immutable identity field supplied by ListObjectsV2."""
+    return (
+        prior.identifier == str(current.get("identifier") or "")
+        and str(prior.etag or "") == str(current.get("etag") or "")
+        and int(prior.size) == int(
+            current.get("size") or current.get("listed_byte_count") or 0)
+        and str(prior.last_modified or "")
+        == str(current.get("last_modified") or "")
+    )
 
 
 def classify_dataset_objects(
@@ -704,51 +749,6 @@ def classify_dataset_objects(
     }
 
 
-def _reused_binding_with_dates(
-    binding: DatasetBinding, start_date: str, end_date: str,
-) -> DatasetBinding:
-    """Re-scope a reused binding's stage-4 record to the new temporal window.
-
-    Reusing a predecessor binding verbatim is only equivalent to a fresh freeze
-    when its stage-4 ``DatasetSnapshot`` carries the same temporal bounds. That
-    record embeds ``temporal_bounds`` and date entries in ``population_filters``,
-    so when the frontier window moves these must be re-derived even though the
-    record-byte content digest and object authority are unchanged.
-    """
-    if binding.dataset_snapshot_json is None:
-        return binding
-    child = json.loads(binding.dataset_snapshot_json)
-    child.pop("population_descriptor_digest", None)
-    child["temporal_bounds"] = [start_date, end_date]
-    rebuilt_filters: list[str] = []
-    for entry in (child.get("population_filters") or ()):
-        if entry.startswith("start_date_inclusive="):
-            rebuilt_filters.append("start_date_inclusive=" + start_date)
-        elif entry.startswith("end_date_inclusive="):
-            rebuilt_filters.append("end_date_inclusive=" + end_date)
-        else:
-            rebuilt_filters.append(entry)
-    child["population_filters"] = rebuilt_filters
-    new_id = D.I.DATASET_SNAPSHOT_ID_PREFIX + D.fingerprint(
-        {key: child[key] for key in D.IDENTITY_MATERIAL_FIELDS})[:24].upper()
-    child["dataset_snapshot_id"] = new_id
-    snapshot = D.DatasetSnapshot.from_dict(child)
-    return DatasetBinding(
-        dataset=binding.dataset,
-        requirement=binding.requirement,
-        presence=binding.presence,
-        schema_version=binding.schema_version,
-        schema_generation=binding.schema_generation,
-        dataset_snapshot_id=snapshot.dataset_snapshot_id,
-        dataset_snapshot_json=D.canonical_json(snapshot.to_dict()),
-        source_object_count=binding.source_object_count,
-        source_row_count=binding.source_row_count,
-        content_digest=binding.content_digest,
-        objects=binding.objects,
-        stage4_evidence_epochs=binding.stage4_evidence_epochs,
-    )
-
-
 def freeze_investigation_snapshot_incremental(
     *,
     predecessor: InvestigationSnapshot,
@@ -766,11 +766,11 @@ def freeze_investigation_snapshot_incremental(
     exact ``DatasetBinding`` authority (object identity, content digest, row
     counts, and stage-4 dataset snapshot record) without downloading any bytes.
 
-    With no explicit membership, listing remains broad (three listings, one
-    HEAD pass) so any mid-freeze S3 change — including to an object classified
-    UNCHANGED — still fails closed.  A supplied closed roster preserves the
-    frontier cutoff: later keys remain eligible for the next epoch while the
-    selected keys are still resolved to exact immutable object identities.
+    Without explicit membership, two listing passes bracket materialisation;
+    only added/replaced bodies are read and only unchanged versioned objects
+    need HEAD because ListObjectsV2 omits VersionId. A supplied closed roster
+    performs no remote I/O: it reuses the frontier's already-verified identities
+    and preserves the cutoff while later keys remain eligible for the next epoch.
     """
     start = _validate_date(start_date, "start_date")
     end = _validate_date(end_date, "end_date")
@@ -801,70 +801,83 @@ def freeze_investigation_snapshot_incremental(
         if not before[name]:
             raise InvestigationSnapshotError("REQUIRED_DATASET_ABSENT:" + name)
 
-    # Resolve exact current versions without downloading bodies.
-    headed: dict[str, tuple[dict[str, Any], ...]] = {}
-    for name in BOUND_DATASETS:
-        if before[name]:
-            headed[name] = resolved.head_bound_objects(
-                name, before[name], expected_schema_version=schema_by_dataset[name])
-        else:
-            headed[name] = ()
-
-    classification = {
-        name: classify_dataset_objects(pred_by_dataset[name], headed[name])
-        for name in BOUND_DATASETS
-    }
-
     bindings: list[DatasetBinding] = []
-    changed_names: list[str] = []
-    first_objects: dict[str, tuple[BoundObject, ...]] = {}
-    first_row_counts: dict[str, int] = {}
     for name in BOUND_DATASETS:
         requirement = "REQUIRED" if name in REQUIRED_DATASETS else "OPTIONAL"
-        if classification[name]["fully_unchanged"]:
-            bindings.append(_reused_binding_with_dates(
-                pred_by_dataset[name], start, end))
+        prior_binding = pred_by_dataset[name]
+        prior_by_key = {item.identifier: item for item in prior_binding.objects}
+        resolved_objects: list[BoundObject] = []
+        to_read: list[dict[str, Any]] = []
+
+        if object_membership is not None:
+            current_records = [dict(item) for item in before[name]]
+            classification = classify_dataset_objects(prior_binding, current_records)
+            for item in current_records:
+                key = str(item.get("identifier") or item.get("s3_key") or "")
+                if key in classification["unchanged"]:
+                    resolved_objects.append(prior_by_key[key])
+                else:
+                    resolved_objects.append(BoundObject.from_metadata(item))
+        else:
+            version_checks: list[dict[str, Any]] = []
+            for item in before[name]:
+                key = str(item.get("identifier") or "")
+                prior = prior_by_key.get(key)
+                if prior is None or not _same_listing_identity(prior, item):
+                    to_read.append(dict(item))
+                elif prior.version_id is None:
+                    resolved_objects.append(prior)
+                else:
+                    version_checks.append(dict(item))
+
+            if version_checks:
+                headed = resolved.head_bound_objects(
+                    name, version_checks,
+                    expected_schema_version=schema_by_dataset[name])
+                for listed, current in zip(version_checks, headed):
+                    key = str(listed.get("identifier") or "")
+                    prior = prior_by_key[key]
+                    if _same_object_identity(prior, current):
+                        resolved_objects.append(prior)
+                    else:
+                        to_read.append(dict(current))
+
+            for item in to_read:
+                rows = resolved.read_objects_for_freeze(
+                    name, (item,), expected_schema_version=schema_by_dataset[name],
+                    start_date=start, end_date=end)
+                malformed = resolved.malformed_report(name)
+                if malformed and malformed.malformed_lines:
+                    raise InvestigationSnapshotError(
+                        f"MALFORMED_BOUND_OBJECT_ROWS:{name}:{malformed.malformed_lines}")
+                metadata = resolved.object_metadata(name)
+                if len(metadata) != 1:
+                    raise InvestigationSnapshotError(
+                        "OBJECT_DISCOVERY_VERIFICATION_COUNT_MISMATCH:" + name)
+                actual = BoundObject.from_metadata(metadata[0])
+                if not _same_listing_identity(actual, item):
+                    raise InvestigationSnapshotError(
+                        "OBJECT_CONTENT_CHANGED_DURING_FREEZE:" + name)
+                if actual.row_count != len(rows):
+                    raise InvestigationSnapshotError(
+                        "OBJECT_ROW_COUNT_CHANGED_DURING_FREEZE:" + name)
+                resolved_objects.append(actual)
+                del rows
+
+            current_for_classification = [item.to_dict() for item in resolved_objects]
+            classification = classify_dataset_objects(
+                prior_binding, current_for_classification)
+
+        resolved_objects.sort(key=lambda item: item.identifier)
+        if classification["fully_unchanged"]:
+            bindings.append(_child_snapshot_from_objects(
+                name, requirement, start, end, resolved_objects, authority))
             continue
-        changed_names.append(name)
-        rows = resolved.read_objects_for_freeze(
-            name, before[name], expected_schema_version=schema_by_dataset[name],
-            start_date=start, end_date=end)
-        malformed = resolved.malformed_report(name)
-        if malformed and malformed.malformed_lines:
-            raise InvestigationSnapshotError(
-                f"MALFORMED_BOUND_OBJECT_ROWS:{name}:{malformed.malformed_lines}")
-        first_objects[name] = tuple(
-            BoundObject.from_metadata(item)
-            for item in resolved.object_metadata(name))
-        if name in REQUIRED_DATASETS and not rows:
+        if name in REQUIRED_DATASETS and not sum(
+                item.row_count for item in resolved_objects):
             raise InvestigationSnapshotError("REQUIRED_DATASET_EMPTY:" + name)
-        first_row_counts[name] = len(rows)
-        bindings.append(_child_snapshot(
-            name, requirement, start, end, rows, first_objects[name], authority))
-        del rows
-
-    if object_membership is None:
-        between = {
-            name: resolved.discover_dataset_objects(
-                name, start_date=start, end_date=end)
-            for name in BOUND_DATASETS
-        }
-        if any(_listing_material(before[name]) != _listing_material(between[name])
-               for name in BOUND_DATASETS):
-            raise InvestigationSnapshotError("OBJECT_POPULATION_CHANGED_DURING_FREEZE")
-
-    for name in changed_names:
-        second_rows = resolved.read_bound_objects(
-            name, [item.to_dict() for item in first_objects[name]],
-            expected_schema_version=schema_by_dataset[name],
-            start_date=start, end_date=end)
-        second_objects = tuple(
-            BoundObject.from_metadata(item)
-            for item in resolved.object_metadata(name))
-        if second_objects != first_objects[name] or len(second_rows) != first_row_counts[name]:
-            raise InvestigationSnapshotError(
-                "OBJECT_CONTENT_CHANGED_DURING_FREEZE:" + name)
-        del second_rows
+        bindings.append(_child_snapshot_from_objects(
+            name, requirement, start, end, resolved_objects, authority))
 
     if object_membership is None:
         after = {
@@ -920,6 +933,70 @@ def load_investigation_snapshot_id(
         Path(manifest_directory) / f"{resolved_id}.json")
     if snapshot.snapshot_id != resolved_id:
         raise InvestigationSnapshotError("INVESTIGATION_SNAPSHOT_ID_MISMATCH")
+    return snapshot
+
+
+def verify_investigation_snapshot_identity(
+    snapshot_id: str,
+    *,
+    source: S3ResearchDataSource | None = None,
+    manifest_directory: Path = MANIFEST_DIRECTORY,
+) -> InvestigationSnapshot:
+    """Revalidate bound identities without downloading historical bodies.
+
+    LIST proves key, ETag, size and last-modified for every bound object. Objects
+    carrying a VersionId receive the additional HEAD needed because
+    ListObjectsV2 does not expose versions. Objects arriving after the frontier
+    cutoff are deliberately ignored; the immutable manifest owns its closed key
+    roster.
+    """
+    snapshot = load_investigation_snapshot_id(
+        snapshot_id, manifest_directory=manifest_directory)
+    resolved = source or get_default_source()
+    if D.fingerprint(_authority_material(resolved)) != D.fingerprint(
+            snapshot.source_authority):
+        raise InvestigationSnapshotError("SOURCE_AUTHORITY_CHANGED")
+
+    for binding in snapshot.datasets:
+        if current_schema(binding.dataset) != binding.schema_version:
+            raise InvestigationSnapshotError(
+                "SCHEMA_AUTHORITY_CHANGED:" + binding.dataset)
+        if binding.presence == "ABSENT":
+            continue
+        expected = {item.identifier: item for item in binding.objects}
+        listed = {
+            str(item.get("identifier") or ""): item
+            for item in resolved.discover_dataset_objects(
+                binding.dataset,
+                start_date=snapshot.start_date,
+                end_date=snapshot.end_date)
+            if str(item.get("identifier") or "") in expected
+        }
+        if set(listed) != set(expected):
+            raise InvestigationSnapshotError(
+                "SNAPSHOT_DATASET_OBJECTS_CHANGED:" + binding.dataset)
+        versioned: list[dict[str, Any]] = []
+        for key, prior in expected.items():
+            if not _same_listing_identity(prior, listed[key]):
+                raise InvestigationSnapshotError(
+                    "SNAPSHOT_DATASET_OBJECTS_CHANGED:" + binding.dataset)
+            if prior.version_id is not None:
+                proven = resolved.verified_object_metadata(binding.dataset, key)
+                if proven is not None:
+                    if not _same_object_identity(prior, proven):
+                        raise InvestigationSnapshotError(
+                            "SNAPSHOT_DATASET_OBJECTS_CHANGED:" + binding.dataset)
+                else:
+                    versioned.append(dict(listed[key]))
+        if versioned:
+            headed = resolved.head_bound_objects(
+                binding.dataset, versioned,
+                expected_schema_version=binding.schema_version)
+            for current in headed:
+                prior = expected[str(current.get("identifier") or "")]
+                if not _same_object_identity(prior, current):
+                    raise InvestigationSnapshotError(
+                        "SNAPSHOT_DATASET_OBJECTS_CHANGED:" + binding.dataset)
     return snapshot
 
 

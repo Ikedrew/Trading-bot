@@ -281,6 +281,7 @@ class S3ResearchDataSource:
         self._listed_objects: dict[str, dict[str, Any]] = {}
         self._dataset_objects: dict[str, tuple[dict[str, Any], ...]] = {}
         self._read_objects: dict[tuple[str, str], dict[str, Any]] = {}
+        self._headed_objects: dict[tuple[str, str], dict[str, Any]] = {}
 
     # ─── client ───────────────────────────────────────────────────────────────
 
@@ -399,11 +400,15 @@ class S3ResearchDataSource:
             for obj in resp.get("Contents", []) or []:
                 key = obj.get("Key", "")
                 if key.endswith(".jsonl"):
+                    modified = obj.get("LastModified")
                     self._listed_objects[key] = {
                         "identifier": key,
                         "etag": str(obj.get("ETag", "")).strip('"'),
                         "size": int(obj.get("Size", 0) or 0),
-                        "last_modified": str(obj.get("LastModified", "") or ""),
+                        "last_modified": (
+                            modified.isoformat() if hasattr(modified, "isoformat")
+                            else str(modified or "")
+                        ),
                     }
                     yield key
             if resp.get("IsTruncated"):
@@ -493,7 +498,10 @@ class S3ResearchDataSource:
             }
 
         with ThreadPoolExecutor(max_workers=max(1, min(max_workers, len(listed) or 1))) as pool:
-            return tuple(pool.map(inspect, listed))
+            headed = tuple(pool.map(inspect, listed))
+        for item in headed:
+            self._headed_objects[(dataset, str(item["identifier"]))] = dict(item)
+        return headed
 
     def read_bound_objects(
         self,
@@ -535,7 +543,10 @@ class S3ResearchDataSource:
         records: list[dict[str, Any]] = []
         observed: list[dict[str, Any]] = []
         for item, key in zip(objects, keys):
-            records.extend(self._read_object(dataset, key))
+            records.extend(self._read_object(
+                dataset, key,
+                version_id=(None if item.get("version_id") is None
+                            else str(item.get("version_id")))))
             actual = dict(self._read_objects[(dataset, key)])
             expected_digest = str(item.get("content_sha256") or "")
             if _verify_content:
@@ -584,7 +595,9 @@ class S3ResearchDataSource:
 
     # ─── object read + decode ─────────────────────────────────────────────────
 
-    def _read_object(self, dataset: str, key: str) -> list[dict[str, Any]]:
+    def _read_object(
+        self, dataset: str, key: str, *, version_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         client = self._get_client()
         response: Mapping[str, Any] = {}
         out: list[dict[str, Any]] = []
@@ -608,7 +621,10 @@ class S3ResearchDataSource:
                 out.append(rec)
 
         try:
-            resp = client.get_object(Bucket=self._bucket, Key=key)
+            request: dict[str, Any] = {"Bucket": self._bucket, "Key": key}
+            if version_id is not None:
+                request["VersionId"] = version_id
+            resp = client.get_object(**request)
             response = resp
             stream = resp["Body"]
             while True:
@@ -772,12 +788,22 @@ class S3ResearchDataSource:
         """Objects consumed by the current cached dataset read, in key order."""
         return self._dataset_objects.get(dataset, ())
 
+    def verified_object_metadata(
+        self, dataset: str, key: str,
+    ) -> dict[str, Any] | None:
+        """Return identity already proven by GET or HEAD in this source run."""
+        value = self._read_objects.get((dataset, key))
+        if value is None:
+            value = self._headed_objects.get((dataset, key))
+        return None if value is None else dict(value)
+
     def clear_cache(self) -> None:
         """Drop the run-level cache (e.g. between independent research runs)."""
         self._cache.clear()
         self._dataset_objects.clear()
         self._listed_objects.clear()
         self._read_objects.clear()
+        self._headed_objects.clear()
 
 
 # ─── Run-scoped default source ────────────────────────────────────────────────

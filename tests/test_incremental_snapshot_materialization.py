@@ -190,6 +190,80 @@ def test_classify_dataset_objects_deterministic_rules():
     assert result["fully_unchanged"] is False
 
 
+
+# Closed-roster byte-size identity (legacy frontier record field names)
+
+def test_bound_object_from_metadata_preserves_legacy_frontier_byte_fields():
+    from research_engine.v10.investigation_snapshot import BoundObject
+
+    legacy = {
+        "identifier": "k",
+        "etag": "e1",
+        "byte_count": 1624,
+        "listed_byte_count": 1624,
+        "last_modified": "2026-09-25T13:00:00Z",
+        "version_id": "v1",
+        "content_sha256": "a" * 64,
+        "row_count": 1,
+    }
+    bound = BoundObject.from_metadata(legacy)
+    assert bound.byte_size == 1624
+    assert bound.size == 1624
+
+
+def test_same_object_identity_accepts_legacy_listed_byte_count():
+    from research_engine.v10.investigation_snapshot import (
+        BoundObject, _same_object_identity,
+    )
+
+    prior = BoundObject(
+        identifier="k", etag="e1", size=10, last_modified="2026-09-25T13:00:00Z",
+        version_id="v1", content_sha256="a" * 64, byte_size=10, row_count=1,
+    )
+    # The legacy frontier roster carries the listing size under listed_byte_count.
+    legacy = {"identifier": "k", "etag": "e1", "listed_byte_count": 10,
+              "last_modified": "2026-09-25T13:00:00Z", "version_id": "v1"}
+    assert _same_object_identity(prior, legacy) is True
+    # A genuinely different size must still fail closed.
+    assert _same_object_identity(prior, {**legacy, "listed_byte_count": 11}) is False
+
+
+def test_classify_dataset_objects_legacy_records_are_unchanged():
+    from research_engine.v10.investigation_snapshot import (
+        BoundObject, DatasetBinding, classify_dataset_objects,
+    )
+
+    def bound(key, etag, version):
+        return BoundObject(
+            identifier=key, etag=etag, size=10,
+            last_modified="2026-09-25T13:00:00Z", version_id=version,
+            content_sha256="a" * 64, byte_size=10, row_count=1,
+        )
+
+    prior = DatasetBinding(
+        dataset="trade_truth", requirement="REQUIRED", presence="PRESENT",
+        schema_version=current_schema("trade_truth"), schema_generation=None,
+        dataset_snapshot_id=None, dataset_snapshot_json=None,
+        source_object_count=2, source_row_count=2,
+        content_digest="a" * 64,
+        objects=(bound("A", "eA", "vA"), bound("B", "eB", "vB")),
+    )
+    # Legacy closed roster: byte size under listed_byte_count/byte_count only.
+    current = [
+        {"identifier": "A", "etag": "eA", "listed_byte_count": 10,
+         "byte_count": 10, "last_modified": "2026-09-25T13:00:00Z",
+         "version_id": "vA"},
+        {"identifier": "B", "etag": "eB", "listed_byte_count": 10,
+         "byte_count": 10, "last_modified": "2026-09-25T13:00:00Z",
+         "version_id": "vB"},
+    ]
+    result = classify_dataset_objects(prior, current)
+    assert set(result["unchanged"]) == {"A", "B"}
+    assert result["replaced"] == ()
+    assert result["added"] == ()
+    assert result["removed"] == ()
+    assert result["fully_unchanged"] is True
+
 # Equivalence and reuse tests
 
 def test_incremental_is_equivalent_to_full_freeze_for_replaced_and_added():
@@ -224,9 +298,9 @@ def test_incremental_reuses_unchanged_and_reads_only_changed():
     fake.objects[_key("trade_truth")] = _body("trade_truth", marker="replaced")
     _incremental_freeze(fake, predecessor)
 
-    # Only the changed dataset (trade_truth) is re-read: 2 body reads total.
-    assert fake.get_calls == gets_after_predecessor + 2
-    assert fake.head_calls >= len(BOUND_DATASETS)
+    # Only the replacement object is read once; unchanged object authority is reused.
+    assert fake.get_calls == gets_after_predecessor + 1
+    assert fake.head_calls == 0
 
 
 def test_removed_object_disappears_and_counts_update():

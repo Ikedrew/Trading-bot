@@ -27,11 +27,11 @@ from research_engine.v10.investigation_snapshot import (
     REQUIRED_DATASETS,
     InvestigationSnapshot,
     InvestigationSnapshotError,
-    SnapshotBoundDatasetReader,
     freeze_investigation_snapshot,
     freeze_investigation_snapshot_incremental,
     load_investigation_snapshot_id,
     save_investigation_snapshot,
+    verify_investigation_snapshot_identity,
 )
 
 
@@ -179,7 +179,11 @@ def _object_identity(item: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _full_object_record(dataset: str, item: Mapping[str, Any]) -> dict[str, Any]:
+def _full_object_record(
+    dataset: str,
+    item: Mapping[str, Any],
+    event_time_coverage: Mapping[str, str | None] | None = None,
+) -> dict[str, Any]:
     contract = PRODUCTION_SCHEMA_REGISTRY[dataset]
     return {
         "dataset": dataset,
@@ -192,10 +196,14 @@ def _full_object_record(dataset: str, item: Mapping[str, Any]) -> dict[str, Any]
         "last_modified": str(item.get("last_modified") or ""),
         "row_count": int(item.get("row_count") or 0),
         "byte_count": int(item.get("byte_size") or 0),
+        "byte_size": int(item.get("byte_size") or 0),
+        "size": int(item.get("size") or 0),
         "listed_byte_count": int(item.get("size") or 0),
         "producer": contract.semantic_owner,
         "authority": "core.production_data_contract.PRODUCTION_SCHEMA_REGISTRY",
         "partition_date": _key_date(str(item.get("identifier") or "")),
+        "event_time_coverage": dict(
+            event_time_coverage or {"start": None, "end": None}),
     }
 
 
@@ -477,162 +485,191 @@ class FrontierStateStore:
         _atomic_json(self.latest_candidate_path, payload)
 
 
+def _same_frontier_listing_identity(
+    prior: Mapping[str, Any], current: Mapping[str, Any],
+) -> bool:
+    """Compare the immutable identity fields supplied by ListObjectsV2."""
+    return (
+        str(prior.get("s3_key") or prior.get("identifier") or "")
+        == str(current.get("identifier") or "")
+        and str(prior.get("etag") or "") == str(current.get("etag") or "")
+        and int(prior.get("listed_byte_count") or prior.get("byte_count") or 0)
+        == int(current.get("size") or 0)
+        and str(prior.get("last_modified") or "")
+        == str(current.get("last_modified") or "")
+    )
+
+
+def _same_frontier_object_identity(
+    prior: Mapping[str, Any], current: Mapping[str, Any],
+) -> bool:
+    if not _same_frontier_listing_identity(prior, current):
+        return False
+    prior_version = prior.get("version_id")
+    current_version = current.get("version_id")
+    if (prior_version is None) != (current_version is None):
+        return False
+    return prior_version is None or str(prior_version) == str(current_version)
+
+
+def _merge_event_coverage(
+    prior: Mapping[str, Any] | None,
+    current: Mapping[str, Any] | None,
+) -> dict[str, str | None]:
+    starts = [str(item["start"]) for item in (prior, current)
+              if item and item.get("start")]
+    ends = [str(item["end"]) for item in (prior, current)
+            if item and item.get("end")]
+    return {
+        "start": min(starts) if starts else None,
+        "end": max(ends) if ends else None,
+    }
+
+
+def _coverage_from_object_records(
+    records: Sequence[Mapping[str, Any]],
+) -> dict[str, str | None] | None:
+    coverage: dict[str, str | None] = {"start": None, "end": None}
+    for record in records:
+        contribution = record.get("event_time_coverage")
+        if not isinstance(contribution, Mapping):
+            return None
+        coverage = _merge_event_coverage(coverage, contribution)
+    return coverage
+
+
+def _read_frontier_object(
+    source: S3ResearchDataSource,
+    dataset: str,
+    item: Mapping[str, Any],
+    as_of_date: date,
+) -> dict[str, Any]:
+    rows = source.read_objects_for_freeze(
+        dataset, (item,), expected_schema_version=current_schema(dataset))
+    contribution = _event_time_coverage(dataset, rows, as_of_date)
+    malformed = source.malformed_report(dataset)
+    if malformed and malformed.malformed_lines:
+        raise FrontierCoordinatorError(
+            FRONTIER_INVALID,
+            f"MALFORMED_GOVERNED_OBJECT_ROWS:{dataset}:{malformed.malformed_lines}",
+        )
+    metadata = source.object_metadata(dataset)
+    if len(metadata) != 1:
+        raise FrontierCoordinatorError(
+            FRONTIER_INVALID,
+            "OBJECT_DISCOVERY_VERIFICATION_COUNT_MISMATCH:" + dataset,
+        )
+    record = _full_object_record(dataset, metadata[0], contribution)
+    if not _same_frontier_listing_identity(record, item):
+        raise FrontierCoordinatorError(
+            FRONTIER_INVALID, "OBJECT_CHANGED_DURING_DISCOVERY:" + dataset)
+    del rows
+    return record
+
+
 def _discover_verified(
-    source: S3ResearchDataSource, *, as_of_date: date,
+    source: S3ResearchDataSource,
+    *,
+    as_of_date: date,
+    previous: Mapping[str, Any] | None = None,
 ) -> tuple[
     dict[str, tuple[dict[str, Any], ...]],
     dict[str, dict[str, str | None]],
     str,
 ]:
-    # Close membership before any potentially long object materialisation.
-    # Objects arriving after this point remain live and are discovered by the
-    # next cycle; they cannot expand the roster being verified below.
+    """Close one roster and download only added or replaced object bodies."""
     listed_by_dataset = {
         dataset: tuple(source.discover_dataset_objects(dataset))
         for dataset in BOUND_DATASETS
     }
     membership_closed_at = _utc_now().isoformat()
+    prior_objects = _prior_objects(previous)
+    prior_membership = ((previous or {}).get("frontier") or {}).get(
+        "dataset_membership") or {}
     verified: dict[str, tuple[dict[str, Any], ...]] = {}
     event_coverage: dict[str, dict[str, str | None]] = {}
+
     for dataset in BOUND_DATASETS:
         listed = listed_by_dataset[dataset]
-        if not listed:
-            verified[dataset] = ()
-            event_coverage[dataset] = {"start": None, "end": None}
-            continue
-        rows = source.read_objects_for_freeze(
-            dataset, listed, expected_schema_version=current_schema(dataset)
-        )
-        event_coverage[dataset] = _event_time_coverage(dataset, rows, as_of_date)
-        malformed = source.malformed_report(dataset)
-        if malformed and malformed.malformed_lines:
-            raise FrontierCoordinatorError(
-                FRONTIER_INVALID,
-                f"MALFORMED_GOVERNED_OBJECT_ROWS:{dataset}:{malformed.malformed_lines}",
-            )
-        metadata = tuple(
-            _full_object_record(dataset, item) for item in source.object_metadata(dataset)
-        )
-        if len(metadata) != len(listed):
-            raise FrontierCoordinatorError(
-                FRONTIER_INVALID, "OBJECT_DISCOVERY_VERIFICATION_COUNT_MISMATCH:" + dataset
-            )
-        verified[dataset] = tuple(sorted(metadata, key=lambda item: item["s3_key"]))
-        # Assignment evaluates the next read before releasing this local.  Drop
-        # it explicitly so two large parsed datasets never overlap in memory.
-        del rows
+        prior_by_key = {
+            str(item.get("s3_key") or item.get("identifier") or ""): dict(item)
+            for item in prior_objects.get(dataset, ())
+        }
+        listed_by_key = {
+            str(item.get("identifier") or ""): dict(item) for item in listed
+        }
+        records: dict[str, dict[str, Any]] = {}
+        to_read: dict[str, dict[str, Any]] = {}
+        version_checks: list[dict[str, Any]] = []
+
+        for key, item in listed_by_key.items():
+            prior = prior_by_key.get(key)
+            if prior is None or not _same_frontier_listing_identity(prior, item):
+                to_read[key] = item
+            elif prior.get("version_id") is None and item.get("version_id") is None:
+                records[key] = prior
+            else:
+                version_checks.append(item)
+
+        if version_checks:
+            headed = source.head_bound_objects(
+                dataset, version_checks,
+                expected_schema_version=current_schema(dataset))
+            for item in headed:
+                key = str(item.get("identifier") or "")
+                prior = prior_by_key[key]
+                if _same_frontier_object_identity(prior, item):
+                    records[key] = prior
+                else:
+                    to_read[key] = dict(item)
+
+        for key, item in to_read.items():
+            records[key] = _read_frontier_object(
+                source, dataset, item, as_of_date)
+
+        current_keys = set(listed_by_key)
+        prior_keys = set(prior_by_key)
+        added_keys = current_keys - prior_keys
+        removed_keys = prior_keys - current_keys
+        replaced_keys = {
+            key for key in current_keys & prior_keys if key in to_read
+        }
+        ordered = [records[key] for key in sorted(records)]
+        prior_coverage = dict(
+            (prior_membership.get(dataset) or {}).get("event_time_coverage")
+            or {"start": None, "end": None})
+
+        if not added_keys and not replaced_keys and not removed_keys:
+            coverage = prior_coverage
+        elif added_keys and not replaced_keys and not removed_keys:
+            added_coverage = _coverage_from_object_records(
+                [records[key] for key in sorted(added_keys)])
+            coverage = _merge_event_coverage(prior_coverage, added_coverage)
+        else:
+            coverage = _coverage_from_object_records(ordered)
+            if coverage is None:
+                # Compatibility fallback for predecessor states created before
+                # per-object event coverage was persisted. Re-read only the
+                # affected dataset once; subsequent epochs remain delta-only.
+                for key, record in list(records.items()):
+                    if not isinstance(record.get("event_time_coverage"), Mapping):
+                        refreshed = _read_frontier_object(
+                            source, dataset, listed_by_key[key], as_of_date)
+                        if not _same_frontier_object_identity(record, refreshed):
+                            raise FrontierCoordinatorError(
+                                FRONTIER_INVALID,
+                                "OBJECT_CHANGED_DURING_COVERAGE_RECOMPUTE:" + dataset)
+                        records[key] = refreshed
+                ordered = [records[key] for key in sorted(records)]
+                coverage = _coverage_from_object_records(ordered)
+            if coverage is None:
+                raise FrontierCoordinatorError(
+                    FRONTIER_INVALID, "EVENT_COVERAGE_RECOMPUTE_FAILED:" + dataset)
+
+        verified[dataset] = tuple(ordered)
+        event_coverage[dataset] = coverage
+
     return verified, event_coverage, membership_closed_at
-
-
-def _frontier_from_state(previous: Mapping[str, Any]) -> FrontierSelection:
-    value = previous["frontier"]
-    return FrontierSelection(
-        frontier_id=str(value["frontier_id"]),
-        selected_start_time=str(value["selected_start_time"]),
-        selected_end_time=str(value["selected_end_time"]),
-        dataset_membership=dict(value["dataset_membership"]),
-        dataset_status=dict(value["dataset_status"]),
-        stale_datasets=tuple(value.get("stale_datasets") or ()),
-        missing_optional_datasets=tuple(value.get("missing_optional_datasets") or ()),
-        gap_diagnostics={
-            name: tuple(items)
-            for name, items in (value.get("gap_diagnostics") or {}).items()
-        },
-        pending_required_objects={
-            name: tuple(items)
-            for name, items in (value.get("pending_required_objects") or {}).items()
-        },
-        coherence_decision=str(value["coherence_decision"]),
-        predecessor_snapshot_id=value.get("predecessor_snapshot_id"),
-        membership_closed_at=value.get("membership_closed_at"),
-    )
-
-
-def _reuse_unchanged_frontier(
-    source: S3ResearchDataSource,
-    previous: Mapping[str, Any] | None,
-    *,
-    as_of_date: date,
-) -> FrontierSelection | None:
-    """Reuse consumed state only after exact current S3 identities match."""
-    if previous is None:
-        return None
-    prior = _frontier_from_state(previous)
-    listed: dict[str, tuple[dict[str, Any], ...]] = {}
-    for dataset in BOUND_DATASETS:
-        items = source.discover_dataset_objects(dataset)
-        if dataset in REQUIRED_DATASETS and not items:
-            return None
-        enriched = tuple(
-            {**dict(item), "partition_date": _key_date(str(item["identifier"]))}
-            for item in items
-        )
-        if any(str(item["partition_date"]) > as_of_date.isoformat() for item in enriched):
-            return None
-        listed[dataset] = enriched
-
-    required_dates = {
-        name: sorted({str(item["partition_date"]) for item in listed[name]})
-        for name in REQUIRED_DATASETS
-    }
-    if any(not values for values in required_dates.values()):
-        return None
-    start = max(values[0] for values in required_dates.values())
-    end = min(values[-1] for values in required_dates.values())
-    if start > end or start != prior.selected_start_time or end != prior.selected_end_time:
-        return None
-    # Preserve the existing fail-closed handling for a required dataset that
-    # has advanced beyond its peers.
-    if any(any(str(item["partition_date"]) > end for item in listed[name])
-           for name in REQUIRED_DATASETS):
-        return None
-
-    selected_by_dataset: dict[str, tuple[dict[str, Any], ...]] = {}
-    for dataset in BOUND_DATASETS:
-        selected = tuple(
-            item for item in listed[dataset]
-            if start <= str(item["partition_date"]) <= end
-        )
-        old = tuple(prior.dataset_membership[dataset]["objects"])
-        current_listing = [
-            (str(item["identifier"]), str(item.get("etag") or ""),
-             int(item.get("size") or 0))
-            for item in selected
-        ]
-        prior_listing = [
-            (str(item["s3_key"]), str(item.get("etag") or ""),
-             int(item.get("listed_byte_count") or item.get("byte_count") or 0))
-            for item in old
-        ]
-        if current_listing != prior_listing:
-            return None
-        selected_by_dataset[dataset] = selected
-
-    # HEAD resolves VersionId, which list_objects_v2 omits.  This retains the
-    # existing exact-version replacement semantics without downloading bodies.
-    for dataset in BOUND_DATASETS:
-        headed = source.head_bound_objects(
-            dataset,
-            selected_by_dataset[dataset],
-            expected_schema_version=current_schema(dataset),
-        )
-        old = tuple(prior.dataset_membership[dataset]["objects"])
-        current_identity = [
-            (str(item["identifier"]), item.get("version_id"),
-             str(item.get("etag") or ""), int(item.get("size") or 0),
-             str(item.get("last_modified") or ""))
-            for item in headed
-        ]
-        prior_identity = [
-            (str(item["s3_key"]), item.get("version_id"),
-             str(item.get("etag") or ""),
-             int(item.get("listed_byte_count") or item.get("byte_count") or 0),
-             str(item.get("last_modified") or ""))
-            for item in old
-        ]
-        if current_identity != prior_identity:
-            return None
-    return prior
 
 
 def _select_frontier(
@@ -953,18 +990,15 @@ def run_frontier_snapshot_cycle(
             previous["last_successful_snapshot_id"])
         resolved_source = source or get_default_source()
         resolved_as_of = as_of_date or _utc_now().date()
-        frontier = _reuse_unchanged_frontier(
-            resolved_source, previous, as_of_date=resolved_as_of)
-        if frontier is None:
-            discovered, event_coverage, membership_closed_at = _discover_verified(
-                resolved_source, as_of_date=resolved_as_of)
-            frontier = _select_frontier(
-                discovered,
-                event_coverage=event_coverage,
-                predecessor_snapshot_id=predecessor,
-                as_of_date=resolved_as_of,
-                membership_closed_at=membership_closed_at,
-            )
+        discovered, event_coverage, membership_closed_at = _discover_verified(
+            resolved_source, as_of_date=resolved_as_of, previous=previous)
+        frontier = _select_frontier(
+            discovered,
+            event_coverage=event_coverage,
+            predecessor_snapshot_id=predecessor,
+            as_of_date=resolved_as_of,
+            membership_closed_at=membership_closed_at,
+        )
         delta = _compute_delta(frontier, previous)
         if not delta["changed_datasets"]:
             if frontier.pending_required_objects:
@@ -1037,10 +1071,11 @@ def run_frontier_snapshot_cycle(
         manifest_path = manifest_dir / f"{snapshot.snapshot_id}.json"
         save_investigation_snapshot(snapshot, manifest_path)
         if verifier is None:
-            loaded = load_investigation_snapshot_id(
-                snapshot.snapshot_id, manifest_directory=manifest_dir
+            verify_investigation_snapshot_identity(
+                snapshot.snapshot_id,
+                source=resolved_source,
+                manifest_directory=manifest_dir,
             )
-            SnapshotBoundDatasetReader(loaded, source=resolved_source)
         else:
             verifier(
                 snapshot.snapshot_id,

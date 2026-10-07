@@ -174,6 +174,18 @@ class MemoryS3:
             "VersionId": "v1",
         }
 
+    def head_object(self, **kwargs):
+        key = str(kwargs["Key"])
+        if key not in self.objects:
+            raise KeyError(key)
+        body = self.objects[key]
+        return {
+            "ETag": '"' + hashlib.md5(body.encode()).hexdigest() + '"',
+            "ContentLength": len(body.encode()),
+            "LastModified": "2026-09-25T13:00:00Z",
+            "VersionId": "v1",
+        }
+
 
 def _freeze(tmp_path: Path, fake: MemoryS3):
     source = S3ResearchDataSource(bucket="question-cycle-test", client=fake)

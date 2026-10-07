@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Research Lab</title>
+<style>
+:root{--bg:#0f172a;--panel:#1e293b;--panel2:#111827;--line:#334155;--txt:#e2e8f0;--mut:#94a3b8;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--info:#38bdf8;--vio:#a78bfa}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--txt)}
+a{color:var(--info);text-decoration:none}a:hover{text-decoration:underline}
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 24px;background:var(--panel2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{font-size:1.15rem;margin:0}.fresh{color:var(--mut);font-size:.82rem;flex:1}
+nav{display:flex;gap:4px;flex-wrap:wrap;padding:8px 24px;background:var(--panel);border-bottom:1px solid var(--line)}
+nav a{padding:6px 12px;border-radius:6px;color:var(--txt)}nav a.on{background:var(--info);color:#0b1220;font-weight:600}
+main{padding:20px 24px;max-width:1500px;margin:auto}
+button{background:var(--info);color:#0b1220;border:0;border-radius:6px;padding:7px 14px;font-weight:600;cursor:pointer}
+button.sec{background:var(--line);color:var(--txt)}button:disabled{opacity:.5;cursor:not-allowed}
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.card{background:var(--panel);padding:12px 16px;border-radius:8px;min-width:150px}
+.card b{display:block;font-size:1.6rem}.card small{color:var(--mut)}
+.banner{border-radius:8px;padding:12px 16px;margin:12px 0;border:1px solid}
+.banner.bad{background:#3b1219;border-color:var(--bad)}.banner.warn{background:#3a2a0a;border-color:var(--warn)}.banner.info{background:#0c2a3d;border-color:var(--info)}.banner.ok{background:#0d2f1c;border-color:var(--ok)}
+table{border-collapse:collapse;width:100%;background:var(--panel2)}th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top;font-size:.9rem}
+th{background:var(--panel);position:sticky;top:96px}tr.row{cursor:pointer}tr.row:hover{background:#172033}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:.75rem;font-weight:600;background:#334155}
+.p-ok{background:#14532d}.p-warn{background:#78350f}.p-bad{background:#7f1d1d}.p-info{background:#0c4a6e}.p-vio{background:#4c1d95}.p-mut{background:#334155;color:var(--mut)}
+.filters{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}input,select{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;min-width:90px}.bar i{display:block;height:100%;background:var(--info)}
+.life{display:flex;gap:0;margin:10px 0;flex-wrap:wrap}.step{padding:8px 14px;background:var(--panel);border:1px solid var(--line);font-size:.82rem;color:var(--mut);position:relative}
+.step.done{background:#14532d;color:#fff}.step.cur{background:var(--info);color:#0b1220;font-weight:700}.step.stop{background:#7f1d1d;color:#fff}
+.lineage{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}.node{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px}.arrow{color:var(--mut)}
+.feed{border-left:2px solid var(--line);margin-left:6px}.feed div{padding:6px 14px;position:relative}.feed div:before{content:"";position:absolute;left:-6px;top:12px;width:10px;height:10px;border-radius:50%;background:var(--info)}
+.feed time{color:var(--mut);font-size:.78rem;display:block}
+details{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin:8px 0}pre{white-space:pre-wrap;word-break:break-word;font-size:.78rem;color:var(--mut)}
+h2{margin:22px 0 8px}h3{margin:16px 0 6px}.mut{color:var(--mut)}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.kv{display:grid;grid-template-columns:220px 1fr;gap:4px 12px}.kv dt{color:var(--mut)}.kv dd{margin:0}
+</style></head><body>
+<header><h1>🔬 Research Lab</h1><div class="fresh" id="fresh">Loading…</div>
+<span id="runstat"></span><button id="runbtn" onclick="runCycle()">Run Research Cycle</button><button class="sec" onclick="load(true)">↻ Refresh</button>
+<label class="mut"><input type="checkbox" id="auto" checked> auto-refresh</label></header>
+<nav id="nav"></nav><main id="app">Loading…</main>
+<script>
+const NAV=[["/","Overview"],["/questions","Questions"],["/q71","Q71+"],["/findings","Findings"],["/hypotheses","Hypotheses"],["/candidates","Candidates"],["/investigations","Investigations"],["/data","Data"],["/history","History"],["/changes","What Changed"]];
+let S=null,Q={};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const COL={COMPLETE:"ok",SHADOW_VALIDATION_ACTIVE:"vio",VALIDATED:"ok",FORWARD_VALIDATED:"ok",PROPOSED:"info",NOT_YET_EVALUATED:"mut",ALIAS_OR_SUPERSEDED:"mut",UNIMPLEMENTED:"warn",WAITING_FOR_DATA:"warn",INSUFFICIENT_DATA:"warn",CANNOT_KNOW_YET:"warn",NEGATIVE_RESULT:"info",IMPLEMENTATION_BLOCKED:"bad",INVALID:"bad",FAILED:"bad",BLOCKED:"bad",REVIEW_REQUIRED:"warn",READY_FOR_PROMOTION_REVIEW:"vio",SUCCEEDED:"ok",COMPLETED:"ok",NO_NEW_RESEARCH_EVIDENCE:"info",REFERENCED_BY_HYPOTHESIS:"mut",SHADOW_COLLECTING:"vio"};
+const pill=s=>`<span class="pill p-${COL[s]||"mut"}">${esc(String(s||"—").replaceAll("_"," "))}</span>`;
+const ts=t=>t?`<span title="${esc(t)}">${esc(new Date(t).toLocaleString())}</span> <span class="mut">(${ago(t)})</span>`:'<span class="mut">never</span>';
+function ago(t){const s=(Date.now()-new Date(t))/1000;if(s<60)return"just now";if(s<3600)return Math.floor(s/60)+" min ago";if(s<86400)return Math.floor(s/3600)+" h ago";return Math.floor(s/86400)+" d ago"}
+const qlink=id=>S.questions.some(q=>q.question_id===id)?link("questions",id):`<span title="Diagnostic pass (not one of the 70 canonical questions)">${esc(id)}</span>`;
+const link=(base,id)=>`<a href="/${base}/${encodeURIComponent(id)}" data-nav>${esc(id)}</a>`;
+const bar=(n,m)=>m?`<div class="bar" title="${n??0} / ${m}"><i style="width:${Math.min(100,100*(n||0)/m)}%"></i></div><small class="mut">${n??0} / ${m}</small>`:'<span class="mut">—</span>';
+const filt=(rows,cols)=>{const f=Q.f||"",st=Q.s||"";return rows.filter(r=>(!st||r.status===st)&&(!f||JSON.stringify(cols.map(c=>r[c])).toLowerCase().includes(f.toLowerCase())))};
+function filterBar(rows,placeholder){const sts=[...new Set(rows.map(r=>r.status).filter(Boolean))].sort();return`<div class="filters"><input id="f" placeholder="${placeholder}" value="${esc(Q.f||"")}" oninput="Q.f=this.value;render(true)"><select onchange="Q.s=this.value;render(true)"><option value="">All statuses</option>${sts.map(s=>`<option ${Q.s===s?"selected":""}>${esc(s)}</option>`).join("")}</select><span class="mut">${filt(rows,Object.keys(rows[0]||{})).length} of ${rows.length}</span></div>`}
+function failBanner(f,title){if(!f)return"";return`<div class="banner bad"><b>${esc(f.title)}</b><p>${esc(f.message)}</p><div class="mut">Failed stage: <b>${esc(f.failed_stage_label||f.failed_stage||"unknown")}</b>${f.at?" · "+ts(f.at):""}</div><details><summary>Technical details</summary><pre>${esc(f.technical)}</pre></details></div>`}
+function terminalBanner(){const l=S.last_run;
+ if(l&&l.status==="FAILED"&&l.failure)return failBanner({...l.failure,at:l.finished_at});
+ if(l&&l.status==="SUCCEEDED")return`<div class="banner ok"><b>Research cycle finished:</b> ${esc(l.outcome)}. The display shows the latest persisted research state.</div>`;
+ return failBanner(S.latest_failure)}
+function lifecycle(c){const order=["PROPOSED","VALIDATED","FORWARD_VALIDATED","SHADOW_VALIDATION_ACTIVE","READY_FOR_PROMOTION_REVIEW"];const seen=new Set((c.status_history||[]).map(h=>h.status));const idx=order.indexOf(c.status);
+ const html=order.map((s,i)=>`<div class="step ${s===c.status?"cur":(seen.has(s)||i<idx)?"done":""}">${esc(s.replaceAll("_"," "))}</div>`).join("");
+ const stop=idx<0?`<div class="step stop">${esc(c.status)}</div>`:"";
+ return`<div class="life">${html}${stop}<div class="step ${c.live_approved?"stop":""}">LIVE: ${c.live_approved?"APPROVED":"NOT APPROVED (live_approved = false)"}</div></div>`}
+function table(cols,rows,rowHtml){return`<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join("")}</tr></thead><tbody>${rows.map(rowHtml).join("")||`<tr><td colspan="${cols.length}" class="mut">Nothing to show.</td></tr>`}</tbody></table>`}
+function kv(o){return`<dl class="kv">${Object.entries(o).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${v}</dd>`).join("")}</dl>`}
+const raw=o=>`<details><summary>Technical data</summary><pre>${esc(JSON.stringify(o,null,2))}</pre></details>`;
+
+const V={
+overview(){const c=S.question_counts,fr=S.freshness;const ca=S.candidates;
+ const src=S.source==="UNIFIED_PROJECTION"?"":`<div class="banner warn"><b>No unified research projection has been published yet.</b> Showing the persisted question registry and the Block 3–4 hypothesis/candidate registry. Questions show “not yet evaluated” until a research cycle completes successfully.</div>`;
+ return`${src}
+ <div class="cards"><div class="card"><small>Canonical questions</small><b>${S.invariants.canonical_question_count}</b></div>
+ <div class="card"><small>Evaluated</small><b>${S.questions.filter(q=>q.status_source==="block2_projection").length}</b></div>
+ <div class="card"><small>Q71+ generated</small><b>${S.q71.generated.length}</b></div>
+ <div class="card"><small>Findings</small><b>${S.findings.length}</b></div><div class="card"><small>Hypotheses</small><b>${S.hypotheses.length}</b></div>
+ <div class="card"><small>Candidates</small><b>${ca.length}</b></div>
+ <div class="card"><small>Shadow validation active</small><b>${ca.filter(x=>x.status==="SHADOW_VALIDATION_ACTIVE").length}</b></div>
+ <div class="card"><small>Live approved</small><b style="color:${S.invariants.live_approved_any?"var(--bad)":"var(--ok)"}">${S.invariants.live_approved_any?"YES":"none (false)"}</b></div></div>
+ <div class="grid2"><div><h2>Freshness</h2>${kv({"Projection":fr.projection_version?esc(fr.projection_version):"none published","Projection saved":ts(fr.projection_persisted_at),"Last cycle attempt":ts(fr.last_attempt_at)+" "+pill(fr.last_attempt_outcome),"Last successful cycle":fr.last_successful_cycle_id?esc(fr.last_successful_cycle_id):"none yet","Page loaded":ts(S.generated_at)})}
+ <h2>Question states</h2>${Object.entries(c).map(([k,v])=>`<div>${pill(k)} ${v}</div>`).join("")}</div>
+ <div><h2>Candidates</h2>${ca.map(x=>`<div class="node" style="margin:6px 0">${link("candidates",x.candidate_id)} ${pill(x.status)}<div class="mut">${esc(x.component)} · from ${link("hypotheses",x.hypothesis_id)}</div>${lifecycle(x)}</div>`).join("")}
+ <h2>Latest changes</h2><div class="feed">${feed(S.changes.slice(0,6))}</div><a href="/changes" data-nav>All changes →</a></div></div>`},
+questions(){const rows=filt(S.questions,["question_id","title","category","status","description"]);
+ return`<h2>Canonical questions (${S.questions.length})</h2>${filterBar(S.questions,"Search id, title, category…")}
+ ${table(["ID","Question","Category","Priority","State","Sample","Note"],rows,q=>`<tr class="row" onclick="go('/questions/${q.question_id}')"><td>${link("questions",q.question_id)}</td><td>${esc(q.title)}</td><td>${esc(q.category)}</td><td>${esc(q.priority)}</td><td>${pill(q.status)}</td><td>${bar(q.sample_n,q.minimum_required_n)}</td><td class="mut">${esc(q.superseded_by?"Superseded by "+q.superseded_by:q.registry_status==="UNIMPLEMENTED"?"Not implemented":q.status_source==="registry"?"Not yet evaluated":"")}</td></tr>`)}`},
+question(id){const q=S.questions.find(x=>x.question_id===id);if(!q)return nf("question",id);
+ const f=S.findings.filter(x=>(x.source_question_ids||[x.source_question_id]).includes(id)),h=S.hypotheses.filter(x=>x.source_question===id),c=S.candidates.filter(x=>(x.source_question_ids||[]).includes(id));
+ const notes=q.registry_status==="ALIAS_OR_SUPERSEDED"?`<div class="banner info"><b>Alias / superseded.</b> ${esc(q.id||q.question_id)} is not evaluated separately; it is superseded by ${link("questions",q.superseded_by)}.</div>`:q.registry_status==="UNIMPLEMENTED"?`<div class="banner warn"><b>Unimplemented.</b> No analysis runner exists for this question yet. It is counted among the 70 but cannot produce an answer.</div>`:"";
+ return`<a href="/questions" data-nav>← Questions</a><h2>${esc(q.question_id)} — ${esc(q.title)} ${pill(q.status)}</h2>${notes}<p>${esc(q.description)}</p>
+ ${kv({Category:esc(q.category),Priority:esc(q.priority),"Depends on":esc((q.depends_on||[]).join(", ")||"—"),"Legacy ids":esc((q.legacy_ids||[]).join(", ")||"—"),"Evaluated at":ts(q.evaluated_at),"Snapshot":esc(q.snapshot_id||"—"),"Evaluation currency":pill(q.evaluation_currency),"Evaluation digest":esc(q.evaluation_identity_digest||"—"),"Failure / blocker":esc(q.failure_reason||"—"),"Sample":bar(q.sample_n,q.minimum_required_n),"Answer":esc(typeof q.substantive_answer==="string"?q.substantive_answer:q.substantive_answer?JSON.stringify(q.substantive_answer):"Not yet evaluated"),"Missing evidence":esc((q.missing_evidence||[]).join(", ")||"—"),"Limitations":esc((q.limitations||[]).map(x=>typeof x==="string"?x:JSON.stringify(x)).join("; ")||"—")})}
+ <h3>Lineage</h3><div class="lineage"><div class="node">${esc(q.question_id)}</div>${f.length?`<span class="arrow">→</span><div class="node">${f.map(x=>link("findings",x.finding_id)).join(", ")}</div>`:""}${h.length?`<span class="arrow">→</span><div class="node">${h.map(x=>link("hypotheses",x.hypothesis_id)).join(", ")}</div>`:""}${c.length?`<span class="arrow">→</span><div class="node">${c.map(x=>link("candidates",x.candidate_id)).join(", ")}</div>`:""}${!f.length&&!h.length?'<span class="mut">No downstream findings yet.</span>':""}</div>${raw(q)}`},
+q71(){const g=S.q71.generated;return`<h2>Q71+ generated research</h2>${S.q71.available?"":`<div class="banner info"><b>No Q71+ state yet.</b> Q71+ questions are generated by the Block 4 cycle once it has run on a verified data snapshot. Nothing has been generated so far.</div>`}
+ ${filterBar(g.map(x=>({...x,status:x.status})),"Search generated questions…")}${table(["ID","Question","State","Origin","Sample"],filt(g,["generated_question_id","question","status"]),x=>`<tr><td>${esc(x.generated_question_id)}</td><td>${esc(x.question||x.title||x.statement||"")}</td><td>${pill(x.status)}</td><td>${esc(x.origin||x.source_finding||"")}</td><td>${bar(x.sample_n,x.minimum_required_n)}</td></tr>`)}`},
+findings(){const r=filt(S.findings,["finding_id","status","summary"]);return`<h2>Findings</h2>${filterBar(S.findings,"Search findings…")}${table(["Finding","State","Summary","Hypotheses","Candidates"],r,f=>`<tr class="row" onclick="go('/findings/${f.finding_id}')"><td>${link("findings",f.finding_id)}</td><td>${pill(f.status)}</td><td>${esc((f.summary||f.statement||"").slice(0,160))}</td><td>${(f.dependent_hypotheses||[]).map(x=>link("hypotheses",x)).join(", ")}</td><td>${(f.dependent_candidates||[]).map(x=>link("candidates",x)).join(", ")}</td></tr>`)}`},
+finding(id){const f=S.findings.find(x=>x.finding_id===id);if(!f)return nf("finding",id);return`<a href="/findings" data-nav>← Findings</a><h2>${esc(id)} ${pill(f.status)}</h2><p>${esc(f.summary||f.statement||"")}</p><h3>Lineage</h3><div class="lineage"><div class="node">${esc(id)}</div><span class="arrow">→</span><div class="node">${(f.dependent_hypotheses||[]).map(x=>link("hypotheses",x)).join(", ")||"—"}</div><span class="arrow">→</span><div class="node">${(f.dependent_candidates||[]).map(x=>link("candidates",x)).join(", ")||"—"}</div></div>${raw(f)}`},
+hypotheses(){const r=filt(S.hypotheses,["hypothesis_id","status","statement","source_finding"]);return`<h2>Hypotheses</h2>${filterBar(S.hypotheses,"Search hypotheses…")}${table(["Hypothesis","State","Statement","Source","Candidates"],r,h=>`<tr class="row" onclick="go('/hypotheses/${h.hypothesis_id}')"><td>${link("hypotheses",h.hypothesis_id)}</td><td>${pill(h.status)}</td><td>${esc((h.statement||"").slice(0,180))}</td><td>${h.source_finding?link("findings",h.source_finding):""}</td><td>${(h.dependent_candidates||[]).map(x=>link("candidates",x)).join(", ")}</td></tr>`)}`},
+hypothesis(id){const h=S.hypotheses.find(x=>x.hypothesis_id===id);if(!h)return nf("hypothesis",id);return`<a href="/hypotheses" data-nav>← Hypotheses</a><h2>${esc(id)} ${pill(h.status)}</h2><p>${esc(h.statement)}</p>
+ <h3>Lineage</h3><div class="lineage">${h.source_question?`<div class="node">${qlink(h.source_question)}</div><span class="arrow">→</span>`:""}<div class="node">${h.source_finding?link("findings",h.source_finding):"—"}</div><span class="arrow">→</span><div class="node"><b>${esc(id)}</b></div><span class="arrow">→</span><div class="node">${(h.dependent_candidates||[]).map(x=>link("candidates",x)).join(", ")||"—"}</div></div>
+ ${kv({Domain:esc(h.domain),Component:esc(h.target_component),"Expected effect":esc(h.expected_effect),Confidence:esc(h.confidence),Evidence:esc(h.evidence_strength),Created:ts(h.created_at)})}${raw(h)}`},
+candidates(){const r=filt(S.candidates,["candidate_id","status","component","hypothesis_id"]);return`<h2>Candidates</h2>${filterBar(S.candidates,"Search candidates…")}${table(["Candidate","State","Component","Hypothesis","Lifecycle","Live"],r,c=>`<tr class="row" onclick="go('/candidates/${c.candidate_id}')"><td>${link("candidates",c.candidate_id)}</td><td>${pill(c.status)}</td><td>${esc(c.component)}</td><td>${link("hypotheses",c.hypothesis_id)}</td><td>${lifecycle(c)}</td><td>${pill(c.live_approved?"APPROVED":"NOT APPROVED")}</td></tr>`)}`},
+candidate(id){const c=S.candidates.find(x=>x.candidate_id===id);if(!c)return nf("candidate",id);const sb=c.shadow_binding||{},p=c.plan||{};
+ const pairedN=(c.shadow_evidence||{}).current_paired_n??(c.shadow_evidence||{}).paired_n??sb.current_paired_n;
+ const shadowProgress=pairedN==null?"No prospective paired count persisted":`${pairedN} / ${p.minimum_sample??"minimum not specified"}`;
+ const wait=c.status==="PROPOSED"?`<div class="banner warn"><b>Waiting for more evidence.</b> ${esc(c.notes)}</div>`:c.status==="SHADOW_VALIDATION_ACTIVE"?`<div class="banner info"><b>Shadow validation is active.</b> Evidence is collected prospectively; live application is forbidden and requires human governance.</div>`:"";
+ return`<a href="/candidates" data-nav>← Candidates</a><h2>${esc(id)} ${pill(c.status)} ${pill(c.live_approved?"LIVE APPROVED":"live_approved = false")}</h2>${wait}${lifecycle(c)}
+ <h3>Lineage</h3><div class="lineage">${(c.source_question_ids||[]).map(x=>`<div class="node">${qlink(x)}</div><span class="arrow">→</span>`).join("")}<div class="node">${(c.source_finding_ids||[]).map(x=>link("findings",x)).join(", ")||"—"}</div><span class="arrow">→</span><div class="node">${link("hypotheses",c.hypothesis_id)}</div><span class="arrow">→</span><div class="node"><b>${esc(id)}</b></div></div>
+ ${kv({Component:esc(c.component),Risk:esc(c.risk_level),Policy:esc(c.policy_id||"—"),"Expected outcome":esc(c.expected_outcome),"Created":ts(c.created_at),"Shadow activated":ts(sb.activated_at),"Prospective only":esc(sb.prospective_only??"—"),"Prospective shadow progress":esc(shadowProgress),"Minimum sample":esc(JSON.stringify(p.minimum_sample||"—")),Notes:esc(c.notes)})}
+ <h3>Status history</h3><div class="feed">${(c.status_history||[]).map(h=>`<div><time>${ts(h.timestamp)}</time><b>${esc(h.status)}</b><div class="mut">${esc(h.evidence||"")}</div></div>`).join("")}</div>
+ ${(c.validation_queue||[]).length?`<h3>Validation queue</h3>${raw(c.validation_queue)}`:""}${raw(c)}`},
+investigations(){const i=S.investigations;return`<h2>Investigations &amp; work queues</h2>${filterBar(i.map(x=>({...x,status:x.state})),"Search…")}${table(["Item","Type","State","Status","Required sample","Detail"],i.filter(x=>(!Q.s||x.state===Q.s)&&(!Q.f||JSON.stringify(x).toLowerCase().includes(Q.f.toLowerCase()))),x=>`<tr><td>${esc(x.id)}</td><td>${esc(x.type.replaceAll("_"," "))}</td><td>${pill(x.state)}</td><td>${pill(x.status)}</td><td>${x.sample_n!=null?bar(x.sample_n,x.minimum_sample):esc(typeof x.minimum_sample==="object"?JSON.stringify(x.minimum_sample):x.minimum_sample??"—")}</td><td class="mut">${esc((x.note||"").slice(0,240))}</td></tr>`)}`},
+data(){const d=S.data_frontier,fr=S.freshness,last=S.last_run||{},failure=last.status==="FAILED"?last.failure:last.status==="SUCCEEDED"?null:S.latest_failure;
+ const access=failure&&failure.kind==="AWS_AUTH_EXPIRED"?"AWS authentication expired":failure&&failure.kind==="AWS_UNAVAILABLE"?"AWS/data unavailable":fr.last_attempt_outcome&&fr.last_attempt_outcome!=="FAILED"?"Available during the latest successful cycle":"Not verified by a successful cycle";
+ const datasets=items=>items&&items.length?items.join(", "):"None reported";
+ return`<h2>Data</h2>${d?kv({"Current snapshot":esc(d.snapshot_id||"—"),"Frontier":esc(d.frontier_start+" → "+d.frontier_end),"Latest evidence":esc(d.snapshot_id?`Frozen snapshot ${d.snapshot_id}`:"No snapshot id recorded"),"Projection version":esc(fr.projection_version||"—"),"Status":pill(d.status),"Changed datasets":esc(datasets(d.changed_datasets)),"Stale datasets":esc(datasets(d.stale_datasets)),"Missing datasets (optional)":esc(datasets(d.missing_optional_datasets))}):`<div class="banner warn"><b>No verified data snapshot yet.</b> The only cycle attempt failed before a snapshot could be frozen.</div>${kv({"Current snapshot":"None published","Frontier":"Unavailable — FRONTIER failed before snapshot freeze","Latest evidence":"Unavailable — no verified snapshot","Projection version":"None published","Stale datasets":"Not assessable without a verified snapshot","Missing datasets":"Not assessable without a verified snapshot"})}`}
+ ${kv({"AWS / data access":esc(access),"Last cycle attempt":ts(fr.last_attempt_at),"Last successful cycle":fr.last_successful_cycle_id||"none yet"})}
+ <h2>Secondary technical diagnostics</h2><p class="mut">The older readiness cockpit is kept for technical diagnostics only. It is not an authority for questions, findings, hypotheses or candidates.${S.legacy_diagnostics.available?` Generated ${ts(S.legacy_diagnostics.generated_at)}. <a href="/legacy/cockpit" target="_blank">Open legacy diagnostics ↗</a>`:""}</p>`},
+history(){return`<h2>Cycle history</h2>${table(["Recorded","Outcome","Failed stage","Cycle","Stages"],S.cycles,c=>`<tr><td>${ts(c.recorded_at)}</td><td>${pill(c.cycle_outcome)}</td><td>${esc(c.failure?c.failure.failed_stage_label:"—")}</td><td class="mut">${esc(c.continuous_cycle_id)}${c.failure?`<details><summary>${esc(c.failure.title)}</summary><p>${esc(c.failure.message)}</p><pre>${esc(c.failure.technical)}</pre></details>`:""}</td><td>${Object.entries(c.stage_statuses||{}).map(([k,v])=>`<div>${esc(k)} ${pill(v)}</div>`).join("")}</td></tr>`)}<h2>Research timeline</h2><div class="feed">${feed(S.changes)}</div>`},
+changes(){return`<h2>What changed</h2><p class="mut">Timestamped research events from persisted projections, candidate lifecycle records and cycle history. Routine persistence writes are omitted.</p><div class="feed">${feed(S.changes)}</div>`}
+};
+const feed=e=>e.map(x=>`<div><time>${ts(x.time)}</time><b>${esc(x.title)}</b> ${x.kind==="CYCLE"?"":pill(x.kind)}<div class="mut">${esc(x.detail)}</div></div>`).join("")||'<div class="mut">No changes recorded yet.</div>';
+const nf=(k,id)=>`<div class="banner warn"><b>No ${k} “${esc(id)}” in the latest persisted state.</b> <a href="/" data-nav>Back to overview</a></div>`;
+
+function route(){const p=location.pathname.replace(/\/+$/,"")||"/";const [,sec,id]=p.split("/").map(x=>x&&decodeURIComponent(x));return{p,sec:sec||"",id}}
+function render(keepFocus){if(!S)return;const r=route();const a=document.getElementById("app");const fo=document.activeElement&&document.activeElement.id;
+ const fn=!r.sec?"overview":r.id?({questions:"question",findings:"finding",hypotheses:"hypothesis",candidates:"candidate"})[r.sec]:r.sec;
+ a.innerHTML=terminalBanner()+(V[fn]?V[fn](r.id):nf("page",r.p));
+ document.getElementById("nav").innerHTML=NAV.map(([h,n])=>`<a href="${h}" data-nav class="${(h==="/"?!r.sec:("/"+r.sec)===h)?"on":""}">${n}</a>`).join("");
+ if(keepFocus&&fo){const e=document.getElementById(fo);if(e){e.focus();const l=e.value.length;e.setSelectionRange(l,l)}}}
+function go(p){history.pushState({},"",p);Q={};render();scrollTo(0,0)}
+document.addEventListener("click",e=>{const a=e.target.closest("a[data-nav]");if(a){e.preventDefault();go(a.getAttribute("href"))}});
+addEventListener("popstate",()=>{Q={};render()});
+function header(){const f=S.freshness,r=S.run||{},last=S.last_run||r.last||{};
+ document.getElementById("fresh").innerHTML=`Loaded ${ts(S.generated_at)} · Projection: ${f.projection_persisted_at?ts(f.projection_persisted_at):"<b>none published</b>"} · Last cycle: ${ts(f.last_attempt_at)} ${f.last_attempt_outcome?pill(f.last_attempt_outcome):""}`;
+ const running=r.status==="RUNNING";document.getElementById("runbtn").disabled=running;
+ document.getElementById("runstat").innerHTML=running?`<span class="pill p-info">⏳ RESEARCH CYCLE RUNNING${r.elapsed_s!=null?" · "+r.elapsed_s+"s":""}</span>`:
+  last.status==="FAILED"?`<span class="pill p-bad">LAST CYCLE FAILED${last.failure&&last.failure.failed_stage?" · "+esc(last.failure.failed_stage):""}</span>`:
+  last.status==="SUCCEEDED"?`<span class="pill p-ok">LAST CYCLE SUCCEEDED</span>`:"";}
+async function load(manual){try{const r=await fetch("/api/state",{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);S=await r.json();header();render(true)}catch(e){if(manual||!S)document.getElementById("app").innerHTML=`<div class="banner bad"><b>Cannot reach the Research Lab server.</b> Start it again with “Research Lab.bat”. <details><summary>Technical details</summary><pre>${esc(e)}</pre></details></div>`}}
+async function runCycle(){const b=document.getElementById("runbtn");b.disabled=true;
+ try{const r=await fetch("/api/run",{method:"POST",headers:{"X-Research-Lab":"1"}});const j=await r.json();if(r.status===409)alert("A research cycle is already running.")}catch(e){alert("Could not start the cycle: "+e)}
+ load(true);pollRun()}
+let polling=false;async function pollRun(){if(polling)return;polling=true;
+ for(;;){await new Promise(r=>setTimeout(r,2000));await load();if(!S||(S.run||{}).status!=="RUNNING")break}
+ polling=false}
+setInterval(()=>{if(document.getElementById("auto").checked)load()},15000);
+load().then(()=>{if(S&&S.run&&S.run.status==="RUNNING")pollRun()});
+</script></body></html>

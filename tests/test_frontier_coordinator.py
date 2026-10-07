@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import date
 import json
 
+import pytest
+
 from core.production_data_contract import current_schema, s3_base_prefix
 from research_engine.data_access.s3_source import S3ResearchDataSource
 from research_engine.v10.continuous.frontier_coordinator import (
@@ -30,12 +32,16 @@ def _key(dataset: str, day: str = "2026-09-25", part: str = "part-000.jsonl") ->
     )
 
 
-def _body(dataset: str, marker: str = "base") -> str:
+def _body(
+    dataset: str,
+    marker: str = "base",
+    timestamp: str = "2026-09-25T12:00:00Z",
+) -> str:
     return json.dumps({
         "schema_version": current_schema(dataset),
         "dataset": dataset,
         "marker": marker,
-        "timestamp_utc": "2026-09-25T12:00:00Z",
+        "timestamp_utc": timestamp,
     }, sort_keys=True) + "\n"
 
 
@@ -49,10 +55,12 @@ class MemoryS3:
         self.versions = dict(versions or {})
         self.get_calls = 0
         self.head_calls = 0
+        self.list_calls = 0
 
     def list_objects_v2(self, **kwargs):
         import hashlib
 
+        self.list_calls += 1
         prefix = str(kwargs.get("Prefix") or "")
         return {
             "IsTruncated": False,
@@ -181,7 +189,7 @@ def test_first_cycle_freezes_exact_membership_updates_pointer_and_rerun_is_noop(
     assert set(second.unchanged_datasets) == set(BOUND_DATASETS)
     assert len(calls) == 1
     assert fake.get_calls == gets_after_first
-    assert fake.head_calls == len(BOUND_DATASETS)
+    assert fake.head_calls == 0
     assert FrontierStateStore(tmp_path / "state").load_latest_success() == state
 
 
@@ -242,12 +250,78 @@ def test_changed_version_id_is_replacement(tmp_path):
     fake = MemoryS3(_objects(), versions={key: "v1"})
     _run(tmp_path, fake)
     fake.versions[key] = "v2"
+    fake.get_calls = fake.head_calls = 0
 
     result = _run(tmp_path, fake)
     assert result.status == SNAPSHOT_READY
     assert result.changed_datasets == ("execution_results",)
     assert result.replaced_object_count == 1
+    assert (fake.head_calls, fake.get_calls) == (1, 1)
 
+
+
+def test_legacy_frontier_roster_materializes_without_membership_mismatch(tmp_path):
+    fake = MemoryS3(_objects())
+    first = _run(tmp_path, fake)
+    assert first.status == SNAPSHOT_READY
+
+    # Simulate a predecessor frontier persisted before byte_size/size were
+    # added to the closed-roster record: reused records carry only
+    # byte_count/listed_byte_count.  The snapshot freezer must still bind the
+    # exact byte size instead of silently dropping it to zero.
+    history = tmp_path / "state" / "history" / f"{first.snapshot_id}.json"
+    state = json.loads(history.read_text())
+    for obj in state["frontier"]["dataset_membership"]["trade_truth"]["objects"]:
+        obj.pop("byte_size", None)
+        obj.pop("size", None)
+    history.write_text(json.dumps(state, indent=2, sort_keys=True))
+
+    fake.objects[_key("trade_truth", part="part-001.jsonl")] = _body(
+        "trade_truth", marker="after-cutoff")
+
+    second = _run(tmp_path, fake)
+    assert second.status == SNAPSHOT_READY
+    assert second.changed_datasets == ("trade_truth",)
+    snapshot = load_investigation_snapshot_id(
+        second.snapshot_id, manifest_directory=tmp_path / "manifests")
+    trade = next(b for b in snapshot.datasets if b.dataset == "trade_truth")
+    keys = {obj.identifier for obj in trade.objects}
+    assert _key("trade_truth") in keys
+    assert _key("trade_truth", part="part-001.jsonl") in keys
+
+
+def test_closed_trade_truth_member_mutation_fails_closed(tmp_path):
+    from research_engine.v10.investigation_snapshot import (
+        InvestigationSnapshotError, verify_investigation_snapshot_identity,
+    )
+
+    fake = MemoryS3(_objects())
+    first = _run(tmp_path, fake)
+    assert first.status == SNAPSHOT_READY
+
+    fake.objects[_key("trade_truth")] = _body("trade_truth", marker="mutated")
+    with pytest.raises(InvestigationSnapshotError,
+                       match="SNAPSHOT_DATASET_OBJECTS_CHANGED"):
+        verify_investigation_snapshot_identity(
+            first.snapshot_id, source=_source(fake),
+            manifest_directory=tmp_path / "manifests")
+
+
+def test_closed_trade_truth_member_removal_fails_closed(tmp_path):
+    from research_engine.v10.investigation_snapshot import (
+        InvestigationSnapshotError, verify_investigation_snapshot_identity,
+    )
+
+    fake = MemoryS3(_objects())
+    first = _run(tmp_path, fake)
+    assert first.status == SNAPSHOT_READY
+
+    del fake.objects[_key("trade_truth")]
+    with pytest.raises(InvestigationSnapshotError,
+                       match="SNAPSHOT_DATASET_OBJECTS_CHANGED"):
+        verify_investigation_snapshot_identity(
+            first.snapshot_id, source=_source(fake),
+            manifest_directory=tmp_path / "manifests")
 
 def test_added_object_is_new_evidence_with_time_and_row_delta(tmp_path):
     fake = MemoryS3(_objects())
@@ -450,3 +524,143 @@ def test_failed_first_run_does_not_consume_then_repair_creates_first_snapshot(tm
     repaired = _run(tmp_path, fake)
     assert repaired.status == SNAPSHOT_READY
     assert repaired.predecessor_snapshot_id is None
+
+
+def _decision_trace_coverage_objects(
+    early: str = "2026-09-25T01:00:00Z",
+    late: str = "2026-09-25T20:00:00Z",
+) -> tuple[dict[str, str], str, str]:
+    objects = _objects()
+    objects.pop(_key("decision_trace"))
+    early_key = _key("decision_trace", part="part-early.jsonl")
+    late_key = _key("decision_trace", part="part-late.jsonl")
+    objects[early_key] = _body(
+        "decision_trace", "early", timestamp=early)
+    objects[late_key] = _body(
+        "decision_trace", "late", timestamp=late)
+    return objects, early_key, late_key
+
+
+def _saved_coverage(tmp_path, dataset: str) -> dict[str, str | None]:
+    state = FrontierStateStore(tmp_path / "state").load_latest_success()
+    return state["frontier"]["dataset_membership"][dataset][
+        "event_time_coverage"]
+
+
+def test_replacement_removes_obsolete_event_coverage_minimum(tmp_path):
+    objects, early_key, _late_key = _decision_trace_coverage_objects()
+    fake = MemoryS3(objects)
+    assert _run(tmp_path, fake).status == SNAPSHOT_READY
+
+    fake.objects[early_key] = _body(
+        "decision_trace", "replacement", timestamp="2026-09-25T10:00:00Z")
+    assert _run(tmp_path, fake).status == SNAPSHOT_READY
+    assert _saved_coverage(tmp_path, "decision_trace") == {
+        "start": "2026-09-25T10:00:00+00:00",
+        "end": "2026-09-25T20:00:00+00:00",
+    }
+
+
+def test_replacement_removes_obsolete_event_coverage_maximum(tmp_path):
+    objects, _early_key, late_key = _decision_trace_coverage_objects()
+    fake = MemoryS3(objects)
+    assert _run(tmp_path, fake).status == SNAPSHOT_READY
+
+    fake.objects[late_key] = _body(
+        "decision_trace", "replacement", timestamp="2026-09-25T15:00:00Z")
+    assert _run(tmp_path, fake).status == SNAPSHOT_READY
+    assert _saved_coverage(tmp_path, "decision_trace") == {
+        "start": "2026-09-25T01:00:00+00:00",
+        "end": "2026-09-25T15:00:00+00:00",
+    }
+
+
+def test_removal_removes_obsolete_event_coverage_minimum(tmp_path):
+    objects, early_key, _late_key = _decision_trace_coverage_objects()
+    fake = MemoryS3(objects)
+    assert _run(tmp_path, fake).status == SNAPSHOT_READY
+
+    fake.objects.pop(early_key)
+    assert _run(tmp_path, fake).status == SNAPSHOT_READY
+    assert _saved_coverage(tmp_path, "decision_trace") == {
+        "start": "2026-09-25T20:00:00+00:00",
+        "end": "2026-09-25T20:00:00+00:00",
+    }
+
+
+def test_removal_removes_obsolete_event_coverage_maximum(tmp_path):
+    objects, _early_key, late_key = _decision_trace_coverage_objects()
+    fake = MemoryS3(objects)
+    assert _run(tmp_path, fake).status == SNAPSHOT_READY
+
+    fake.objects.pop(late_key)
+    assert _run(tmp_path, fake).status == SNAPSHOT_READY
+    assert _saved_coverage(tmp_path, "decision_trace") == {
+        "start": "2026-09-25T01:00:00+00:00",
+        "end": "2026-09-25T01:00:00+00:00",
+    }
+
+
+def test_added_only_event_coverage_merge_stays_exact(tmp_path):
+    objects = _objects()
+    objects[_key("decision_trace")] = _body(
+        "decision_trace", "first", timestamp="2026-09-25T10:00:00Z")
+    fake = MemoryS3(objects)
+    assert _run(tmp_path, fake).status == SNAPSHOT_READY
+
+    fake.objects[_key("decision_trace", part="part-added.jsonl")] = _body(
+        "decision_trace", "added", timestamp="2026-09-25T20:00:00Z")
+    assert _run(tmp_path, fake).status == SNAPSHOT_READY
+    assert _saved_coverage(tmp_path, "decision_trace") == {
+        "start": "2026-09-25T10:00:00+00:00",
+        "end": "2026-09-25T20:00:00+00:00",
+    }
+
+
+def test_unchanged_event_coverage_reuses_exact_authority_without_body_or_head(tmp_path):
+    objects, _early_key, _late_key = _decision_trace_coverage_objects()
+    fake = MemoryS3(objects)
+    assert _run(tmp_path, fake).status == SNAPSHOT_READY
+    before = _saved_coverage(tmp_path, "decision_trace")
+    fake.get_calls = fake.head_calls = fake.list_calls = 0
+
+    result = _run(tmp_path, fake)
+
+    assert result.status == NO_NEW_GOVERNED_EVIDENCE
+    assert _saved_coverage(tmp_path, "decision_trace") == before
+    assert (fake.list_calls, fake.head_calls, fake.get_calls) == (10, 0, 0)
+
+
+@pytest.mark.parametrize(
+    ("transition", "expected_gets"),
+    (("added", 1), ("replaced", 1), ("removed", 0)),
+)
+def test_complete_cycle_remote_calls_scale_with_object_delta(
+    tmp_path, transition, expected_gets,
+):
+    objects: dict[str, str] = {}
+    for dataset in BOUND_DATASETS:
+        for index in range(15):
+            objects[_key(dataset, part=f"part-{index:03d}.jsonl")] = _body(
+                dataset, f"historical-{index:03d}")
+    fake = MemoryS3(objects)
+    assert _run(tmp_path, fake).status == SNAPSHOT_READY
+    trade_keys = sorted(key for key in fake.objects if "/trade_truth/" in key)
+
+    if transition == "added":
+        fake.objects[_key("trade_truth", part="part-added.jsonl")] = _body(
+            "trade_truth", "added")
+    elif transition == "replaced":
+        fake.objects[trade_keys[0]] = _body("trade_truth", "replacement")
+    else:
+        fake.objects.pop(trade_keys[0])
+    fake.list_calls = fake.head_calls = fake.get_calls = 0
+
+    result = _run(tmp_path, fake)
+
+    assert result.status == SNAPSHOT_READY
+    assert (fake.list_calls, fake.head_calls, fake.get_calls) == (
+        20, 0, expected_gets)
+    clean = freeze_investigation_snapshot(
+        start_date="2026-09-25", end_date="2026-09-25", source=_source(fake))
+    assert result.snapshot_id == clean.snapshot_id
