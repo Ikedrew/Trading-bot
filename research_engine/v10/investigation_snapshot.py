@@ -624,6 +624,281 @@ def freeze_investigation_snapshot(
     return snapshot
 
 
+# ─── Object-level incremental materialization ────────────────────────────────
+# Classification labels used to decide whether a predecessor's verified immutable
+# object authority may be reused, or must be re-read and re-verified.
+
+UNCHANGED = "UNCHANGED"
+ADDED = "ADDED"
+REPLACED = "REPLACED"
+REMOVED = "REMOVED"
+
+
+def _same_object_identity(prior: BoundObject, current: Mapping[str, Any]) -> bool:
+    """Return True only when ``current`` proves the exact object in ``prior``.
+
+    Compares the exact object identity the predecessor snapshot already verified
+    (key, ETag, byte size, last-modified and version ID where versioned). S3
+    objects are immutable once written, so an identical version ID + ETag + size
+    proves the same bytes; the predecessor's content SHA-256 / byte size / row
+    count therefore remain valid authority and need not be re-derived. Any
+    ambiguity (e.g. a versioning-mode flip) fails closed so the caller re-reads.
+    """
+    if prior.identifier != str(current.get("identifier") or ""):
+        return False
+    if str(prior.etag or "") != str(current.get("etag") or ""):
+        return False
+    if int(prior.size) != int(current.get("size") or 0):
+        return False
+    if str(prior.last_modified or "") != str(current.get("last_modified") or ""):
+        return False
+    prior_version = prior.version_id
+    current_version = current.get("version_id")
+    if (prior_version is None) != (current_version is None):
+        return False
+    if prior_version is not None and str(prior_version) != str(current_version):
+        return False
+    return True
+
+
+def classify_dataset_objects(
+    prior_binding: DatasetBinding,
+    current_objects: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Deterministically classify one dataset's closed roster against a predecessor.
+
+    ``current_objects`` are the exact current object records resolved from the new
+    closed roster (listing material enriched with version ID via HEAD). The rules:
+
+      * same key + same exact immutable identity   -> UNCHANGED
+      * new key                                    -> ADDED
+      * same key + changed version/ETag/digest     -> REPLACED
+      * prior key absent from new closed membership -> REMOVED
+
+    ``fully_unchanged`` is True only when the dataset can be reused verbatim.
+    """
+    prior_by_key = {item.identifier: item for item in prior_binding.objects}
+    current_by_key = {
+        str(item.get("identifier") or ""): item for item in current_objects
+    }
+    unchanged: list[str] = []
+    added: list[str] = []
+    replaced: list[str] = []
+    removed: list[str] = []
+    for key in current_by_key:
+        if key not in prior_by_key:
+            added.append(key)
+        elif _same_object_identity(prior_by_key[key], current_by_key[key]):
+            unchanged.append(key)
+        else:
+            replaced.append(key)
+    for key in prior_by_key:
+        if key not in current_by_key:
+            removed.append(key)
+    return {
+        "unchanged": tuple(sorted(unchanged)),
+        "added": tuple(sorted(added)),
+        "replaced": tuple(sorted(replaced)),
+        "removed": tuple(sorted(removed)),
+        "fully_unchanged": not added and not replaced and not removed,
+    }
+
+
+def _reused_binding_with_dates(
+    binding: DatasetBinding, start_date: str, end_date: str,
+) -> DatasetBinding:
+    """Re-scope a reused binding's stage-4 record to the new temporal window.
+
+    Reusing a predecessor binding verbatim is only equivalent to a fresh freeze
+    when its stage-4 ``DatasetSnapshot`` carries the same temporal bounds. That
+    record embeds ``temporal_bounds`` and date entries in ``population_filters``,
+    so when the frontier window moves these must be re-derived even though the
+    record-byte content digest and object authority are unchanged.
+    """
+    if binding.dataset_snapshot_json is None:
+        return binding
+    child = json.loads(binding.dataset_snapshot_json)
+    child.pop("population_descriptor_digest", None)
+    child["temporal_bounds"] = [start_date, end_date]
+    rebuilt_filters: list[str] = []
+    for entry in (child.get("population_filters") or ()):
+        if entry.startswith("start_date_inclusive="):
+            rebuilt_filters.append("start_date_inclusive=" + start_date)
+        elif entry.startswith("end_date_inclusive="):
+            rebuilt_filters.append("end_date_inclusive=" + end_date)
+        else:
+            rebuilt_filters.append(entry)
+    child["population_filters"] = rebuilt_filters
+    new_id = D.I.DATASET_SNAPSHOT_ID_PREFIX + D.fingerprint(
+        {key: child[key] for key in D.IDENTITY_MATERIAL_FIELDS})[:24].upper()
+    child["dataset_snapshot_id"] = new_id
+    snapshot = D.DatasetSnapshot.from_dict(child)
+    return DatasetBinding(
+        dataset=binding.dataset,
+        requirement=binding.requirement,
+        presence=binding.presence,
+        schema_version=binding.schema_version,
+        schema_generation=binding.schema_generation,
+        dataset_snapshot_id=snapshot.dataset_snapshot_id,
+        dataset_snapshot_json=D.canonical_json(snapshot.to_dict()),
+        source_object_count=binding.source_object_count,
+        source_row_count=binding.source_row_count,
+        content_digest=binding.content_digest,
+        objects=binding.objects,
+        stage4_evidence_epochs=binding.stage4_evidence_epochs,
+    )
+
+
+def freeze_investigation_snapshot_incremental(
+    *,
+    predecessor: InvestigationSnapshot,
+    start_date: str,
+    end_date: str,
+    source: S3ResearchDataSource | None = None,
+    manifest_path: Path | None = None,
+    object_membership: Mapping[str, Sequence[Mapping[str, Any]]] | None = None,
+) -> InvestigationSnapshot:
+    """Capture a new immutable snapshot reusing verified unchanged object authority.
+
+    Equivalent to :func:`freeze_investigation_snapshot` over the same closed
+    membership, but only datasets whose closed object roster actually changed are
+    re-read and re-verified. Datasets proven unchanged reuse the predecessor's
+    exact ``DatasetBinding`` authority (object identity, content digest, row
+    counts, and stage-4 dataset snapshot record) without downloading any bytes.
+
+    With no explicit membership, listing remains broad (three listings, one
+    HEAD pass) so any mid-freeze S3 change — including to an object classified
+    UNCHANGED — still fails closed.  A supplied closed roster preserves the
+    frontier cutoff: later keys remain eligible for the next epoch while the
+    selected keys are still resolved to exact immutable object identities.
+    """
+    start = _validate_date(start_date, "start_date")
+    end = _validate_date(end_date, "end_date")
+    if start > end:
+        raise InvestigationSnapshotError("INVERTED_SNAPSHOT_BOUNDS")
+    resolved = source or get_default_source()
+    authority = _authority_material(resolved)
+    schema_by_dataset = {name: current_schema(name) for name in BOUND_DATASETS}
+
+    pred_by_dataset = {binding.dataset: binding for binding in predecessor.datasets}
+    if set(pred_by_dataset) != set(BOUND_DATASETS):
+        raise InvestigationSnapshotError("PREDECESSOR_DATASET_SET_MISMATCH")
+
+    if object_membership is None:
+        before = {
+            name: resolved.discover_dataset_objects(
+                name, start_date=start, end_date=end)
+            for name in BOUND_DATASETS
+        }
+    else:
+        if set(object_membership) != set(BOUND_DATASETS):
+            raise InvestigationSnapshotError("CLOSED_EPOCH_DATASET_SET_MISMATCH")
+        before = {
+            name: tuple(dict(item) for item in object_membership[name])
+            for name in BOUND_DATASETS
+        }
+    for name in REQUIRED_DATASETS:
+        if not before[name]:
+            raise InvestigationSnapshotError("REQUIRED_DATASET_ABSENT:" + name)
+
+    # Resolve exact current versions without downloading bodies.
+    headed: dict[str, tuple[dict[str, Any], ...]] = {}
+    for name in BOUND_DATASETS:
+        if before[name]:
+            headed[name] = resolved.head_bound_objects(
+                name, before[name], expected_schema_version=schema_by_dataset[name])
+        else:
+            headed[name] = ()
+
+    classification = {
+        name: classify_dataset_objects(pred_by_dataset[name], headed[name])
+        for name in BOUND_DATASETS
+    }
+
+    bindings: list[DatasetBinding] = []
+    changed_names: list[str] = []
+    first_objects: dict[str, tuple[BoundObject, ...]] = {}
+    first_row_counts: dict[str, int] = {}
+    for name in BOUND_DATASETS:
+        requirement = "REQUIRED" if name in REQUIRED_DATASETS else "OPTIONAL"
+        if classification[name]["fully_unchanged"]:
+            bindings.append(_reused_binding_with_dates(
+                pred_by_dataset[name], start, end))
+            continue
+        changed_names.append(name)
+        rows = resolved.read_objects_for_freeze(
+            name, before[name], expected_schema_version=schema_by_dataset[name],
+            start_date=start, end_date=end)
+        malformed = resolved.malformed_report(name)
+        if malformed and malformed.malformed_lines:
+            raise InvestigationSnapshotError(
+                f"MALFORMED_BOUND_OBJECT_ROWS:{name}:{malformed.malformed_lines}")
+        first_objects[name] = tuple(
+            BoundObject.from_metadata(item)
+            for item in resolved.object_metadata(name))
+        if name in REQUIRED_DATASETS and not rows:
+            raise InvestigationSnapshotError("REQUIRED_DATASET_EMPTY:" + name)
+        first_row_counts[name] = len(rows)
+        bindings.append(_child_snapshot(
+            name, requirement, start, end, rows, first_objects[name], authority))
+        del rows
+
+    if object_membership is None:
+        between = {
+            name: resolved.discover_dataset_objects(
+                name, start_date=start, end_date=end)
+            for name in BOUND_DATASETS
+        }
+        if any(_listing_material(before[name]) != _listing_material(between[name])
+               for name in BOUND_DATASETS):
+            raise InvestigationSnapshotError("OBJECT_POPULATION_CHANGED_DURING_FREEZE")
+
+    for name in changed_names:
+        second_rows = resolved.read_bound_objects(
+            name, [item.to_dict() for item in first_objects[name]],
+            expected_schema_version=schema_by_dataset[name],
+            start_date=start, end_date=end)
+        second_objects = tuple(
+            BoundObject.from_metadata(item)
+            for item in resolved.object_metadata(name))
+        if second_objects != first_objects[name] or len(second_rows) != first_row_counts[name]:
+            raise InvestigationSnapshotError(
+                "OBJECT_CONTENT_CHANGED_DURING_FREEZE:" + name)
+        del second_rows
+
+    if object_membership is None:
+        after = {
+            name: resolved.discover_dataset_objects(
+                name, start_date=start, end_date=end)
+            for name in BOUND_DATASETS
+        }
+        if any(_listing_material(before[name]) != _listing_material(after[name])
+               for name in BOUND_DATASETS):
+            raise InvestigationSnapshotError("OBJECT_POPULATION_CHANGED_DURING_FREEZE")
+
+    material = _identity_material(
+        start_date=start, end_date=end, source_authority=authority,
+        bindings=bindings, excluded_by_design=EXCLUDED_BY_DESIGN)
+    digest = D.fingerprint(material)
+    snapshot_id = "ISNAP-" + digest[:24].upper()
+    epoch_id = "INVESTIGATION-EPOCH-" + digest[:24].upper()
+    snapshot = InvestigationSnapshot(
+        snapshot_id=snapshot_id,
+        evidence_epoch=epoch_id,
+        snapshot_fingerprint=digest,
+        created_at=datetime.now(timezone.utc).isoformat(),
+        start_date=start,
+        end_date=end,
+        source_authority_json=D.canonical_json(authority),
+        datasets=tuple(bindings),
+        excluded_by_design=EXCLUDED_BY_DESIGN,
+    )
+    snapshot = InvestigationSnapshot.from_dict(snapshot.to_dict())
+    if manifest_path is not None:
+        _save_manifest(snapshot, Path(manifest_path))
+    return snapshot
+
+
 def load_investigation_snapshot(path: Path) -> InvestigationSnapshot:
     """Load an immutable manifest and rederive all identity/digest invariants."""
     try:

@@ -14,7 +14,11 @@ from typing import Any, Callable, Mapping, Sequence
 
 from core.production_data_contract import PRODUCTION_SCHEMA_REGISTRY, current_schema
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json, fingerprint
-from research_engine.data_access.s3_source import S3ResearchDataSource, get_default_source
+from research_engine.data_access.s3_source import (
+    ResearchDataSourceError,
+    S3ResearchDataSource,
+    get_default_source,
+)
 from research_engine.v10.investigation_snapshot import (
     BOUND_DATASETS,
     EXCLUDED_BY_DESIGN,
@@ -22,8 +26,10 @@ from research_engine.v10.investigation_snapshot import (
     OPTIONAL_DATASETS,
     REQUIRED_DATASETS,
     InvestigationSnapshot,
+    InvestigationSnapshotError,
     SnapshotBoundDatasetReader,
     freeze_investigation_snapshot,
+    freeze_investigation_snapshot_incremental,
     load_investigation_snapshot_id,
     save_investigation_snapshot,
 )
@@ -876,6 +882,57 @@ def _assert_snapshot_membership(
             )
 
 
+def _materialize_snapshot(
+    *,
+    freezer: Callable[..., InvestigationSnapshot],
+    incremental_freezer: Callable[..., InvestigationSnapshot],
+    predecessor_snapshot_id: str | None,
+    manifest_directory: Path,
+    start_date: str,
+    end_date: str,
+    source: S3ResearchDataSource,
+    object_membership: Mapping[str, Sequence[Mapping[str, Any]]],
+) -> InvestigationSnapshot:
+    """Reuse predecessor object authority when safe; otherwise freeze fully.
+
+    A missing or unreadable predecessor artifact falls back to a full clean
+    freeze rather than risking a partially-reused snapshot. A present predecessor
+    is passed to the incremental freezer, which re-reads only changed datasets.
+    """
+    if predecessor_snapshot_id is None:
+        return freezer(
+            start_date=start_date,
+            end_date=end_date,
+            source=source,
+            object_membership=object_membership,
+        )
+    try:
+        predecessor = load_investigation_snapshot_id(
+            predecessor_snapshot_id, manifest_directory=manifest_directory)
+    except InvestigationSnapshotError:
+        return freezer(
+            start_date=start_date,
+            end_date=end_date,
+            source=source,
+            object_membership=object_membership,
+        )
+    try:
+        return incremental_freezer(
+            predecessor=predecessor,
+            start_date=start_date,
+            end_date=end_date,
+            source=source,
+            object_membership=object_membership,
+        )
+    except (InvestigationSnapshotError, ResearchDataSourceError):
+        return freezer(
+            start_date=start_date,
+            end_date=end_date,
+            source=source,
+            object_membership=object_membership,
+        )
+
+
 def run_frontier_snapshot_cycle(
     *,
     source: S3ResearchDataSource | None = None,
@@ -883,6 +940,7 @@ def run_frontier_snapshot_cycle(
     manifest_directory: Path | str = MANIFEST_DIRECTORY,
     as_of_date: date | None = None,
     freezer: Callable[..., InvestigationSnapshot] = freeze_investigation_snapshot,
+    incremental_freezer: Callable[..., InvestigationSnapshot] = freeze_investigation_snapshot_incremental,
     verifier: Callable[..., Any] | None = None,
 ) -> FrontierCycleResult:
     """Discover, cohere, freeze, verify, and advance one governed frontier."""
@@ -961,7 +1019,12 @@ def run_frontier_snapshot_cycle(
                 delta=delta,
             )
 
-        snapshot = freezer(
+        manifest_dir = Path(manifest_directory)
+        snapshot = _materialize_snapshot(
+            freezer=freezer,
+            incremental_freezer=incremental_freezer,
+            predecessor_snapshot_id=predecessor,
+            manifest_directory=manifest_dir,
             start_date=frontier.selected_start_time,
             end_date=frontier.selected_end_time,
             source=resolved_source,
@@ -971,7 +1034,6 @@ def run_frontier_snapshot_cycle(
             },
         )
         _assert_snapshot_membership(snapshot, frontier)
-        manifest_dir = Path(manifest_directory)
         manifest_path = manifest_dir / f"{snapshot.snapshot_id}.json"
         save_investigation_snapshot(snapshot, manifest_path)
         if verifier is None:
