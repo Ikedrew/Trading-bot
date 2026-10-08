@@ -83,6 +83,19 @@ PRODUCTION_EVALUATOR_FAMILIES: tuple[Mapping[str, str], ...] = (
         "evaluator_version": "v1",
         "capability_class": "GENERATED_QUESTION_DESCRIPTIVE_EVALUATOR",
     },
+    {
+        # The only candidate-capable production family: the canonical HD09
+        # governed exit-policy counterfactual authority.  Its governed
+        # intervention is resolved from the governed policy catalogue at
+        # evaluation time, never named statically and never inferred.
+        "evidence_class": "GOVERNED_EXIT_POLICY_COUNTERFACTUAL",
+        "evaluator_key": "q71.counterfactual.governed_exit_policy",
+        "runner_module": "research_engine.experiments.q71_production_evaluators",
+        "runner_function": "governed_exit_policy_counterfactual",
+        "evaluator_version": "v1",
+        "capability_class": (
+            "GENERATED_QUESTION_GOVERNED_COUNTERFACTUAL_INTERVENTION_EVALUATOR"),
+    },
 )
 
 
@@ -281,6 +294,10 @@ def production_capability_matrix() -> dict[str, Any]:
             "candidate_capable": declaration.candidate_capable,
             "governed_intervention_policy_id": (
                 declaration.governed_intervention_policy_id),
+            "governed_intervention_authority": (
+                declaration.governed_intervention_authority),
+            "governed_intervention_policy_catalogue": (
+                declaration.governed_intervention_policy_catalogue),
             "unsupported_reason": None,
         })
     for token, entry in sorted(unsupported.items()):
@@ -299,6 +316,8 @@ def production_capability_matrix() -> dict[str, Any]:
             "hypothesis_capable": False,
             "candidate_capable": False,
             "governed_intervention_policy_id": None,
+            "governed_intervention_authority": None,
+            "governed_intervention_policy_catalogue": None,
             "unsupported_reason": str(entry["reason"]),
             "unsupported_detail": str(entry["detail"]),
             "unsupported_provenance": str(entry["provenance"]),

@@ -287,7 +287,7 @@ def test_production_registry_loads_and_persists(tmp_path):
     registry = _production_registry(tmp_path)
     path = tmp_path / "production_registry.json"
     assert path.exists()
-    assert len(registry.all()) == len(PRODUCTION_EVALUATOR_FAMILIES) == 3
+    assert len(registry.all()) == len(PRODUCTION_EVALUATOR_FAMILIES) == 4
     loaded = load_production_evaluator_registry(path)
     assert loaded is not None
     assert [item.evaluator_key for item in loaded.all()] == [
@@ -510,12 +510,32 @@ def test_capability_matrix_is_honest_and_denominator_is_not_narrowed():
     assert 0.0 < matrix["supported_fraction"] < 1.0
     assert set(matrix["unsupported_family_reasons"]) == set(
         unsupported_evidence_class_catalogue())
-    assert matrix["candidate_capable_families"] == []
+    # Exactly one production family is candidate-capable, and it is the governed
+    # HD09 exit-policy counterfactual authority.
+    assert matrix["candidate_capable_families"] == [
+        "GOVERNED_EXIT_POLICY_COUNTERFACTUAL"]
     assert {row["structural_family"] for row in matrix["families"]} == set(families)
     for row in matrix["families"]:
         if not row["evaluator_available"]:
             assert row["unsupported_reason"]
             assert row["scientific_finding_capable"] is False
+            assert row["candidate_capable"] is False
+            assert row["governed_intervention_policy_id"] is None
+            assert row["governed_intervention_authority"] is None
+        elif row["candidate_capable"]:
+            # A candidate-capable family must declare a governed intervention:
+            # either a static governed policy id or a structural authority that
+            # resolves one from the governed policy catalogue.
+            assert (row["governed_intervention_policy_id"]
+                    or row["governed_intervention_authority"])
+            if row["governed_intervention_authority"]:
+                assert row["governed_intervention_policy_catalogue"] == (
+                    "research_engine.registry.exit_policy_adjudication."
+                    "CANDIDATE_POLICIES_V1")
+        else:
+            assert row["governed_intervention_policy_id"] is None
+            assert row["governed_intervention_authority"] is None
+            assert row["governed_intervention_policy_catalogue"] is None
 
 
 
@@ -558,16 +578,23 @@ def test_production_evaluator_creates_no_candidate_without_governed_intervention
     tmp_path,
 ):
     harness, orchestration, execution, bridge, registry = _run_full_cycle(tmp_path)
-    # No production family names a governed intervention policy, so no candidate
-    # can be created and the pipeline must say exactly why.
+    # The end-to-end cycle runs the E1 expectancy family, which names no governed
+    # intervention: no candidate can be created and the pipeline must say why.
     assert bridge.candidates_created == ()
     assert any("CANDIDATE_DESIGN_REQUIRED" in item
                for item in bridge.review_required)
     assert harness.registry.list_candidates() == []
     matrix = production_capability_matrix()
-    assert matrix["candidate_capable_families"] == []
+    # Exactly one production family is candidate-capable: the governed HD09
+    # exit-policy counterfactual authority.  No other family may claim it.
+    assert matrix["candidate_capable_families"] == [
+        "GOVERNED_EXIT_POLICY_COUNTERFACTUAL"]
     for row in matrix["families"]:
+        if row["structural_family"] == "GOVERNED_EXIT_POLICY_COUNTERFACTUAL":
+            continue
+        assert row["candidate_capable"] is False
         assert row["governed_intervention_policy_id"] is None
+        assert row["governed_intervention_authority"] is None
     result = harness.results.load_result(execution["result_ids"][0])
     assert result.governed_scientific_metrics["no_governed_intervention_reason"] == (
         "NO_INTERVENTION_MAPPING")
@@ -940,6 +967,22 @@ def test_production_evaluator_functions_respect_their_declared_scope_directly():
     assert empty is not None and empty.scientifically_meaningful is False
     assert empty.not_meaningful_reason == "TEST_NOT_ESTIMABLE"
 
+    # The candidate-capable counterfactual family fails closed when no frozen
+    # governed counterfactual evidence is admitted, and never names a policy.
+    counterfactual = governed_scientific_result(
+        evaluators.governed_exit_policy_counterfactual(
+            generated_question_id="GEN-TEST", datasets=datasets))
+    assert counterfactual is not None
+    assert counterfactual.scientifically_meaningful is False
+    assert counterfactual.not_meaningful_reason == "INSUFFICIENT_GOVERNED_EVIDENCE"
+    assert counterfactual.candidate_design is None
+    assert counterfactual.no_intervention_reason is None
+    report = evaluators.governed_exit_policy_counterfactual(
+        generated_question_id="GEN-TEST", datasets=datasets)
+    assert report["status"] == "INSUFFICIENT_DATA"
+    assert report["provenance"]["fail_closed_reason"] == (
+        "MISSING_COUNTERFACTUAL_EVIDENCE")
+
 def test_no_live_approval_anywhere_in_the_production_pipeline(tmp_path):
     harness, orchestration, execution, bridge, registry = _run_full_cycle(tmp_path)
     projection = harness.projection(q71=orchestration, bridge=bridge)
@@ -960,6 +1003,7 @@ def test_production_modules_never_write_candidates_or_findings_directly():
         Path("research_engine/experiments/q71_production_evaluators.py"),
         Path("research_engine/experiments/q71_evidence_classes.py"),
         Path("research_engine/v10/continuous/q71_production_registry.py"),
+        Path("research_engine/control_plane/governed_counterfactual_evidence.py"),
     )
     forbidden_import_fragments = (
         "optimisation_registry", "scientific_state_store", "scientific_state_bridge",

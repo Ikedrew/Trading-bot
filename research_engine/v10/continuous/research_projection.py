@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
+from research_engine.experiments.q71_evidence_classes import (
+    evidence_class_declaration,
+)
 from research_engine.registry.baseline_manifest import BASELINE_QUESTION_IDS
 from research_engine.v10.continuous.production_coverage import (
     NO_PRODUCTION_OBSERVATION_SPACE,
@@ -136,6 +139,28 @@ def _generated_question_rows(
             str(cand) for finding_id in linked_findings
             for cand in (dependencies.get(finding_id, {}) or {}).get("candidates", [])
         })
+        requirements = row.get("evidence_requirements")
+        requirements = (dict(requirements)
+                        if isinstance(requirements, Mapping) else {})
+        evidence_class = str(requirements.get("evidence_class") or "")
+        declaration = evidence_class_declaration(evidence_class)
+        governed = dict(execution.get("governed_scientific_metrics") or {})
+        candidate_capable = bool(
+            declaration is not None and declaration.candidate_capable)
+        row.update({
+            "evidence_class": evidence_class or None,
+            "candidate_capable": candidate_capable,
+            "governed_intervention": (
+                None if not candidate_capable else {
+                    "policy_id": declaration.governed_intervention_policy_id,
+                    "authority": declaration.governed_intervention_authority,
+                    "catalogue": (
+                        declaration.governed_intervention_policy_catalogue),
+                }),
+            "governed_policy_id": governed.get("governed_policy_id"),
+            "no_governed_intervention_reason": governed.get(
+                "no_governed_intervention_reason"),
+        })
         row.update({
             "execution_status": execution_status,
             "scientific_status": scientific,
@@ -257,6 +282,20 @@ def build_unified_research_projection(
         row["shadow_evidence"] = dict(shadow_evidence.get(candidate.candidate_id, {}))
         row["live_approved"] = bool(candidate.shadow_binding.get("live_approved", False))
         row["promotion_action"] = "HUMAN_REVIEW_REQUIRED" if candidate.status == "READY_FOR_PROMOTION_REVIEW" else None
+        # Runtime-authority truth: a research candidate carries none until the
+        # governed Block-3 path has an explicit human acceptance and deployment.
+        row["runtime_authority"] = (
+            "LIVE_APPROVED" if row["live_approved"] else "NOT_LIVE")
+        row["human_approval_required"] = not row["live_approved"]
+        evidence_state = str(
+            (candidate.provenance or {}).get("evidence_state") or "")
+        blocked_upstream = (
+            candidate.status in {"BLOCKED_UPSTREAM_INVALIDATED",
+                                 "INVALIDATED_UPSTREAM"}
+            or evidence_state in {"FINDING_WEAKENED", "FINDING_INVALIDATED"})
+        row["upstream_invalidation"] = evidence_state or (
+            candidate.status if blocked_upstream else None)
+        row["blocked_upstream"] = bool(blocked_upstream)
         pending = sorted(set(row["source_question_ids"]) & pending_question_ids)
         row["execution_freshness"] = (
             "DEEP_STALE" if pending else "CURRENT")

@@ -11,6 +11,23 @@ import sys
 import uuid
 from typing import Any, Callable, Mapping
 
+from research_engine.control_plane.governed_counterfactual_evidence import (
+    COUNTERFACTUAL_EVIDENCE_CLASS,
+    CounterfactualEvidenceError,
+    CounterfactualEvidenceStore,
+    DEFAULT_COUNTERFACTUAL_EVIDENCE_DIRECTORY,
+    build_governed_counterfactual_evidence,
+    bind_counterfactual_evidence,
+    validate_governed_counterfactual_evidence,
+)
+from research_engine.control_plane.governed_m5_candle_authority import (
+    DEFAULT_M5_CANDLE_AUTHORITY_DIRECTORY,
+    M5_CANDLE_AUTHORITY_IDENTITY,
+    CandleAuthorityError,
+    M5CandleAuthorityStore,
+    bind_m5_candle_authority,
+    build_governed_m5_candle_authority,
+)
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
 from research_engine.registry.baseline_manifest import BASELINE_QUESTION_IDS
 from research_engine.lifecycle.generated_research_store import (
@@ -49,6 +66,10 @@ from research_engine.v10.continuous.production_coverage import (
     write_q71_coverage_source_mapping,
 )
 from research_engine.v10.investigation_snapshot import MANIFEST_DIRECTORY
+from research_engine.v10.investigation_snapshot import (
+    InvestigationSnapshot, load_investigation_snapshot_id,
+    open_investigation_snapshot,
+)
 from research_engine.v10.continuous.question_cycle_state import QuestionCycleStore
 from research_engine.v10.continuous.research_projection import (
     ResearchProjectionStore, build_evaluation_refresh_projection,
@@ -223,6 +244,180 @@ def _stale_evaluation_questions(
     return stale_question_ids(recorded, identities)
 
 
+def _governed_candle_authority_state(
+    *, present: bool, authority: Any = None, binding: Any = None,
+    reason: str | None = None, detail: str = "",
+) -> dict[str, Any]:
+    """The Lab-truth block for the governed M5 candle authority."""
+    return {
+        "authority_identity": M5_CANDLE_AUTHORITY_IDENTITY,
+        "present": bool(present),
+        "authority_id": (None if authority is None
+                         else str(authority.authority_id)),
+        "content_digest": (None if authority is None
+                           else str(authority.content_digest)),
+        "snapshot_id": (None if authority is None
+                        else str(authority.snapshot_id)),
+        "snapshot_fingerprint": (None if authority is None
+                                 else str(authority.snapshot_fingerprint)),
+        "investigation_epoch": (None if authority is None
+                                else str(authority.investigation_epoch)),
+        "frontier_start": (None if authority is None
+                           else str(authority.frontier_start)),
+        "frontier_end": (None if authority is None
+                         else str(authority.frontier_end)),
+        "symbols": ([] if authority is None else list(authority.symbols)),
+        "bar_count": (0 if authority is None else int(authority.bar_count)),
+        "first_bar_utc": (None if authority is None or not authority.bar_count
+                          else str(authority.bars[0]["open_time_utc"])),
+        "last_bar_utc": (None if authority is None or not authority.bar_count
+                         else str(authority.bars[-1]["open_time_utc"])),
+        "completeness": ({} if authority is None
+                         else dict(authority.completeness)),
+        "bound": binding is not None,
+        "fail_closed_reason": None if present else (
+            reason or "MISSING_M5_CANDLE_AUTHORITY"),
+        "detail": str(detail or ""),
+    }
+
+
+def _materialize_governed_candle_authority(
+    *, snapshot_id: str, manifest_directory: Path | str, source: Any,
+    store: M5CandleAuthorityStore, producer: Callable[..., Any] | None,
+    created_at: str,
+) -> tuple[Any, Any, dict[str, Any]]:
+    """Admit the governed M5 candle authority for exactly this frontier.
+
+    This runs *upstream* of the Q71 worker, which never touches storage.  An
+    unchanged frontier reuses its already-registered deterministic authority, so
+    re-entry does not re-read or re-mint anything.  Any failure is a governed
+    fail-closed state, never a fabricated authority.
+    """
+    if producer is None:
+        return None, None, _governed_candle_authority_state(
+            present=False, reason="CANDLE_AUTHORITY_PRODUCER_DISABLED",
+            detail="no governed candle authority producer is configured")
+    existing = store.for_snapshot(str(snapshot_id))
+    if existing is not None:
+        authority, binding = existing
+        return authority, binding, _governed_candle_authority_state(
+            present=True, authority=authority, binding=binding,
+            detail="reused the registered deterministic authority")
+    try:
+        snapshot: InvestigationSnapshot = load_investigation_snapshot_id(
+            str(snapshot_id), manifest_directory=Path(manifest_directory))
+        reader = open_investigation_snapshot(
+            str(snapshot_id), source=source,
+            manifest_directory=Path(manifest_directory))
+        shadow_rows = reader.cycle_cached_dataset("shadow_runtime")
+        authority = producer(
+            shadow_runtime_rows=shadow_rows,
+            snapshot_id=str(snapshot.snapshot_id),
+            snapshot_fingerprint=str(snapshot.snapshot_fingerprint),
+            investigation_epoch=str(snapshot.evidence_epoch),
+            frontier_start=str(snapshot.start_date),
+            frontier_end=str(snapshot.end_date),
+            snapshot_authority=dict(snapshot.source_authority),
+            produced_at=str(created_at), source=source)
+        binding = bind_m5_candle_authority(
+            authority, bound_at=str(created_at))
+        store.register(authority, bound_at=str(created_at))
+    except CandleAuthorityError as exc:
+        return None, None, _governed_candle_authority_state(
+            present=False, reason=str(exc.reason_code), detail=str(exc))
+    except Exception as exc:  # noqa: BLE001 - a governed gap, never a crash
+        return None, None, _governed_candle_authority_state(
+            present=False, reason="CANDLE_AUTHORITY_UNAVAILABLE",
+            detail=f"{type(exc).__name__}:{exc}")
+    return authority, binding, _governed_candle_authority_state(
+        present=True, authority=authority, binding=binding,
+        detail="produced from the governed events_v1 M5 candle stream")
+
+
+def _produce_governed_counterfactual_evidence(
+    *, snapshot_id: str, manifest_directory: Path | str, source: Any,
+    candle_authority: Any, candle_authority_binding: Any,
+    store: CounterfactualEvidenceStore, producer: Callable[..., Any] | None,
+    produced_at: str,
+) -> tuple[Any, Any, dict[str, Any]]:
+    """Freeze the governed counterfactual evidence upstream of the worker."""
+    state: dict[str, Any] = {
+        "evidence_class": COUNTERFACTUAL_EVIDENCE_CLASS,
+        "present": False,
+        "dataset_id": None,
+        "content_digest": None,
+        "scientifically_analysable": False,
+        "reason_codes": [],
+        "admissible_rows": 0,
+        "excluded_rows": 0,
+        "candle_authority_id": None,
+        "fail_closed_reason": None,
+        "detail": "",
+    }
+    if producer is None:
+        state["fail_closed_reason"] = "COUNTERFACTUAL_PRODUCER_DISABLED"
+        state["detail"] = (
+            "no governed counterfactual evidence producer is configured")
+        return None, None, state
+    if candle_authority is None:
+        state["fail_closed_reason"] = "MISSING_M5_CANDLE_AUTHORITY"
+        state["detail"] = (
+            "no governed M5 candle authority is bound to this frontier, so no "
+            "counterfactual evidence can be produced")
+        return None, None, state
+    try:
+        snapshot: InvestigationSnapshot = load_investigation_snapshot_id(
+            str(snapshot_id), manifest_directory=Path(manifest_directory))
+        reader = open_investigation_snapshot(
+            str(snapshot_id), source=source,
+            manifest_directory=Path(manifest_directory))
+        shadow_rows = reader.cycle_cached_dataset("shadow_runtime")
+        identities = {
+            item.dataset: str(item.content_digest)
+            for item in snapshot.datasets}
+        identities["events"] = str(candle_authority.content_digest)
+        artifact = producer(
+            shadow_runtime_rows=shadow_rows,
+            candle_authority=candle_authority,
+            candle_authority_binding=candle_authority_binding,
+            snapshot_id=str(snapshot.snapshot_id),
+            snapshot_fingerprint=str(snapshot.snapshot_fingerprint),
+            investigation_epoch=str(snapshot.evidence_epoch),
+            frontier_start=str(snapshot.start_date),
+            frontier_end=str(snapshot.end_date),
+            produced_at=str(produced_at),
+            source_dataset_identities=identities)
+        artifact = validate_governed_counterfactual_evidence(artifact)
+        binding = bind_counterfactual_evidence(
+            artifact, bound_at=str(produced_at))
+        store.register(artifact, bound_at=str(produced_at))
+    except CounterfactualEvidenceError as exc:
+        state["fail_closed_reason"] = str(exc).split(":", 1)[0]
+        state["detail"] = str(exc)
+        return None, None, state
+    except CandleAuthorityError as exc:
+        state["fail_closed_reason"] = str(exc.reason_code)
+        state["detail"] = str(exc)
+        return None, None, state
+    except Exception as exc:  # noqa: BLE001 - a governed gap, never a crash
+        state["fail_closed_reason"] = "MISSING_COUNTERFACTUAL_EVIDENCE"
+        state["detail"] = f"{type(exc).__name__}:{exc}"
+        return None, None, state
+    state.update({
+        "present": True,
+        "dataset_id": str(artifact.dataset_id),
+        "content_digest": str(artifact.content_digest),
+        "scientifically_analysable": bool(artifact.scientifically_analysable),
+        "reason_codes": list(artifact.reason_codes),
+        "admissible_rows": len(artifact.rows),
+        "excluded_rows": len(artifact.exclusions),
+        "candle_authority_id": str(artifact.candle_authority_id),
+        "detail": (
+            "frozen upstream from the governed snapshot + candle authority"),
+    })
+    return artifact, binding, state
+
+
 @_exclusive_continuous_cycle
 def run_continuous_research_cycle(
     *, state_root: Path | str = Path("data/research/continuous"),
@@ -255,8 +450,21 @@ def run_continuous_research_cycle(
     enable_deep_work: bool = True,
     execution_policy: ResearchExecutionPolicy | None = None,
     deep_work_queue_path: Path | str | None = None,
+    m5_candle_authority_producer: Callable[..., Any] | None = (
+        build_governed_m5_candle_authority),
+    m5_candle_authority_store: M5CandleAuthorityStore | None = None,
+    candle_authority_directory: Path | str | None = None,
+    counterfactual_evidence_producer: Callable[..., Any] | None = (
+        build_governed_counterfactual_evidence),
+    counterfactual_evidence_store: CounterfactualEvidenceStore | None = None,
+    counterfactual_evidence_directory: Path | str | None = None,
 ) -> ContinuousResearchCycleResult:
-    """Run one external-scheduler-friendly cycle; it never promotes live state."""
+    """Run one external-scheduler-friendly cycle; it never promotes live state.
+
+    The governed M5 candle authority and the governed counterfactual evidence are
+    produced here, *upstream* of the snapshot-only Q71 worker.  The worker only
+    ever receives the frozen artifact plus its snapshot-pinned membership.
+    """
     cycle_attempt_id = uuid.uuid4().hex.upper()
     root = Path(state_root)
     cycle_store = ContinuousCycleStore(root / "cycles")
@@ -521,6 +729,12 @@ def run_continuous_research_cycle(
     # coverage to reason over, and the stage fails closed instead of inventing
     # one.
     progress("enter_stage", "OBSERVATION_SPACE")
+    candle_authority = None
+    candle_authority_binding = None
+    candle_authority_state = _governed_candle_authority_state(present=False)
+    counterfactual_evidence = None
+    counterfactual_binding = None
+    counterfactual_state: dict[str, Any] = {"present": False}
     try:
         coverage_projection = QuestionCycleStore(
             question_state_dir).load_current()
@@ -528,6 +742,22 @@ def run_continuous_research_cycle(
         for job in research_work_store.ordered():
             if job.state in {PENDING, RUNNING}:
                 active_research.setdefault(job.question_id, []).append(job.job_id)
+        # The governed M5 candle authority is admitted *before* coverage so the
+        # candidate-capable cell reports its true evidence readiness.  It is
+        # produced upstream of the snapshot-only Q71 worker, which never reads
+        # storage.
+        candle_authority, candle_authority_binding, candle_authority_state = (
+            _materialize_governed_candle_authority(
+                snapshot_id=str(_value(frontier, "snapshot_id")),
+                manifest_directory=Path(
+                    observation_space_manifest_directory or MANIFEST_DIRECTORY),
+                source=q71_evidence_source,
+                store=(m5_candle_authority_store or M5CandleAuthorityStore(
+                    candle_authority_directory
+                    if candle_authority_directory is not None
+                    else DEFAULT_M5_CANDLE_AUTHORITY_DIRECTORY)),
+                producer=m5_candle_authority_producer,
+                created_at=str(_value(question, "completed_at", started))))
         materialized = observation_space_materializer(
             snapshot_id=str(_value(frontier, "snapshot_id")),
             manifest_directory=Path(
@@ -545,12 +775,18 @@ def run_continuous_research_cycle(
                 key: tuple(value) for key, value in active_research.items()},
             evaluator_registry=q71_evaluator_registry,
             q71_state=load_q71_state(root / "q71_state.json"),
+            candle_authority=candle_authority,
+            candle_authority_binding=candle_authority_binding,
             created_at=str(_value(question, "completed_at", started)),
             observed_at=str(_value(question, "completed_at", started)),
         )
         q71_coverage_store = materialized.coverage_store
         q71_coverage_artifact = materialized.coverage
         observation_coverage = dict(materialized.surface)
+        observation_coverage["m5_candle_authority"] = {
+            **(observation_coverage.get("m5_candle_authority") or {}),
+            **candle_authority_state,
+        }
         stages["OBSERVATION_SPACE"] = "COMPLETED"
         progress("exit_stage", "OBSERVATION_SPACE", status="COMPLETED", details={
             "observation_space_snapshot_id":
@@ -559,6 +795,8 @@ def run_continuous_research_cycle(
                 materialized.production_coverage_snapshot_id,
             "cell_count": materialized.coverage.cell_count,
             "blind_spot_count": observation_coverage.get("blind_spot_count"),
+            "m5_candle_authority_present": candle_authority_state["present"],
+            "m5_candle_authority_id": candle_authority_state["authority_id"],
         })
     except Exception as exc:
         # Fail closed: Q71+ generation is handed an empty governed coverage
@@ -572,7 +810,10 @@ def run_continuous_research_cycle(
             "total_governed_observation_cells": 0,
             "cell_count": 0,
             "conserved": False,
+            "m5_candle_authority": candle_authority_state,
         }
+        candle_authority = None
+        candle_authority_binding = None
         q71_coverage_store = ResearchCoverageStore(
             root / "observation_space" / "failed_closed_coverage.json")
         progress("exit_stage", "OBSERVATION_SPACE", status="FAILED_CLOSED",
@@ -633,6 +874,28 @@ def run_continuous_research_cycle(
                 root / "q71_execution_state.json")
             res_store = generated_result_store or GeneratedQuestionResultStore(
                 root / "q71_results")
+            # Produce the frozen governed counterfactual evidence upstream of the
+            # worker.  The worker receives only the frozen artifact plus its
+            # snapshot-pinned membership and never reads storage.
+            (
+                counterfactual_evidence, counterfactual_binding,
+                counterfactual_state,
+            ) = _produce_governed_counterfactual_evidence(
+                snapshot_id=str(_value(frontier, "snapshot_id")),
+                manifest_directory=Path(
+                    observation_space_manifest_directory or MANIFEST_DIRECTORY),
+                source=q71_evidence_source,
+                candle_authority=candle_authority,
+                candle_authority_binding=candle_authority_binding,
+                store=(counterfactual_evidence_store
+                       or CounterfactualEvidenceStore(
+                           counterfactual_evidence_directory
+                           if counterfactual_evidence_directory is not None
+                           else DEFAULT_COUNTERFACTUAL_EVIDENCE_DIRECTORY)),
+                producer=counterfactual_evidence_producer,
+                produced_at=str(_value(question, "completed_at", started)))
+            observation_coverage["counterfactual_evidence"] = (
+                counterfactual_state)
             generated_execution = run_generated_question_worker(
                 snapshot_id=str(_value(frontier, "snapshot_id")),
                 evaluator_registry=q71_evaluator_registry,
@@ -657,6 +920,10 @@ def run_continuous_research_cycle(
                      status=stages["Q71_EXECUTION"], details={
                          "executed": len(generated_execution.get("outcomes", [])),
                          "results": len(generated_execution.get("result_ids", [])),
+                         "counterfactual_evidence_present":
+                             bool(counterfactual_state.get("present")),
+                         "counterfactual_fail_closed_reason":
+                             counterfactual_state.get("fail_closed_reason"),
                      })
     except Exception as exc:
         # Generated execution is bounded and additive: a failure here must never
@@ -665,6 +932,13 @@ def run_continuous_research_cycle(
             "status": "FAILED_OPTIONAL",
             "failure_reason": f"{type(exc).__name__}:{exc}",
             "outcomes": [], "result_ids": [],
+        }
+        observation_coverage["counterfactual_evidence"] = {
+            **counterfactual_state,
+            "fail_closed_reason": (
+                counterfactual_state.get("fail_closed_reason")
+                or "MISSING_COUNTERFACTUAL_EVIDENCE"),
+            "detail": f"{type(exc).__name__}:{exc}",
         }
         stages["Q71_EXECUTION"] = "FAILED_OPTIONAL"
         progress("exit_stage", "Q71_EXECUTION", status="FAILED_OPTIONAL",

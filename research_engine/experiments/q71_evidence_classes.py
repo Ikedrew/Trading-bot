@@ -33,7 +33,14 @@ from dataclasses import dataclass, field
 import hashlib
 from typing import Any, Mapping
 
+from research_engine.control_plane.governed_counterfactual_evidence import (
+    COUNTERFACTUAL_EVIDENCE_CLASS,
+    GOVERNED_POLICY_CATALOGUE,
+)
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
+from research_engine.experiments.governed_scientific_result import (
+    GOVERNED_POLICY_IDS,
+)
 
 
 EVIDENCE_CLASS_CATALOGUE_SCHEMA = "production_evidence_class_catalogue_v1"
@@ -50,6 +57,46 @@ SUPPORTED_GOVERNED_DATASETS = frozenset({
 
 class ProductionEvidenceClassError(RuntimeError):
     """A production evidence-class declaration is invalid or unsupported."""
+
+
+def resolve_governed_intervention_authority(
+    declaration: "ProductionEvidenceClass",
+) -> Any:
+    """Structurally resolve the governed intervention authority of a family.
+
+    A family whose governed intervention is data-dependent declares a qualified
+    ``module.function`` instead of a static policy id.  Resolution is structural:
+    the module must import, the attribute must be callable, and the declared
+    catalogue must be the governed policy catalogue.  Nothing is matched by text
+    and no policy is invented here; the resolved authority returns a member of
+    the governed catalogue or nothing at all.
+    """
+    import importlib
+
+    authority = str(declaration.governed_intervention_authority or "").strip()
+    if not authority or "." not in authority:
+        raise ProductionEvidenceClassError(
+            "EVIDENCE_CLASS_INTERVENTION_AUTHORITY_INVALID:"
+            + declaration.evidence_class + ":" + authority)
+    module_name, _, attribute = authority.rpartition(".")
+    try:
+        module = importlib.import_module(module_name)
+    except Exception as exc:  # noqa: BLE001 - report the exact structural failure
+        raise ProductionEvidenceClassError(
+            "EVIDENCE_CLASS_INTERVENTION_AUTHORITY_UNIMPORTABLE:"
+            + declaration.evidence_class + ":"
+            + f"{type(exc).__name__}:{exc}") from exc
+    resolved = getattr(module, attribute, None)
+    if not callable(resolved):
+        raise ProductionEvidenceClassError(
+            "EVIDENCE_CLASS_INTERVENTION_AUTHORITY_NOT_CALLABLE:"
+            + declaration.evidence_class + ":" + authority)
+    if str(declaration.governed_intervention_policy_catalogue or "") != (
+            GOVERNED_POLICY_CATALOGUE):
+        raise ProductionEvidenceClassError(
+            "EVIDENCE_CLASS_INTERVENTION_CATALOGUE_UNKNOWN:"
+            + declaration.evidence_class)
+    return resolved
 
 
 @dataclass(frozen=True)
@@ -75,6 +122,16 @@ class ProductionEvidenceClass:
     governed_intervention_policy_id: str | None
     capability_class: str
     declared_scope_note: str
+    #: How this family's governed intervention is resolved.  ``candidate_capable``
+    #: requires exactly one of:
+    #:   * a static ``governed_intervention_policy_id`` from the governed policy
+    #:     catalogue, or
+    #:   * a structural ``governed_intervention_authority`` (a qualified
+    #:     ``module.function``) that resolves the single supported policy from
+    #:     ``governed_intervention_policy_catalogue`` at evaluation time.
+    #: Free text is never matched and a mapping is never guessed.
+    governed_intervention_authority: str | None = None
+    governed_intervention_policy_catalogue: str | None = None
     provenance: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -108,11 +165,38 @@ class ProductionEvidenceClass:
         if policy_id is not None:
             policy_id = str(policy_id).strip() or None
             object.__setattr__(self, "governed_intervention_policy_id", policy_id)
+        authority = self.governed_intervention_authority
+        if authority is not None:
+            authority = str(authority).strip() or None
+            object.__setattr__(self, "governed_intervention_authority", authority)
+        catalogue = self.governed_intervention_policy_catalogue
+        if catalogue is not None:
+            catalogue = str(catalogue).strip() or None
+            object.__setattr__(
+                self, "governed_intervention_policy_catalogue", catalogue)
+        if policy_id is not None and authority is not None:
+            raise ProductionEvidenceClassError(
+                "EVIDENCE_CLASS_INTERVENTION_MAPPING_AMBIGUOUS:"
+                + self.evidence_class)
         # A candidate is only ever claimable when a governed intervention exists.
-        if self.candidate_capable and not self.governed_intervention_policy_id:
+        if self.candidate_capable and not (policy_id or authority):
             raise ProductionEvidenceClassError(
                 "EVIDENCE_CLASS_CANDIDATE_REQUIRES_GOVERNED_POLICY:"
                 + self.evidence_class)
+        if not self.candidate_capable and (authority or catalogue):
+            raise ProductionEvidenceClassError(
+                "EVIDENCE_CLASS_INTERVENTION_AUTHORITY_WITHOUT_CANDIDATE:"
+                + self.evidence_class)
+        if policy_id is not None and policy_id not in GOVERNED_POLICY_IDS:
+            raise ProductionEvidenceClassError(
+                "EVIDENCE_CLASS_INTERVENTION_POLICY_UNKNOWN:"
+                + self.evidence_class + ":" + policy_id)
+        if authority is not None:
+            if catalogue != GOVERNED_POLICY_CATALOGUE:
+                raise ProductionEvidenceClassError(
+                    "EVIDENCE_CLASS_INTERVENTION_CATALOGUE_UNKNOWN:"
+                    + self.evidence_class + ":" + str(catalogue))
+            resolve_governed_intervention_authority(self)
         if not isinstance(self.minimum_evidence, Mapping) or not self.minimum_evidence:
             raise ProductionEvidenceClassError(
                 "EVIDENCE_CLASS_MINIMUM_EVIDENCE_REQUIRED:" + self.evidence_class)
@@ -134,6 +218,9 @@ class ProductionEvidenceClass:
             "hypothesis_capable": self.hypothesis_capable,
             "candidate_capable": self.candidate_capable,
             "governed_intervention_policy_id": self.governed_intervention_policy_id,
+            "governed_intervention_authority": self.governed_intervention_authority,
+            "governed_intervention_policy_catalogue": (
+                self.governed_intervention_policy_catalogue),
             "capability_class": self.capability_class,
         }
 
@@ -275,6 +362,59 @@ PRODUCTION_EVIDENCE_CLASSES: tuple[ProductionEvidenceClass, ...] = (
                 "definition"),
         },
     ),
+    ProductionEvidenceClass(
+        evidence_class=COUNTERFACTUAL_EVIDENCE_CLASS,
+        canonical_question_id="EX1",
+        canonical_evaluator_module=(
+            "research_engine.experiments.exit_policy_governed"),
+        governed_datasets=("shadow_runtime",),
+        observation_grain=(
+            "one completed governed lifecycle x one governed exit policy"),
+        estimand=(
+            "paired difference between the counterfactual governed-policy "
+            "outcome R and the reproduced SHADOW_BASELINE_V1 outcome R for one "
+            "completed governed lifecycle"),
+        statistical_method=(
+            "opportunity-clustered CR0 two-sided Wald family over the nine "
+            "frozen governed candidate policies, Holm step-down adjusted at the "
+            "frozen HD09 family alpha"),
+        minimum_evidence={
+            "minimum_paired_lifecycles": 200,
+            "minimum_distinct_opportunities": 100,
+            "significance_alpha": 0.05,
+        },
+        scientific_finding_capable=True,
+        hypothesis_capable=True,
+        candidate_capable=True,
+        governed_intervention_policy_id=None,
+        governed_intervention_authority=(
+            "research_engine.control_plane.governed_counterfactual_evidence."
+            "treatment_signature"),
+        governed_intervention_policy_catalogue=GOVERNED_POLICY_CATALOGUE,
+        capability_class=(
+            "GENERATED_QUESTION_GOVERNED_COUNTERFACTUAL_INTERVENTION_EVALUATOR"),
+        declared_scope_note=(
+            "Scope: questions whose governed evidence class is the frozen "
+            "governed counterfactual exit-policy population.  The governed "
+            "intervention is data-dependent: the canonical HD09 authority names "
+            "a policy only when exactly one governed policy is supported on the "
+            "question's primary endpoint, and declines with "
+            "NO_INTERVENTION_MAPPING or AMBIGUOUS_GOVERNED_INTERVENTION "
+            "otherwise.  No policy is named statically and none is inferred "
+            "from question wording."),
+        provenance={
+            "authority": "research_engine.experiments.exit_policy_governed",
+            "population_id": "GOVERNED_EXIT_POLICY_COUNTERFACTUAL",
+            "evidence_authority": (
+                "exit_bar_path_v1 + shadow_baseline_replay_v1 + "
+                "exit_candidate_replay_v1, frozen upstream by "
+                "research_engine.control_plane.governed_counterfactual_evidence"),
+            "derivation": (
+                "the canonical HD09 evaluator's own governed scientific result, "
+                "including its own governed intervention mapping and validation "
+                "criteria"),
+        },
+    ),
 )
 
 
@@ -332,8 +472,13 @@ UNSUPPORTED_EVIDENCE_CLASSES: tuple[Mapping[str, Any], ...] = (
             "(D5 EVIDENCE_CLASS)"),
         "detail": (
             "D5 computes a real counterfactual rejection analysis but declares "
-            "no governed scientific result.  Manufacturing one here would "
-            "fabricate the scientific semantics instead of reusing them."),
+            "no governed scientific result and names no governed policy.  "
+            "Manufacturing one here would fabricate the scientific semantics "
+            "instead of reusing them.  This token is a DIFFERENT structural "
+            "family from GOVERNED_EXIT_POLICY_COUNTERFACTUAL, which is the "
+            "governed HD09 exit-policy counterfactual authority and is a real "
+            "supported production family.  The token is retained in the "
+            "denominator so the coverage fraction is never narrowed."),
     },
     {
         "evidence_class": "SHADOW_CANDIDATE_PROSPECTIVE",
@@ -384,6 +529,7 @@ __all__ = [
     "evidence_class_declaration",
     "evidence_class_identity",
     "evidence_class_vocabulary",
+    "resolve_governed_intervention_authority",
     "structural_generated_question_families",
     "unsupported_evidence_class_catalogue",
 ]

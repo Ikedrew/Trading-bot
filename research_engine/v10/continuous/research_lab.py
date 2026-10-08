@@ -189,6 +189,36 @@ def build_lab_view(projection: Mapping[str, Any]) -> dict[str, Any]:
             queues.get("missing_evaluator_investigations") or []),
         "generated_questions_waiting": list(
             queues.get("waiting_investigations") or []),
+        # Candidate-capability truth for generated research: which generated
+        # questions belong to a governed family that can legitimately produce a
+        # candidate, and which scientifically meaningful ones named no governed
+        # intervention (NO_INTERVENTION_MAPPING).
+        "candidate_capable_generated_questions": [
+            row.get("generated_question_id")
+            for row in (projection.get("generated_questions") or [])
+            if row.get("candidate_capable")],
+        "generated_questions_without_intervention": [
+            row.get("generated_question_id")
+            for row in (projection.get("generated_questions") or [])
+            if row.get("no_governed_intervention_reason")],
+        "generated_questions_with_governed_policy": [
+            row.get("generated_question_id")
+            for row in (projection.get("generated_questions") or [])
+            if row.get("governed_policy_id")],
+        # No research candidate carries runtime authority without a governed
+        # human acceptance and deployment; the Lab states that explicitly.
+        "candidates_not_live": [
+            row.get("candidate_id")
+            for row in (projection.get("candidates") or [])
+            if not row.get("live_approved")],
+        "candidates_human_approval_required": [
+            row.get("candidate_id")
+            for row in (projection.get("candidates") or [])
+            if row.get("human_approval_required")],
+        "candidates_blocked_upstream": [
+            row.get("candidate_id")
+            for row in (projection.get("candidates") or [])
+            if row.get("blocked_upstream")],
         # ── Observation space / governed coverage (production autonomy) ──────
         # The surface is projected verbatim from the observation-space stage.
         # With no materialized snapshot the status is explicitly
@@ -283,6 +313,44 @@ def render_lab_terminal(view: dict[str, Any]) -> str:
             f"  states="
             + "  ".join(f"{k}={v}" for k, v in sorted(
                 (coverage.get("coverage_states") or {}).items())))
+        candle = coverage.get("m5_candle_authority") or {}
+        if candle:
+            if candle.get("present"):
+                lines.append(
+                    f"M5 candle authority: {candle.get('authority_id')}"
+                    f"  {candle.get('authority_identity')}"
+                    f"  bars={candle.get('bar_count')}"
+                    f"  symbols={','.join(candle.get('symbols') or []) or '-'}"
+                    f"  digest={str(candle.get('content_digest') or '')[:16]}"
+                    f"  snapshot={candle.get('snapshot_id')}")
+            else:
+                lines.append(
+                    "M5 candle authority: MISSING"
+                    f"  reason={candle.get('fail_closed_reason')}"
+                    "  (the candidate-capable Q71 family cannot run without it)")
+        counterfactual = coverage.get("counterfactual_evidence") or {}
+        if counterfactual:
+            if counterfactual.get("present"):
+                lines.append(
+                    "Counterfactual evidence: "
+                    f"{counterfactual.get('dataset_id')}"
+                    f"  analysable={counterfactual.get('scientifically_analysable')}"
+                    f"  admissible_rows={counterfactual.get('admissible_rows')}"
+                    f"  digest={str(counterfactual.get('content_digest') or '')[:16]}")
+            else:
+                lines.append(
+                    "Counterfactual evidence: ABSENT"
+                    f"  reason={counterfactual.get('fail_closed_reason')}")
+        ready = coverage.get("candidate_capable_cells_evidence_ready") or []
+        blocked = coverage.get("candidate_capable_cells_blocked") or []
+        if ready or blocked:
+            lines.append(
+                "Candidate-capable cells: "
+                f"evidence_ready={len(ready)}  blocked={len(blocked)}")
+        for row in blocked:
+            lines.append(
+                f"  BLOCKED cell {row.get('cell_identity')}"
+                f"  reasons={','.join(str(x) for x in (row.get('fail_closed_reasons') or []))}")
     what = view.get("what_changed") or {}
     changed_qs = what.get("questions_changed") or []
     if changed_qs:
@@ -310,7 +378,25 @@ def render_lab_terminal(view: dict[str, Any]) -> str:
         for c in view["candidates"]:
             lines.append(
                 f"  {c.get('candidate_id','?'):32s}  "
-                f"status={c.get('status','?')}")
+                f"status={c.get('status','?')}"
+                f"  authority={c.get('runtime_authority','NOT_LIVE')}"
+                f"  upstream_invalidation={c.get('upstream_invalidation') or '-'}")
+        lines.append(
+            "  NOT LIVE / HUMAN APPROVAL REQUIRED: "
+            + (", ".join(str(item) for item in
+                         (view.get("candidates_human_approval_required") or []))
+               or "none"))
+    if view.get("candidate_capable_generated_questions"):
+        lines.append(
+            "Candidate-capable generated research: "
+            + ", ".join(str(item) for item in
+                        view["candidate_capable_generated_questions"]))
+    if view.get("generated_questions_without_intervention"):
+        lines.append(
+            "NO_INTERVENTION_MAPPING (scientifically meaningful, no governed "
+            "intervention): "
+            + ", ".join(str(item) for item in
+                        view["generated_questions_without_intervention"]))
     if view.get("review_required"):
         lines.append("")
         lines.append("REVIEW REQUIRED: " + ", ".join(str(r) for r in view["review_required"]))

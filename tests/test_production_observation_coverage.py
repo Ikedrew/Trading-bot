@@ -57,11 +57,18 @@ from research_engine.v10.continuous.production_coverage import (
     production_coverage_snapshot_from_dict,
     q71_coverage_source_mapping,
 )
+from research_engine.control_plane.governed_m5_candle_authority import (
+    M5_CANDLE_AUTHORITY_IDENTITY,
+    M5CandleAuthorityStore,
+    bind_m5_candle_authority,
+    freeze_governed_m5_candle_authority,
+)
 from research_engine.v10.continuous.production_observation_space import (
     INVALID_SCHEMA,
     MISSING_DATASET_BINDING,
     MISSING_EVIDENCE,
     MISSING_EVALUATOR,
+    MISSING_M5_CANDLE_AUTHORITY,
     STALE_FRONTIER,
     UNKNOWN_EVIDENCE_CLASS,
     ObservationSpaceSnapshot,
@@ -148,6 +155,7 @@ class Harness:
     def materialize(self, *, snapshot=None, manifests=None, statuses=None,
                     result_snapshot: str | None = None, registry="default",
                     projection=None, policy=None, name: str = "materialization",
+                    candle_authority=None, candle_authority_binding=None,
                     created_at: str = CREATED_AT, observed_at: str | None = None):
         snapshot = snapshot or self.snapshot
         manifests = manifests or self.manifests
@@ -165,6 +173,8 @@ class Harness:
             coverage_store_path=self.root / name / "research_coverage.json",
             canonical_question_projection=projection,
             evaluator_registry=resolved_registry, policy=policy,
+            candle_authority=candle_authority,
+            candle_authority_binding=candle_authority_binding,
             created_at=created_at,
             observed_at=observed_at or created_at)
 
@@ -213,6 +223,93 @@ class Harness:
     def decisions(self, result) -> dict:
         return {item.cell_identity: item for item in result.coverage.decisions}
 
+# ── 0. governed M5 candle authority (candidate-capability evidence) ─────────
+def governed_candle_authority_for(
+    harness: Harness, *, snapshot_id: str | None = None,
+    frontier_start: str | None = None, frontier_end: str | None = None,
+    close: float = 1.105,
+):
+    """Freeze a governed M5 candle authority for one harness frontier.
+
+    The rows are governed ``events_v1`` CANDLE/mt5_data/M5 records for exactly
+    the frontier's own instrument population and inside its own window.  Nothing
+    is invented: this is the same contract the production producer enforces.
+    """
+    from datetime import datetime, timezone
+
+    from research_engine.v10.investigation_snapshot import (
+        open_investigation_snapshot,
+    )
+
+    snapshot = harness.snapshot
+    start = str(frontier_start or snapshot.start_date)
+    end = str(frontier_end or snapshot.end_date)
+    base_ms = int(datetime.strptime(start, "%Y-%m-%d").replace(
+        tzinfo=timezone.utc).timestamp() * 1000)
+    reader = open_investigation_snapshot(
+        snapshot.snapshot_id, source=harness.source,
+        manifest_directory=harness.manifests)
+    shadow = reader.cycle_cached_dataset("shadow_runtime")
+    symbols = sorted({
+        str(row.get("symbol")).upper() for row in shadow if row.get("symbol")})
+    rows = []
+    for symbol in symbols:
+        for index in range(6):
+            ts = base_ms + index * 300_000
+            rows.append({
+                "ts_utc_ms": ts, "type": "CANDLE", "symbol": symbol,
+                "timeframe": "M5", "source": "mt5_data",
+                "schema_version": "events_v1",
+                "payload": {
+                    "ts": ts, "o": 1.100, "h": 1.110, "l": 1.090,
+                    "c": close, "v": 100.0,
+                    "timestamp_normalization_version": (
+                        "mt5_broker_to_utc_once_v1"),
+                },
+            })
+    authority = freeze_governed_m5_candle_authority(
+        candle_rows=rows, shadow_runtime_rows=shadow,
+        snapshot_id=str(snapshot_id or snapshot.snapshot_id),
+        snapshot_fingerprint=snapshot.snapshot_fingerprint,
+        investigation_epoch=snapshot.evidence_epoch,
+        frontier_start=start, frontier_end=end,
+        snapshot_authority=snapshot.source_authority,
+        produced_at=CREATED_AT)
+    return authority, bind_m5_candle_authority(authority, bound_at=CREATED_AT)
+
+
+def candidate_capable_cell(harness: Harness, result):
+    declarations = {item.evidence_class: item
+                    for item in PRODUCTION_EVIDENCE_CLASSES}
+    for cell in result.coverage.decisions:
+        declaration = declarations.get(cell.evidence_class)
+        if declaration is not None and declaration.candidate_capable:
+            return cell
+    raise AssertionError("no candidate-capable cell was materialized")
+
+
+def test_candidate_capable_cell_fails_closed_without_candle_authority(tmp_path):
+    """8/20. Without the governed candle authority the cell says exactly why."""
+    harness = Harness(tmp_path)
+    result = harness.materialize(name="no_candles")
+    row = candidate_capable_cell(harness, result)
+    assert row.candidate_capable is True
+    assert row.candidate_evidence_ready is False
+    assert MISSING_M5_CANDLE_AUTHORITY in row.fail_closed_reasons
+    assert row.candle_authority_id is None
+    surface = result.surface
+    assert surface["m5_candle_authority"]["present"] is False
+    assert surface["m5_candle_authority"]["fail_closed_reason"] == (
+        MISSING_M5_CANDLE_AUTHORITY)
+    assert surface["candidate_capable_cells_evidence_ready"] == []
+    blocked = surface["candidate_capable_cells_blocked"]
+    assert [item["cell_identity"] for item in blocked] == [row.cell_identity]
+    # The Lab states the precise reason; it is never hidden behind WAITING.
+    view = build_lab_view(_lab_projection(observation_coverage=surface))
+    rendered = render_lab_terminal(view)
+    assert "M5 candle authority: MISSING" in rendered
+    assert MISSING_M5_CANDLE_AUTHORITY in rendered
+
 
 
 # ── 1. deterministic observation-cell identity ──────────────────────────────
@@ -229,7 +326,7 @@ def test_observation_cell_identity_is_deterministic(tmp_path):
             == [cell.cell_identity
                 for cell in second.observation_space.observation_space.cells])
     assert len(set(cell.cell_identity
-                   for cell in first.observation_space.observation_space.cells)) == 6
+                   for cell in first.observation_space.observation_space.cells)) == 7
 
 
 def test_cell_identity_is_stable_across_evidence_epochs(tmp_path):
@@ -353,7 +450,19 @@ def test_coverage_conservation_holds_on_real_evidence(tmp_path):
     report = result.coverage.conservation
     assert report["conserved"] is True
     total = report["total_governed_observation_cells"]
-    assert total == result.coverage.cell_count == 6
+    # Seven governed cells: E1, X3, the four canonical exit-path questions and
+    # the candidate-capable governed counterfactual family on EX1.  The count is
+    # pinned exactly so no catch-all cell can ever appear unnoticed.
+    assert total == result.coverage.cell_count == 7
+    assert sorted(item.evidence_class for item in result.coverage.decisions) == [
+        "CURRENT_COMPLETED_SHADOW_LIFECYCLES",
+        "CURRENT_COMPLETED_SHADOW_LIFECYCLE_EXIT_PATH",
+        "CURRENT_COMPLETED_SHADOW_LIFECYCLE_EXIT_PATH",
+        "CURRENT_COMPLETED_SHADOW_LIFECYCLE_EXIT_PATH",
+        "CURRENT_COMPLETED_SHADOW_LIFECYCLE_EXIT_PATH",
+        "GOVERNED_EXIT_POLICY_COUNTERFACTUAL",
+        "SESSION_CONDITIONED_ABSOLUTE_MEASURED_EXECUTION_SLIPPAGE",
+    ]
     assert sum(report["governed_partition"].values()) == total
     assert report["axis_coverage_state"]["conserved"] is True
     assert report["axis_evaluator_capability"]["conserved"] is True
@@ -391,7 +500,7 @@ def test_duplicate_cell_declarations_fail_closed():
     expected = 0
     for declaration in PRODUCTION_EVIDENCE_CLASSES:
         expected += len(canonical_questions_for_evidence_class(declaration))
-    assert len(declarations) == expected == 6
+    assert len(declarations) == expected == 7
     space = governed_observation_space()
     assert len(space.cells) == expected
 
@@ -417,10 +526,30 @@ def test_canonical_question_mapping_is_structural(tmp_path):
     assert exit_cells == tuple(sorted(
         item.covered_cell_ids[0] for item in
         (mapping[question_id] for question_id in ("EX1", "EX2", "EX3", "EX4"))))
-    for question_id in ("EX1", "EX2", "EX3", "EX4"):
+    for question_id in ("EX2", "EX3", "EX4"):
         assert mapping[question_id].evidence_classes == (
             "CURRENT_COMPLETED_SHADOW_LIFECYCLE_EXIT_PATH",)
         assert len(mapping[question_id].covered_cell_ids) == 1
+    # EX1 is covered by BOTH governed families: the descriptive exit-path cell
+    # and the candidate-capable governed counterfactual cell.  Two evidence
+    # classes on one canonical question is two governed observation cells, not a
+    # duplicated cell.
+    counterfactual_cells = tuple(sorted(
+        item.cell_identity for item in decisions
+        if item.evidence_class == "GOVERNED_EXIT_POLICY_COUNTERFACTUAL"))
+    assert len(counterfactual_cells) == 1
+    assert mapping["EX1"].evidence_classes == (
+        "CURRENT_COMPLETED_SHADOW_LIFECYCLE_EXIT_PATH",
+        "GOVERNED_EXIT_POLICY_COUNTERFACTUAL",
+    )
+    assert mapping["EX1"].covered_cell_ids == tuple(sorted(
+        (counterfactual_cells[0], exit_cells[0])))
+    counterfactual = next(
+        item for item in decisions
+        if item.evidence_class == "GOVERNED_EXIT_POLICY_COUNTERFACTUAL")
+    assert counterfactual.candidate_capable is True
+    assert counterfactual.scientific_finding_capable is True
+    assert counterfactual.evaluator_key == "q71.counterfactual.governed_exit_policy"
     assert mapping["X3"].evidence_classes == (
         "SESSION_CONDITIONED_ABSOLUTE_MEASURED_EXECUTION_SLIPPAGE",)
     assert mapping["E2"].covered_cell_ids == ()
@@ -468,7 +597,7 @@ def test_q71_questions_are_bound_to_their_source_cells(tmp_path):
     harness = Harness(tmp_path)
     result = harness.materialize()
     orchestration = harness.orchestrate(result, capacity=10)
-    assert len(orchestration["new_question_ids"]) == 6
+    assert len(orchestration["new_question_ids"]) == 7
     state = harness.q71_state()
     cells = {cell.cell_identity
              for cell in result.observation_space.observation_space.cells}
@@ -481,7 +610,7 @@ def test_q71_questions_are_bound_to_their_source_cells(tmp_path):
         result.coverage, state,
         generated_store=GeneratedResearchStore(
             harness.root / "q71" / "generated.json"))
-    assert mapping["generated_question_count"] == 6
+    assert mapping["generated_question_count"] == 7
     assert mapping["production_coverage_snapshot_id"] == \
         result.production_coverage_snapshot_id
     for entry in mapping["entries"].values():
@@ -525,7 +654,7 @@ def test_real_blind_spots_are_detected_from_real_evidence(tmp_path):
     harness = Harness(tmp_path)
     result = harness.materialize()
     decisions = harness.decisions(result)
-    assert len(decisions) == 6
+    assert len(decisions) == 7
     for decision in decisions.values():
         assert decision.coverage_state == "OBSERVED_NOT_RESEARCHED"
         assert decision.blind_spot is True
@@ -569,7 +698,8 @@ def test_waiting_for_data_cell_is_not_a_duplicate_blind_spot(tmp_path):
         created_at=CREATED_AT, observed_at=CREATED_AT)
     decisions = {item.cell_identity: item for item in waiting.decisions}
     shadow_classes = {"CURRENT_COMPLETED_SHADOW_LIFECYCLES",
-                      "CURRENT_COMPLETED_SHADOW_LIFECYCLE_EXIT_PATH"}
+                      "CURRENT_COMPLETED_SHADOW_LIFECYCLE_EXIT_PATH",
+                      "GOVERNED_EXIT_POLICY_COUNTERFACTUAL"}
     for decision in decisions.values():
         if decision.evidence_class in shadow_classes:
             assert decision.coverage_state == "QUESTION_EXISTS_NO_EVIDENCE"
@@ -581,11 +711,11 @@ def test_waiting_for_data_cell_is_not_a_duplicate_blind_spot(tmp_path):
     first = harness.orchestrate_coverage(
         waiting, store_path=harness.root / "waiting" / "coverage.json",
         name="waiting")
-    assert len(first["new_question_ids"]) == 6
+    assert len(first["new_question_ids"]) == 7
     statuses = {row["generated_question_id"]: row["status"]
                 for row in first["generated_questions"]}
     assert sorted(set(statuses.values())) == ["QUEUED", "WAITING_FOR_DATA"]
-    assert sum(1 for value in statuses.values() if value == "WAITING_FOR_DATA") == 5
+    assert sum(1 for value in statuses.values() if value == "WAITING_FOR_DATA") == 6
     queued = {row["generated_question_id"] for row in first["queue"]}
     assert len(queued) == 1
     for question_id, status in statuses.items():
@@ -618,7 +748,7 @@ def test_missing_evaluator_is_reported_honestly(tmp_path):
         assert MISSING_EVALUATOR in decision.fail_closed_reasons
     orchestration = harness.orchestrate(
         result, registry=EMPTY_REGISTRY, name="q71-no-evaluator")
-    assert len(orchestration["new_question_ids"]) == 6
+    assert len(orchestration["new_question_ids"]) == 7
     assert orchestration["queue"] == []
     for row in orchestration["generated_questions"]:
         assert row["status"] == "MISSING_EVALUATOR"
@@ -642,6 +772,18 @@ def test_scientifically_unsupported_families_are_represented(tmp_path):
         assert families[token].reason_code == str(entry["reason"])
         assert families[token].cell_identities == ()
         assert families[token].provenance
+    # The governed exit-policy counterfactual family is a real supported family
+    # with a real production evaluator and real candidate capability.  It is a
+    # different structural token from D5's deliberately unsupported
+    # COUNTERFACTUAL_SHADOW_SIMULATED_OUTCOME, which stays unsupported and stays
+    # in the denominator.
+    assert "GOVERNED_EXIT_POLICY_COUNTERFACTUAL" not in unsupported
+    assert "COUNTERFACTUAL_SHADOW_SIMULATED_OUTCOME" in unsupported
+    counterfactual = families["GOVERNED_EXIT_POLICY_COUNTERFACTUAL"]
+    assert counterfactual.materialized is True
+    assert counterfactual.reason_code is None
+    assert counterfactual.evaluator_available is True
+    assert counterfactual.cell_identities
     surface = result.surface
     assert {item["structural_family"] for item in
             surface["scientifically_unsupported_families"]} == set(unsupported)
@@ -655,8 +797,8 @@ def test_one_blind_spot_produces_exactly_one_generated_question(tmp_path):
     result = harness.materialize()
     blind = [item for item in result.coverage.decisions if item.blind_spot]
     orchestration = harness.orchestrate(result, capacity=50)
-    assert len(orchestration["new_question_ids"]) == len(blind) == 6
-    assert len(set(orchestration["new_question_ids"])) == 6
+    assert len(orchestration["new_question_ids"]) == len(blind) == 7
+    assert len(set(orchestration["new_question_ids"])) == 7
     state = harness.q71_state()
     source_cells = [row["source_cell_id"] for row in state["question_states"].values()]
     assert sorted(source_cells) == sorted(item.cell_identity for item in blind)
@@ -670,14 +812,14 @@ def test_unchanged_snapshot_rerun_generates_no_duplicate(tmp_path):
     harness = Harness(tmp_path)
     result = harness.materialize()
     first = harness.orchestrate(result, capacity=50)
-    assert len(first["new_question_ids"]) == 6
+    assert len(first["new_question_ids"]) == 7
     second = harness.orchestrate(result, capacity=50)
     assert second["new_question_ids"] == []
     assert second["superseded_questions"] == []
     assert sorted(row["generated_question_id"]
                   for row in second["generated_questions"]) == \
         sorted(first["new_question_ids"])
-    assert len(harness.q71_state()["question_states"]) == 6
+    assert len(harness.q71_state()["question_states"]) == 7
 
 
 # ── 18-19. changed evidence changes coverage and re-enters ──────────────────
@@ -713,7 +855,7 @@ def test_changed_evidence_re_enters_the_same_question(tmp_path):
         waiting, store_path=store_path, name="reentry")
     waiting_ids = {row["generated_question_id"] for row in first["generated_questions"]
                    if row["status"] == "WAITING_FOR_DATA"}
-    assert len(waiting_ids) == 5
+    assert len(waiting_ids) == 6
 
     arrived = build_production_coverage(
         result.observation_space,
@@ -745,7 +887,7 @@ def test_evaluator_arrival_re_enters_the_same_question(tmp_path):
         name="arrival")
     blocked = {row["generated_question_id"] for row in first["generated_questions"]
                if row["status"] == MISSING_EVALUATOR}
-    assert len(blocked) == 6
+    assert len(blocked) == 7
 
     second = harness.orchestrate_coverage(
         result.coverage, store_path=store_path, registry=harness.registry,
@@ -787,7 +929,7 @@ def test_superseded_question_is_not_regenerated(tmp_path):
     store_path = harness.root / "supersede" / "coverage.json"
     first = harness.orchestrate_coverage(
         result.coverage, store_path=store_path, name="supersede")
-    assert len(first["new_question_ids"]) == 6
+    assert len(first["new_question_ids"]) == 7
 
     proposals = _coverage_proposals(result.coverage)
     target_cell = sorted(proposals)[0]
@@ -841,7 +983,7 @@ def test_resolved_cell_retires_and_is_never_regenerated(tmp_path):
     store_path = harness.root / "retire" / "coverage.json"
     first = harness.orchestrate_coverage(
         blind.coverage, store_path=store_path, name="retire")
-    assert len(first["new_question_ids"]) == 6
+    assert len(first["new_question_ids"]) == 7
 
     statuses = {question_id: "COMPLETE"
                 for question_id in ("E1", "X3", "EX1", "EX2", "EX3", "EX4")}
@@ -863,7 +1005,7 @@ def test_resolved_cell_retires_and_is_never_regenerated(tmp_path):
         resolved, store_path=store_path, name="retire")
     assert third["new_question_ids"] == []
     assert third["retired_question_ids"] == []
-    assert len(harness.q71_state("retire")["question_states"]) == 6
+    assert len(harness.q71_state("retire")["question_states"]) == 7
 
 
 def test_excluded_cell_is_not_materialized_and_not_regenerated(tmp_path):
@@ -881,11 +1023,12 @@ def test_excluded_cell_is_not_materialized_and_not_regenerated(tmp_path):
     assert (families["CURRENT_COMPLETED_SHADOW_LIFECYCLE_EXIT_PATH"].reason_code
             == "EXCLUDED_BY_POLICY")
     orchestration = harness.orchestrate(result, capacity=50, name="excluded")
-    assert len(orchestration["new_question_ids"]) == 2
+    assert len(orchestration["new_question_ids"]) == 3
     state = harness.q71_state("excluded")
     assert {row["evidence_requirements"]["evidence_class"]
             for row in state["question_states"].values()} == {
         "CURRENT_COMPLETED_SHADOW_LIFECYCLES",
+        "GOVERNED_EXIT_POLICY_COUNTERFACTUAL",
         "SESSION_CONDITIONED_ABSOLUTE_MEASURED_EXECUTION_SLIPPAGE"}
 
 
@@ -977,7 +1120,7 @@ def test_coverage_snapshot_is_persisted_and_registered(tmp_path):
          / "latest_coverage.json").read_text(encoding="utf-8"))
     assert pointer["production_coverage_snapshot_id"] == \
         result.production_coverage_snapshot_id
-    assert pointer["cell_count"] == 6
+    assert pointer["cell_count"] == 7
     # The governed store the orchestration reads carries the same snapshot.
     registered = result.coverage_store.get(
         result.coverage.coverage_snapshot.coverage_snapshot_identity)
@@ -1080,11 +1223,11 @@ def test_lab_reports_real_coverage_truthfully(tmp_path):
         result.observation_space_snapshot_id
     assert reported["production_coverage_snapshot_id"] == \
         result.production_coverage_snapshot_id
-    assert reported["total_governed_observation_cells"] == 6
-    assert reported["cell_count"] == 6
-    assert reported["blind_spot_count"] == 6
+    assert reported["total_governed_observation_cells"] == 7
+    assert reported["cell_count"] == 7
+    assert reported["blind_spot_count"] == 7
     assert reported["conserved"] is True
-    assert len(reported["blind_spots"]) == 6
+    assert len(reported["blind_spots"]) == 7
     for row in reported["blind_spots"]:
         assert row["cell_identity"]
         assert row["blind_spot_class"] == "DATA_WITHOUT_RESEARCH"
@@ -1185,7 +1328,7 @@ def test_continuous_loop_invokes_coverage_before_q71_generation(tmp_path):
         .read_text(encoding="utf-8"))
     surface = projection["observation_coverage"]
     assert surface["status"] == "MATERIALIZED"
-    assert surface["cell_count"] == 6
+    assert surface["cell_count"] == 7
     assert surface["conserved"] is True
 
 
@@ -1273,7 +1416,7 @@ def test_no_generic_or_fuzzy_question_generation():
     assert "admit_coverage_curiosity" in _module_identifiers(
         "production_coverage.py")
     declarations = governed_observation_cell_declarations()
-    assert len(declarations) == 6
+    assert len(declarations) == 7
     for declaration in declarations:
         assert declaration.subject_kind == "CANONICAL_QUESTION"
         assert declaration.subject_identity in canonical_inventory()
@@ -1312,3 +1455,192 @@ def test_no_live_trading_mutation_from_the_observation_stage(tmp_path):
     assert "findings" not in surface
 
 EMPTY_REGISTRY = GeneratedQuestionEvaluatorRegistry(registrations=())
+
+
+def test_candidate_capable_cell_becomes_evidence_ready_with_candles(tmp_path):
+    """21/22/23. A bound governed candle authority makes the cell evidence-ready."""
+    harness = Harness(tmp_path)
+    authority, binding = governed_candle_authority_for(harness)
+    result = harness.materialize(
+        name="with_candles", candle_authority=authority,
+        candle_authority_binding=binding)
+    row = candidate_capable_cell(harness, result)
+    assert row.candidate_capable is True
+    assert row.candidate_evidence_ready is True
+    assert MISSING_M5_CANDLE_AUTHORITY not in row.fail_closed_reasons
+    assert row.candle_authority_id == authority.authority_id
+    assert row.candle_authority_digest == authority.content_digest
+    surface = result.surface
+    assert surface["m5_candle_authority"]["present"] is True
+    assert surface["m5_candle_authority"]["authority_identity"] == (
+        M5_CANDLE_AUTHORITY_IDENTITY)
+    assert surface["m5_candle_authority"]["authority_id"] == (
+        authority.authority_id)
+    assert surface["m5_candle_authority"]["content_digest"] == (
+        authority.content_digest)
+    assert surface["candidate_capable_cells_evidence_ready"] == [
+        row.cell_identity]
+    assert surface["candidate_capable_cells_blocked"] == []
+    # Coverage conservation remains valid on every axis.
+    assert surface["conserved"] is True
+    view = build_lab_view(_lab_projection(observation_coverage=surface))
+    rendered = render_lab_terminal(view)
+    assert "M5 candle authority: " + authority.authority_id in rendered
+    assert "Candidate-capable cells: evidence_ready=1  blocked=0" in rendered
+
+
+def test_stale_candle_authority_is_refused_for_this_frontier(tmp_path):
+    """14/15. A candle authority from another frontier is refused, not reused."""
+    harness = Harness(tmp_path)
+    authority, binding = governed_candle_authority_for(
+        harness, snapshot_id="ISNAP-OTHERFRONTIER000000000002")
+    result = harness.materialize(
+        name="stale_candles", candle_authority=authority,
+        candle_authority_binding=binding)
+    row = candidate_capable_cell(harness, result)
+    assert row.candidate_evidence_ready is False
+    assert STALE_FRONTIER in row.fail_closed_reasons
+    assert result.surface["m5_candle_authority"]["present"] is False
+    assert result.surface["conserved"] is True
+
+
+def test_candle_authority_without_membership_is_refused(tmp_path):
+    """A governed authority is admitted only through its pinned membership."""
+    harness = Harness(tmp_path)
+    authority, _ = governed_candle_authority_for(harness)
+    result = harness.materialize(
+        name="unbound_candles", candle_authority=authority)
+    row = candidate_capable_cell(harness, result)
+    assert row.candidate_evidence_ready is False
+    assert MISSING_M5_CANDLE_AUTHORITY in row.fail_closed_reasons
+    assert result.surface["m5_candle_authority"]["present"] is False
+
+
+
+# ── The loop admits candle authority and freezes counterfactual evidence ────
+def _events_objects_for(harness: Harness) -> dict:
+    """Governed ``events_v1`` M5 CANDLE objects for the harness frontier."""
+    from datetime import datetime, timezone
+
+    from core.production_data_contract import s3_base_prefix
+    from research_engine.v10.investigation_snapshot import (
+        open_investigation_snapshot,
+    )
+
+    snapshot = harness.snapshot
+    base_ms = int(datetime.strptime(snapshot.start_date, "%Y-%m-%d").replace(
+        tzinfo=timezone.utc).timestamp() * 1000)
+    reader = open_investigation_snapshot(
+        snapshot.snapshot_id, source=harness.source,
+        manifest_directory=harness.manifests)
+    shadow = reader.cycle_cached_dataset("shadow_runtime")
+    symbols = sorted({
+        str(row.get("symbol")).upper() for row in shadow if row.get("symbol")})
+    objects: dict = {}
+    for symbol in symbols:
+        rows = []
+        for index in range(8):
+            ts = base_ms + index * 300_000
+            rows.append({
+                "ts_utc_ms": ts, "type": "CANDLE", "symbol": symbol,
+                "timeframe": "M5", "source": "mt5_data",
+                "schema_version": "events_v1",
+                "payload": {
+                    "ts": ts, "o": 1.100, "h": 1.110, "l": 1.090,
+                    "c": 1.105, "v": 100.0,
+                    "timestamp_normalization_version": (
+                        "mt5_broker_to_utc_once_v1"),
+                },
+            })
+        key = (
+            f"{s3_base_prefix('events')}/schema_version=events_v1"
+            f"/symbol={symbol}/date={snapshot.start_date}/part-000.jsonl")
+        objects[key] = "".join(
+            json.dumps(row, sort_keys=True) + "\n" for row in rows)
+    return objects
+
+
+
+
+def _candle_loop_kwargs(tmp_path, harness, state, question, frontier, bridge):
+    return dict(
+        state_root=tmp_path / "continuous",
+        frontier_runner=lambda **_: frontier,
+        question_runner=lambda value, **_: question,
+        bridge_runner=lambda value, **_: bridge,
+        question_kwargs={"state_directory": state},
+        bridge_kwargs={"scientific_state_directory": tmp_path / "science",
+                       "optimisation_registry_directory": tmp_path / "registry"},
+        q71_kwargs={"generated_store": GeneratedResearchStore(
+                        tmp_path / "generated.json"),
+                    "agenda_store": ResearchAgendaStore(
+                        tmp_path / "agenda.json")},
+        q71_capacity=1,
+        q71_evaluator_registry=harness.registry,
+        q71_execution_policy=GeneratedExecutionPolicy(max_questions_per_run=1),
+        observation_space_manifest_directory=harness.manifests,
+        observation_space_directory=tmp_path / "observation_space",
+        production_coverage_directory=tmp_path / "production_coverage",
+        production_coverage_store_path=tmp_path / "research_coverage.json",
+        q71_evidence_source=harness.source,
+        candle_authority_directory=tmp_path / "candle_authority",
+        counterfactual_evidence_directory=(
+            tmp_path / "counterfactual_evidence"),
+        max_validation_jobs=0)
+
+
+def test_continuous_loop_admits_candle_authority_for_the_frontier(tmp_path):
+    """A/B/C/D/E/12. The real loop admits candle authority and freezes evidence."""
+    from research_engine.v10.continuous.research_loop import (
+        run_continuous_research_cycle,
+    )
+    from research_engine.v10.continuous.research_projection import (
+        ResearchProjectionStore,
+    )
+
+    harness = Harness(tmp_path)
+    harness.client.objects.update(_events_objects_for(harness))
+    state, question, frontier, bridge = _loop_fixtures(
+        tmp_path, snapshot_id=harness.snapshot.snapshot_id)
+    result = run_continuous_research_cycle(
+        **_candle_loop_kwargs(
+            tmp_path, harness, state, question, frontier, bridge))
+
+    assert result.cycle_outcome == "COMPLETED", (
+        result.failure_stage, result.failure_reason)
+    assert result.stage_statuses["OBSERVATION_SPACE"] == "COMPLETED"
+    projection = ResearchProjectionStore(
+        tmp_path / "continuous" / "projection").load_latest()
+    coverage = projection["observation_coverage"]
+    candle = coverage["m5_candle_authority"]
+    assert candle["present"] is True
+    assert candle["authority_identity"] == M5_CANDLE_AUTHORITY_IDENTITY
+    assert candle["authority_id"]
+    assert candle["content_digest"]
+    assert candle["bar_count"] > 0
+    assert candle["snapshot_id"] == harness.snapshot.snapshot_id
+    assert coverage["candidate_capable_cells_evidence_ready"]
+    assert coverage["candidate_capable_cells_blocked"] == []
+    # The authority is immutably registered against this exact frontier.
+    store = M5CandleAuthorityStore(tmp_path / "candle_authority")
+    pinned = store.for_snapshot(harness.snapshot.snapshot_id)
+    assert pinned is not None
+    assert pinned[0].authority_id == candle["authority_id"]
+    assert pinned[1].content_digest == candle["content_digest"]
+    # The governed counterfactual evidence was frozen upstream of the worker.
+    counterfactual = coverage["counterfactual_evidence"]
+    assert counterfactual["present"] is True
+    assert counterfactual["dataset_id"].startswith("CFE-")
+    assert counterfactual["candle_authority_id"] == candle["authority_id"]
+    assert counterfactual["content_digest"]
+    # Nothing was fabricated: the fixture's candle window does not cover its
+    # shadow lifecycles, so the artifact is legitimately non-analysable.
+    assert counterfactual["scientifically_analysable"] is False
+    assert "MISSING_COUNTERFACTUAL_EVIDENCE" in counterfactual["reason_codes"]
+    assert "MISSING_M5_CANDLE_AUTHORITY" not in counterfactual["reason_codes"]
+    # Re-entry is deterministic: a second cycle reuses the same authority.
+    second = run_continuous_research_cycle(
+        **_candle_loop_kwargs(
+            tmp_path, harness, state, question, frontier, bridge))
+    assert second.cycle_outcome in {"COMPLETED", "NO_NEW_RESEARCH_EVIDENCE"}
+    assert store.authority_ids() == (candle["authority_id"],)

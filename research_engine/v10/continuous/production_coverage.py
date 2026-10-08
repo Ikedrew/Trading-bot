@@ -53,11 +53,19 @@ from research_engine.lifecycle.research_coverage_store import (
 )
 from research_engine.v10.investigation_snapshot import MANIFEST_DIRECTORY
 
+from research_engine.control_plane.governed_m5_candle_authority import (
+    M5_CANDLE_AUTHORITY_IDENTITY,
+    CandleAuthorityError,
+    validate_governed_m5_candle_authority,
+    verify_m5_candle_authority_binding,
+)
+
 from research_engine.v10.continuous.production_observation_space import (
     CANONICAL_QUESTION_MAPPING_VERSION,
     EXCLUDED_BY_POLICY,
     MISSING_EVIDENCE,
     MISSING_EVALUATOR,
+    MISSING_M5_CANDLE_AUTHORITY,
     PRODUCER_VERSION,
     Q71_MAPPING_VERSION,
     STALE_FRONTIER,
@@ -189,6 +197,14 @@ class ProductionCoverageDecision:
     source_observation_cell_id: str
     coverage_snapshot_identity: str
     existing_generated_question_id: str | None = None
+    #: True only when a candidate-capable cell is *fully* evidence-backed: the
+    #: governed dataset population is bound, the governed M5 candle authority is
+    #: bound to this exact frontier, the candidate-capable evaluator is
+    #: registered and the declaration names a governed intervention authority.
+    candidate_evidence_ready: bool = False
+    #: The governed M5 candle authority admitted to this frontier, if any.
+    candle_authority_id: str | None = None
+    candle_authority_digest: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -207,6 +223,9 @@ class ProductionCoverageDecision:
             "expected_question_status": self.expected_question_status,
             "expected_question_reason": self.expected_question_reason,
             "candidate_capable": self.candidate_capable,
+            "candidate_evidence_ready": self.candidate_evidence_ready,
+            "candle_authority_id": self.candle_authority_id,
+            "candle_authority_digest": self.candle_authority_digest,
             "scientific_finding_capable": self.scientific_finding_capable,
             "hypothesis_capable": self.hypothesis_capable,
             "evidence_volume": self.evidence_volume,
@@ -222,6 +241,45 @@ class ProductionCoverageDecision:
 def _declaration_for(evidence_class: str) -> Any:
     return next((item for item in PRODUCTION_EVIDENCE_CLASSES
                  if item.evidence_class == evidence_class), None)
+
+
+def admit_candle_authority(
+    *, observation_space_snapshot: ObservationSpaceSnapshot,
+    candle_authority: Any = None, candle_authority_binding: Any = None,
+) -> tuple[Any, Any, str | None]:
+    """Admit a governed M5 candle authority to exactly this frontier.
+
+    Returns ``(artifact, binding, fail_closed_reason)``.  Nothing is repaired:
+    an authority from another snapshot, another epoch, another window or with a
+    different digest is refused with a closed reason code, and the
+    candidate-capable cell then reports exactly why it cannot run.
+    """
+    if candle_authority is None and candle_authority_binding is None:
+        return None, None, MISSING_M5_CANDLE_AUTHORITY
+    if candle_authority is None or candle_authority_binding is None:
+        return None, None, MISSING_M5_CANDLE_AUTHORITY
+    frontier = observation_space_snapshot.frontier_snapshot_id
+    try:
+        artifact = validate_governed_m5_candle_authority(candle_authority)
+        if artifact.authority_identity != M5_CANDLE_AUTHORITY_IDENTITY:
+            return None, None, MISSING_M5_CANDLE_AUTHORITY
+        if artifact.snapshot_id != str(frontier):
+            return None, None, STALE_FRONTIER
+        if (artifact.frontier_start
+                != observation_space_snapshot.frontier_start
+                or artifact.frontier_end
+                != observation_space_snapshot.frontier_end):
+            return None, None, STALE_FRONTIER
+        verified = verify_m5_candle_authority_binding(
+            candle_authority_binding, snapshot_id=str(frontier),
+            snapshot_fingerprint=artifact.snapshot_fingerprint,
+            investigation_epoch=artifact.investigation_epoch,
+            authority=artifact)
+    except CandleAuthorityError as exc:
+        return None, None, str(exc.reason_code)
+    except Exception:  # noqa: BLE001 - any failure must fail closed
+        return None, None, MISSING_M5_CANDLE_AUTHORITY
+    return artifact, verified, None
 
 
 def coverage_evidence_for_cell(
@@ -645,6 +703,14 @@ def _decision_from_dict(value: Mapping[str, Any]) -> ProductionCoverageDecision:
         existing_generated_question_id=(
             None if value.get("existing_generated_question_id") is None
             else str(value["existing_generated_question_id"])),
+        candidate_evidence_ready=bool(
+            value.get("candidate_evidence_ready")),
+        candle_authority_id=(
+            None if value.get("candle_authority_id") in (None, "")
+            else str(value["candle_authority_id"])),
+        candle_authority_digest=(
+            None if value.get("candle_authority_digest") in (None, "")
+            else str(value["candle_authority_digest"])),
     )
 
 
@@ -807,9 +873,20 @@ def build_production_coverage(
     active_research_by_question: Mapping[str, Sequence[str]] | None = None,
     evaluator_registry: Any | None = None,
     q71_state: Mapping[str, Any] | None = None,
+    candle_authority: Any = None,
+    candle_authority_binding: Any = None,
     created_at: str = "", observed_at: str = "",
 ) -> ProductionCoverageSnapshot:
-    """Build the immutable governed production coverage snapshot."""
+    """Build the immutable governed production coverage snapshot.
+
+    ``candle_authority`` is the governed M5 candle authority admitted to this
+    exact frontier.  A candidate-capable cell is reported as evidence-ready only
+    when its governed dataset population is observed, the candle authority is
+    bound to this frontier, the candidate-capable evaluator is registered and the
+    declaration names a governed intervention authority.  When candle authority
+    is absent or stale the cell carries the precise fail-closed reason instead of
+    a generic waiting state.
+    """
     space = observation_space_snapshot.observation_space
     policy = observation_space_snapshot.policy
     bindings = observation_space_snapshot.bindings
@@ -819,6 +896,11 @@ def build_production_coverage(
         canonical_question_projection,
         active_research_by_question=active_research_by_question)
     live_questions = _existing_generated_questions(q71_state)
+    admitted_candles, admitted_candle_binding, candle_reason = (
+        admit_candle_authority(
+            observation_space_snapshot=observation_space_snapshot,
+            candle_authority=candle_authority,
+            candle_authority_binding=candle_authority_binding))
     evidence_by_cell: dict[str, CoverageEvidence] = {}
     reasons_by_cell: dict[str, tuple[str, ...]] = {}
     evaluators: dict[str, str | None] = {}
@@ -860,6 +942,17 @@ def build_production_coverage(
         reasons = set(reasons_by_cell[cell.cell_identity])
         if evaluator is None:
             reasons.add(MISSING_EVALUATOR)
+        candidate_capable = bool(
+            declaration is not None and declaration.candidate_capable)
+        intervention_authority = bool(
+            declaration is not None
+            and (declaration.governed_intervention_policy_id
+                 or declaration.governed_intervention_authority))
+        evidence_ready = bool(
+            candidate_capable and binding.observed and evaluator is not None
+            and intervention_authority and admitted_candles is not None)
+        if candidate_capable and not evidence_ready:
+            reasons.add(candle_reason or MISSING_M5_CANDLE_AUTHORITY)
         decisions.append(ProductionCoverageDecision(
             cell_identity=cell.cell_identity,
             evidence_class=cell.evidence_class,
@@ -879,8 +972,7 @@ def build_production_coverage(
                                else MISSING_EVALUATOR),
             expected_question_status=expected_status,
             expected_question_reason=expected_reason,
-            candidate_capable=bool(
-                declaration is not None and declaration.candidate_capable),
+            candidate_capable=candidate_capable,
             scientific_finding_capable=bool(
                 declaration is not None
                 and declaration.scientific_finding_capable),
@@ -894,6 +986,13 @@ def build_production_coverage(
             coverage_snapshot_identity=coverage.coverage_snapshot_identity,
             existing_generated_question_id=live_questions.get(
                 cell.cell_identity),
+            candidate_evidence_ready=evidence_ready,
+            candle_authority_id=(None if not candidate_capable
+                                 or admitted_candles is None
+                                 else str(admitted_candles.authority_id)),
+            candle_authority_digest=(None if not candidate_capable
+                                     or admitted_candles is None
+                                     else str(admitted_candles.content_digest)),
         ))
     mapping = canonical_question_coverage_mapping(
         coverage, bindings, states, frontier_snapshot_id=frontier_snapshot_id)
@@ -1013,6 +1112,21 @@ def coverage_surface(
     blind = [row for row in decisions if row.get("blind_spot")]
     generated = [row for row in decisions
                  if row.get("existing_generated_question_id")]
+    candidate_rows = [row for row in decisions if row.get("candidate_capable")]
+    ready_rows = [row for row in candidate_rows
+                  if row.get("candidate_evidence_ready")]
+    blocked_rows = [row for row in candidate_rows
+                    if not row.get("candidate_evidence_ready")]
+    candle_authorities = sorted({
+        str(row.get("candle_authority_id"))
+        for row in decisions if row.get("candle_authority_id")})
+    candle_digests = sorted({
+        str(row.get("candle_authority_digest"))
+        for row in decisions if row.get("candle_authority_digest")})
+    candle_reasons = sorted({
+        reason for row in blocked_rows
+        for reason in (row.get("fail_closed_reasons") or ())
+        if reason in (MISSING_M5_CANDLE_AUTHORITY, STALE_FRONTIER, SUPERSEDED)})
     return {
         "status": "MATERIALIZED",
         "observation_space_snapshot_id": document.get(
@@ -1060,6 +1174,35 @@ def coverage_surface(
         "candidate_capable_cells": [
             row.get("cell_identity") for row in decisions
             if row.get("candidate_capable")],
+        # ── Governed M5 candle authority (candidate-capability evidence) ─────
+        # A candidate-capable cell is evidence-ready only when the governed M5
+        # candle authority is bound to this exact frontier.  The Lab must never
+        # hide a missing authority behind a generic WAITING state.
+        "candidate_capable_cells_evidence_ready": [
+            row.get("cell_identity") for row in ready_rows],
+        "candidate_capable_cells_blocked": [
+            {
+                "cell_identity": row.get("cell_identity"),
+                "evidence_class": row.get("evidence_class"),
+                "fail_closed_reasons": row.get("fail_closed_reasons"),
+            }
+            for row in blocked_rows],
+        "m5_candle_authority": {
+            "authority_identity": "events_v1:CANDLE:mt5_data:M5",
+            "present": bool(candle_authorities),
+            "authority_id": (candle_authorities[0] if candle_authorities
+                             else None),
+            "content_digest": (candle_digests[0] if candle_digests else None),
+            "snapshot_id": document.get("frontier_snapshot_id"),
+            "bound": bool(candle_authorities),
+            "required_by": [
+                row.get("cell_identity") for row in candidate_rows],
+            "fail_closed_reason": (None if candle_authorities
+                                   else (candle_reasons[0] if candle_reasons
+                                         else MISSING_M5_CANDLE_AUTHORITY)),
+            "detail": (
+                "projected from the immutable production coverage snapshot"),
+        },
         "scientifically_unsupported_families": [
             {
                 "structural_family": row.get("structural_family"),
@@ -1122,6 +1265,8 @@ def materialize_production_coverage(
     evaluator_registry: Any | None = None,
     q71_state: Mapping[str, Any] | None = None,
     policy: ProductionObservationPolicy | None = None,
+    candle_authority: Any = None,
+    candle_authority_binding: Any = None,
     evaluator_registry_identity: str = "", created_at: str = "",
     observed_at: str = "",
 ) -> ProductionCoverageMaterialization:
@@ -1133,6 +1278,10 @@ def materialize_production_coverage(
     live governed evidence -> observation-space materialization -> governed
     coverage snapshot -> structural blind-spot detection -> registration in the
     store ``run_q71_orchestration`` reads.
+
+    ``candle_authority`` is the governed M5 candle authority already admitted to
+    this frontier by the caller.  Nothing here reads storage: the authority is
+    verified against the frontier's own identity and then reported truthfully.
     """
     from research_engine.v10.continuous.production_observation_space import (
         DEFAULT_OBSERVATION_SPACE_DIRECTORY as _DEFAULT_OBSERVATION_DIRECTORY,
@@ -1155,6 +1304,8 @@ def materialize_production_coverage(
         canonical_question_projection=canonical_question_projection,
         active_research_by_question=active_research_by_question,
         evaluator_registry=evaluator_registry, q71_state=q71_state,
+        candle_authority=candle_authority,
+        candle_authority_binding=candle_authority_binding,
         created_at=created_at, observed_at=observed_at)
     persisted = ProductionCoverageSnapshotStore(
         coverage_directory).register(coverage)
@@ -1205,6 +1356,7 @@ __all__ = [
     "ProductionCoverageSnapshotStore",
     "RESOLVED_RESULT_STATUSES",
     "SUPERSEDED_RESULT_STATUSES",
+    "admit_candle_authority",
     "assert_coverage_conservation",
     "build_production_coverage",
     "canonical_question_coverage_mapping",

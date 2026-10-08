@@ -48,6 +48,27 @@ from research_engine.experiments.governed_scientific_result import (
     governed_scientific_result,
     not_meaningful,
 )
+from research_engine.control_plane.governed_counterfactual_evidence import (
+    COUNTERFACTUAL_EVIDENCE_CLASS,
+    INCOMPLETE_REPLAY,
+    INSUFFICIENT_SAMPLE,
+    INVALID_COUNTERFACTUAL_SCHEMA,
+    LEAKAGE_GUARD_FAILED,
+    MISSING_BASELINE,
+    MISSING_COUNTERFACTUAL_EVIDENCE,
+    MISSING_M5_CANDLE_AUTHORITY,
+    MISSING_SHADOW_LIFECYCLE_POPULATION,
+    STALE_FRONTIER,
+    SUPERSEDED_EVIDENCE,
+    TREATMENT_SIGNATURE_MISMATCH,
+    UNKNOWN_GOVERNED_POLICY,
+    CounterfactualEvidenceError,
+    rebuild_governed_exit_evidence,
+    validate_governed_counterfactual_evidence,
+    verify_counterfactual_rows,
+    verify_governed_counterfactual_binding,
+)
+from research_engine.experiments import exit_policy_governed as governed_exit
 from research_engine.experiments.x3_session_quality import build_x3_report
 
 
@@ -62,6 +83,22 @@ STATUS_INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
 _NOT_ESTIMABLE_REASONS = frozenset({
     INSUFFICIENT_GOVERNED_EVIDENCE, TEST_NOT_ESTIMABLE,
 })
+
+#: The most specific governed fail-closed reasons, in reporting preference order.
+#: A frozen artifact may carry several reason codes; the evaluator reports the
+#: concrete evidence defect rather than the generic "no admissible evidence".
+_SPECIFIC_FAIL_CLOSED_CODES = (
+    MISSING_M5_CANDLE_AUTHORITY,
+    MISSING_SHADOW_LIFECYCLE_POPULATION,
+    INVALID_COUNTERFACTUAL_SCHEMA,
+    INCOMPLETE_REPLAY,
+    LEAKAGE_GUARD_FAILED,
+    MISSING_BASELINE,
+    TREATMENT_SIGNATURE_MISMATCH,
+    UNKNOWN_GOVERNED_POLICY,
+    STALE_FRONTIER,
+    SUPERSEDED_EVIDENCE,
+)
 
 
 def _rows(datasets: Mapping[str, Any] | None, name: str) -> list[dict[str, Any]]:
@@ -122,9 +159,21 @@ def _reidentify(
     population["question_id"] = generated_question_id
     if canonical_authority:
         population["canonical_authority_question_id"] = canonical_authority
+    design = result.candidate_design
+    if design is not None:
+        # The governed result's own contract requires the candidate design's
+        # applicable population to agree with the signal population on every
+        # key.  The canonical authority question identity is preserved inside
+        # both, so no lineage is lost and no scientific semantic is changed.
+        applicable = dict(design.applicable_population)
+        applicable["question_id"] = generated_question_id
+        if canonical_authority:
+            applicable["canonical_authority_question_id"] = canonical_authority
+        design = replace(design, applicable_population=applicable)
     return replace(
         result, question_id=generated_question_id,
-        signal=replace(signal, population=population))
+        signal=replace(signal, population=population),
+        candidate_design=design)
 
 
 def _status_for(governed: GovernedScientificResult) -> str:
@@ -320,6 +369,9 @@ def governed_exit_path_distribution(
             "mean_mae_r": _mean(mae),
             "mean_realised_r": _mean(realised),
             "exit_reason_counts": dict(sorted(exit_reasons.items())),
+
+
+            "exit_reason_counts": dict(sorted(exit_reasons.items())),
         },
         "recommendation": "DESCRIPTIVE_ONLY",
         "warnings": [
@@ -337,6 +389,154 @@ def governed_exit_path_distribution(
         },
     }
     return _report_with(report, governed)
+
+
+# ── Family 4: governed counterfactual exit-policy intervention ───────────────
+# Reuses the canonical HD09 authority (research_engine.experiments.
+# exit_policy_governed) verbatim: its own exit-bar-path, baseline-reproduction
+# and nine-policy candidate-replay populations, its own opportunity-clustered
+# CR0 Holm family, and its own governed scientific result — including the
+# governed intervention mapping it declares when exactly one governed policy is
+# supported.  The evaluator reads ONLY the frozen governed counterfactual
+# evidence artifact admitted to this question's snapshot; it never opens a
+# filesystem path, a replay directory or live S3.
+
+def _counterfactual_fail_closed(
+    generated_question_id: str, reason_code: str, detail: str,
+) -> dict[str, Any]:
+    """Declare, machine-readably, that no governed counterfactual analysis ran."""
+    governed = not_meaningful(
+        generated_question_id, INSUFFICIENT_GOVERNED_EVIDENCE,
+        detail=reason_code + (":" + detail if detail else ""))
+    report = {
+        "status": _status_for(governed),
+        "conclusion": (
+            "governed counterfactual exit-policy evidence is not available for "
+            "this generated question"),
+        "sample_size": 0,
+        "confidence": "INSUFFICIENT_DATA",
+        "key_metrics": {"governed_counterfactual_rows": 0},
+        "recommendation": "WAIT_FOR_EVIDENCE",
+        "warnings": [
+            "No governed counterfactual evidence was admitted to this "
+            "snapshot; nothing was analysed and nothing was inferred.",
+        ],
+        "failure_reason": reason_code,
+        "missing_evidence": [detail or reason_code],
+        "provenance": {
+            "production_evaluator_family": "governed_exit_policy_counterfactual",
+            "canonical_authority": "research_engine.experiments.exit_policy_governed",
+            "canonical_question_id": "EX1",
+            "fail_closed_reason": reason_code,
+            "reused_computation": (
+                "none: the governed counterfactual evidence was not admissible"),
+        },
+    }
+    return _report_with(report, governed)
+def governed_exit_policy_counterfactual(
+    *, generated_question_id: str,
+    datasets: Mapping[str, Any] | None = None,
+    shadow_runtime: Sequence[Mapping[str, Any]] | None = None,
+    governed_counterfactual_evidence: Any = None,
+    governed_counterfactual_binding: Any = None,
+    evidence_class: str = "UNKNOWN",
+    population_identity: str = "UNKNOWN",
+    horizon: str = "UNKNOWN",
+    **_ignored: Any,
+) -> dict[str, Any]:
+    """Governed counterfactual exit-policy evaluation of one generated question.
+
+    The only admissible evidence is the frozen governed counterfactual artifact
+    the worker admitted for this snapshot.  Everything the canonical HD09
+    authority needs is reconstructed from that artifact plus the snapshot's own
+    ``shadow_runtime`` population, and the artifact is refused unless it was
+    produced from exactly that population.
+    """
+    shadow = [
+        dict(row) for row in (shadow_runtime or [])
+        if isinstance(row, Mapping)
+    ] or _rows(datasets, "shadow_runtime")
+    if governed_counterfactual_evidence is None:
+        return _counterfactual_fail_closed(
+            generated_question_id, MISSING_COUNTERFACTUAL_EVIDENCE,
+            "no frozen governed counterfactual evidence was admitted to this "
+            "snapshot")
+    try:
+        artifact = validate_governed_counterfactual_evidence(
+            governed_counterfactual_evidence)
+        if governed_counterfactual_binding is not None:
+            verify_governed_counterfactual_binding(
+                governed_counterfactual_binding,
+                snapshot_id=artifact.snapshot_id,
+                snapshot_fingerprint=artifact.snapshot_fingerprint,
+                investigation_epoch=artifact.investigation_epoch,
+                evidence=artifact)
+        if not artifact.scientifically_analysable:
+            codes = list(artifact.reason_codes)
+            specific = [
+                code for code in codes if code in _SPECIFIC_FAIL_CLOSED_CODES]
+            reason_code = (specific or codes or [MISSING_COUNTERFACTUAL_EVIDENCE])[0]
+            return _counterfactual_fail_closed(
+                generated_question_id, reason_code,
+                ",".join(str(code) for code in codes))
+        rebuilt = rebuild_governed_exit_evidence(artifact, shadow)
+        if rebuilt.missing_evidence:
+            return _counterfactual_fail_closed(
+                generated_question_id, MISSING_M5_CANDLE_AUTHORITY,
+                "; ".join(str(item) for item in rebuilt.missing_evidence))
+        verify_counterfactual_rows(artifact, rebuilt)
+    except CounterfactualEvidenceError as exc:
+        return _counterfactual_fail_closed(
+            generated_question_id, str(exc).split(":", 1)[0], str(exc))
+    except Exception as exc:  # noqa: BLE001 - any failure must fail closed
+        return _counterfactual_fail_closed(
+            generated_question_id, INCOMPLETE_REPLAY,
+            f"{type(exc).__name__}:{exc}")
+    canonical_report = governed_exit.analyse_ex1(
+        rebuilt.candidate, rebuilt.reproduction, rebuilt.path)
+    declared = governed_scientific_result(canonical_report)
+    if declared is None:  # pragma: no cover - the HD09 authority always declares
+        governed = not_meaningful(
+            generated_question_id, INSUFFICIENT_GOVERNED_EVIDENCE,
+            detail="the canonical HD09 evaluator declared no governed result")
+    else:
+        governed = _reidentify(declared, generated_question_id)
+    report = dict(canonical_report)
+    report["status"] = _status_for(governed)
+    report["provenance"] = {
+        **dict(report.get("provenance") or {}),
+        "production_evaluator_family": "governed_exit_policy_counterfactual",
+        "canonical_authority": "research_engine.experiments.exit_policy_governed",
+        "canonical_question_id": "EX1",
+        "governed_counterfactual_evidence": {
+            "dataset_id": artifact.dataset_id,
+            "content_digest": artifact.content_digest,
+            "evidence_class": artifact.evidence_class,
+            "producer_identity": artifact.producer_identity,
+            "producer_version": artifact.producer_version,
+            "snapshot_id": artifact.snapshot_id,
+            "snapshot_fingerprint": artifact.snapshot_fingerprint,
+            "investigation_epoch": artifact.investigation_epoch,
+            "source_dataset_identities": [
+                list(item) for item in artifact.source_dataset_identities],
+            "replay_method": artifact.replay_method,
+            "replay_version": artifact.replay_version,
+            "m5_authority": artifact.m5_authority,
+            "admissible_rows": len(artifact.rows),
+            "excluded_rows": len(artifact.exclusions),
+            "reason_codes": list(artifact.reason_codes),
+        },
+        "reused_computation": (
+            "exit_policy_governed.analyse_ex1 over the governed exit-bar-path, "
+            "baseline-reproduction and nine-policy candidate-replay populations "
+            "rebuilt from the frozen governed evidence, re-identified to this "
+            "generated question"),
+    }
+    return _report_with(report, governed)
+
+
+
+
 
 
 def _numbers(population: Sequence[Mapping[str, Any]], name: str) -> list[float]:
@@ -357,5 +557,6 @@ __all__ = [
     "STATUS_INSUFFICIENT_DATA",
     "completed_shadow_lifecycle_expectancy",
     "governed_exit_path_distribution",
+    "governed_exit_policy_counterfactual",
     "session_conditioned_execution_slippage",
 ]

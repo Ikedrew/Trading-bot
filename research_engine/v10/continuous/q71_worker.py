@@ -30,6 +30,11 @@ from typing import Any, Callable, Mapping, Sequence
 
 import hashlib
 
+from research_engine.control_plane.governed_counterfactual_evidence import (
+    MISSING_COUNTERFACTUAL_EVIDENCE,
+    CounterfactualEvidenceError,
+    verify_governed_counterfactual_binding,
+)
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
 from research_engine.experiments.governed_scientific_result import (
     ScientificResultError, governed_scientific_metrics,
@@ -39,7 +44,7 @@ from research_engine.v10.continuous.canonical_question_cycle import (
     _build_context, _dataset_material, _snapshot_only_runner_environment,
 )
 from research_engine.v10.continuous.generated_question_lifecycle import (
-    IMPLEMENTATION_BLOCKED, INVALID, MISSING_EVALUATOR,
+    BLOCKED, IMPLEMENTATION_BLOCKED, INVALID, MISSING_EVALUATOR,
     RUNNING, TERMINAL_STATES, WAITING_FOR_DATA,
     execution_status_from_report_status, generation_to_lifecycle,
     scientific_status,
@@ -149,6 +154,39 @@ def _evidence_references(
     return tuple(references)
 
 
+def _admit_governed_counterfactual(
+    context: "_SnapshotContext", *, evidence: Any, binding: Any,
+) -> tuple[Any, Any, tuple[str, str] | None]:
+    """Admit frozen governed counterfactual evidence to THIS snapshot only.
+
+    The common investigation snapshot's bound-dataset set is closed, so the
+    admission is an explicit governed membership pinned to the snapshot's exact
+    identity.  A binding from another frontier or epoch, an artifact that does
+    not match its binding, or an artifact supplied without a governed membership
+    at all, all fail closed: the worker never admits ungoverned evidence and
+    never repairs a mismatch.
+    """
+    if evidence is None and binding is None:
+        return None, None, None
+    if evidence is None or binding is None:
+        return None, None, (
+            MISSING_COUNTERFACTUAL_EVIDENCE,
+            "a governed counterfactual artifact requires its snapshot-pinned "
+            "governed evidence membership, and vice versa")
+    try:
+        verified = verify_governed_counterfactual_binding(
+            binding,
+            snapshot_id=str(getattr(context.snapshot, "snapshot_id", "")),
+            snapshot_fingerprint=str(
+                getattr(context.snapshot, "snapshot_fingerprint", "")),
+            investigation_epoch=str(
+                getattr(context.snapshot, "evidence_epoch", "")),
+            evidence=evidence)
+    except CounterfactualEvidenceError as exc:
+        return None, None, (str(exc).split(":", 1)[0], str(exc))
+    return evidence, verified, None
+
+
 def _load_evaluator(
     registration: GeneratedQuestionEvaluatorRegistration,
 ) -> Callable[..., Any]:
@@ -164,11 +202,15 @@ def _evaluator_kwargs(
     specification: Mapping[str, Any],
     resolution: GeneratedQuestionEvaluatorResolution,
     context: _SnapshotContext, required_datasets: Sequence[str],
+    governed_counterfactual_evidence: Any = None,
+    governed_counterfactual_binding: Any = None,
 ) -> dict[str, Any]:
     """Bind the governed evidence to the evaluator's declared signature.
 
     A required parameter the worker cannot satisfy fails closed: the worker never
-    invents evidence to make an evaluator run.
+    invents evidence to make an evaluator run.  ``governed_counterfactual_evidence``
+    is frozen governed evidence produced upstream and admitted to this snapshot;
+    the worker only ever passes on what the caller proved belongs to it.
     """
     cell = specification.get("observation_cell")
     cell = dict(cell) if isinstance(cell, Mapping) else {}
@@ -205,6 +247,11 @@ def _evaluator_kwargs(
         "investigation_epoch": str(getattr(context.snapshot, "evidence_epoch", "")),
         "evidence_frontier": str(getattr(context.snapshot, "end_date", "")),
         "evaluator_key": str(resolution.evaluator_key or ""),
+        # Frozen governed evidence admitted to THIS snapshot.  The artifact is
+        # never read from disk here: the caller produced it upstream and the
+        # worker proved its membership before binding it.
+        "governed_counterfactual_evidence": governed_counterfactual_evidence,
+        "governed_counterfactual_binding": governed_counterfactual_binding,
     }
     primary = required_datasets[0] if required_datasets else None
     for dataset in required_datasets:
@@ -423,8 +470,17 @@ def run_generated_question_worker(
     source: Any | None = None,
     policy: GeneratedExecutionPolicy | None = None,
     recorded_at: str | None = None,
+    governed_counterfactual_evidence: Any = None,
+    governed_counterfactual_binding: Any = None,
 ) -> dict[str, Any]:
-    """Execute at most ``max_questions_per_run`` queued generated questions."""
+    """Execute at most ``max_questions_per_run`` queued generated questions.
+
+    ``governed_counterfactual_evidence`` is frozen governed counterfactual
+    evidence produced upstream of this worker and admitted to ``snapshot_id`` by
+    ``governed_counterfactual_binding``.  The worker never reads that evidence
+    from disk and never admits it without a membership that verifies against its
+    own snapshot.
+    """
     resolved_policy = policy or GeneratedExecutionPolicy()
     if not isinstance(evaluator_registry, GeneratedQuestionEvaluatorRegistry):
         raise GeneratedQuestionWorkerError("GOVERNED_EVALUATOR_REGISTRY_REQUIRED")
@@ -507,7 +563,9 @@ def run_generated_question_worker(
             registry_identity=registry_identity,
             manifest_directory=manifest_directory, source=source,
             policy=resolved_policy, stamp=stamp,
-            execution_store=execution_store, result_store=result_store)
+            execution_store=execution_store, result_store=result_store,
+            governed_counterfactual_evidence=governed_counterfactual_evidence,
+            governed_counterfactual_binding=governed_counterfactual_binding)
         outcomes.append(outcome)
         if entry is not None:
             batch_entries.append(entry)
@@ -551,6 +609,8 @@ def _execute_one(
     policy: GeneratedExecutionPolicy, stamp: str,
     execution_store: GeneratedQuestionExecutionStore,
     result_store: GeneratedQuestionResultStore,
+    governed_counterfactual_evidence: Any = None,
+    governed_counterfactual_binding: Any = None,
 ) -> tuple[dict[str, Any], dict[str, Any] | None, str | None]:
     """Verify evidence, execute, transport and persist one generated question."""
     context = _load_snapshot_context(
@@ -573,6 +633,19 @@ def _execute_one(
             evaluator_identity_digest=registration.evaluator_identity_digest,
             evaluator_version=registration.evaluator_version,
             outcome=WAITING_FOR_DATA), None, None
+    admitted_evidence, admitted_binding, refusal = _admit_governed_counterfactual(
+        context, evidence=governed_counterfactual_evidence,
+        binding=governed_counterfactual_binding)
+    if refusal is not None:
+        # A governed-evidence integrity failure must never look like a data gap.
+        return _operational_outcome(
+            execution_store, question_id=question_id,
+            execution_status=BLOCKED, reason_code=refusal[0], reason=refusal[1],
+            stamp=stamp, evidence_epoch=evidence_identity,
+            evaluator_key=registration.evaluator_key,
+            evaluator_identity_digest=registration.evaluator_identity_digest,
+            evaluator_version=registration.evaluator_version,
+            outcome=BLOCKED), None, None
     work_item_id = work_item_identity(
         generated_question_id=question_id, evidence_epoch=evidence_identity,
         evaluator_identity_digest=registration.evaluator_identity_digest)
@@ -611,7 +684,9 @@ def _execute_one(
         kwargs = _evaluator_kwargs(
             runner, generated_question_id=question_id,
             specification=specification, resolution=resolution,
-            context=context, required_datasets=registration.required_datasets)
+            context=context, required_datasets=registration.required_datasets,
+            governed_counterfactual_evidence=admitted_evidence,
+            governed_counterfactual_binding=admitted_binding)
         with _snapshot_only_runner_environment(context.reader):
             report = runner(**kwargs)
         if not isinstance(report, Mapping):
