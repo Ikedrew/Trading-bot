@@ -187,7 +187,20 @@ def run_cadence_tick(
         fast_attempted = True
         t0 = time.perf_counter()
         try:
-            result = run_continuous_research_cycle(state_root=root)
+            # The production Q71+ evaluator registry is the single eligibility
+            # authority for generated questions.  Absence is a legitimate state
+            # (every generated question then stays MISSING_EVALUATOR), so a
+            # failure to load it must never fabricate capability.
+            from research_engine.v10.continuous.research_loop import (
+                _production_evaluator_registry,
+            )
+
+            try:
+                evaluator_registry = _production_evaluator_registry()
+            except Exception:
+                evaluator_registry = None
+            result = run_continuous_research_cycle(
+                state_root=root, q71_evaluator_registry=evaluator_registry)
             fast_outcome = str(getattr(result, "cycle_outcome", "UNKNOWN"))
         except Exception as exc:
             fast_outcome = f"EXCEPTION:{type(exc).__name__}:{exc}"

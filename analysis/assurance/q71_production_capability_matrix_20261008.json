@@ -1,0 +1,163 @@
+{
+  "candidate_capable_families": [],
+  "evidence_class_catalogue_identity": "f352a0a1115257372f7a76eb965668962938ca09319e7c926e9c75c7eaa4d341",
+  "families": [
+    {
+      "candidate_capable": false,
+      "estimand": "mean R-multiple per completed governed shadow lifecycle",
+      "evaluator_available": true,
+      "evaluator_key": "q71.expectancy.completed_shadow_lifecycle",
+      "evaluator_version": "v1",
+      "evidence_requirements": [
+        "shadow_runtime"
+      ],
+      "governed_intervention_policy_id": null,
+      "hypothesis_capable": true,
+      "minimum_evidence": {
+        "minimum_estimable_completed_lifecycles": 5,
+        "significance_alpha": 0.05
+      },
+      "observation_grain": "one completed governed shadow lifecycle with a realised R-multiple",
+      "runner": "research_engine.experiments.q71_production_evaluators.completed_shadow_lifecycle_expectancy",
+      "scientific_finding_capable": true,
+      "statistical_method": "one-sample t-test of the mean R-multiple versus zero, normal approximation, alpha=0.05, minimum 5 estimable lifecycles",
+      "structural_family": "CURRENT_COMPLETED_SHADOW_LIFECYCLES",
+      "unsupported_reason": null
+    },
+    {
+      "candidate_capable": false,
+      "estimand": "session-conditioned absolute producer-measured execution slippage",
+      "evaluator_available": true,
+      "evaluator_key": "q71.execution.session_conditioned_slippage",
+      "evaluator_version": "v1",
+      "evidence_requirements": [
+        "execution_results",
+        "execution_context"
+      ],
+      "governed_intervention_policy_id": null,
+      "hypothesis_capable": true,
+      "minimum_evidence": {
+        "minimum_decisions_per_session": 10,
+        "minimum_matched_account_results": 30,
+        "minimum_results_per_session": 30,
+        "significance_alpha": 0.05
+      },
+      "observation_grain": "one distinct account/broker execution result",
+      "runner": "research_engine.experiments.q71_production_evaluators.session_conditioned_execution_slippage",
+      "scientific_finding_capable": true,
+      "statistical_method": "correlation_id-clustered quadratic Wald joint session test with Holm step-down pairwise contrasts, alpha=0.05",
+      "structural_family": "SESSION_CONDITIONED_ABSOLUTE_MEASURED_EXECUTION_SLIPPAGE",
+      "unsupported_reason": null
+    },
+    {
+      "candidate_capable": false,
+      "estimand": "descriptive distribution of the governed exit path (MFE/MAE/exit reason/realised R)",
+      "evaluator_available": true,
+      "evaluator_key": "q71.descriptive.exit_path_distribution",
+      "evaluator_version": "v1",
+      "evidence_requirements": [
+        "shadow_runtime"
+      ],
+      "governed_intervention_policy_id": null,
+      "hypothesis_capable": false,
+      "minimum_evidence": {
+        "minimum_eligible_lifecycles": 1
+      },
+      "observation_grain": "one completed shadow lifecycle carrying realised MFE, MAE, exit reason and realised R-multiple",
+      "runner": "research_engine.experiments.q71_production_evaluators.governed_exit_path_distribution",
+      "scientific_finding_capable": false,
+      "statistical_method": "descriptive distribution only; this evaluator defines no statistical test",
+      "structural_family": "CURRENT_COMPLETED_SHADOW_LIFECYCLE_EXIT_PATH",
+      "unsupported_reason": null
+    },
+    {
+      "candidate_capable": false,
+      "estimand": null,
+      "evaluator_available": false,
+      "evaluator_key": null,
+      "evaluator_version": null,
+      "evidence_requirements": [],
+      "governed_intervention_policy_id": null,
+      "hypothesis_capable": false,
+      "minimum_evidence": {},
+      "observation_grain": null,
+      "runner": null,
+      "scientific_finding_capable": false,
+      "statistical_method": null,
+      "structural_family": "COUNTERFACTUAL_SHADOW_SIMULATED_OUTCOME",
+      "unsupported_detail": "D5 computes a real counterfactual rejection analysis but declares no governed scientific result.  Manufacturing one here would fabricate the scientific semantics instead of reusing them.",
+      "unsupported_provenance": "research_engine.experiments.d5_rejected_opportunity_validation (D5 EVIDENCE_CLASS)",
+      "unsupported_reason": "NO_GOVERNED_SCIENTIFIC_RESULT_FROM_CANONICAL_AUTHORITY"
+    },
+    {
+      "candidate_capable": false,
+      "estimand": null,
+      "evaluator_available": false,
+      "evaluator_key": null,
+      "evaluator_version": null,
+      "evidence_requirements": [],
+      "governed_intervention_policy_id": null,
+      "hypothesis_capable": false,
+      "minimum_evidence": {},
+      "observation_grain": null,
+      "runner": null,
+      "scientific_finding_capable": false,
+      "statistical_method": null,
+      "structural_family": "EVENTS",
+      "unsupported_detail": "The token names no physical governed dataset, so no evaluator can declare an honest analytical population or evidence authority from it.",
+      "unsupported_provenance": "declared as the governed cell evidence class by research_engine.lifecycle.research_observation_space in the coverage and Q71 execution suites",
+      "unsupported_reason": "EVIDENCE_CLASS_NOT_BOUND_TO_GOVERNED_DATASET"
+    },
+    {
+      "candidate_capable": false,
+      "estimand": null,
+      "evaluator_available": false,
+      "evaluator_key": null,
+      "evaluator_version": null,
+      "evidence_requirements": [],
+      "governed_intervention_policy_id": null,
+      "hypothesis_capable": false,
+      "minimum_evidence": {},
+      "observation_grain": null,
+      "runner": null,
+      "scientific_finding_capable": false,
+      "statistical_method": null,
+      "structural_family": "SHADOW_CANDIDATE_PROSPECTIVE",
+      "unsupported_detail": "This class describes prospective evidence about an existing governed candidate, not a governed population a generated coverage question can be researched against.",
+      "unsupported_provenance": "research_engine.control_plane.shadow_candidate_governance (candidate_status_citation evidence_class)",
+      "unsupported_reason": "EVIDENCE_CLASS_NOT_A_GENERATED_QUESTION_POPULATION"
+    }
+  ],
+  "finding_capable_families": [
+    "CURRENT_COMPLETED_SHADOW_LIFECYCLES",
+    "SESSION_CONDITIONED_ABSOLUTE_MEASURED_EXECUTION_SLIPPAGE"
+  ],
+  "generated_question_structural_dimensions": {
+    "discriminating_dimension": "evidence_class",
+    "intervention_classes": [
+      "UNKNOWN"
+    ],
+    "metric_families": [
+      "UNKNOWN"
+    ],
+    "observation_cells": "not pinned: production observation cells are minted from the observation space, so a registration declares its whole evidence-class scope rather than enumerating cells",
+    "question_types": [
+      "COVERAGE_GAP"
+    ]
+  },
+  "hypothesis_capable_families": [
+    "CURRENT_COMPLETED_SHADOW_LIFECYCLES",
+    "SESSION_CONDITIONED_ABSOLUTE_MEASURED_EXECUTION_SLIPPAGE"
+  ],
+  "matrix_schema": "q71_production_capability_matrix_v1",
+  "registry_identity": "8d69a06f22e9ed7da74174108323ec9f307a7f622604b1d781ec7094925f45a9",
+  "supported_families": 3,
+  "supported_fraction": 0.5,
+  "total_structural_families": 6,
+  "unsupported_families": 3,
+  "unsupported_family_reasons": {
+    "COUNTERFACTUAL_SHADOW_SIMULATED_OUTCOME": "NO_GOVERNED_SCIENTIFIC_RESULT_FROM_CANONICAL_AUTHORITY",
+    "EVENTS": "EVIDENCE_CLASS_NOT_BOUND_TO_GOVERNED_DATASET",
+    "SHADOW_CANDIDATE_PROSPECTIVE": "EVIDENCE_CLASS_NOT_A_GENERATED_QUESTION_POPULATION"
+  }
+}

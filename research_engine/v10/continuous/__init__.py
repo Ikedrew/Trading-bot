@@ -46,6 +46,18 @@ from research_engine.v10.continuous.q71_worker import (
     GeneratedQuestionWorkerError,
     run_generated_question_worker,
 )
+from research_engine.v10.continuous.q71_production_registry import (
+    PRODUCTION_EVALUATOR_FAMILIES,
+    ProductionEvaluatorRegistryError,
+    build_production_evaluator_registry,
+    load_production_evaluator_registry,
+    production_capability_matrix,
+    production_evaluator_registrations,
+    production_registry_document,
+    production_registry_identity,
+    verify_production_registry,
+    write_production_evaluator_registry,
+)
 from research_engine.v10.continuous.state import CycleState, CycleStatus, TriggerStatus
 
 __all__ = [
@@ -62,16 +74,26 @@ __all__ = [
     "GeneratedQuestionResultStore",
     "GeneratedQuestionWorkerError",
     "LIFECYCLE_STATES",
+    "PRODUCTION_EVALUATOR_FAMILIES",
+    "ProductionEvaluatorRegistryError",
     "ScientificStateBridgeError",
     "ScientificStateBridgeResult",
     "FrontierCycleResult",
     "CycleState",
     "CycleStatus",
     "TriggerStatus",
+    "build_production_evaluator_registry",
+    "load_production_evaluator_registry",
+    "production_capability_matrix",
+    "production_evaluator_registrations",
+    "production_registry_document",
+    "production_registry_identity",
     "run_frontier_snapshot_cycle",
     "run_canonical_question_cycle",
     "run_generated_question_worker",
     "run_generated_scientific_bridge",
     "run_scientific_state_bridge",
+    "verify_production_registry",
     "work_item_identity",
+    "write_production_evaluator_registry",
 ]

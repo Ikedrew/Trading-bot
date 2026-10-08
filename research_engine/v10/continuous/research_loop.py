@@ -483,6 +483,11 @@ def run_continuous_research_cycle(
         qkwargs.setdefault("snapshot_id", str(_value(frontier, "snapshot_id")))
         qkwargs.setdefault("capacity", q71_capacity)
         qkwargs.setdefault("state_path", root / "q71_state.json")
+        if q71_evaluator_registry is not None:
+            # The governed registry is the single eligibility authority: the
+            # question generation declares executable must be exactly the
+            # question the worker can execute.
+            qkwargs.setdefault("evaluator_registry", q71_evaluator_registry)
         q71 = q71_runner(**qkwargs)
         stages["Q71_PLUS"] = str(q71.get("status", "COMPLETED"))
         progress("exit_stage", "Q71_PLUS", status=stages["Q71_PLUS"])
