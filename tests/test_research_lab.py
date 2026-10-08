@@ -117,7 +117,7 @@ def test_duplicate_start_does_not_launch_a_second_child(tmp_path, monkeypatch):
     assert json.loads(server.LOCK_PATH.read_text(encoding="utf-8"))["stage"] == "RUNNING"
 
 
-def test_canonical_question_and_candidate_fallback_state():
+def test_canonical_question_and_projected_candidate_state():
     state = server.build_state()
     questions = {q["question_id"]: q for q in state["questions"]}
 
@@ -132,6 +132,140 @@ def test_canonical_question_and_candidate_fallback_state():
     assert candidate["hypothesis_id"] == "HYP-DP1-002"
     assert candidate["policy_id"] == "TRAIL_ACT_0_25R_DIST_0_10R_V1"
     assert candidate["live_approved"] is False
+
+
+def test_empty_projection_artifacts_do_not_fall_back_to_diagnostic_registry(tmp_path, monkeypatch):
+    state_root = isolate_run_state(tmp_path, monkeypatch)
+    projection_dir = state_root / "projection"
+    projection_dir.mkdir(parents=True)
+    projection = {
+        "projection_schema": "unified_research_projection_v1",
+        "projection_version": "RPROJ-EMPTY-AUTHORITY",
+        "continuous_cycle_id": "CRCYCLE-EMPTY",
+        "canonical_questions": server._registry_questions(),
+        "generated_questions": [], "findings": [], "hypotheses": [], "candidates": [],
+        "investigations_and_work_queues": {}, "research_lag": {"lag_epochs": 2},
+        "data_frontier": {"snapshot_id": "SNAP-EMPTY"}, "what_changed": {},
+    }
+    (projection_dir / "latest.json").write_text(json.dumps(projection), encoding="utf-8")
+    registry = tmp_path / "diagnostic-registry.json"
+    registry.write_text(json.dumps({
+        "hypotheses": {"STALE-H": {"hypothesis_id": "STALE-H"}},
+        "candidates": {"STALE-C": {"candidate_id": "STALE-C", "hypothesis_id": "STALE-H"}},
+        "plans": {"STALE-C": {"candidate_id": "STALE-C"}},
+    }), encoding="utf-8")
+    monkeypatch.setattr(server, "OPT_REGISTRY", registry)
+
+    state = server.build_state()
+
+    assert state["source"] == "UNIFIED_PROJECTION"
+    assert state["findings"] == []
+    assert state["hypotheses"] == []
+    assert state["candidates"] == []
+    assert state["freshness"]["research_lag"]["lag_epochs"] == 2
+
+
+def test_no_projection_does_not_surface_partial_scientific_stores(tmp_path, monkeypatch):
+    isolate_run_state(tmp_path, monkeypatch)
+    registry = tmp_path / "diagnostic-registry.json"
+    registry.write_text(json.dumps({
+        "hypotheses": {"STALE-H": {"hypothesis_id": "STALE-H"}},
+        "candidates": {"STALE-C": {"candidate_id": "STALE-C", "hypothesis_id": "STALE-H"}},
+        "plans": {},
+    }), encoding="utf-8")
+    monkeypatch.setattr(server, "OPT_REGISTRY", registry)
+
+    state = server.build_state()
+
+    assert state["source"] == "PERSISTED_STORES_NO_PROJECTION"
+    assert len(state["questions"]) == 70
+    assert all(row["status_source"] == "registry" for row in state["questions"])
+    assert state["q71"]["available"] is False
+    assert state["findings"] == state["hypotheses"] == state["candidates"] == []
+
+
+def test_operator_api_bounds_large_evidence_inventories_without_hiding_count(tmp_path, monkeypatch):
+    state_root = isolate_run_state(tmp_path, monkeypatch)
+    projection_dir = state_root / "projection"
+    projection_dir.mkdir(parents=True)
+    questions = server._registry_questions()
+    questions[0]["evidence_references"] = [
+        {"identifier": f"OBJECT-{index}"} for index in range(40)]
+    questions[0]["key_metrics"] = {
+        "diagnostics": [{"index": index} for index in range(40)]}
+    projection = {
+        "projection_schema": "unified_research_projection_v1",
+        "projection_version": "RPROJ-LARGE-EVIDENCE",
+        "canonical_questions": questions,
+        "generated_questions": [], "findings": [], "hypotheses": [], "candidates": [],
+        "investigations_and_work_queues": {}, "what_changed": {},
+    }
+    (projection_dir / "latest.json").write_text(json.dumps(projection), encoding="utf-8")
+
+    state = server.build_state()
+    first = state["questions"][0]
+
+    assert first["evidence_reference_count"] == 40
+    assert first["evidence_references_shown"] == 25
+    assert first["evidence_references_truncated"] is True
+    assert len(first["evidence_references"]) == 25
+    assert len(first["key_metrics"]["diagnostics"]) == 25
+    assert first["operator_view_truncation"]["key_metrics.diagnostics"] == {
+        "total": 40, "shown": 25}
+
+
+def test_unified_projection_preserves_end_to_end_operator_lineage(tmp_path, monkeypatch):
+    state_root = isolate_run_state(tmp_path, monkeypatch)
+    projection_dir = state_root / "projection"
+    projection_dir.mkdir(parents=True)
+    questions = server._registry_questions()
+    questions[0].update({"status": "COMPLETE", "evaluated_at": "2026-10-07T00:00:00Z"})
+    projection = {
+        "projection_schema": "unified_research_projection_v1",
+        "projection_version": "RPROJ-END-TO-END",
+        "continuous_cycle_id": "CRCYCLE-END-TO-END",
+        "canonical_questions": questions,
+        "generated_questions": [{
+            "generated_question_id": "Q71-TEST", "status": "ACTIVE",
+            "question": "Controlled unresolved gap?", "source_finding": "F-TEST"}],
+        "findings": [{
+            "finding_id": "F-TEST", "status": "SUPPORTED", "source_question_ids": ["E1"],
+            "dependent_hypotheses": ["H-TEST"], "dependent_candidates": ["C-TEST"]}],
+        "hypotheses": [{
+            "hypothesis_id": "H-TEST", "status": "SUPPORTED", "source_question": "E1",
+            "source_finding": "F-TEST", "dependent_candidates": ["C-TEST"]}],
+        "candidates": [{
+            "candidate_id": "C-TEST", "status": "READY_FOR_PROMOTION_REVIEW",
+            "hypothesis_id": "H-TEST", "source_question_ids": ["E1"],
+            "source_finding_ids": ["F-TEST"], "live_approved": False,
+            "plan": {"minimum_sample": 100}, "status_history": []}],
+        "investigations_and_work_queues": {"generated_question_queue": ["Q71-TEST"]},
+        "data_frontier": {"snapshot_id": "SNAP-END-TO-END"},
+        "research_lag": {"lag_epochs": 0, "pending_deep_jobs": 0, "running_deep_jobs": 0},
+        "what_changed": {
+            "new_q71_questions": ["Q71-TEST"], "new_findings": ["F-TEST"],
+            "new_hypotheses": ["H-TEST"], "proposed_candidates": ["C-TEST"]},
+    }
+    (projection_dir / "latest.json").write_text(json.dumps(projection), encoding="utf-8")
+
+    state = server.build_state()
+
+    assert state["q71"]["generated"][0]["generated_question_id"] == "Q71-TEST"
+    assert state["findings"][0]["dependent_hypotheses"] == ["H-TEST"]
+    assert state["hypotheses"][0]["dependent_candidates"] == ["C-TEST"]
+    assert state["candidates"][0]["source_finding_ids"] == ["F-TEST"]
+    assert state["candidates"][0]["live_approved"] is False
+    assert state["candidates"][0]["status"] == "READY_FOR_PROMOTION_REVIEW"
+    assert state["what_changed_cycle"]["new_q71_questions"] == ["Q71-TEST"]
+
+
+def test_static_lab_distinguishes_terminal_candidate_states_and_non_live_review():
+    html = (server.STATIC / "index.html").read_text(encoding="utf-8")
+    for status in ("REJECTED", "DISABLED", "REVOKED", "SUPERSEDED", "RETIRED"):
+        assert f'{status}:"' in html
+    assert "NOT APPROVED (live_approved = false)" in html
+    assert "READY_FOR_PROMOTION_REVIEW" in html
+    assert "State read error." in html
 
 
 def test_merge_uses_nested_block2_result_not_registry_fallback():

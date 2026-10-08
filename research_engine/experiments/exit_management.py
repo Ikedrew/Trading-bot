@@ -190,9 +190,18 @@ def _make_report(
 ) -> dict[str, Any]:
     """Build a canonical report for exit-management questions."""
     from research_engine.experiments.experiment_base import build_report, build_fingerprint
+    from research_engine.experiments.governed_scientific_result import (
+        DESCRIPTIVE_ONLY,
+        attach,
+        not_meaningful,
+    )
 
     sample = dataset.get("sample_size", 0)
-    return build_report(
+    # Repair Block 1: this module's own SCIENTIFIC BOUNDARY states that every
+    # EX1-EX4 conclusion here is OBSERVATIONAL, describes a distribution, and
+    # performs no policy simulation.  It therefore declares, explicitly and
+    # machine-readably, that its results are not scientific findings.
+    return attach(build_report(
         question_id=question_id,
         status=status,
         overall=overall,
@@ -211,7 +220,14 @@ def _make_report(
             "registry_id": question_id,
             "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre",
         },
-    )
+    ), not_meaningful(
+        question_id, DESCRIPTIVE_ONLY,
+        detail=(
+            "Observational MFE/MAE distribution report over canonical shadow_runtime_v1 "
+            "completed lifecycles; no counterfactual policy simulation and no "
+            "statistical test is performed."
+        ),
+    ))
 
 
 def _insufficient(

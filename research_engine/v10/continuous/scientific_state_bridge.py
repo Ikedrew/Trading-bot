@@ -151,27 +151,79 @@ def _metric(result: CanonicalQuestionResult, *names: str) -> Any:
     return None
 
 
+def _governed_lineage_present(result: CanonicalQuestionResult) -> bool:
+    """A finding must be traceable to a governed population or to evidence.
+
+    Either an explicit population definition or real evidence lineage is
+    required.  Neither may be assumed: an untraceable claim fails closed.
+    """
+    return bool(_population(result)) or bool(result.evidence_references) \
+        or bool(result.evidence_datasets)
+
+
+def _require_governed_scientific_metadata(result: CanonicalQuestionResult) -> None:
+    """Fail closed on contradictory or incomplete declared scientific metadata."""
+    if not _governed_lineage_present(result):
+        raise ValueError("SCIENTIFIC_METADATA_INVALID:FINDING_POPULATION_OR_LINEAGE_REQUIRED")
+    sample = result.sample_n
+    if sample is not None and (
+        isinstance(sample, bool) or not isinstance(sample, int) or sample <= 0
+    ):
+        raise ValueError("SCIENTIFIC_METADATA_INVALID:NON_POSITIVE_SAMPLE_SIZE")
+    for container in (result.key_metrics, result.statistical_output):
+        if not isinstance(container, Mapping):
+            continue
+        interval = container.get("confidence_interval")
+        if interval is None:
+            continue
+        if (
+            not isinstance(interval, (list, tuple))
+            or len(interval) != 2
+            or any(isinstance(item, bool) or not isinstance(item, (int, float))
+                   for item in interval)
+            or float(interval[0]) > float(interval[1])
+        ):
+            raise ValueError("SCIENTIFIC_METADATA_INVALID:INVALID_CONFIDENCE_INTERVAL")
+
+
 def _explicit_scientific_signal(result: CanonicalQuestionResult) -> tuple[bool, str]:
     """Accept only a runner-declared signal or governed statistical decision."""
     if result.status not in {COMPLETE, NEGATIVE_RESULT} or not _conclusion(result):
         return False, "QUESTION_NOT_SCIENTIFICALLY_RESOLVED"
-    explicit = _metric(result, "scientifically_meaningful")
-    if explicit is True:
+    declared = _metric(result, "scientifically_meaningful")
+    not_meaningful_reason = _metric(result, "scientific_not_meaningful_reason")
+    if declared is not None:
+        if not isinstance(declared, bool):
+            raise ValueError("SCIENTIFIC_METADATA_INVALID:MEANINGFUL_FLAG_NOT_BOOLEAN")
+        if not declared:
+            # An evaluator's explicit declaration is authoritative.  A
+            # structurally COMPLETE result can never be upgraded into a finding
+            # by an unrelated classification, p-value or interval.
+            return False, "RUNNER_DECLARED_NOT_MEANINGFUL:" + str(
+                not_meaningful_reason or "UNSPECIFIED")
+        if not_meaningful_reason not in (None, ""):
+            raise ValueError("SCIENTIFIC_METADATA_CONTRADICTION:MEANINGFUL_WITH_REASON")
+        _require_governed_scientific_metadata(result)
         return True, "RUNNER_DECLARED_MEANINGFUL"
+    if not_meaningful_reason not in (None, ""):
+        raise ValueError("SCIENTIFIC_METADATA_CONTRADICTION:REASON_WITHOUT_DECLARATION")
     classification = str(_metric(
         result, "finding_classification", "scientific_classification", "decision_status"
     ) or "").upper()
     if classification in _SIGNAL_CLASSIFICATIONS:
+        _require_governed_scientific_metadata(result)
         return True, "GOVERNED_CLASSIFICATION:" + classification
     statistical = result.statistical_output if isinstance(result.statistical_output, Mapping) else {}
     p_value = statistical.get("p_value")
     alpha = statistical.get("alpha")
     if isinstance(p_value, (int, float)) and isinstance(alpha, (int, float)) and p_value <= alpha:
+        _require_governed_scientific_metadata(result)
         return True, "GOVERNED_SIGNIFICANCE_DECISION"
     ci = statistical.get("confidence_interval") or _metric(result, "confidence_interval")
     if isinstance(ci, Sequence) and not isinstance(ci, (str, bytes)) and len(ci) == 2:
         low, high = ci
         if isinstance(low, (int, float)) and isinstance(high, (int, float)) and (low > 0 or high < 0):
+            _require_governed_scientific_metadata(result)
             return True, "CONFIDENCE_INTERVAL_EXCLUDES_NULL"
     return False, "NO_GOVERNED_GENERIC_SCIENTIFIC_THRESHOLD"
 
@@ -500,6 +552,50 @@ def _validation_plan(
     )
 
 
+def _falsification_criteria(result: CanonicalQuestionResult) -> list[str]:
+    """Return only runner-supplied, measurable criteria; never invent thresholds."""
+    supplied = _metric(result, "falsification_criteria")
+    if supplied is not None:
+        if not isinstance(supplied, (list, tuple)) or not all(
+            isinstance(item, str) and item.strip() for item in supplied
+        ):
+            raise ValueError("INVALID_FALSIFICATION_CRITERIA")
+        return [item.strip() for item in supplied]
+    validation = _metric(result, "validation_criteria")
+    if not isinstance(validation, Mapping):
+        return []
+    failure_conditions = validation.get("failure_conditions")
+    if not isinstance(failure_conditions, Mapping):
+        return []
+    return [
+        key + "=" + canonical_json(value)
+        for key, value in sorted(failure_conditions.items())
+        if isinstance(key, str) and key.strip()
+    ]
+
+
+def _complete_validation_criteria(result: CanonicalQuestionResult) -> dict[str, Any] | None:
+    """Accept a candidate plan only when all evidence gates are explicit."""
+    supplied = _metric(result, "validation_criteria")
+    if not isinstance(supplied, Mapping):
+        return None
+    criteria = dict(supplied)
+    required_sample = criteria.get("required_sample")
+    if (
+        not isinstance(required_sample, int)
+        or isinstance(required_sample, bool)
+        or required_sample <= 0
+        or not isinstance(criteria.get("primary_metrics"), (list, tuple))
+        or not criteria.get("primary_metrics")
+        or not isinstance(criteria.get("success_conditions"), Mapping)
+        or not criteria.get("success_conditions")
+        or not isinstance(criteria.get("failure_conditions"), Mapping)
+        or not criteria.get("failure_conditions")
+    ):
+        return None
+    return criteria
+
+
 def _reconcile_opt_dp1_002(
     document: dict[str, Any], registry: OptimisationRegistry,
 ) -> tuple[str | None, dict[str, Any] | None]:
@@ -643,6 +739,10 @@ def run_scientific_state_bridge(
                     reviews.append(finding_ref + ":NO_DEPENDENT_HYPOTHESIS_TO_INVALIDATE")
                     continue
             elif existing_hypothesis is None:
+                falsification_criteria = _falsification_criteria(result)
+                if not falsification_criteria:
+                    reviews.append(finding_ref + ":FALSIFICATION_CRITERIA_REQUIRED")
+                    continue
                 hypothesis = ResearchHypothesis(
                     hypothesis_id=hypothesis_id,
                     source_finding=finding_id,
@@ -659,7 +759,7 @@ def run_scientific_state_bridge(
                     mechanism=mechanism,
                     mechanism_unknown=not bool(mechanism),
                     target_population=_population(result),
-                    falsification_criteria=list(_metric(result, "falsification_criteria") or []),
+                    falsification_criteria=falsification_criteria,
                     required_evidence=list(result.evidence_datasets),
                     source_finding_versions=[finding_ref],
                     source_question_results=[result.result_id],
@@ -740,6 +840,11 @@ def run_scientific_state_bridge(
             supplied_parameters = _metric(result, "governed_policy_parameters", "treatment_parameters")
             if supplied_parameters is not None and dict(supplied_parameters) != policy:
                 raise ScientificStateBridgeError("GOVERNED_POLICY_PARAMETERS_MISMATCH:" + policy_id)
+            criteria = _complete_validation_criteria(result)
+            if criteria is None:
+                designs.append(hypothesis_id)
+                reviews.append(hypothesis_id + ":VALIDATION_CRITERIA_REQUIRED")
+                continue
             treatment_hash = _treatment_hash(policy)
             signature = _treatment_signature(qid, policy, result)
             known = _known_treatment(
@@ -768,15 +873,12 @@ def run_scientific_state_bridge(
                         "DUPLICATE_CONFLICTING_CANDIDATE_IDENTITY:" + candidate_id)
                 suppressed.append(candidate_id)
                 continue
-            criteria = _metric(result, "validation_criteria")
-            if not isinstance(criteria, Mapping):
-                reviews.append(candidate_id + ":VALIDATION_CRITERIA_REVIEW_REQUIRED")
             candidate = OptimisationCandidate(
                 candidate_id=candidate_id,
                 hypothesis_id=hypothesis_id,
                 baseline_id=str(_metric(result, "baseline_id") or cycle.snapshot_id),
                 created_at=result.evaluated_at,
-                component=str(_metric(result, "target_component") or "Unknown"),
+                component=signature.component.value,
                 changes={"policy_id": policy_id, "frozen_policy": policy},
                 expected_outcome=str(_metric(result, "expected_effect") or _effect_direction(result)),
                 risk_level=classify_change_risk(policy),
@@ -804,6 +906,7 @@ def run_scientific_state_bridge(
                     "treatment_memory": memory_decision,
                     "treatment_signature": signature.to_dict(),
                     "target_population": _population(result),
+                    "reported_target_component": _metric(result, "target_component"),
                 },
             )
             plan = _validation_plan(candidate, result)

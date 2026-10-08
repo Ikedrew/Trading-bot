@@ -30,6 +30,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+# Governed evaluator semantic identity; see component_reward for the contract.
+# Repair Block 1: E1 now declares its governed scientific result (the one-sample
+# t-test of mean R-multiple versus zero that this evaluator already computes).
+EVALUATOR_SEMANTIC_VERSIONS = {
+    "run": "e1_governed_scientific_result_v2",
+}
+EVALUATOR_REPORT_SCHEMA_VERSIONS = {
+    "run": {"registry_id": "E1", "report_filename": "q19_expected_value.json"},
+}
+
 
 @dataclass
 class ExpectedValueResult:
@@ -362,6 +372,107 @@ def run_expected_value(shadow_trades: list[dict[str, Any]]) -> ExpectedValueResu
 # ─── STANDARD REPORT PERSISTENCE ──────────────────────────────────────────────
 
 
+POPULATION = {
+    "population_id": "CURRENT_COMPLETED_SHADOW_LIFECYCLES",
+    "question_id": "E1",
+    "observation_grain": "one completed governed shadow lifecycle with a realised R-multiple",
+    "evidence_authority": "shadow_runtime_v1 reconstructed completed lifecycles",
+    "estimand": "mean R-multiple per completed lifecycle",
+}
+SIGNIFICANCE_ALPHA = 0.05
+
+
+def _governed_scientific_result(result: ExpectedValueResult):
+    """Declare the governed scientific result this evaluator actually computed.
+
+    E1 already computes a one-sample t-test of the mean R-multiple against zero
+    and a governed edge classification.  Nothing is recomputed or invented here;
+    only the existing computation is declared.
+    """
+    from research_engine.experiments.governed_scientific_result import (
+        NO_INTERVENTION_MAPPING,
+        TEST_NOT_ESTIMABLE,
+        FalsificationContract,
+        ScientificSignal,
+        meaningful,
+        not_meaningful,
+    )
+
+    if result.t_statistic is None or result.total_trades < 5:
+        return not_meaningful(
+            "E1", TEST_NOT_ESTIMABLE,
+            detail=(
+                "completed_lifecycles=" + str(result.total_trades)
+                + ":t_statistic=" + str(result.t_statistic)
+            ),
+        )
+    classification = result.edge_classification or "NO_EDGE"
+    if classification in {"STRONG_EDGE", "MARGINAL_EDGE"}:
+        failure_conditions = {
+            "significant": {"eq": False},
+            "mean_r_multiple": {"lte": 0.0},
+        }
+        criteria = (
+            "E1: the governed one-sample t-test of mean R-multiple versus zero does not "
+            f"reject at alpha={SIGNIFICANCE_ALPHA} (this evaluator's own significance rule)",
+            "E1: the sign of the mean R-multiple per completed lifecycle reverses on the "
+            "governed replication population",
+            "E1: fewer than five eligible completed lifecycles, or zero R-multiple variance, "
+            "on the governed replication population (the test is not estimable)",
+        )
+    elif classification == "NEGATIVE_EDGE":
+        failure_conditions = {"mean_r_multiple": {"gt": 0.0}}
+        criteria = (
+            "E1: the mean R-multiple per completed lifecycle becomes positive on the "
+            "governed replication population",
+            "E1: the sample becomes too small or degenerate to estimate the mean at all",
+        )
+    else:
+        failure_conditions = {"significant": {"eq": True}}
+        criteria = (
+            "E1: the governed one-sample t-test of mean R-multiple versus zero rejects at "
+            f"alpha={SIGNIFICANCE_ALPHA} on the governed replication population",
+            "E1: fewer than five eligible completed lifecycles, or zero R-multiple variance, "
+            "on the governed replication population (the test is not estimable)",
+        )
+    signal = ScientificSignal(
+        signal_type="SYSTEM_EXPECTANCY_T_TEST_VS_ZERO",
+        classification=classification,
+        primary_metric="mean_r_multiple_per_completed_lifecycle",
+        estimate=float(result.avg_r),
+        significance_method="one_sample_t_test_vs_zero_normal_approximation",
+        significance_value=float(result.t_statistic),
+        sample_size=int(result.total_trades),
+        population=dict(POPULATION),
+        null_definition="the mean R-multiple per completed lifecycle is zero",
+        limitations=(
+            "CURRENT completed shadow lifecycles only; shadow outcomes are simulated "
+            "research evidence, not realised live P&L.",
+            "The one-sample t-test treats completed lifecycles as independent; repeated "
+            "horizons for one canonical opportunity are not clustered.",
+            "No standardised effect size or confidence interval is computed by this "
+            "evaluator, so none is declared.",
+        ),
+        effect_direction=(
+            "POSITIVE" if result.avg_r > 0 else "NEGATIVE" if result.avg_r < 0 else "NULL"),
+        effect_size=float(result.avg_r),
+    )
+    return meaningful(
+        "E1",
+        signal=signal,
+        falsification=FalsificationContract(
+            criteria=criteria,
+            failure_conditions=failure_conditions,
+            minimum_evidence_requirements={
+                "minimum_estimable_completed_lifecycles": 5,
+                "significance_alpha": SIGNIFICANCE_ALPHA,
+            },
+        ),
+        # E1 measures system expectancy; it identifies no governed intervention.
+        no_intervention_reason=NO_INTERVENTION_MAPPING,
+    )
+
+
 def run(shadow_trades: list[dict[str, Any]] | None = None) -> dict:
     """
     Run Q19 and persist result using standard research report framework.
@@ -420,6 +531,9 @@ def run(shadow_trades: list[dict[str, Any]] | None = None) -> dict:
         recommendation=recommendation,
         provenance={"experiment_module": "research_engine.experiments.expected_value", "registry_id": "Q19", "function": "run", "pipeline": "Question -> Experiment -> Dataset -> Output -> Knowledge -> Command Centre"},
     )
+    # Repair Block 1: the evaluator declares its own governed scientific result.
+    from research_engine.experiments.governed_scientific_result import attach
+    attach(report, _governed_scientific_result(result))
 
     # Persist
     try:

@@ -1,0 +1,1404 @@
+{
+  "artifact": "repair_block1_evaluator_scientific_matrix",
+  "classification_vocabulary": {
+    "A": "SCIENTIFICALLY_INTERPRETABLE",
+    "B": "DESCRIPTIVE_ONLY",
+    "C": "GOVERNANCE_OR_READINESS",
+    "D": "INTERVENTION_CAPABLE",
+    "E": "NOT_SUITABLE_FOR_AUTOMATIC_FINDING"
+  },
+  "counts": {
+    "A": 6,
+    "B": 3,
+    "C": 3,
+    "D": 3,
+    "E": 55
+  },
+  "generated_for": "Repair Block 1 \u2014 production evaluator scientific semantics",
+  "questions": [
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "A",
+      "classification_rationale": "one-sample t-test of mean R-multiple versus zero, declared as a governed signal",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": true,
+      "finding_not_eligible_reason": null,
+      "governed_declaration": "declares_descriptive_only",
+      "governed_policy_type": null,
+      "hypothesis_eligible": true,
+      "hypothesis_not_eligible_reason": null,
+      "question_id": "E1",
+      "runner": "research_engine.experiments.expected_value.run",
+      "scientific_result_supported": true
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "E2",
+      "runner": "research_engine.experiments.legacy_canonical.run_q05",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "E3",
+      "runner": "research_engine.experiments.strategy_expectancy.run_e3",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "E4",
+      "runner": "research_engine.experiments.edge_depth.run_e4",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "E5",
+      "runner": "research_engine.experiments.out_of_sample_validation.run_out_of_sample_validation",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "M1",
+      "runner": "research_engine.experiments.market_prediction_rw2.run_m1",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "M2",
+      "runner": "research_engine.experiments.market_research.run_m2",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "M3",
+      "runner": "research_engine.experiments.market_prediction_rw2.run_m3",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "M4",
+      "runner": "research_engine.experiments.market_research.run_m4",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "M5",
+      "runner": "research_engine.experiments.market_temporal.run_m5",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "M6",
+      "runner": "research_engine.experiments.market_research.run_m6",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "M7",
+      "runner": "research_engine.experiments.market_prediction_rw2.run_m7",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "market_context",
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "M8",
+      "runner": "research_engine.experiments.market_prediction_rw2.run_m8",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "M9",
+      "runner": "research_engine.experiments.m9_phase_pattern.run_m9_phase_pattern",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "M10",
+      "runner": "research_engine.experiments.m10_strategy_family_per_phase.run_m10_strategy_family_per_phase",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades",
+        "decision_trace"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "M11",
+      "runner": "research_engine.experiments.market_prediction_rw2.run_m11",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades",
+        "decision_trace"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "D1",
+      "runner": "research_engine.experiments.component_reward.run",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "D2",
+      "runner": "research_engine.experiments.d2_paired_calibration.run_d2",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "D3",
+      "runner": "research_engine.experiments.d3_predicted_ev_gate.run_d3",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "D4",
+      "runner": "research_engine.experiments.d4_score_threshold_validation.run_d4",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "D5",
+      "runner": "research_engine.experiments.d5_rejected_opportunity_validation.run_d5",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "portfolio_rankings",
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "D6",
+      "runner": "research_engine.experiments.portfolio_ranking.run_portfolio_ranking",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "S1",
+      "runner": null,
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "S2",
+      "runner": "research_engine.experiments.selection_research.run_s2",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "S3",
+      "runner": "research_engine.experiments.selection_research.run_s3",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "S4",
+      "runner": "research_engine.experiments.selection_research.run_s4",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "S5",
+      "runner": "research_engine.experiments.strategy_identity_expectancy.run_s5",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "S6",
+      "runner": "research_engine.experiments.horizon_expectancy.run_s6",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "S7",
+      "runner": "research_engine.experiments.strategy_horizon_interaction.run_s7",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "execution_results_v1",
+        "execution_context"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "declares_governed_scientific_result",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "X1",
+      "runner": "research_engine.experiments.execution_protection_research.run_x1",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "execution_results_v1",
+        "execution_attempts_v1"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "declares_governed_scientific_result",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "X2",
+      "runner": "research_engine.experiments.execution_protection_research.run_x2",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "A",
+      "classification_rationale": "cluster-robust session slippage omnibus test; no trading intervention",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "execution_context",
+        "execution_results_v1"
+      ],
+      "finding_eligible": true,
+      "finding_not_eligible_reason": null,
+      "governed_declaration": "declares_governed_scientific_result",
+      "governed_policy_type": null,
+      "hypothesis_eligible": true,
+      "hypothesis_not_eligible_reason": null,
+      "question_id": "X3",
+      "runner": "research_engine.experiments.execution_protection_research.run_x3",
+      "scientific_result_supported": true
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades",
+        "trade_truth"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "X4",
+      "runner": "research_engine.experiments.shadow_validation.run",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "execution_results_v1",
+        "execution_context",
+        "decision_trace"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "X6",
+      "runner": "research_engine.experiments.execution_stability.run_x6",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "R1",
+      "runner": "research_engine.experiments.r1_risk_layer_effectiveness.run_r1",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "R2",
+      "runner": "research_engine.experiments.r2_guard_attribution.run_r2",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "R3",
+      "runner": "research_engine.experiments.probability_of_ruin.run_probability_of_ruin",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "R4",
+      "runner": "research_engine.experiments.drawdown_threshold.run_drawdown_threshold",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "R5",
+      "runner": "research_engine.experiments.position_sizing.run_position_sizing",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "risk_deviation_v1"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "RISK-1",
+      "runner": "research_engine.experiments.risk_research.run_risk1",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "L1",
+      "runner": "research_engine.experiments.pattern_degradation.run_l1",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "L2",
+      "runner": "research_engine.experiments.legacy_canonical.run_q15",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades",
+        "decision_trace"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "L3",
+      "runner": "research_engine.experiments.architecture_assumption_validity.run_l3",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades",
+        "market_context"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "L4",
+      "runner": "research_engine.experiments.market_behaviour_stability.run_l4",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "L5",
+      "runner": "research_engine.experiments.edge_depth.run_l5",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "L6",
+      "runner": "research_engine.experiments.learning_cycle_validation.run_l6",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "L7",
+      "runner": "research_engine.experiments.shadow_ab_validation.run_shadow_ab_validation",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "C",
+      "classification_rationale": "dataset-suitability/coverage readiness report",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "G1",
+      "runner": "research_engine.experiments.dataset_suitability.run_g1",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "C",
+      "classification_rationale": "lineage-coverage accounting report",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades",
+        "decision_trace"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "G2",
+      "runner": "research_engine.experiments.lineage_coverage.run_g2",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "C",
+      "classification_rationale": "research-validity snapshot accounting report",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "G3",
+      "runner": "research_engine.experiments.research_validity.run_g3",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades",
+        "decision_trace"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "P1",
+      "runner": "research_engine.experiments.promotion_impact.run_promotion_impact",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": true,
+      "candidate_not_eligible_reason": null,
+      "classification": "D",
+      "classification_rationale": "HD09 governed exit-policy counterfactual; names the supported governed policy",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": true,
+      "finding_not_eligible_reason": null,
+      "governed_declaration": "declares_descriptive_only",
+      "governed_policy_type": "governed exit-policy catalogue (trailing-stop | reduced-target | time-cap)",
+      "hypothesis_eligible": true,
+      "hypothesis_not_eligible_reason": null,
+      "question_id": "EX1",
+      "runner": "research_engine.experiments.exit_policy_governed.run_ex1",
+      "scientific_result_supported": true
+    },
+    {
+      "candidate_design_eligible": true,
+      "candidate_not_eligible_reason": null,
+      "classification": "D",
+      "classification_rationale": "HD09 governed trailing-policy counterfactual; names the supported governed policy",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": true,
+      "finding_not_eligible_reason": null,
+      "governed_declaration": "declares_descriptive_only",
+      "governed_policy_type": "governed trailing-stop catalogue",
+      "hypothesis_eligible": true,
+      "hypothesis_not_eligible_reason": null,
+      "question_id": "EX2",
+      "runner": "research_engine.experiments.exit_policy_governed.run_ex2",
+      "scientific_result_supported": true
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "B",
+      "classification_rationale": "observational MFE/MAE distribution report; no statistical test defined",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "declares_descriptive_only",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "EX3",
+      "runner": "research_engine.experiments.exit_management.run_ex3",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "B",
+      "classification_rationale": "observational adverse-excursion distribution report; no statistical test",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "declares_descriptive_only",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "EX4",
+      "runner": "research_engine.experiments.exit_management.run_ex4",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "A",
+      "classification_rationale": "governed candidate x dimension interaction omnibus; no single intervention",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": true,
+      "finding_not_eligible_reason": null,
+      "governed_declaration": "declares_descriptive_only",
+      "governed_policy_type": null,
+      "hypothesis_eligible": true,
+      "hypothesis_not_eligible_reason": null,
+      "question_id": "EX5",
+      "runner": "research_engine.experiments.exit_policy_heterogeneity.run_ex5",
+      "scientific_result_supported": true
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "A",
+      "classification_rationale": "governed candidate x strategy-family interaction omnibus",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": true,
+      "finding_not_eligible_reason": null,
+      "governed_declaration": "declares_descriptive_only",
+      "governed_policy_type": null,
+      "hypothesis_eligible": true,
+      "hypothesis_not_eligible_reason": null,
+      "question_id": "EX6",
+      "runner": "research_engine.experiments.exit_policy_heterogeneity.run_ex6",
+      "scientific_result_supported": true
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "A",
+      "classification_rationale": "governed candidate x regime interaction omnibus",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": true,
+      "finding_not_eligible_reason": null,
+      "governed_declaration": "declares_descriptive_only",
+      "governed_policy_type": null,
+      "hypothesis_eligible": true,
+      "hypothesis_not_eligible_reason": null,
+      "question_id": "EX7",
+      "runner": "research_engine.experiments.exit_policy_heterogeneity.run_ex7",
+      "scientific_result_supported": true
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "A",
+      "classification_rationale": "governed candidate x candlestick-pattern interaction omnibus",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": true,
+      "finding_not_eligible_reason": null,
+      "governed_declaration": "declares_descriptive_only",
+      "governed_policy_type": null,
+      "hypothesis_eligible": true,
+      "hypothesis_not_eligible_reason": null,
+      "question_id": "EX8",
+      "runner": "research_engine.experiments.exit_policy_heterogeneity.run_ex8",
+      "scientific_result_supported": true
+    },
+    {
+      "candidate_design_eligible": true,
+      "candidate_not_eligible_reason": null,
+      "classification": "D",
+      "classification_rationale": "HD09 governed timeout-endpoint counterfactual; names the supported governed policy",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": true,
+      "finding_not_eligible_reason": null,
+      "governed_declaration": "declares_descriptive_only",
+      "governed_policy_type": "governed exit-policy catalogue (timeout-conversion endpoint)",
+      "hypothesis_eligible": true,
+      "hypothesis_not_eligible_reason": null,
+      "question_id": "EX9",
+      "runner": "research_engine.experiments.exit_policy_governed.run_ex9",
+      "scientific_result_supported": true
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "EX10",
+      "runner": "research_engine.experiments.exit_policy_walk_forward.run_ex10",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "management_actions",
+        "trade_truth"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "MGMT-1",
+      "runner": "research_engine.experiments.management_research.run_mgmt1",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "management_actions",
+        "trade_truth"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "MGMT-2",
+      "runner": "research_engine.experiments.management_research.run_mgmt2",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades",
+        "horizon_candidates"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "HORIZON-1",
+      "runner": "research_engine.experiments.selection_research.run_horizon1",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "strategy_candidates",
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "STRAT-1",
+      "runner": "research_engine.experiments.selection_research.run_strat1",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "decision_trace",
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "X5",
+      "runner": "research_engine.experiments.x5_predicted_ev_realised_r_validation.run_x5",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "execution_results_v1",
+        "execution_context",
+        "decision_trace"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "declares_governed_scientific_result",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "EXEC1",
+      "runner": "research_engine.experiments.execution_protection_research.run_exec1",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "B",
+      "classification_rationale": "protection-integrity report; integrity is not trade quality",
+      "declares_governed_result": true,
+      "evidence_datasets": [
+        "protection_audit_v1"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "declares_governed_scientific_result",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "PROT1",
+      "runner": "research_engine.experiments.execution_protection_research.run_prot1",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "portfolio_rankings",
+        "shadow_trades"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "PORT-1",
+      "runner": "research_engine.experiments.portfolio_ranking.run_port_1",
+      "scientific_result_supported": false
+    },
+    {
+      "candidate_design_eligible": false,
+      "candidate_not_eligible_reason": "NO_GOVERNED_INTERVENTION_MAPPING: the evaluator identifies no governed policy from the governed catalogue",
+      "classification": "E",
+      "classification_rationale": "evaluator emits no governed scientific declaration; a finding would require semantics it does not produce",
+      "declares_governed_result": false,
+      "evidence_datasets": [
+        "shadow_trades",
+        "horizon_candidates"
+      ],
+      "finding_eligible": false,
+      "finding_not_eligible_reason": "NO_GOVERNED_SCIENTIFIC_SIGNAL: the evaluator does not declare a scientifically meaningful result, so a finding would be unsupported",
+      "governed_declaration": "no_governed_scientific_result_declared",
+      "governed_policy_type": null,
+      "hypothesis_eligible": false,
+      "hypothesis_not_eligible_reason": "FALSIFICATION_CRITERIA_REQUIRED: no evaluator-declared falsification criteria exist for this result",
+      "question_id": "OPP-1",
+      "runner": "research_engine.experiments.opportunity_selection.run_opp_1",
+      "scientific_result_supported": false
+    }
+  ],
+  "repair_block_2_interface": {
+    "candidate_design_requirements": [
+      "governed_policy_id from CANDIDATE_POLICIES_V1",
+      "treatment_parameters exactly equal to the catalogue entry",
+      "treatment_component matching the policy family",
+      "complete validation_criteria (positive required_sample, primary_metrics, success_conditions, failure_conditions)",
+      "falsification criteria",
+      "applicable_population refining the signal population"
+    ],
+    "evaluator_contract_module": "research_engine.experiments.governed_scientific_result",
+    "not_meaningful_vocabulary": [
+      "DESCRIPTIVE_ONLY",
+      "GOVERNANCE_STATE_ONLY",
+      "NO_STATISTICAL_TEST_DEFINED",
+      "INSUFFICIENT_CAUSAL_SUPPORT",
+      "NO_INTERVENTION_MAPPING",
+      "INSUFFICIENT_GOVERNED_EVIDENCE",
+      "TEST_NOT_ESTIMABLE",
+      "AMBIGUOUS_GOVERNED_INTERVENTION",
+      "POPULATION_NOT_DEFINED"
+    ],
+    "report_key": "scientific_result",
+    "requirement": "A generated-question evaluator (Q71+) must return a mapping containing scientific_result, built with meaningful(...) or not_meaningful(...), exactly as the canonical evaluators do. The canonical normalizer transports it; the bridge consumes the flat projection produced by governed_scientific_metrics().",
+    "schema": "governed_evaluator_scientific_result_v1"
+  }
+}

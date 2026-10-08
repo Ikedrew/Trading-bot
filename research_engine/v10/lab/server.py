@@ -176,6 +176,41 @@ def _annotate_evaluation_currency(rows: list[dict[str, Any]]) -> None:
             "evaluation_identity_digest")
 
 
+def _bound_evidence_references(rows: list[dict[str, Any]], limit: int = 25) -> None:
+    """Keep the operator API bounded while declaring omitted projection detail."""
+    for row in rows:
+        references = row.get("evidence_references")
+        if not isinstance(references, list):
+            continue
+        row["evidence_reference_count"] = len(references)
+        if len(references) > limit:
+            row["evidence_references"] = references[:limit]
+            row["evidence_references_truncated"] = True
+            row["evidence_references_shown"] = limit
+        else:
+            row["evidence_references_truncated"] = False
+            row["evidence_references_shown"] = len(references)
+
+        truncation: dict[str, dict[str, int]] = {}
+
+        def bounded(value: Any, path: str) -> Any:
+            if isinstance(value, list):
+                if len(value) > limit:
+                    truncation[path] = {"total": len(value), "shown": limit}
+                return [bounded(item, f"{path}[{index}]")
+                        for index, item in enumerate(value[:limit])]
+            if isinstance(value, dict):
+                return {key: bounded(item, f"{path}.{key}" if path else key)
+                        for key, item in value.items()}
+            return value
+
+        for field, value in list(row.items()):
+            if field != "evidence_references":
+                row[field] = bounded(value, field)
+        if truncation:
+            row["operator_view_truncation"] = truncation
+
+
 def _cycles() -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     history = STATE_ROOT / "cycles" / "history"
     rows: list[dict[str, Any]] = []
@@ -311,27 +346,22 @@ def build_state() -> dict[str, Any]:
     overlay: dict[str, Any] = {}
     if projection:
         overlay = {r["question_id"]: r for r in projection.get("canonical_questions", [])}
-    else:
-        try:
-            from research_engine.v10.continuous.question_cycle_state import QuestionCycleStore
-            current = QuestionCycleStore().load_current()
-            overlay = (current or {}).get("questions", {})
-        except Exception as exc:
-            errors.append(f"Question projection unreadable: {exc}")
     try:
         questions = _merge_questions(_registry_questions(), overlay)
         _annotate_evaluation_currency(questions)
+        _bound_evidence_references(questions)
     except Exception as exc:
         questions = []
         errors.append(f"Canonical registry unavailable: {exc}")
-    fb = _fallback_from_optimisation()
     source = "UNIFIED_PROJECTION" if projection else "PERSISTED_STORES_NO_PROJECTION"
     src = projection or {}
-    hypotheses = src.get("hypotheses") or fb["hypotheses"]
-    candidates = src.get("candidates") or fb["candidates"]
-    findings = src.get("findings") or fb["findings"]
-    for c in candidates:
-        c["plan"] = fb["plans"].get(c["candidate_id"])
+    # The unified projection is the sole authority for scientific artifacts.
+    # Empty projected collections are authoritative emptiness, not permission
+    # to substitute mutable diagnostic registries. With no projection, show
+    # only canonical definitions and an explicit no-authority state.
+    hypotheses = list(src.get("hypotheses", []))
+    candidates = list(src.get("candidates", []))
+    findings = list(src.get("findings", []))
     cycles, success = _cycles()
     q71_rows = src.get("generated_questions", [])
     work = src.get("investigations_and_work_queues") or {}
@@ -378,6 +408,7 @@ def build_state() -> dict[str, Any]:
             "last_attempt_outcome": cycles[0]["cycle_outcome"] if cycles else None,
             "last_success": success,
             "last_successful_cycle_id": (success or {}).get("continuous_cycle_id"),
+            "research_lag": src.get("research_lag") or {},
         },
         "latest_failure": next((c["failure"] | {"cycle_id": c["continuous_cycle_id"],
                                                   "at": c["recorded_at"],

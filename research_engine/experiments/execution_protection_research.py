@@ -65,9 +65,15 @@ from research_engine.control_plane.evidence_resolver import (
 # Governed evaluator semantic identity; see component_reward for the contract.
 EVALUATOR_SEMANTIC_VERSIONS = {
     "run_exec1": "exec1_governed_execution_evidence_reuse_v2",
+    # Repair Block 1: X3 now declares its governed scientific result (its own
+    # cluster-robust omnibus session test).  A declaration change makes every
+    # result published by the previous evaluator stale and eligible for governed
+    # re-evaluation on the same snapshot.
+    "run_x3": "x3_governed_scientific_result_v2",
 }
 EVALUATOR_REPORT_SCHEMA_VERSIONS = {
     "run_exec1": {"GOVERNED_REASON_SCHEMA": "governed_reason_v1"},
+    "run_x3": {"REPORT_FILENAME": "w4_x3_session_quality.json"},
 }
 
 logger = logging.getLogger(__name__)

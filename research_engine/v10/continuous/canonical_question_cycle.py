@@ -35,6 +35,9 @@ from research_engine.registry.baseline_manifest import (
 )
 from research_engine.registry.definition_validator import build_definitions_from_registry
 from research_engine.registry.research_question_models import ResearchQuestion
+from research_engine.experiments.governed_scientific_result import (
+    governed_scientific_metrics,
+)
 from research_engine.v10.continuous.question_cycle_state import (
     CanonicalQuestionCycleResult,
     CanonicalQuestionResult,
@@ -738,6 +741,12 @@ def _normalise_report(
         *_sequence(report.get("warnings")),
         *_sequence(report.get("research_gaps")),
     )
+    # Governed evaluator-side scientific result (Repair Block 1).  The evaluator
+    # owns the scientific meaning; this normalizer only transports it.  A
+    # malformed or self-contradictory declaration raises here so the cycle fails
+    # the question closed instead of publishing unsupported science.
+    key_metrics = _key_metrics(report, resolution)
+    key_metrics.update(governed_scientific_metrics(report))
     status = _normalise_status(report)
     reason_code_value = report.get("reason_code")
     legacy_reason_value = report.get("reason")
@@ -766,7 +775,7 @@ def _normalise_report(
         substantive_answer=_substantive_answer(report),
         sample_n=sample,
         sample_deficit=deficit,
-        key_metrics=_key_metrics(report, resolution),
+        key_metrics=key_metrics,
         confidence=report.get("confidence"),
         statistical_output=(report.get("statistical_output") or report.get("statistics")),
         evidence_datasets=tuple(source.value for source in question.data_sources),

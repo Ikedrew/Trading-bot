@@ -74,9 +74,12 @@ def build_unified_research_projection(
     """Compose authorities without becoming one; no status is derived from wall time."""
     document = scientific_store.document
     question_authority = (question_projection or {}).get("questions", {})
+    baseline_items = (
+        _baseline_items(question_authority)
+        if question_projection is not None else [])
     pending_question_ids = {
         str(question_id)
-        for question_id, raw in question_authority.items()
+        for question_id, raw in baseline_items
         if isinstance(raw, Mapping)
         and str(raw.get("work_state") or "").startswith("DEEP_")
     }
@@ -112,6 +115,9 @@ def build_unified_research_projection(
     shadow_evidence = shadow_evidence or {}
     for candidate in sorted(optimisation_registry.list_candidates(), key=lambda row: row.candidate_id):
         row = candidate.to_dict()
+        get_plan = getattr(optimisation_registry, "get_plan", None)
+        plan = get_plan(candidate.candidate_id) if get_plan is not None else None
+        row["plan"] = None if plan is None else plan.to_dict()
         hypothesis = optimisation_registry.get_hypothesis(candidate.hypothesis_id)
         row["source_finding_ids"] = sorted(set(
             candidate.source_finding_versions
@@ -129,9 +135,8 @@ def build_unified_research_projection(
         candidates.append(row)
 
     question_rows: list[dict[str, Any]] = []
-    questions = question_authority
     if question_projection is not None:
-        for question_id, raw in _baseline_items(questions):
+        for question_id, raw in baseline_items:
             row = dict(raw)
             row.setdefault("question_id", question_id)
             linked_findings = sorted({

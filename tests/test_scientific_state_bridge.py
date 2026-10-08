@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -12,12 +13,15 @@ from research_engine.v10.continuous.question_cycle_state import (
     QuestionCycleStore,
     immutable_json,
 )
+from research_engine.v10.continuous.research_lab import build_lab_view
+from research_engine.v10.continuous.research_projection import build_unified_research_projection
 from research_engine.v10.continuous.scientific_state_bridge import (
     NO_SCIENTIFIC_STATE_CHANGE,
     ScientificStateBridgeError,
     run_scientific_state_bridge,
 )
 from research_engine.v10.continuous.scientific_state_store import ScientificStateStore
+from research_engine.v10.continuous.validation_queue import ValidationQueueStore
 from research_engine.v10.optimisation.models import OptimisationCandidate, ResearchHypothesis
 from research_engine.v10.optimisation.optimisation_registry import OptimisationRegistry
 
@@ -29,6 +33,20 @@ POLICY = {
     "activation_r": 0.25,
     "distance_r": 0.10,
 }
+VALIDATION_CRITERIA = {
+    "required_sample": 100,
+    "primary_metrics": ["expectancy_r"],
+    "success_conditions": {"expectancy_r": {"gt": 0.0}},
+    "failure_conditions": {"expectancy_r": {"lte": 0.0}},
+}
+
+
+def _candidate_metrics(**extra):
+    return {
+        "governed_policy_id": POLICY["policy_id"],
+        "validation_criteria": VALIDATION_CRITERIA,
+        **extra,
+    }
 
 
 def _result(snapshot: str, *, n: int = 100, confidence: str = "MEDIUM",
@@ -50,6 +68,7 @@ def _result(snapshot: str, *, n: int = 100, confidence: str = "MEDIUM",
             "scientifically_meaningful": True,
             "effect_size": 0.25,
             "effect_direction": "POSITIVE",
+            "falsification_criteria": ["expectancy_r <= 0 on governed replication"],
             **(metrics or {}),
         },
         confidence=confidence,
@@ -210,21 +229,88 @@ def test_governed_policy_creates_proposed_candidate_and_plan(tmp_path):
             "success_conditions": {"ci_lower": "> 0"},
             "failure_conditions": {"ci_includes_zero": "true"},
         },
+        "falsification_criteria": None,
     })
-    bridge, registry = _run(tmp_path, _cycle(qstore, 1, result), qstore)
+    cycle = _cycle(qstore, 1, result)
+    bridge, registry = _run(tmp_path, cycle, qstore)
     assert len(bridge.candidates_created) == 1
     candidate = registry.get_candidate(bridge.candidates_created[0])
     assert candidate.status == "PROPOSED"
     assert candidate.policy_id == POLICY["policy_id"]
     assert len(candidate.treatment_hash) == 64
     assert candidate.source_question_results == [result.result_id]
+    hypothesis = registry.get_hypothesis(candidate.hypothesis_id)
+    assert hypothesis.falsification_criteria == ['ci_includes_zero="true"']
+    assert candidate.component == "STOP_GEOMETRY"
+    assert candidate.provenance["question_id"] == "E1"
+    assert candidate.provenance["question_result_id"] == result.result_id
+    assert candidate.provenance["finding_id"] == hypothesis.source_finding
     assert registry.get_plan(candidate.candidate_id).minimum_sample == 300
     assert bridge.validation_handoff[0]["source_question_result_id"] == result.result_id
+
+    question_projection = json.loads(
+        qstore.projection_path(cycle.cycle_id).read_text(encoding="utf-8"))
+    frontier = SimpleNamespace(
+        snapshot_id="ISNAP-1", fingerprint="fp-ISNAP-1", investigation_epoch="epoch-ISNAP-1",
+        frontier_start="2026-10-01", frontier_end="2026-10-03",
+        predecessor_snapshot_id=None, changed_datasets=("trade_truth",),
+        stale_datasets=(), missing_optional_datasets=(), status="SNAPSHOT_READY",
+    )
+    projection = build_unified_research_projection(
+        continuous_cycle_id="CRCYCLE-AUDIT2", frontier=frontier,
+        question_projection=question_projection, bridge=bridge,
+        scientific_store=ScientificStateStore(tmp_path / "scientific"),
+        optimisation_registry=registry,
+        validation_store=ValidationQueueStore(tmp_path / "validation.json"),
+    )
+    e1 = next(row for row in projection["canonical_questions"] if row["question_id"] == "E1")
+    assert e1["linked_findings"] == [hypothesis.source_finding]
+    assert e1["linked_hypotheses"] == [hypothesis.hypothesis_id]
+    assert e1["linked_candidates"] == [candidate.candidate_id]
+    assert [row["candidate_id"] for row in projection["candidates"]] == [candidate.candidate_id]
+    lab = build_lab_view(projection)
+    assert [row["candidate_id"] for row in lab["candidates"]] == [candidate.candidate_id]
+
+
+def test_non_usable_result_cannot_create_finding(tmp_path):
+    qstore = QuestionCycleStore(tmp_path / "questions")
+    complete = _result("ISNAP-1")
+    result = CanonicalQuestionResult(**{
+        **complete.identity_material(),
+        "status": "INSUFFICIENT_DATA",
+        "substantive_answer": None,
+        "missing_evidence": ("trade_truth",),
+    })
+    cycle = _cycle(qstore, 1, result)
+    bridge, registry = _run(tmp_path, cycle, qstore)
+    assert not bridge.findings_created
+    assert not registry.list_hypotheses()
+    assert not registry.list_candidates()
+
+
+def test_hypothesis_and_candidate_design_gates_fail_closed(tmp_path):
+    qstore = QuestionCycleStore(tmp_path / "questions")
+    no_falsification = _result("ISNAP-1", metrics={"falsification_criteria": []})
+    finding_only, registry = _run(
+        tmp_path, _cycle(qstore, 1, no_falsification), qstore)
+    assert finding_only.findings_created
+    assert not registry.list_hypotheses()
+    assert any("FALSIFICATION_CRITERIA_REQUIRED" in row for row in finding_only.review_required)
+
+    qstore2 = QuestionCycleStore(tmp_path / "questions-2")
+    invalid_candidate = _result(
+        "ISNAP-2", metrics={"governed_policy_id": POLICY["policy_id"]})
+    result, registry2 = _run(
+        tmp_path / "invalid-candidate", _cycle(qstore2, 2, invalid_candidate), qstore2)
+    assert result.hypotheses_created
+    assert not result.candidates_created
+    assert not registry2.list_candidates()
+    assert any("VALIDATION_CRITERIA_REQUIRED" in row for row in result.review_required)
 
 
 def test_identical_and_equivalent_candidate_suppressed(tmp_path):
     qstore = QuestionCycleStore(tmp_path / "questions")
-    metrics = {"governed_policy_id": POLICY["policy_id"]}
+    metrics = _candidate_metrics()
     result1 = _result("ISNAP-1", metrics=metrics)
     first, registry = _run(tmp_path, _cycle(qstore, 1, result1), qstore)
     result2 = _result("ISNAP-2", metrics={**metrics, "finding_action": "FINDING_STRENGTHENED"})
@@ -235,7 +321,7 @@ def test_identical_and_equivalent_candidate_suppressed(tmp_path):
 
 def test_upstream_state_propagation_respects_live_boundary(tmp_path):
     qstore = QuestionCycleStore(tmp_path / "questions")
-    result = _result("ISNAP-1", metrics={"governed_policy_id": POLICY["policy_id"]})
+    result = _result("ISNAP-1", metrics=_candidate_metrics())
     first, registry = _run(tmp_path, _cycle(qstore, 1, result), qstore)
     candidate = registry.get_candidate(first.candidates_created[0])
     candidate.status = "SHADOW_VALIDATION_ACTIVE"
@@ -250,7 +336,7 @@ def test_upstream_state_propagation_respects_live_boundary(tmp_path):
 
 def test_unvalidated_candidate_is_blocked_or_reviewed_by_upstream_change(tmp_path):
     qstore = QuestionCycleStore(tmp_path / "questions")
-    result = _result("ISNAP-1", metrics={"governed_policy_id": POLICY["policy_id"]})
+    result = _result("ISNAP-1", metrics=_candidate_metrics())
     first, registry = _run(tmp_path, _cycle(qstore, 1, result), qstore)
     candidate_id = first.candidates_created[0]
     weak = _result("ISNAP-2", metrics={"finding_action": "FINDING_WEAKENED"})
@@ -302,7 +388,7 @@ class _FakeTreatmentStore:
 
 def test_treatment_memory_rejection_blocks_and_revisit_permission_reopens(tmp_path):
     qstore = QuestionCycleStore(tmp_path / "questions")
-    result = _result("ISNAP-1", metrics={"governed_policy_id": POLICY["policy_id"]})
+    result = _result("ISNAP-1", metrics=_candidate_metrics())
     cycle = _cycle(qstore, 1, result)
     registry = OptimisationRegistry(str(tmp_path / "optimisation"))
     blocked = run_scientific_state_bridge(
@@ -584,7 +670,7 @@ def test_evaluation_aware_history_never_collides_with_legacy(tmp_path):
 
 def test_persistence_failure_rolls_back_registry_and_no_success_receipt(tmp_path):
     qstore = QuestionCycleStore(tmp_path / "questions")
-    result = _result("ISNAP-1", metrics={"governed_policy_id": POLICY["policy_id"]})
+    result = _result("ISNAP-1", metrics=_candidate_metrics())
     cycle = _cycle(qstore, 1, result)
     registry = OptimisationRegistry(str(tmp_path / "optimisation"))
 

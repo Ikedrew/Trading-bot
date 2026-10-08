@@ -235,6 +235,7 @@ def test_projection_is_deterministic_all_70_and_opt_dp_visible(tmp_path):
     assert dp["status"] == "SHADOW_VALIDATION_ACTIVE"
     assert dp["live_approved"] is False
     assert dp["shadow_evidence"]["paired_n"] == 12
+    assert dp["plan"] == registry.get_plan("OPT-DP1-002").to_dict()
 
 
 def _fake_question(tmp_path):

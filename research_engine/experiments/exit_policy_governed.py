@@ -37,6 +37,18 @@ from research_engine.control_plane.exit_candidate_replay import (
     candidate_replay_digest,
     build_candidate_replay_population,
 )
+from research_engine.experiments.governed_scientific_result import (
+    AMBIGUOUS_GOVERNED_INTERVENTION,
+    GOVERNANCE_STATE_ONLY,
+    INSUFFICIENT_GOVERNED_EVIDENCE,
+    NO_INTERVENTION_MAPPING,
+    CandidateDesignContract,
+    FalsificationContract,
+    ScientificSignal,
+    attach,
+    meaningful,
+    not_meaningful,
+)
 from research_engine.registry.exit_policy_adjudication import (
     CANDIDATE_POLICIES_V1,
     CLUSTERED_INFERENCE,
@@ -49,17 +61,34 @@ from research_engine.registry.exit_policy_adjudication import (
 # Governed evaluator semantic identity; see component_reward for the contract.
 REPORT_SCHEMA_VERSION = "hd09_governed_exit_research_v1"
 INFERENCE_SCHEMA_VERSION = "hd09_clustered_cr0_normal_v1"
+# Repair Block 1: these evaluators now declare their governed scientific result
+# (scientific signal, falsification and governed intervention mapping).  The
+# declaration is a semantic change, so every result published by the previous
+# evaluator is stale and eligible for governed re-evaluation on the same
+# snapshot.  It never implies that new market evidence exists.
 EVALUATOR_SEMANTIC_VERSIONS = {
-    "run_ex2": "ex2_snapshot_scoped_population_closure_v2",
+    "run_ex1": "ex1_governed_scientific_result_v3",
+    "run_ex2": "ex2_governed_scientific_result_v3",
+    "run_ex9": "ex9_governed_scientific_result_v3",
 }
 EVALUATOR_REPORT_SCHEMA_VERSIONS = {
+    "run_ex1": {
+        "REPORT_SCHEMA_VERSION": REPORT_SCHEMA_VERSION,
+        "INFERENCE_SCHEMA_VERSION": INFERENCE_SCHEMA_VERSION,
+    },
     "run_ex2": {
+        "REPORT_SCHEMA_VERSION": REPORT_SCHEMA_VERSION,
+        "INFERENCE_SCHEMA_VERSION": INFERENCE_SCHEMA_VERSION,
+    },
+    "run_ex9": {
         "REPORT_SCHEMA_VERSION": REPORT_SCHEMA_VERSION,
         "INFERENCE_SCHEMA_VERSION": INFERENCE_SCHEMA_VERSION,
     },
 }
 EVALUATOR_GOVERNANCE_CONTRACT_VERSIONS = {
+    "run_ex1": {"HD09_ADJUDICATION_VERSION": HD09_ADJUDICATION_VERSION},
     "run_ex2": {"HD09_ADJUDICATION_VERSION": HD09_ADJUDICATION_VERSION},
+    "run_ex9": {"HD09_ADJUDICATION_VERSION": HD09_ADJUDICATION_VERSION},
 }
 TARGETS = ("EX1", "EX2", "EX9")
 TRAILING_POLICY_IDS = tuple(
@@ -390,6 +419,9 @@ def _make_report(
         "provenance": {**analytical_material, "analytical_digest": analytical_digest},
         "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
+    # Repair Block 1: the evaluator declares its own governed scientific result.
+    # Attached before the report digest so validation stays exact.
+    attach(report, _governed_scientific_result(question_id, tests, readiness, status))
     report_material = dict(report)
     report_material.pop("generated", None)
     report["provenance"]["report_digest"] = evidence_digest((report_material,))
@@ -417,6 +449,262 @@ def _apply_holm_and_interpret(
         else:
             supported = estimate > 0 and adjusted[test["test_identity"]] <= alpha
             test["interpretation"] = "SUPPORTED_CONVERSION" if supported else "NOT_SUPPORTED"
+
+
+SUPPORTED_INTERPRETATIONS = frozenset({
+    "SUPPORTED_IMPROVEMENT", "SUPPORTED_REDUCTION", "SUPPORTED_CONVERSION",
+})
+
+# The question's primary governed endpoint and the direction in which that
+# endpoint expresses a favourable governed outcome.  These are read from the
+# adjudicated HD09 contract, not chosen here.
+_PRIMARY_ENDPOINT = {
+    "EX1": "candidate_r_minus_reproduced_baseline_r",
+    "EX2": "candidate_retention_minus_baseline_retention",
+    "EX9": ENDPOINT_A,
+}
+_FAVOURABLE_DIRECTION = {"EX1": "MAXIMISE", "EX2": "MAXIMISE", "EX9": "MINIMISE"}
+
+SCIENTIFIC_SIGNAL_TYPE = "GOVERNED_EXIT_POLICY_COUNTERFACTUAL"
+PRIMARY_METRIC = {
+    "EX1": "paired_r_improvement_vs_reproduced_baseline",
+    "EX2": "paired_retention_improvement_vs_reproduced_baseline",
+    "EX9": "paired_timeout_indicator_change_vs_reproduced_baseline",
+}
+SIGNIFICANCE_METHOD = (
+    "opportunity_clustered_cr0_two_sided_wald_holm_adjusted_family"
+)
+TREATMENT_COMPONENT_BY_POLICY_TYPE = {
+    "TRAILING": "STOP_GEOMETRY",
+    "REDUCED_TP": "TARGET_GEOMETRY",
+    "TIME_CAP": "TIMING",
+}
+
+
+def _governed_population(question_id: str) -> dict[str, Any]:
+    """The stable, snapshot-independent definition of the analytical population.
+
+    Deliberately excludes counts and digests: a finding's identity must survive
+    a changed sample, otherwise every new snapshot would mint a new finding for
+    the same proposition.
+    """
+    return {
+        "population_id": SCIENTIFIC_SIGNAL_TYPE,
+        "question_id": question_id,
+        "baseline_policy_id": "SHADOW_BASELINE_V1",
+        "candidate_policy_ids": [str(item["policy_id"]) for item in CANDIDATE_POLICIES_V1],
+        "lifecycle_grain": "one completed governed lifecycle x one candidate policy",
+        "cluster_identity": COMMON_ANALYTICAL_CONTRACT["cluster_identity"],
+        "evidence_authority": (
+            "exit_bar_path_v1 + shadow_baseline_replay_v1 + exit_candidate_replay_v1"
+        ),
+    }
+
+
+def _primary_tests(
+    question_id: str, tests: Sequence[Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    endpoint = _PRIMARY_ENDPOINT[question_id]
+    return [test for test in tests if test.get("endpoint") == endpoint]
+
+
+def _reference_test(
+    question_id: str, tests: Sequence[Mapping[str, Any]],
+) -> Mapping[str, Any]:
+    """The deterministic governed reference test for the primary endpoint."""
+    primary = sorted(
+        _primary_tests(question_id, tests),
+        key=lambda test: (float(test["weighted_effect_estimate"]), str(test["test_identity"])),
+    )
+    return primary[-1] if _FAVOURABLE_DIRECTION[question_id] == "MAXIMISE" else primary[0]
+
+
+def _supported_policies(
+    question_id: str, tests: Sequence[Mapping[str, Any]],
+) -> list[str]:
+    """Policies the evaluator's own governed interpretation supports.
+
+    EX9 is judged on its primary endpoint only; the secondary conversion
+    endpoint is reported inside the intervention rationale and never names a
+    policy on its own.
+    """
+    return sorted({
+        str(test["policy_identity"]) for test in _primary_tests(question_id, tests)
+        if str(test.get("interpretation") or "") in SUPPORTED_INTERPRETATIONS
+    })
+
+
+def _falsification(question_id: str, policy_id: str) -> FalsificationContract:
+    """Falsification conditions are the negation of the evaluator's own rule."""
+    alpha = float(CLUSTERED_INFERENCE["alpha"])
+    level = float(CLUSTERED_INFERENCE["confidence_level"])
+    favourable = "positive" if _FAVOURABLE_DIRECTION[question_id] == "MAXIMISE" else "negative"
+    criteria = (
+        f"{policy_id}: governed replication does not reject at Holm-adjusted alpha={alpha} "
+        "(the HD09 family decision rule)",
+        f"{policy_id}: the opportunity-weighted paired effect is not {favourable} "
+        "on the governed replication population",
+        f"{policy_id}: the {level:.0%} clustered confidence interval for the paired effect "
+        "does not exclude zero",
+        "the governed paired-lifecycle, distinct-opportunity and cell gates in "
+        "SAMPLE_AND_READINESS_CONTRACT are not met on the replication population",
+    )
+    failure_conditions = (
+        {
+            "holm_adjusted_p_value": {"gt": alpha},
+            "weighted_effect_estimate": {"lte": 0.0},
+        }
+        if _FAVOURABLE_DIRECTION[question_id] == "MAXIMISE" else
+        {
+            "holm_adjusted_p_value": {"gt": alpha},
+            "weighted_effect_estimate": {"gte": 0.0},
+        }
+    )
+    contract = SAMPLE_AND_READINESS_CONTRACT[question_id]
+    return FalsificationContract(
+        criteria=criteria,
+        failure_conditions=failure_conditions,
+        minimum_evidence_requirements={
+            key: value for key, value in contract.items() if isinstance(value, (int, float))
+        },
+    )
+
+
+def _validation_criteria(question_id: str) -> dict[str, Any]:
+    """The governed validation plan, read from the frozen HD09 readiness contract."""
+    alpha = float(CLUSTERED_INFERENCE["alpha"])
+    contract = SAMPLE_AND_READINESS_CONTRACT[question_id]
+    if _FAVOURABLE_DIRECTION[question_id] == "MAXIMISE":
+        success = {
+            "weighted_effect_estimate": {"gt": 0.0},
+            "holm_adjusted_p_value": {"lte": alpha},
+            "confidence_interval_95_lower": {"gt": 0.0},
+        }
+        failure = {
+            "weighted_effect_estimate": {"lte": 0.0},
+            "holm_adjusted_p_value": {"gt": alpha},
+        }
+    else:
+        success = {
+            "weighted_effect_estimate": {"lt": 0.0},
+            "holm_adjusted_p_value": {"lte": alpha},
+        }
+        failure = {
+            "weighted_effect_estimate": {"gte": 0.0},
+            "holm_adjusted_p_value": {"gt": alpha},
+        }
+    return {
+        "required_sample": int(contract["minimum_paired_lifecycles"]),
+        "primary_metrics": ["weighted_effect_estimate", "holm_adjusted_p_value"],
+        "success_conditions": success,
+        "failure_conditions": failure,
+        "minimum_evidence_requirements": {
+            key: value for key, value in contract.items() if isinstance(value, (int, float))
+        },
+    }
+
+
+def _governed_scientific_result(
+    question_id: str,
+    tests: Sequence[Mapping[str, Any]],
+    readiness: Mapping[str, Any],
+    status: str,
+):
+    """Declare the governed scientific result this evaluator actually computed."""
+    if status != "COMPLETE" or readiness.get("state") != "READY":
+        return not_meaningful(
+            question_id, INSUFFICIENT_GOVERNED_EVIDENCE,
+            detail="readiness=" + str(readiness.get("state"))
+            + ":blockers=" + ",".join(str(item) for item in readiness.get("blockers", ())),
+        )
+    reference = _reference_test(question_id, tests)
+    supported = _supported_policies(question_id, tests)
+    estimate = float(reference["weighted_effect_estimate"])
+    population = _governed_population(question_id)
+    signal = ScientificSignal(
+        signal_type=SCIENTIFIC_SIGNAL_TYPE,
+        classification=(
+            "SUPPORTED_GOVERNED_INTERVENTION" if supported
+            else "NO_SUPPORTED_GOVERNED_INTERVENTION"),
+        primary_metric=PRIMARY_METRIC[question_id],
+        estimate=estimate,
+        significance_method=SIGNIFICANCE_METHOD,
+        significance_value=float(reference["holm_adjusted_p_value"]),
+        sample_size=int(min(test["eligible_paired_lifecycle_count"] for test in tests)),
+        population=population,
+        null_definition=(
+            "no candidate policy in the required HD09 Holm family improves on the "
+            "reproduced SHADOW_BASELINE_V1 at the governed family alpha"
+        ),
+        limitations=(
+            HD09_ADJUDICATED_CONTRACT["claim_boundary"],
+            "Paired effects are simulated counterfactual policy outcomes on governed "
+            "historical lifecycles; repeated horizons are clustered by "
+            "canonical_opportunity_id.",
+            "The governed reference test is the deterministic extreme of the primary "
+            "endpoint family, never a post-hoc selection of a favourable policy.",
+        ),
+        effect_direction=(
+            "POSITIVE" if estimate > 0 else "NEGATIVE" if estimate < 0 else "NULL"),
+        effect_size=estimate,
+        confidence_interval=(
+            float(reference["confidence_interval_95"][0]),
+            float(reference["confidence_interval_95"][1]),
+        ),
+    )
+    falsification = _falsification(
+        question_id,
+        str(reference["policy_identity"]) if not supported else supported[0],
+    )
+    if not supported:
+        return meaningful(
+            question_id, signal=signal, falsification=falsification,
+            no_intervention_reason=NO_INTERVENTION_MAPPING,
+        )
+    if len(supported) > 1:
+        # More than one governed policy is supported: the evaluator cannot name a
+        # single intervention without choosing between equally supported
+        # policies, so it declines rather than guessing.
+        return meaningful(
+            question_id, signal=signal, falsification=falsification,
+            no_intervention_reason=AMBIGUOUS_GOVERNED_INTERVENTION,
+        )
+    policy_id = supported[0]
+    policy = next(item for item in CANDIDATE_POLICIES_V1 if item["policy_id"] == policy_id)
+    test = next(
+        item for item in _primary_tests(question_id, tests)
+        if item["policy_identity"] == policy_id)
+    criteria = _validation_criteria(question_id)
+    secondary = [
+        {
+            "test_identity": item["test_identity"],
+            "endpoint": item.get("endpoint"),
+            "weighted_effect_estimate": item["weighted_effect_estimate"],
+            "holm_adjusted_p_value": item["holm_adjusted_p_value"],
+            "interpretation": item["interpretation"],
+        }
+        for item in tests
+        if item["policy_identity"] == policy_id and item["test_identity"] != test["test_identity"]
+    ]
+    design = CandidateDesignContract(
+        governed_policy_id=policy_id,
+        treatment_component=TREATMENT_COMPONENT_BY_POLICY_TYPE[str(policy["policy_type"])],
+        treatment_parameters=dict(policy),
+        success_conditions=dict(criteria["success_conditions"]),
+        failure_conditions=dict(criteria["failure_conditions"]),
+        validation_criteria=criteria,
+        applicable_population={**population, "governed_policy_id": policy_id},
+        intervention_rationale=(
+            f"{question_id} governed counterfactual evaluation: {policy_id} is the single "
+            f"candidate supported on the question's primary endpoint "
+            f"(estimate={test['weighted_effect_estimate']}, "
+            f"Holm-adjusted p={test['holm_adjusted_p_value']}). Secondary endpoints: "
+            + json.dumps(secondary, sort_keys=True)
+        ),
+    )
+    return meaningful(
+        question_id, signal=signal, falsification=falsification, candidate_design=design,
+    )
 
 
 def analyse_ex1(candidate, reproduction, path, *, _foundations_validated: bool = False) -> dict[str, Any]:
@@ -648,6 +936,12 @@ def _governed_missing_evidence_report(question_id: str, evidence: Any) -> dict[s
         "provenance": provenance,
         "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
+    # The evaluator's governed M5 observation gap is an explicit, machine-readable
+    # statement that this result is not a scientific finding.
+    attach(report, not_meaningful(
+        question_id, INSUFFICIENT_GOVERNED_EVIDENCE,
+        detail="; ".join(missing) or "GOVERNED_EXIT_EVIDENCE_INCOMPLETE",
+    ))
     material = dict(report)
     material.pop("generated", None)
     report["provenance"]["report_digest"] = evidence_digest((material,))
@@ -717,6 +1011,12 @@ def run_ex2(*, governed_records=None, governed_exit_evidence=None) -> dict[str, 
             "provenance": provenance,
             "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
+        # A historically unanswerable question is a governance state, not a
+        # scientific conclusion: say so explicitly and machine-readably.
+        attach(report, not_meaningful(
+            "EX2", GOVERNANCE_STATE_ONLY,
+            detail="HISTORICALLY_UNANSWERABLE:" + str(audit.get("historically_unobserved")),
+        ))
         material = dict(report)
         material.pop("generated", None)
         report["provenance"]["report_digest"] = evidence_digest((material,))

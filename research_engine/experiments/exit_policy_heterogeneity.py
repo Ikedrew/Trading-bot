@@ -36,6 +36,16 @@ from research_engine.experiments.exit_policy_governed import (
     load_governed_foundations,
 )
 from research_engine.experiments.strategy_horizon_interaction import _chi_square_survival
+from research_engine.experiments.governed_scientific_result import (
+    GOVERNANCE_STATE_ONLY,
+    INSUFFICIENT_GOVERNED_EVIDENCE,
+    NO_INTERVENTION_MAPPING,
+    FalsificationContract,
+    ScientificSignal,
+    attach,
+    meaningful,
+    not_meaningful,
+)
 from research_engine.registry.exit_policy_adjudication import (
     CANDIDATE_POLICIES_V1,
     CLUSTERED_INFERENCE,
@@ -48,6 +58,24 @@ from research_engine.registry.exit_policy_adjudication import (
 )
 
 REPORT_SCHEMA_VERSION = "hd09_governed_exit_heterogeneity_v1"
+# Repair Block 1: this evaluator now declares its governed scientific result.
+# The declaration is a semantic change, so results published by the previous
+# evaluator are stale and eligible for governed re-evaluation on the same
+# snapshot; it never implies that new market evidence exists.
+EVALUATOR_SEMANTIC_VERSIONS = {
+    "run_ex5": "ex5_governed_scientific_result_v2",
+    "run_ex6": "ex6_governed_scientific_result_v2",
+    "run_ex7": "ex7_governed_scientific_result_v2",
+    "run_ex8": "ex8_governed_scientific_result_v2",
+}
+EVALUATOR_REPORT_SCHEMA_VERSIONS = {
+    runner: {"REPORT_SCHEMA_VERSION": REPORT_SCHEMA_VERSION}
+    for runner in ("run_ex5", "run_ex6", "run_ex7", "run_ex8")
+}
+EVALUATOR_GOVERNANCE_CONTRACT_VERSIONS = {
+    runner: {"HD09_ADJUDICATION_VERSION": HD09_ADJUDICATION_VERSION}
+    for runner in ("run_ex5", "run_ex6", "run_ex7", "run_ex8")
+}
 TARGETS = ("EX5", "EX6", "EX7", "EX8")
 CANONICAL_HORIZONS = ("SCALP", "INTRADAY", "EXTENDED")
 CANONICAL_STRATEGIES = tuple(item.value for item in StrategyFamily if item is not StrategyFamily.NONE)
@@ -295,6 +323,128 @@ def fit_candidate_dimension_interaction(
     }
 
 
+def _governed_population(question_id: str, spec: Mapping[str, Any]) -> dict[str, Any]:
+    """The stable, snapshot-independent definition of the analytical population.
+
+    Deliberately excludes counts and digests so a changed sample never mints a
+    new finding for the same proposition.
+    """
+    return {
+        "population_id": "GOVERNED_EXIT_EFFECT_HETEROGENEITY",
+        "question_id": question_id,
+        "dimension_name": str(spec["name"]),
+        "dimension_source": str(spec["source"]),
+        "dimension_levels": [str(level) for level in spec["levels"]],
+        "baseline_policy_id": "SHADOW_BASELINE_V1",
+        "candidate_policy_ids": [str(item["policy_id"]) for item in CANDIDATE_POLICIES_V1],
+        "lifecycle_grain": (
+            "one completed governed lifecycle x one candidate policy x one dimension level"
+        ),
+        "cluster_identity": COMMON_ANALYTICAL_CONTRACT["cluster_identity"],
+    }
+
+
+def _scientific_signal(
+    question_id: str, population: Mapping[str, Any], inference: Mapping[str, Any],
+    valid_lifecycles: int,
+) -> ScientificSignal:
+    """Declare the governed heterogeneity claim this evaluator actually computed."""
+    omnibus = inference["omnibus"]
+    followups = list(inference["followups"])
+    if followups:
+        reference = sorted(
+            followups,
+            key=lambda item: (float(item["holm_adjusted_p_value"]), str(item["test_identity"])),
+        )[0]
+        estimate = float(reference["effect_contrast"])
+        significance = float(reference["holm_adjusted_p_value"])
+        method = "opportunity_clustered_cr0_two_sided_holm_adjusted_contrast"
+        primary_metric = "within_candidate_dimension_level_effect_contrast"
+        interval = (
+            float(reference["confidence_interval_95"][0]),
+            float(reference["confidence_interval_95"][1]),
+        )
+    else:
+        # The omnibus did not reject, so its statistic is finite by construction
+        # (a degenerate covariance direction rejects with p = 0).
+        estimate = float(omnibus["statistic"])
+        significance = float(omnibus["p_value"])
+        method = "canonical_opportunity_clustered_cr0_wald_chi_square"
+        primary_metric = "omnibus_interaction_wald_statistic"
+        interval = None
+    return ScientificSignal(
+        signal_type="GOVERNED_EXIT_EFFECT_HETEROGENEITY",
+        classification=(
+            "SUPPORTED_HETEROGENEITY" if omnibus["reject_at_alpha_0_05"]
+            else "NO_RELIABLE_HETEROGENEITY"),
+        primary_metric=primary_metric,
+        estimate=estimate,
+        significance_method=method,
+        significance_value=significance,
+        sample_size=int(valid_lifecycles),
+        population=dict(population),
+        null_definition=str(omnibus["null"]),
+        limitations=(
+            HD09_ADJUDICATED_CONTRACT["claim_boundary"],
+            "Cell effects are simulated counterfactual policy outcomes on governed "
+            "historical lifecycles and are bounded to the sufficient dimension levels.",
+            "The governed reference test is the smallest Holm-adjusted family contrast, "
+            "never a post-hoc selection of a favourable level.",
+        ),
+        effect_direction=(
+            "POSITIVE" if estimate > 0 else "NEGATIVE" if estimate < 0 else "NULL"),
+        effect_size=estimate,
+        confidence_interval=interval,
+    )
+
+
+def _falsification(question_id: str, dimension_name: str) -> FalsificationContract:
+    """Falsification conditions are the negation of the evaluator's own rule."""
+    alpha = float(HETEROGENEITY_CONTRACT["global_alpha"])
+    common = SAMPLE_AND_READINESS_CONTRACT["EX5_EX8"]
+    return FalsificationContract(
+        criteria=(
+            f"{question_id}: the omnibus {dimension_name} interaction test does not reject "
+            f"at the governed global alpha={alpha}",
+            f"{question_id}: no within-candidate {dimension_name} level contrast remains "
+            "significant after the governed Holm step-down",
+            "the governed paired-lifecycle, distinct-opportunity, cell and dimension "
+            "coverage gates in SAMPLE_AND_READINESS_CONTRACT are not met on replication",
+        ),
+        failure_conditions={
+            "omnibus_p_value": {"gt": alpha},
+            "holm_adjusted_p_value": {"gt": alpha},
+        },
+        minimum_evidence_requirements={
+            key: value for key, value in common.items() if isinstance(value, (int, float))
+        },
+    )
+
+
+def _governed_scientific_result(
+    question_id: str, spec: Mapping[str, Any], inference: Mapping[str, Any] | None,
+    readiness_state: str, valid_lifecycles: int,
+):
+    """Declare the governed scientific result for one heterogeneity question."""
+    if inference is None or readiness_state != "READY" or int(valid_lifecycles) <= 0:
+        return not_meaningful(
+            question_id, INSUFFICIENT_GOVERNED_EVIDENCE,
+            detail="readiness=" + str(readiness_state)
+            + ":valid_lifecycles=" + str(valid_lifecycles),
+        )
+    population = _governed_population(question_id, spec)
+    signal = _scientific_signal(
+        question_id, population, inference, int(valid_lifecycles))
+    return meaningful(
+        question_id,
+        signal=signal,
+        falsification=_falsification(question_id, str(spec["name"])),
+        # A heterogeneity finding identifies a dimension, not one governed
+        # intervention: the evaluator must not name a policy here.
+        no_intervention_reason=NO_INTERVENTION_MAPPING,
+    )
+
+
 def _blocked_report(question_id: str, reason: str) -> dict[str, Any]:
     report = {
         "report_schema_version": REPORT_SCHEMA_VERSION,
@@ -310,6 +460,9 @@ def _blocked_report(question_id: str, reason: str) -> dict[str, Any]:
         },
         "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
+    # A blocked analysis is a governance state, not a scientific conclusion.
+    attach(report, not_meaningful(
+        question_id, GOVERNANCE_STATE_ONLY, detail=reason))
     material = dict(report); material.pop("generated", None)
     report["provenance"]["report_digest"] = evidence_digest((material,))
     return report
@@ -495,12 +648,15 @@ def _analyse(
             "provenance": {**analytical_material, "analytical_digest": analytical_digest},
             "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
+        # Repair Block 1: the evaluator declares its own governed scientific
+        # result.  Attached before the report digest so validation stays exact.
+        attach(report, _governed_scientific_result(
+            question_id, spec, inference, readiness_state, len(valid_lifecycles)))
         report_material = dict(report); report_material.pop("generated", None)
         report["provenance"]["report_digest"] = evidence_digest((report_material,))
         return report
     except (ValueError, TypeError, KeyError, ArithmeticError) as error:
         return _blocked_report(question_id, str(error))
-
 
 def analyse_ex5(candidate, reproduction, path, dimensions, **kwargs):
     return _analyse("EX5", candidate, reproduction, path, dimensions, **kwargs)
@@ -580,6 +736,10 @@ def _governed_heterogeneity_result(question_id: str, evidence: Any) -> dict[str,
             },
             "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
+        attach(report, not_meaningful(
+            question_id, INSUFFICIENT_GOVERNED_EVIDENCE,
+            detail="; ".join(missing) or "GOVERNED_EXIT_EVIDENCE_INCOMPLETE",
+        ))
         material = dict(report)
         material.pop("generated", None)
         report["provenance"]["report_digest"] = evidence_digest((material,))

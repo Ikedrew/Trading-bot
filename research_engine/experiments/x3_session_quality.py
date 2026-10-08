@@ -21,6 +21,15 @@ from research_engine.experiments.experiment_base import (
     build_fingerprint_from_provenance,
     build_report,
 )
+from research_engine.experiments.governed_scientific_result import (
+    INSUFFICIENT_GOVERNED_EVIDENCE,
+    NO_INTERVENTION_MAPPING,
+    FalsificationContract,
+    ScientificSignal,
+    attach,
+    meaningful,
+    not_meaningful,
+)
 from research_engine.experiments.strategy_horizon_interaction import (
     _chi_square_survival,
     _holm_adjust,
@@ -335,7 +344,7 @@ def session_metrics(
 
 
 def _invalid_evidence_report(exc: Exception) -> dict[str, Any]:
-    return build_report(
+    return attach(build_report(
         question_id="X3",
         status="INSUFFICIENT_DATA",
         overall={
@@ -359,6 +368,128 @@ def _invalid_evidence_report(exc: Exception) -> dict[str, Any]:
             "registry_id": "X3", "scientific_owner": "X3",
             "report_identity": REPORT_FILENAME,
         },
+    ), not_meaningful(
+        "X3", INSUFFICIENT_GOVERNED_EVIDENCE,
+        detail=f"{type(exc).__name__}: {exc}",
+    ))
+
+
+def _governed_population(primary_sessions: Sequence[str]) -> dict[str, Any]:
+    """The stable definition of X3's analytical population.
+
+    Excludes counts and digests so a changed sample never mints a new finding
+    for the same proposition.
+    """
+    return {
+        "population_id": "SESSION_CONDITIONED_ABSOLUTE_MEASURED_EXECUTION_SLIPPAGE",
+        "question_id": "X3",
+        "observation_grain": "one distinct account/broker execution result",
+        "cluster_identity": "correlation_id",
+        "session_source": "execution_context.session_state",
+        "evaluated_primary_sessions": [str(item) for item in primary_sessions],
+        "evidence_authority": "execution_results_v1 + execution_context",
+    }
+
+
+def _governed_scientific_result(
+    status: str,
+    fit: Mapping[str, Any] | None,
+    contrasts: Sequence[Mapping[str, Any]],
+    primary_sessions: Sequence[str],
+    overall_sufficient: bool,
+    analytical_count: int,
+):
+    """Declare the governed scientific result X3 actually computed."""
+    if status != "COMPLETE" or fit is None:
+        return not_meaningful(
+            "X3", INSUFFICIENT_GOVERNED_EVIDENCE,
+            detail=(
+                "overall_sufficient=" + str(bool(overall_sufficient))
+                + ":primary_sessions=" + str(len(primary_sessions))
+                + ":analytical_results=" + str(int(analytical_count))
+            ),
+        )
+    supported = sorted(
+        (
+            item for item in contrasts
+            if item.get("inferential_claim_permitted") and item.get("holm_adjusted_p_value") is not None
+        ),
+        key=lambda item: (float(item["holm_adjusted_p_value"]), str(item["contrast"])),
+    )
+    if supported:
+        reference = supported[0]
+        estimate = float(reference["estimate_absolute_slippage_difference"])
+        significance = float(reference["holm_adjusted_p_value"])
+        method = "correlation_id_clustered_two_sided_normal_holm_adjusted_contrast"
+        primary_metric = "session_absolute_measured_slippage_contrast"
+        interval = (
+            float(reference["interval_95"]["lower"]),
+            float(reference["interval_95"]["upper"]),
+        )
+    else:
+        # No follow-up was permitted, so the governed statement is the omnibus
+        # session test itself: its statistic is finite whenever it did not reject.
+        estimate = float(fit["wald_statistic"])
+        significance = float(fit["omnibus_p_value"])
+        method = "correlation_id_clustered_quadratic_wald_joint_session_test"
+        primary_metric = "omnibus_session_wald_statistic"
+        interval = None
+    omnibus_rejected = float(fit["omnibus_p_value"]) <= ALPHA
+    signal = ScientificSignal(
+        signal_type="SESSION_CONDITIONED_EXECUTION_SLIPPAGE",
+        classification=(
+            "SUPPORTED_SESSION_SLIPPAGE_DIFFERENCE" if omnibus_rejected
+            else "NO_RELIABLE_SESSION_SLIPPAGE_DIFFERENCE"),
+        primary_metric=primary_metric,
+        estimate=estimate,
+        significance_method=method,
+        significance_value=significance,
+        sample_size=int(analytical_count),
+        population=_governed_population(primary_sessions),
+        null_definition=(
+            "all sufficient evaluated sessions have equal mean absolute measured "
+            "execution slippage"
+        ),
+        limitations=(
+            "CURRENT governed evidence and the listed primary-sufficient sessions only; "
+            "measured execution slippage does not establish strategy expectancy or "
+            "profitability.",
+            "The rejection endpoint is descriptive and cannot alter the primary slippage "
+            "inference.",
+            "The governed reference test is the smallest Holm-adjusted family contrast, "
+            "never a post-hoc selection of a favourable session.",
+        ),
+        effect_direction=(
+            "POSITIVE" if estimate > 0 else "NEGATIVE" if estimate < 0 else "NULL"),
+        effect_size=estimate,
+        confidence_interval=interval,
+    )
+    return meaningful(
+        "X3",
+        signal=signal,
+        falsification=FalsificationContract(
+            criteria=(
+                "X3: the omnibus cluster-robust session slippage test does not reject at "
+                f"the governed alpha={ALPHA}",
+                "X3: no session pair contrast remains significant after the governed Holm "
+                "step-down",
+                "X3: the governed minimum matched-account-result and per-session gates are "
+                "not met on replication",
+            ),
+            failure_conditions={
+                "omnibus_p_value": {"gt": ALPHA},
+                "holm_adjusted_p_value": {"gt": ALPHA},
+            },
+            minimum_evidence_requirements={
+                "minimum_governed_matched_account_results": MIN_OVERALL_RESULTS,
+                "minimum_measured_results_per_primary_session": MIN_SESSION_RESULTS,
+                "minimum_distinct_decisions_per_primary_session": MIN_SESSION_DECISIONS,
+                "minimum_primary_sufficient_sessions": 2,
+            },
+        ),
+        # X3 identifies an execution-quality difference, not a governed trading
+        # intervention: the evaluator must not name a policy here.
+        no_intervention_reason=NO_INTERVENTION_MAPPING,
     )
 
 
@@ -503,7 +634,7 @@ def build_x3_report(
     fingerprint = build_fingerprint_from_provenance(
         analytical_provenance, validation_score="CURRENT_GOVERNED_X3"
     )
-    return build_report(
+    return attach(build_report(
         question_id="X3",
         status=status,
         overall=overall,
@@ -536,7 +667,9 @@ def build_x3_report(
             "report_identity": REPORT_FILENAME,
             "shared_evidence_foundation": "research_engine.control_plane.execution_evidence",
         },
-    )
+    ), _governed_scientific_result(
+        status, fit, contrasts, primary_sessions, overall_sufficient, len(analytical),
+    ))
 
 
 __all__ = [
