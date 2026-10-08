@@ -13,6 +13,10 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
+from research_engine.experiments.governed_scientific_result import (
+    SCIENTIFIC_RESULT_SCHEMA,
+)
+
 from research_engine.lifecycle.generated_research_identity import (
     GeneratedResearchKind, GeneratedResearchProposal,
 )
@@ -26,6 +30,11 @@ from research_engine.lifecycle.research_opportunity import (
     ExplanationDiscrimination, InformationValue, ObservationRequirement,
     OpportunityState, OpportunitySubjectKind, ProspectiveWait, QuestionResolution,
     ResearchAnswerability, ResearchCost, ResearchOpportunity,
+)
+from research_engine.v10.continuous.generated_question_lifecycle import (
+    REENTRY_EVIDENCE_ARRIVED, REENTRY_EVIDENCE_CHANGED,
+    REENTRY_EVALUATOR_REGISTERED, SUPERSEDED_BY_NEWER_GENERATION,
+    effective_status, generation_to_lifecycle,
 )
 from research_engine.lifecycle.research_priority import POLICY_LEXICOGRAPHIC_V1
 from research_engine.lifecycle.research_queue import ResearchQueue
@@ -68,6 +77,17 @@ def _save_state(path: Path, value: Mapping[str, Any]) -> None:
     except Exception as exc:
         temp.unlink(missing_ok=True)
         raise Q71OrchestrationError("Q71_STATE_PERSISTENCE_FAILED") from exc
+
+def load_q71_state(path: Path | str = DEFAULT_Q71_STATE_PATH) -> dict[str, Any]:
+    """Public, fail-closed reader shared by the orchestration and the worker."""
+    return _load_state(Path(path))
+
+
+def save_q71_state(path: Path | str, value: Mapping[str, Any]) -> None:
+    """Public atomic writer shared by the orchestration and the worker."""
+    _save_state(Path(path), value)
+
+
 
 
 def _opportunity(record: Any, boundary: str, state_row: Mapping[str, Any]) -> ResearchOpportunity:
@@ -135,6 +155,22 @@ def _coverage_proposal(signal: Any, cell: Any) -> GeneratedResearchProposal:
             "interaction_identity": cell.interaction_identity or None,
             "slice_identity": cell.slice_identity or None,
         },
+        "question_type": "COVERAGE_GAP",
+        # Explicitly unknown semantics stay unknown; nothing is invented.
+        "evidence_datasets": [],
+        "required_fields": [],
+        "target_population": None,
+        # Absent evaluator_key means the governed registry decides.
+        "evaluator_key": None,
+        "evaluator_capability_class": None,
+        "metric_family": "UNKNOWN",
+        "intervention_class": "UNKNOWN",
+        "creation_reason": "GOVERNED_COVERAGE_BLIND_SPOT",
+        "re_entry_trigger": "COVERAGE_EVIDENCE_OR_EVALUATOR_CHANGE",
+        "supersession_key": "coverage_cell:" + cell.cell_identity,
+        "generation_version": 1,
+        "expected_scientific_result_schema": SCIENTIFIC_RESULT_SCHEMA,
+
         "depends_on": [],
     }
     return GeneratedResearchProposal(
@@ -186,8 +222,9 @@ def _update_question_state(
 ) -> dict[str, Any]:
     status, reason = _coverage_status(coverage_row, evaluator)
     old_status = str(previous.get("status") or "")
-    reentered = old_status in {
-        "WAITING_FOR_DATA", "MISSING_EVALUATOR", "RETIRED",
+    status_reentered = old_status in {
+        "WAITING_FOR_DATA", "MISSING_EVALUATOR", "RETIRED", "INVALID",
+        "IMPLEMENTATION_BLOCKED",
     } and status in {"READY", "ACTIVE"}
     history = list(previous.get("evidence_history") or [])
     evidence_event = {
@@ -199,8 +236,13 @@ def _update_question_state(
         "research_attempt_refs": list(coverage_row.evidence.research_attempt_refs),
         "conclusion_refs": list(coverage_row.evidence.conclusion_refs),
     }
-    if not history or history[-1] != evidence_event:
+    evidence_changed = bool(history) and history[-1] != evidence_event
+    if not history or evidence_changed:
         history.append(evidence_event)
+    # A question re-enters when its own governed evidence changed, not when
+    # unrelated evidence did: the evidence event is per observation cell.
+    reentered = status_reentered or (
+        evidence_changed and status in {"READY", "ACTIVE"})
     return {
         **dict(previous),
         "generated_question_id": question_id,
@@ -224,7 +266,86 @@ def _update_question_state(
         "last_evaluated_snapshot": snapshot.coverage_snapshot_identity,
         "evidence_history": history,
         "reentry_count": int(previous.get("reentry_count") or 0) + int(reentered),
+        "reentry_reason": (
+            REENTRY_EVALUATOR_REGISTERED
+            if status_reentered and old_status == "MISSING_EVALUATOR" and evaluator
+            else REENTRY_EVIDENCE_ARRIVED
+            if status_reentered and old_status == "WAITING_FOR_DATA"
+            else REENTRY_EVIDENCE_CHANGED
+            if reentered
+            else previous.get("reentry_reason")),
+        # Re-entry is an explicit governed authorisation, not an implicit reset.
+        "reentry_authorized": bool(reentered),
+        "generation_lifecycle_status": generation_to_lifecycle(status),
     }
+
+
+
+
+
+def _apply_structural_supersession(
+    records: Sequence[Any], question_states: dict[str, Any], *,
+    snapshot_id: str, recorded_at: str,
+) -> list[dict[str, Any]]:
+    """Supersede older generated questions for the same governed cell.
+
+    Supersession identity is structural only: the persisted ``supersession_key``
+    (derived from the observation-cell identity) plus the declared
+    ``generation_version``.  Free-text question wording is never compared, so
+    semantic equivalence is never guessed.  The superseded question is retained
+    historically with an explicit SUPERSEDED_BY lineage.
+    """
+    groups: dict[str, list[tuple[int, str]]] = {}
+    for record in records:
+        specification = record.specification
+        key = str(specification.get("supersession_key") or "")
+        if not key:
+            continue
+        state_row = question_states.get(record.generated_research_id) or {}
+        if str(state_row.get("status") or "") in TERMINAL_STATUSES:
+            continue
+        groups.setdefault(key, []).append((
+            int(specification.get("generation_version") or 0),
+            record.generated_research_id,
+        ))
+    superseded: list[dict[str, Any]] = []
+    for key, members in sorted(groups.items()):
+        if len(members) < 2:
+            continue
+        # Deterministic winner: highest generation version, then lowest id.
+        winner = sorted(members, key=lambda item: (-item[0], item[1]))[0][1]
+        for version, question_id in sorted(members):
+            if question_id == winner:
+                continue
+            previous = dict(question_states.get(question_id) or {})
+            history = list(previous.get("supersession_history") or ())
+            entry = {
+                "status": "SUPERSEDED",
+                "reason_code": SUPERSEDED_BY_NEWER_GENERATION,
+                "superseded_by": winner,
+                "supersession_key": key,
+                "generation_version": version,
+                "recorded_at": recorded_at,
+            }
+            if not history or history[-1] != entry:
+                history.append(entry)
+            question_states[question_id] = {
+                **previous,
+                "generated_question_id": question_id,
+                "status": "SUPERSEDED",
+                "reason": SUPERSEDED_BY_NEWER_GENERATION,
+                "superseded_by": winner,
+                "supersession_key": key,
+                "supersession_history": history,
+                "reentry_authorized": False,
+                "last_evaluated_snapshot": snapshot_id,
+            }
+            superseded.append({
+                "generated_question_id": question_id,
+                "superseded_by": winner,
+                "reason_code": SUPERSEDED_BY_NEWER_GENERATION,
+            })
+    return superseded
 
 
 def run_q71_orchestration(
@@ -233,9 +354,18 @@ def run_q71_orchestration(
     generated_store: GeneratedResearchStore | None = None,
     agenda_store: ResearchAgendaStore | None = None,
     state_path: Path | str = DEFAULT_Q71_STATE_PATH,
-    evaluator_registry: Mapping[str, str] | None = None,
+    evaluator_registry: Mapping[str, str] | Any | None = None,
+    supersession_recorded_at: str = "",
 ) -> dict[str, Any]:
-    """Generate, govern, persist and prioritise Q71+ research questions."""
+    """Generate, govern, persist and prioritise Q71+ research questions.
+
+    ``evaluator_registry`` accepts either the governed
+    ``GeneratedQuestionEvaluatorRegistry`` (authoritative, production) or a plain
+    string mapping used by focused tests.  When a governed registry is supplied,
+    its ``capability_index()`` is the single eligibility authority, so the
+    question that generation declares executable is exactly the question the
+    worker can execute.
+    """
     if isinstance(capacity, bool) or not isinstance(capacity, int) or not 1 <= capacity <= 100:
         raise Q71OrchestrationError("Q71_CAPACITY_OUT_OF_RANGE")
     path = Path(state_path)
@@ -245,9 +375,14 @@ def run_q71_orchestration(
     coverage = coverage_store if coverage_store is not None else ResearchCoverageStore()
     generated = generated_store if generated_store is not None else GeneratedResearchStore()
     agendas = agenda_store if agenda_store is not None else ResearchAgendaStore()
-    evaluators = dict(evaluator_registry or {})
+    if evaluator_registry is not None and hasattr(
+            evaluator_registry, "capability_index"):
+        evaluators = dict(evaluator_registry.capability_index())
+    else:
+        evaluators = dict(evaluator_registry or {})
     new_question_ids: list[str] = []
     retired_question_ids: list[str] = []
+    superseded_questions: list[dict[str, Any]] = []
     snapshots = coverage.snapshots()
     if snapshots:
         latest = max(snapshots, key=lambda item: (
@@ -333,6 +468,16 @@ def run_q71_orchestration(
             if updated["status"] == "RETIRED" and previous.get("status") != "RETIRED":
                 retired_question_ids.append(record.generated_research_id)
 
+        # Structural supersession: a newer governed generation for the same
+        # observation cell supersedes an older one.  Semantic equivalence is
+        # never inferred from free text.
+        superseded_questions = _apply_structural_supersession(
+            generated.all(), state["question_states"],
+            snapshot_id=snapshot_id,
+            recorded_at=supersession_recorded_at or str(
+                getattr(latest, "observed_at", "") or ""))
+
+
     opportunities = tuple(
         _opportunity(record, snapshot_id, state.get("question_states", {}).get(
             record.generated_research_id, {}))
@@ -358,47 +503,78 @@ def run_q71_orchestration(
                                "status": "QUEUED"})
     _save_state(path, state)
     queued_ids = {row["generated_question_id"] for row in queue_rows}
-    generated_rows = [{
-        "generated_question_id": record.generated_research_id,
-        "question": state.get("question_states", {}).get(
-            record.generated_research_id, {}).get("question", record.target_ref),
-        "why_generated": record.trigger_ref,
-        "source_opportunity": record.trigger_ref,
-        "evidence_availability": state.get("question_states", {}).get(
-            record.generated_research_id, {}).get(
-                "evidence_available", record.specification.get("evidence_available")),
-        "status": ("QUEUED" if record.generated_research_id in queued_ids else
-                   state.get("question_states", {}).get(
-                       record.generated_research_id, {}).get("status", "PROPOSED")),
-        "priority": next((row["position"] for row in queue_rows
-                          if row["generated_question_id"] == record.generated_research_id), None),
-        "sample_readiness": record.specification.get("sample_readiness"),
-        "last_evaluated_snapshot": state.get("question_states", {}).get(
-            record.generated_research_id, {}).get("last_evaluated_snapshot"),
-        "evaluator": state.get("question_states", {}).get(
-            record.generated_research_id, {}).get(
-                "evaluator", record.specification.get("snapshot_bound_runner")),
-        "evidence_requirements": state.get("question_states", {}).get(
-            record.generated_research_id, {}).get(
-                "evidence_requirements", record.specification.get("evidence_requirements", {})),
-        "depends_on": state.get("question_states", {}).get(
-            record.generated_research_id, {}).get(
-                "depends_on", record.specification.get("depends_on", [])),
-        "reentry_count": state.get("question_states", {}).get(
-            record.generated_research_id, {}).get("reentry_count", 0),
-        "source_lineage": list(record.parent_refs),
-        "linked_findings": [], "linked_hypotheses": [], "linked_candidates": [],
-        "retirement_reason": state.get("question_states", {}).get(
-            record.generated_research_id, {}).get("reason"),
-    } for record in generated.all()]
+    generated_rows = []
+    for record in generated.all():
+        question_id = record.generated_research_id
+        state_row = state.get("question_states", {}).get(question_id, {})
+        specification = record.specification
+        generation_status = (
+            "QUEUED" if question_id in queued_ids
+            else state_row.get("status", "PROPOSED"))
+        execution_status = state_row.get("execution_status")
+        generated_rows.append({
+            "generated_question_id": question_id,
+            "question": state_row.get("question", record.target_ref),
+            "why_generated": record.trigger_ref,
+            "source_opportunity": record.trigger_ref,
+            "evidence_availability": state_row.get(
+                "evidence_available", specification.get("evidence_available")),
+            "status": generation_status,
+            # The lifecycle status is the single normalised derivation shared
+            # with the worker, the projection and the Lab.
+            "lifecycle_status": effective_status(
+                generation_status, execution_status),
+            "priority": next((row["position"] for row in queue_rows
+                              if row["generated_question_id"] == question_id), None),
+            "sample_readiness": specification.get("sample_readiness"),
+            "last_evaluated_snapshot": state_row.get("last_evaluated_snapshot"),
+            "last_evidence_event": (
+                (state_row.get("evidence_history") or [{}])[-1]),
+            "evaluator": state_row.get(
+                "evaluator", specification.get("evaluator_key")),
+            "evaluator_key": state_row.get(
+                "evaluator_key", specification.get("evaluator_key")),
+            "evaluator_capability_class": specification.get(
+                "evaluator_capability_class"),
+            "evidence_requirements": state_row.get(
+                "evidence_requirements", specification.get("evidence_requirements", {})),
+            "evidence_datasets": list(
+                specification.get("evidence_datasets") or ()),
+            "depends_on": state_row.get(
+                "depends_on", specification.get("depends_on", [])),
+            "reentry_count": state_row.get("reentry_count", 0),
+            "reentry_reason": state_row.get("reentry_reason"),
+            "reentry_authorized": bool(state_row.get("reentry_authorized")),
+            "question_type": specification.get("question_type"),
+            "metric_family": specification.get("metric_family"),
+            "intervention_class": specification.get("intervention_class"),
+            "generation_version": specification.get("generation_version"),
+            "supersession_key": specification.get("supersession_key"),
+            "superseded_by": state_row.get("superseded_by"),
+            "supersession_reason": state_row.get("supersession_reason"),
+            "supersession_history": list(state_row.get("supersession_history") or ()),
+            "expected_scientific_result_schema": specification.get(
+                "expected_scientific_result_schema"),
+            "source_lineage": list(record.parent_refs),
+            "linked_findings": [], "linked_hypotheses": [], "linked_candidates": [],
+            "retirement_reason": state_row.get("reason"),
+        })
     return {
         "status": "COMPLETED", "agenda_id": agenda_id, "queue_id": queue_id,
         "new_question_ids": new_question_ids,
         "retired_question_ids": sorted(set(retired_question_ids)),
+        "superseded_questions": superseded_questions,
         "generated_questions": generated_rows, "queue": queue_rows,
         "proposal_count": len(state["signals"]), "queue_capacity": capacity,
         "execution_mode": "QUEUE_ONLY_UNLESS_SNAPSHOT_BOUND_RUNNER_REGISTERED",
     }
 
 
-__all__ = ["Q71OrchestrationError", "run_q71_orchestration"]
+__all__ = [
+    "DEFAULT_Q71_STATE_PATH",
+    "Q71OrchestrationError",
+    "Q71_STATE_SCHEMA",
+    "load_q71_state",
+    "run_q71_orchestration",
+    "save_q71_state",
+]

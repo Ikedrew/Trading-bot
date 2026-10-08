@@ -75,6 +75,7 @@ _STAGE_LABEL = {
     "QUESTIONS": "Re-evaluating the 70 canonical questions",
     "SCIENTIFIC_STATE": "Updating findings, hypotheses and candidates",
     "Q71_PLUS": "Generating Q71+ research questions",
+    "Q71_EXECUTION": "Executing generated research questions",
     "VALIDATION_QUEUE": "Processing the validation queue",
     "PROJECTION": "Publishing the research projection",
 }
@@ -381,6 +382,29 @@ def build_state() -> dict[str, Any]:
                 "id": q["question_id"], "type": "CANONICAL_QUESTION", "status": q["status"],
                 "state": "WAITING_FOR_DATA", "minimum_sample": q.get("minimum_required_n"),
                 "sample_n": q.get("sample_n"), "note": q.get("title"), "linked": None})
+    # Generated questions are investigations in their own right, with their own
+    # governed waiting/blocked reasons.
+    for row in q71_rows:
+        lifecycle = str(row.get("lifecycle_status") or "")
+        if lifecycle not in (
+                "WAITING_FOR_DATA", "MISSING_EVALUATOR", "IMPLEMENTATION_BLOCKED",
+                "BLOCKED", "INSUFFICIENT_DATA", "RUNNING", "QUEUED"):
+            continue
+        investigations.append({
+            "id": row.get("generated_question_id"), "type": "GENERATED_QUESTION",
+            "status": lifecycle,
+            "state": ("RUNNING" if lifecycle == "RUNNING"
+                      else "MISSING_EVALUATOR" if lifecycle == "MISSING_EVALUATOR"
+                      else "IN_PROGRESS" if lifecycle in ("QUEUED", "IMPLEMENTATION_BLOCKED")
+                      else "WAITING_FOR_DATA"),
+            "minimum_sample": None, "sample_n": None,
+            "note": row.get("question") or row.get("why_generated"),
+            "linked": None,
+            "reason": row.get("waiting_reason") or row.get("missing_evaluator_reason")
+            or row.get("reason_code"),
+            "execution_freshness": row.get("execution_freshness"),
+            "evaluator_available": row.get("evaluator_available"),
+        })
     changes = list(_status_events(candidates))
     for cyc in cycles:
         changes.append({"time": cyc.get("recorded_at"), "kind": "CYCLE", "subject": cyc["continuous_cycle_id"],
@@ -415,8 +439,34 @@ def build_state() -> dict[str, Any]:
                                                   "stage_statuses": c.get("stage_statuses")}
                                 for c in cycles[:1] if c.get("failure")), None),
         "question_counts": counts, "questions": questions,
-        "q71": {"generated": q71_rows, "queue": work.get("generated_question_queue") or [],
-                "available": bool(projection)},
+        "q71": {
+            "generated": q71_rows,
+            "queue": work.get("generated_question_queue") or [],
+            "available": bool(projection),
+            # Repair Block 2: the five Lab distinctions, read from the
+            # projection's own derivation.  The Lab never infers scientific
+            # meaning from an execution status.
+            "lifecycle_counts": work.get("generated_question_lifecycle_counts") or {},
+            "execution_counts": work.get("generated_question_execution_counts") or {},
+            "freshness_counts": work.get("generated_question_freshness_counts") or {},
+            "executable": [row.get("generated_question_id") for row in q71_rows
+                           if row.get("question_executable")],
+            "running": [row.get("generated_question_id") for row in q71_rows
+                        if row.get("question_running")],
+            "answered": [row.get("generated_question_id") for row in q71_rows
+                         if row.get("question_answered")],
+            "scientifically_actionable": [
+                row.get("generated_question_id") for row in q71_rows
+                if row.get("question_scientifically_actionable")],
+            "missing_evaluator": [
+                row.get("generated_question_id") for row in q71_rows
+                if row.get("lifecycle_status") == "MISSING_EVALUATOR"],
+            "waiting_for_data": [
+                row.get("generated_question_id") for row in q71_rows
+                if row.get("lifecycle_status") == "WAITING_FOR_DATA"],
+            "superseded": [row.get("generated_question_id") for row in q71_rows
+                           if row.get("lifecycle_status") == "SUPERSEDED"],
+        },
         "findings": findings, "hypotheses": hypotheses, "candidates": candidates,
         "investigations": investigations, "work_queues": work,
         "data_frontier": src.get("data_frontier"),

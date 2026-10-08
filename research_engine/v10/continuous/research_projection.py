@@ -10,9 +10,18 @@ from typing import Any, Mapping, Sequence
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
 from research_engine.registry.baseline_manifest import BASELINE_QUESTION_IDS
 from research_engine.v10.continuous.scientific_state_store import ScientificStateStore
+from research_engine.v10.continuous.q71_worker import relevant_evidence_identity
 from research_engine.v10.continuous.research_work_queue import ResearchWorkQueueStore
 from research_engine.v10.continuous.validation_queue import ValidationQueueStore
 from research_engine.v10.optimisation.optimisation_registry import OptimisationRegistry
+from research_engine.v10.continuous.generated_question_lifecycle import (
+    MISSING_EVALUATOR, NOT_SCIENTIFICALLY_RESOLVED, WAITING_FOR_DATA,
+    effective_status, execution_freshness, lifecycle_flags,
+)
+from research_engine.v10.continuous.generated_question_result import (
+    GeneratedQuestionExecutionStore, GeneratedQuestionResultStore,
+)
+
 
 
 PROJECTION_SCHEMA = "unified_research_projection_v1"
@@ -61,6 +70,119 @@ def _current_finding_versions(document: Mapping[str, Any]) -> list[dict[str, Any
     return rows
 
 
+def _counts(rows: Sequence[Mapping[str, Any]], name: str) -> dict[str, int]:
+    """Deterministic status counts for the projection's queue diagnostics."""
+    counts: dict[str, int] = {}
+    for row in rows:
+        key = str(row.get(name) or "UNKNOWN")
+        counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _generated_question_rows(
+    *, q71: Mapping[str, Any] | None, findings: Sequence[Mapping[str, Any]],
+    dependencies: Mapping[str, Any],
+    execution_store: GeneratedQuestionExecutionStore | None,
+    result_store: GeneratedQuestionResultStore | None,
+) -> list[dict[str, Any]]:
+    """Merge generated-question generation state with governed execution state.
+
+    The projection remains the sole authority: the Lab and every other consumer
+    read this derivation instead of guessing meaning from a status string.
+    """
+    states = {} if execution_store is None else execution_store.states()
+    rows: list[dict[str, Any]] = []
+    for raw in (q71 or {}).get("generated_questions", []):
+        row = dict(raw)
+        question_id = str(row.get("generated_question_id") or "")
+        execution = dict(states.get(question_id) or {})
+        result = None
+        if result_store is not None and execution.get("latest_result_id"):
+            result = result_store.load_result(str(execution["latest_result_id"]))
+        generation_status = row.get("status")
+        execution_status = execution.get("execution_status")
+        lifecycle = effective_status(generation_status, execution_status)
+        evaluator_available = bool(
+            execution.get("evaluator_key") or row.get("evaluator_key"))
+        evidence_available = bool(row.get("evidence_availability"))
+        current_epoch = str(row.get("last_evaluated_snapshot") or "")
+        current_evidence_identity = relevant_evidence_identity({
+            "evidence_history": [dict(row.get("last_evidence_event") or {})],
+            "last_evaluated_snapshot": current_epoch,
+        })
+        result_epoch = str(execution.get("result_evidence_identity") or "")
+        current_digest = str(execution.get("evaluator_identity_digest") or "")
+        freshness = execution_freshness(
+            execution_status=execution_status,
+            result_evidence_epoch=result_epoch,
+            current_evidence_epoch=current_evidence_identity,
+            result_evaluator_digest=execution.get("result_evaluator_digest"),
+            current_evaluator_digest=current_digest,
+        )
+        scientific = str(
+            execution.get("scientific_status") or NOT_SCIENTIFICALLY_RESOLVED)
+        linked_findings = sorted({
+            str(item.get("finding_id")) for item in findings
+            if question_id in (item.get("source_question_ids") or ())
+        } - {"None", ""})
+        linked_hypotheses = sorted({
+            str(hyp) for finding_id in linked_findings
+            for hyp in (dependencies.get(finding_id, {}) or {}).get("hypotheses", [])
+        })
+        linked_candidates = sorted({
+            str(cand) for finding_id in linked_findings
+            for cand in (dependencies.get(finding_id, {}) or {}).get("candidates", [])
+        })
+        row.update({
+            "execution_status": execution_status,
+            "scientific_status": scientific,
+            "execution_freshness": freshness,
+            "lifecycle_status": lifecycle,
+            "evaluator_key": execution.get("evaluator_key") or row.get("evaluator_key"),
+            "evaluator_version": execution.get("evaluator_version"),
+            "evaluator_identity_digest": execution.get("evaluator_identity_digest"),
+            "evaluator_available": evaluator_available,
+            "latest_result_id": execution.get("latest_result_id"),
+            "result_history": list(execution.get("result_history") or ()),
+            "predecessor_result_id": execution.get("predecessor_result_id"),
+            "governed_scientific_metrics": dict(
+                execution.get("governed_scientific_metrics") or {}),
+            "reason_code": execution.get("reason_code") or row.get("retirement_reason"),
+            "waiting_reason": (
+                execution.get("reason_code") if lifecycle == WAITING_FOR_DATA
+                else None),
+            "missing_evaluator_reason": (
+                execution.get("reason_code") if lifecycle == MISSING_EVALUATOR
+                else None),
+            "reentry_reason": execution.get("reentry_reason") or row.get("reentry_reason"),
+            "superseded_by": execution.get("superseded_by") or row.get("superseded_by"),
+            "supersession_reason": (
+                execution.get("supersession_reason") or row.get("supersession_reason")),
+            "supersession_history": list(
+                execution.get("supersession_history") or row.get("supersession_history") or ()),
+            "queue_state": generation_status,
+            "evidence_epoch": result_epoch or None,
+            "evidence_frontier": None if result is None else result.evidence_frontier,
+            "evidence_datasets": (
+                list(result.evidence_datasets) if result is not None
+                else list(row.get("evidence_datasets") or ())),
+            "linked_findings": linked_findings,
+            "linked_hypotheses": linked_hypotheses,
+            "linked_candidates": linked_candidates,
+            "result_ids": list(
+                result_store.result_ids(question_id) if result_store is not None else ()),
+        })
+        row.update(lifecycle_flags(
+            generation_status=generation_status,
+            execution_status=execution_status,
+            evaluator_available=evaluator_available,
+            evidence_available=evidence_available,
+            scientific=scientific))
+        rows.append(row)
+    return rows
+
+
+
 def build_unified_research_projection(
     *, continuous_cycle_id: str, frontier: Any, question_projection: Mapping[str, Any] | None,
     bridge: Any | None, scientific_store: ScientificStateStore,
@@ -68,6 +190,9 @@ def build_unified_research_projection(
     q71: Mapping[str, Any] | None = None,
     shadow_evidence: Mapping[str, Mapping[str, Any]] | None = None,
     predecessor_projection: Mapping[str, Any] | None = None,
+    generated_execution_store: GeneratedQuestionExecutionStore | None = None,
+    generated_result_store: GeneratedQuestionResultStore | None = None,
+
     research_work_store: ResearchWorkQueueStore | None = None,
     projection_generated_at: str | None = None,
 ) -> dict[str, Any]:
@@ -134,6 +259,11 @@ def build_unified_research_projection(
         row["pending_question_ids"] = pending
         candidates.append(row)
 
+    generated_rows = _generated_question_rows(
+        q71=q71, findings=findings, dependencies=dependencies,
+        execution_store=generated_execution_store,
+        result_store=generated_result_store)
+
     question_rows: list[dict[str, Any]] = []
     if question_projection is not None:
         for question_id, raw in baseline_items:
@@ -157,6 +287,24 @@ def build_unified_research_projection(
                         "changed_this_cycle": question_id in set(_value(bridge, "question_changes_processed", ()))})
             question_rows.append(row)
 
+    prior_generated_rows = {
+        str(row.get("generated_question_id")): row
+        for row in (predecessor_projection or {}).get("generated_questions", [])
+        if isinstance(row, Mapping)
+    }
+    generated_transitions = [
+        {"generated_question_id": row.get("generated_question_id"),
+         "lifecycle_status": row.get("lifecycle_status"),
+         "execution_status": row.get("execution_status"),
+         "scientific_status": row.get("scientific_status"),
+         "result_id": row.get("latest_result_id")}
+        for row in generated_rows
+        if row.get("latest_result_id")
+        and row.get("latest_result_id") != (
+            prior_generated_rows.get(
+                str(row.get("generated_question_id"))) or {}).get("latest_result_id")
+    ]
+
     changed = {
         "new_data": list(_value(frontier, "changed_datasets", ())),
         "questions_changed": list(_value(bridge, "question_changes_processed", ())),
@@ -172,6 +320,10 @@ def build_unified_research_projection(
         "shadow_transitions": [],
         "new_q71_questions": list((q71 or {}).get("new_question_ids", [])),
         "retired_questions": list((q71 or {}).get("retired_question_ids", [])),
+        "superseded_questions": list((q71 or {}).get("superseded_questions", [])),
+        "q71_execution_transitions": generated_transitions,
+        "new_q71_results": [
+            row["result_id"] for row in generated_transitions if row.get("result_id")],
         "new_blockers": list(_value(bridge, "review_required", ())),
     }
     research_lag = (
@@ -219,17 +371,29 @@ def build_unified_research_projection(
             "freshness": "FROZEN_AT_FRONTIER",
         },
         "canonical_questions": question_rows,
-        "generated_questions": list((q71 or {}).get("generated_questions", [])),
+        "generated_questions": generated_rows,
         "findings": findings,
         "hypotheses": hypothesis_rows,
         "candidates": candidates,
         "investigations_and_work_queues": {
-            "active_research_investigations": [row.get("generated_question_id") for row in
-                                               (q71 or {}).get("generated_questions", [])
-                                               if row.get("status") == "ACTIVE"],
-            "waiting_investigations": [row.get("generated_question_id") for row in
-                                       (q71 or {}).get("generated_questions", [])
-                                       if row.get("status") == "WAITING_FOR_DATA"],
+            "active_research_investigations": [
+                row.get("generated_question_id") for row in generated_rows
+                if row.get("status") == "ACTIVE"],
+            "waiting_investigations": [
+                row.get("generated_question_id") for row in generated_rows
+                if row.get("lifecycle_status") == WAITING_FOR_DATA],
+            "missing_evaluator_investigations": [
+                row.get("generated_question_id") for row in generated_rows
+                if row.get("lifecycle_status") == MISSING_EVALUATOR],
+            "scientifically_actionable_generated_questions": [
+                row.get("generated_question_id") for row in generated_rows
+                if row.get("question_scientifically_actionable")],
+            "generated_question_lifecycle_counts": _counts(
+                generated_rows, "lifecycle_status"),
+            "generated_question_execution_counts": _counts(
+                generated_rows, "execution_status"),
+            "generated_question_freshness_counts": _counts(
+                generated_rows, "execution_freshness"),
             "generated_question_queue": list((q71 or {}).get("queue", [])),
             "validation_queue": [job.to_dict() for job in validation_store.ordered()],
             "forward_validation_queue": [job.to_dict() for job in validation_store.ordered()

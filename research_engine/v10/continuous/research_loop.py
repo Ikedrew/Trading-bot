@@ -22,6 +22,16 @@ from research_engine.v10.continuous.frontier_coordinator import (
     FRONTIER_INCOMPLETE, NO_NEW_GOVERNED_EVIDENCE, SNAPSHOT_READY,
     run_frontier_snapshot_cycle,
 )
+from research_engine.v10.continuous.generated_question_result import (
+    GeneratedQuestionExecutionStore, GeneratedQuestionResultStore,
+)
+from research_engine.v10.continuous.q71_evaluator_registry import (
+    DEFAULT_REGISTRY_PATH as DEFAULT_EVALUATOR_REGISTRY_PATH,
+    GeneratedQuestionEvaluatorRegistry,
+)
+from research_engine.v10.continuous.q71_worker import (
+    GeneratedExecutionPolicy, run_generated_question_worker,
+)
 from research_engine.v10.continuous.q71_orchestration import run_q71_orchestration
 from research_engine.v10.continuous.question_cycle_state import QuestionCycleStore
 from research_engine.v10.continuous.research_projection import (
@@ -34,7 +44,9 @@ from research_engine.v10.continuous.research_work_queue import (
     ResearchWorkQueueError,
     ResearchWorkQueueStore,
 )
-from research_engine.v10.continuous.scientific_state_bridge import run_scientific_state_bridge
+from research_engine.v10.continuous.scientific_state_bridge import (
+    run_generated_scientific_bridge, run_scientific_state_bridge,
+)
 from research_engine.v10.continuous.scientific_state_store import ScientificStateStore
 from research_engine.v10.continuous.validation_queue import (
     ValidationQueueStore, enqueue_forward_validation, enqueue_validation_handoff,
@@ -44,7 +56,7 @@ from research_engine.v10.optimisation.optimisation_registry import OptimisationR
 
 
 STAGES = ("FRONTIER", "QUESTIONS", "SCIENTIFIC_STATE", "Q71_PLUS",
-          "VALIDATION_QUEUE", "PROJECTION")
+          "Q71_EXECUTION", "VALIDATION_QUEUE", "PROJECTION")
 
 
 class ContinuousResearchLoopError(RuntimeError):
@@ -205,6 +217,13 @@ def run_continuous_research_cycle(
     question_kwargs: Mapping[str, Any] | None = None,
     bridge_kwargs: Mapping[str, Any] | None = None,
     q71_kwargs: Mapping[str, Any] | None = None,
+    q71_evaluator_registry: GeneratedQuestionEvaluatorRegistry | None = None,
+    q71_execution_policy: GeneratedExecutionPolicy | None = None,
+    q71_manifest_directory: Path | str | None = None,
+    q71_evidence_source: Any | None = None,
+    generated_execution_store: GeneratedQuestionExecutionStore | None = None,
+    generated_result_store: GeneratedQuestionResultStore | None = None,
+    generated_bridge_runner: Callable[..., Any] = run_generated_scientific_bridge,
     validation_executor: Callable[..., Mapping[str, Any]] | None = None,
     forward_executor: Callable[..., Mapping[str, Any]] | None = None,
     max_validation_jobs: int = 1,
@@ -304,7 +323,8 @@ def run_continuous_research_cycle(
             registry_loader=question_registry_loader)
         if _is_current_successful_projection(
                 latest, frontier, stale_questions, canonical_projection):
-            for stage in ("QUESTIONS", "SCIENTIFIC_STATE", "Q71_PLUS", "VALIDATION_QUEUE"):
+            for stage in ("QUESTIONS", "SCIENTIFIC_STATE", "Q71_PLUS",
+                          "Q71_EXECUTION", "VALIDATION_QUEUE"):
                 stages[stage] = "SKIPPED_NO_NEW_EVIDENCE"
                 progress("skip_stage", stage, "NO_NEW_EVIDENCE_WITH_CURRENT_PROJECTION")
             stages["PROJECTION"] = "RETAINED"
@@ -473,6 +493,56 @@ def run_continuous_research_cycle(
         progress("exit_stage", "Q71_PLUS", status="FAILED_OPTIONAL", details={
             "failure": f"{type(exc).__name__}:{exc}"})
 
+    progress("enter_stage", "Q71_EXECUTION")
+    generated_execution: dict[str, Any] = {}
+    generated_bridge = None
+    try:
+        if q71_evaluator_registry is None:
+            stages["Q71_EXECUTION"] = "SKIPPED_NO_EVALUATOR_REGISTRY"
+            progress("skip_stage", "Q71_EXECUTION", "NO_GOVERNED_EVALUATOR_REGISTRY")
+        else:
+            exec_store = generated_execution_store or GeneratedQuestionExecutionStore(
+                root / "q71_execution_state.json")
+            res_store = generated_result_store or GeneratedQuestionResultStore(
+                root / "q71_results")
+            generated_execution = run_generated_question_worker(
+                snapshot_id=str(_value(frontier, "snapshot_id")),
+                evaluator_registry=q71_evaluator_registry,
+                result_store=res_store, execution_store=exec_store,
+                q71_state_path=root / "q71_state.json",
+                **({"manifest_directory": q71_manifest_directory}
+                   if q71_manifest_directory is not None else {}),
+                **({"source": q71_evidence_source}
+                   if q71_evidence_source is not None else {}),
+                policy=q71_execution_policy or GeneratedExecutionPolicy())
+            batch_id = generated_execution.get("batch_id")
+            if batch_id:
+                generated_bridge = generated_bridge_runner(
+                    batch_id, generated_result_store=res_store,
+                    scientific_state_directory=scientific_state_dir,
+                    optimisation_registry_directory=registry_dir)
+                stages["Q71_EXECUTION"] = str(
+                    _value(generated_bridge, "status", "COMPLETED"))
+            else:
+                stages["Q71_EXECUTION"] = "NO_EXECUTABLE_GENERATED_QUESTION"
+            progress("exit_stage", "Q71_EXECUTION",
+                     status=stages["Q71_EXECUTION"], details={
+                         "executed": len(generated_execution.get("outcomes", [])),
+                         "results": len(generated_execution.get("result_ids", [])),
+                     })
+    except Exception as exc:
+        # Generated execution is bounded and additive: a failure here must never
+        # invalidate canonical scientific state, but it must be visible.
+        generated_execution = {
+            "status": "FAILED_OPTIONAL",
+            "failure_reason": f"{type(exc).__name__}:{exc}",
+            "outcomes": [], "result_ids": [],
+        }
+        stages["Q71_EXECUTION"] = "FAILED_OPTIONAL"
+        progress("exit_stage", "Q71_EXECUTION", status="FAILED_OPTIONAL",
+                 details={"failure": f"{type(exc).__name__}:{exc}"})
+
+
     progress("enter_stage", "VALIDATION_QUEUE", details={"max_jobs": max_validation_jobs})
     try:
         validation_store = ValidationQueueStore(root / "validation_queue.json")
@@ -543,6 +613,12 @@ def run_continuous_research_cycle(
             validation_store=validation_store, q71=q71,
             shadow_evidence=shadow_evidence, predecessor_projection=previous_projection,
             research_work_store=research_work_store,
+            generated_execution_store=(
+                generated_execution_store or GeneratedQuestionExecutionStore(
+                    root / "q71_execution_state.json")),
+            generated_result_store=(
+                generated_result_store or GeneratedQuestionResultStore(
+                    root / "q71_results")),
             projection_generated_at=str(_value(question, "completed_at", started)),
         )
         projection_path = str(projection_store.save(projection))
@@ -777,15 +853,36 @@ def run_deep_research_job(
         raise
 
 
+def _production_evaluator_registry(
+    path: Path | str | None = None,
+) -> GeneratedQuestionEvaluatorRegistry | None:
+    """Load the governed Q71+ evaluator registry when one is deployed.
+
+    Absence is a legitimate production state: with no registry, every generated
+    question resolves to MISSING_EVALUATOR and is shown as such rather than
+    being executed by an evaluator that was never registered.
+    """
+    resolved = Path(path) if path is not None else DEFAULT_EVALUATOR_REGISTRY_PATH
+    if not resolved.exists():
+        return None
+    return GeneratedQuestionEvaluatorRegistry(resolved)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run one bounded continuous research cycle")
     parser.add_argument("--state-root", default="data/research/continuous")
     parser.add_argument("--q71-capacity", type=int, default=10)
     parser.add_argument("--max-validation-jobs", type=int, default=1)
+    parser.add_argument("--q71-evaluator-registry", default=None)
+    parser.add_argument("--q71-max-executions", type=int, default=1)
     args = parser.parse_args(argv)
     result = run_continuous_research_cycle(
         state_root=args.state_root, q71_capacity=args.q71_capacity,
-        max_validation_jobs=args.max_validation_jobs)
+        max_validation_jobs=args.max_validation_jobs,
+        q71_evaluator_registry=_production_evaluator_registry(
+            args.q71_evaluator_registry),
+        q71_execution_policy=GeneratedExecutionPolicy(
+            max_questions_per_run=args.q71_max_executions))
     print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
     return 0 if result.cycle_outcome in {"COMPLETED", "NO_NEW_RESEARCH_EVIDENCE"} else 1
 

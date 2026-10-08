@@ -14,6 +14,9 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json, fingerprint
+from research_engine.lifecycle.generated_research_identity import (
+    is_generated_research_id,
+)
 from research_engine.lifecycle.treatment_memory_store import TreatmentMemoryStore
 from research_engine.lifecycle.treatment_equivalence import assess_treatment_equivalence
 from research_engine.lifecycle.treatment_memory import (
@@ -25,6 +28,11 @@ from research_engine.lifecycle.treatment_memory import (
 )
 from research_engine.lifecycle.research_opportunity import OpportunitySubjectKind
 from research_engine.registry.exit_policy_adjudication import CANDIDATE_POLICIES_V1
+from research_engine.v10.continuous.generated_question_result import (
+    DEFAULT_GENERATED_RESULT_DIRECTORY,
+    GeneratedQuestionExecutionBatch,
+    GeneratedQuestionResultStore,
+)
 from research_engine.v10.continuous.question_cycle_state import (
     CanonicalQuestionCycleResult,
     CanonicalQuestionResult,
@@ -49,6 +57,8 @@ from research_engine.v10.optimisation.optimisation_registry import OptimisationR
 COMPLETE = "COMPLETE"
 NEGATIVE_RESULT = "NEGATIVE_RESULT"
 NO_SCIENTIFIC_STATE_CHANGE = "NO_SCIENTIFIC_STATE_CHANGE"
+CANONICAL_SOURCE_KIND = "CANONICAL_QUESTION_CYCLE"
+GENERATED_SOURCE_KIND = "GENERATED_QUESTION_EXECUTION_BATCH"
 COMPLETED = "COMPLETED"
 COMPLETED_WITH_REVIEW = "COMPLETED_WITH_REVIEW_REQUIRED"
 COMPLETED_WITH_ITEM_FAILURES = "COMPLETED_WITH_ITEM_FAILURES"
@@ -100,6 +110,8 @@ class ScientificStateBridgeResult:
     scientific_state_path: str = ""
     optimisation_registry_path: str = ""
     validation_handoff: tuple[dict[str, Any], ...] = ()
+    # Repair Block 2: which governed authority produced this reconciliation run.
+    source_kind: str = "CANONICAL_QUESTION_CYCLE"
 
     def to_dict(self) -> dict[str, Any]:
         return {"run_schema": BRIDGE_RUN_SCHEMA, **asdict(self)}
@@ -347,6 +359,20 @@ def _treatment_hash(policy: Mapping[str, Any]) -> str:
     return hashlib.sha256(canonical_json(dict(policy)).encode("utf-8")).hexdigest()
 
 
+def _subject_kind(question_id: str) -> OpportunitySubjectKind:
+    """The governed subject namespace a treatment signature must be authored in.
+
+    A canonical question and a generated question are different governed
+    namespaces; the signature must name the subject's own namespace or the
+    treatment-memory authority rejects it.
+    """
+    return (
+        OpportunitySubjectKind.GENERATED_RESEARCH
+        if is_generated_research_id(question_id)
+        else OpportunitySubjectKind.CANONICAL_QUESTION
+    )
+
+
 def _treatment_signature(
     question_id: str, policy: Mapping[str, Any], result: CanonicalQuestionResult,
 ) -> TreatmentSignature:
@@ -373,7 +399,7 @@ def _treatment_signature(
         raise ScientificStateBridgeError(
             "GOVERNED_POLICY_NOT_REPRESENTABLE_IN_TREATMENT_MEMORY:" + policy_type)
     return TreatmentSignature.create(
-        subject_kind=OpportunitySubjectKind.CANONICAL_QUESTION,
+        subject_kind=_subject_kind(question_id),
         subject_ref=question_id,
         component=component,
         change_parameters=parameters,
@@ -615,6 +641,400 @@ def _reconcile_opt_dp1_002(
     return candidate.candidate_id, before
 
 
+@dataclass
+class _ReconciliationContext:
+    """Everything the shared reconciliation needs, owned by one bridge run."""
+
+    document: dict[str, Any]
+    registry: OptimisationRegistry
+    policies: Mapping[str, Mapping[str, Any]]
+    memory: TreatmentMemoryStore
+    cycle_id: str
+    snapshot_id: str
+    investigation_epoch: str
+    sinks: dict[str, list[Any]] = field(default_factory=dict)
+    failures: list[dict[str, Any]] = field(default_factory=list)
+    handoff: list[dict[str, Any]] = field(default_factory=list)
+    # Generated-question lineage: question id -> immutable generated result id.
+    # Empty for the canonical bridge, so canonical lineage is unchanged.
+    generated_result_ids: dict[str, str] = field(default_factory=dict)
+
+    def generated_lineage(self, question_id: str) -> dict[str, Any]:
+        result_id = self.generated_result_ids.get(question_id)
+        return {} if not result_id else {
+            "generated_question_result_id": result_id}
+
+
+def _new_reconciliation_sinks() -> dict[str, list[Any]]:
+    return {
+        "findings_created": [], "findings_strengthened": [],
+        "findings_weakened": [], "findings_amended": [],
+        "findings_invalidated": [], "hypotheses_created": [],
+        "hypotheses_updated": [], "hypotheses_invalidated": [],
+        "candidates_created": [], "candidates_updated": [],
+        "candidate_design_required": [],
+        "duplicate_equivalent_treatments_suppressed": [],
+        "review_required": [], "governance_signals": [],
+    }
+
+
+def _reconcile_changed_results(
+    changed_results: Mapping[str, CanonicalQuestionResult],
+    context: "_ReconciliationContext",
+) -> None:
+    """Reconcile changed results into governed scientific state.
+
+    Shared verbatim by the canonical question bridge and the generated-
+    question bridge so a generated result can never be interpreted by a
+    weaker rule than a canonical one.
+    """
+    document = context.document
+    registry = context.registry
+    policies = context.policies
+    memory = context.memory
+    failures = context.failures
+    handoff = context.handoff
+    created = context.sinks["findings_created"]
+    strengthened = context.sinks["findings_strengthened"]
+    weakened = context.sinks["findings_weakened"]
+    amended = context.sinks["findings_amended"]
+    invalidated = context.sinks["findings_invalidated"]
+    hypotheses_created = context.sinks["hypotheses_created"]
+    hypotheses_updated = context.sinks["hypotheses_updated"]
+    hypotheses_invalidated = context.sinks["hypotheses_invalidated"]
+    candidates_created = context.sinks["candidates_created"]
+    candidates_updated = context.sinks["candidates_updated"]
+    designs = context.sinks["candidate_design_required"]
+    suppressed = context.sinks["duplicate_equivalent_treatments_suppressed"]
+    reviews = context.sinks["review_required"]
+    governance = context.sinks["governance_signals"]
+    for qid in sorted(changed_results):
+        result = changed_results[qid]
+        item_document = deepcopy(document)
+        item_hypotheses = deepcopy(registry._hypotheses)
+        item_candidates = deepcopy(registry._candidates)
+        item_plans = deepcopy(registry._plans)
+        try:
+            meaningful, reason = _explicit_scientific_signal(result)
+            if not meaningful:
+                if result.status in {COMPLETE, NEGATIVE_RESULT} and _conclusion(result):
+                    reviews.append(qid + ":FINDING_DERIVATION:" + reason)
+                continue
+            finding_id = _finding_identity(result)
+            history = document["findings"].setdefault(finding_id, [])
+            previous = history[-1] if history else None
+            action = _finding_action(previous, result)
+            if action == "NO_FINDING_CHANGE":
+                continue
+            finding = _finding_record(finding_id, len(history) + 1, result, action, previous)
+            history.append(finding)
+            if context.generated_result_ids.get(qid):
+                # Generated-question lineage, recorded on the same finding path
+                # the canonical bridge uses.  Never fabricated: the id is the
+                # immutable artifact this reconciliation read.
+                finding["lineage"].update(context.generated_lineage(qid))
+            finding_ref = f"{finding_id}:v{finding['finding_version']}"
+            document["current"]["findings"][finding_id] = finding_ref
+            if action == "NEW_FINDING":
+                created.append(finding_ref)
+            elif action == "FINDING_STRENGTHENED":
+                strengthened.append(finding_ref)
+            elif action == "FINDING_WEAKENED":
+                weakened.append(finding_ref)
+            elif action in {"FINDING_AMENDED", "FINDING_SUPERSEDED"}:
+                amended.append(finding_ref)
+            elif action == "FINDING_INVALIDATED":
+                invalidated.append(finding_ref)
+
+            hypothesis_id = _hypothesis_id(finding_id)
+            # Reconcile an explicitly named pre-existing hypothesis rather than minting a duplicate.
+            supplied_hypothesis = _metric(result, "source_hypothesis_id", "hypothesis_id")
+            if supplied_hypothesis and registry.get_hypothesis(str(supplied_hypothesis)):
+                hypothesis_id = str(supplied_hypothesis)
+            existing_hypothesis = registry.get_hypothesis(hypothesis_id)
+            if existing_hypothesis is not None and existing_hypothesis.source_finding != finding_id:
+                raise ScientificStateBridgeError(
+                    "HYPOTHESIS_IDENTITY_COLLISION:" + hypothesis_id)
+            mechanism = str(_metric(result, "mechanism") or "")
+            if action == "FINDING_INVALIDATED":
+                if existing_hypothesis:
+                    existing_hypothesis.status = "INVALIDATED_UPSTREAM"
+                    existing_hypothesis.version += 1
+                    existing_hypothesis.history.append({
+                        "version": existing_hypothesis.version,
+                        "status": existing_hypothesis.status,
+                        "finding_version": finding_ref,
+                        "snapshot_id": context.snapshot_id,
+                    })
+                    hypotheses_invalidated.append(hypothesis_id)
+                else:
+                    reviews.append(finding_ref + ":NO_DEPENDENT_HYPOTHESIS_TO_INVALIDATE")
+                    continue
+            elif existing_hypothesis is None:
+                falsification_criteria = _falsification_criteria(result)
+                if not falsification_criteria:
+                    reviews.append(finding_ref + ":FALSIFICATION_CRITERIA_REQUIRED")
+                    continue
+                hypothesis = ResearchHypothesis(
+                    hypothesis_id=hypothesis_id,
+                    source_finding=finding_id,
+                    source_question=qid,
+                    domain=qid.split("-")[0],
+                    created_at=result.evaluated_at,
+                    statement=_conclusion(result),
+                    target_component=str(_metric(result, "target_component") or "Unknown"),
+                    expected_effect=str(_metric(result, "expected_effect") or _effect_direction(result)),
+                    confidence=str(result.confidence or "LOW"),
+                    evidence_strength=str(_metric(result, "evidence_strength") or reason),
+                    status="PROPOSED",
+                    hypothesis_type=("MECHANISTIC_HYPOTHESIS" if mechanism else "OBSERVATIONAL_HYPOTHESIS"),
+                    mechanism=mechanism,
+                    mechanism_unknown=not bool(mechanism),
+                    target_population=_population(result),
+                    falsification_criteria=falsification_criteria,
+                    required_evidence=list(result.evidence_datasets),
+                    source_finding_versions=[finding_ref],
+                    source_question_results=[result.result_id],
+                    evidence_lineage={
+                        "snapshot_id": context.snapshot_id,
+                        "result_id": result.result_id,
+                        **context.generated_lineage(qid),
+                    },
+                    history=[{"version": 1, "status": "PROPOSED", "finding_version": finding_ref}],
+                )
+                registry.add_hypothesis(hypothesis)
+                hypotheses_created.append(hypothesis_id)
+                if not mechanism:
+                    reviews.append(hypothesis_id + ":MECHANISM_UNKNOWN")
+            else:
+                existing_hypothesis.version += 1
+                existing_hypothesis.source_finding_versions.append(finding_ref)
+                existing_hypothesis.source_question_results.append(result.result_id)
+                existing_hypothesis.confidence = str(result.confidence or existing_hypothesis.confidence)
+                if action == "FINDING_WEAKENED":
+                    existing_hypothesis.status = "EVIDENCE_WEAKENED_REVIEW_REQUIRED"
+                elif action in {"FINDING_AMENDED", "FINDING_SUPERSEDED"}:
+                    existing_hypothesis.status = "AMENDED_REVIEW_REQUIRED"
+                existing_hypothesis.history.append({
+                    "version": existing_hypothesis.version,
+                    "status": existing_hypothesis.status,
+                    "finding_version": finding_ref,
+                    "snapshot_id": context.snapshot_id,
+                })
+                hypotheses_updated.append(hypothesis_id)
+
+            document["hypothesis_history"].setdefault(hypothesis_id, []).append({
+                "hypothesis_id": hypothesis_id,
+                "finding_version": finding_ref,
+                "action": action,
+                "snapshot_id": context.snapshot_id,
+                "result_id": result.result_id,
+            })
+            document["current"]["hypotheses"][hypothesis_id] = finding_ref
+            deps = document["dependencies"].setdefault(finding_id, {
+                "hypotheses": [], "candidates": [],
+            })
+            if hypothesis_id not in deps["hypotheses"]:
+                deps["hypotheses"].append(hypothesis_id)
+
+            # Upstream deterioration propagates before any candidate design.
+            if action in {"FINDING_WEAKENED", "FINDING_INVALIDATED"}:
+                for candidate_id in list(deps["candidates"]):
+                    candidate = registry.get_candidate(candidate_id)
+                    if candidate is None:
+                        raise ScientificStateBridgeError(
+                            "DEPENDENCY_GRAPH_CANDIDATE_MISSING:" + candidate_id)
+                    if candidate.status in _LIVE_CANDIDATE_STATUSES:
+                        governance.append({
+                            "candidate_id": candidate_id,
+                            "signal": "UPSTREAM_" + action,
+                            "action": "GOVERNANCE_REVIEW_REQUIRED_NO_RUNTIME_MUTATION",
+                        })
+                    elif candidate.status in _MUTABLE_RESEARCH_CANDIDATE_STATUSES:
+                        if action == "FINDING_INVALIDATED":
+                            candidate.status = "BLOCKED_UPSTREAM_INVALIDATED"
+                        candidate.provenance["evidence_state"] = action
+                        candidate.status_history.append({
+                            "status": candidate.status,
+                            "timestamp": result.evaluated_at,
+                            "reason": action,
+                        })
+                        candidates_updated.append(candidate_id)
+                if action == "FINDING_INVALIDATED":
+                    continue
+
+            policy_id = str(_metric(result, "governed_policy_id", "policy_id") or "")
+            if not policy_id:
+                designs.append(hypothesis_id)
+                reviews.append(hypothesis_id + ":CANDIDATE_DESIGN_REQUIRED")
+                continue
+            policy = policies.get(policy_id)
+            if policy is None:
+                designs.append(hypothesis_id)
+                reviews.append(hypothesis_id + ":UNGOVERNED_POLICY_ID:" + policy_id)
+                continue
+            supplied_parameters = _metric(result, "governed_policy_parameters", "treatment_parameters")
+            if supplied_parameters is not None and dict(supplied_parameters) != policy:
+                raise ScientificStateBridgeError("GOVERNED_POLICY_PARAMETERS_MISMATCH:" + policy_id)
+            criteria = _complete_validation_criteria(result)
+            if criteria is None:
+                designs.append(hypothesis_id)
+                reviews.append(hypothesis_id + ":VALIDATION_CRITERIA_REQUIRED")
+                continue
+            treatment_hash = _treatment_hash(policy)
+            signature = _treatment_signature(qid, policy, result)
+            known = _known_treatment(
+                policy_id, treatment_hash, _population(result), signature, registry)
+            if known is not None:
+                suppressed.append(known.candidate_id)
+                if known.candidate_id not in deps["candidates"]:
+                    deps["candidates"].append(known.candidate_id)
+                document["current"]["candidates"][known.candidate_id] = "EXTERNAL_OPTIMISATION_REGISTRY"
+                continue
+            memory_decision = _memory_assessment(
+                policy_id, treatment_hash, context.snapshot_id, signature, memory)
+            if memory_decision["decision"] == "DUPLICATE_OR_REJECTED_TREATMENT":
+                suppressed.append(policy_id + ":TREATMENT_MEMORY")
+                reviews.append(policy_id + ":REVISIT_NOT_AUTHORISED")
+                continue
+            candidate_id = _candidate_id(hypothesis_id, policy_id, _population(result))
+            existing_candidate = registry.get_candidate(candidate_id)
+            if existing_candidate is not None:
+                if (
+                    existing_candidate.hypothesis_id != hypothesis_id
+                    or existing_candidate.policy_id != policy_id
+                    or existing_candidate.treatment_hash != treatment_hash
+                ):
+                    raise ScientificStateBridgeError(
+                        "DUPLICATE_CONFLICTING_CANDIDATE_IDENTITY:" + candidate_id)
+                suppressed.append(candidate_id)
+                continue
+            candidate = OptimisationCandidate(
+                candidate_id=candidate_id,
+                hypothesis_id=hypothesis_id,
+                baseline_id=str(_metric(result, "baseline_id") or context.snapshot_id),
+                created_at=result.evaluated_at,
+                component=signature.component.value,
+                changes={"policy_id": policy_id, "frozen_policy": policy},
+                expected_outcome=str(_metric(result, "expected_effect") or _effect_direction(result)),
+                risk_level=classify_change_risk(policy),
+                status="PROPOSED",
+                notes="Block 3 proposal only; validation and runtime activation are forbidden.",
+                policy_id=policy_id,
+                treatment_hash=treatment_hash,
+                source_finding_versions=[finding_ref],
+                source_question_results=[result.result_id],
+                target_population=_population(result),
+                validation_objective=str(_metric(result, "validation_objective") or _conclusion(result)),
+                validation_requirements=dict(criteria or {}),
+                limitations=[str(item) for item in result.limitations],
+                provenance={
+                    "source_cycle_id": context.cycle_id,
+                    "snapshot_id": context.snapshot_id,
+                    "investigation_epoch": context.investigation_epoch,
+                    "finding_id": finding_id,
+                    "finding_version": finding_ref,
+                    "question_id": qid,
+                    "question_result_id": result.result_id,
+                    **context.generated_lineage(qid),
+                    "policy_authority": (
+                        "research_engine.registry.exit_policy_adjudication.CANDIDATE_POLICIES_V1"
+                    ),
+                    "treatment_memory": memory_decision,
+                    "treatment_signature": signature.to_dict(),
+                    "target_population": _population(result),
+                    "reported_target_component": _metric(result, "target_component"),
+                },
+            )
+            plan = _validation_plan(candidate, result)
+            registry.add_candidate(candidate)
+            registry.add_plan(plan)
+            candidates_created.append(candidate_id)
+            deps["candidates"].append(candidate_id)
+            document["current"]["candidates"][candidate_id] = finding_ref
+            document["candidate_history"].setdefault(candidate_id, []).append({
+                "candidate_id": candidate_id,
+                "status": "PROPOSED",
+                "finding_version": finding_ref,
+                "hypothesis_id": hypothesis_id,
+                "question_result_id": result.result_id,
+                "snapshot_id": context.snapshot_id,
+                "policy_id": policy_id,
+                "treatment_hash": treatment_hash,
+            })
+            handoff.append({
+                "candidate_id": candidate_id,
+                "status": "PROPOSED",
+                "policy_id": policy_id,
+                "treatment_hash": treatment_hash,
+                "validation_plan": plan.to_dict(),
+                "source_finding_version": finding_ref,
+                "source_hypothesis_id": hypothesis_id,
+                "source_question_result_id": result.result_id,
+            })
+        except ScientificStateBridgeError:
+            raise
+        except Exception as exc:
+            document = item_document
+            registry._hypotheses = item_hypotheses
+            registry._candidates = item_candidates
+            registry._plans = item_plans
+            failures.append({
+                "question_id": qid,
+                "category": type(exc).__name__,
+                "reason": str(exc),
+            })
+
+    context.document = document
+
+
+def _commit_bridge_run(
+    *, result: ScientificStateBridgeResult, document: Mapping[str, Any],
+    registry: OptimisationRegistry, sstore: ScientificStateStore,
+    reconciled_id: str | None, reconciled_before: Mapping[str, Any] | None,
+    persistence_hook: Callable[[str], None] | None,
+) -> ScientificStateBridgeResult:
+    """Persist one reconciliation run with the canonical rollback contract.
+
+    Shared by the canonical and generated bridges so both are equally safe: a
+    partial write can never publish a success receipt, and the live candidate
+    binding is re-verified after persistence.
+    """
+    registry_path = registry._dir / "registry.json"
+    original_registry = registry_path.read_bytes() if registry_path.exists() else None
+    try:
+        if persistence_hook:
+            persistence_hook("before_registry")
+        registry.save()
+        if persistence_hook:
+            persistence_hook("before_scientific_state")
+        sstore.commit(document, result.to_dict())
+    except Exception as exc:
+        try:
+            _restore_registry_file(registry_path, original_registry)
+        except Exception as restore_exc:
+            raise ScientificStateBridgeError(
+                "BRIDGE_PERSISTENCE_AND_REGISTRY_RECOVERY_FAILED:"
+                f"{exc}:{restore_exc}") from restore_exc
+        raise ScientificStateBridgeError(
+            f"BRIDGE_PERSISTENCE_FAILED:{type(exc).__name__}:{exc}") from exc
+
+    # Historical consistency invariant: reconciliation may never mutate live binding.
+    if reconciled_id and reconciled_before:
+        after = registry.get_candidate(reconciled_id)
+        if after is None or {
+            "treatment_hash": after.treatment_hash,
+            "status": after.status,
+            "shadow_binding": dict(after.shadow_binding),
+        } != {
+            "treatment_hash": reconciled_before["treatment_hash"],
+            "status": reconciled_before["status"],
+            "shadow_binding": reconciled_before["shadow_binding"],
+        }:
+            raise ScientificStateBridgeError("OPT_DP1_002_RUNTIME_STATE_MUTATED")
+    return result
+
+
 def run_scientific_state_bridge(
     question_cycle_result: Any,
     *,
@@ -681,273 +1101,29 @@ def run_scientific_state_bridge(
 
     reconciled_id, reconciled_before = _reconcile_opt_dp1_002(document, registry)
 
-    for qid in sorted(changed_results):
-        result = changed_results[qid]
-        item_document = deepcopy(document)
-        item_hypotheses = deepcopy(registry._hypotheses)
-        item_candidates = deepcopy(registry._candidates)
-        item_plans = deepcopy(registry._plans)
-        try:
-            meaningful, reason = _explicit_scientific_signal(result)
-            if not meaningful:
-                if result.status in {COMPLETE, NEGATIVE_RESULT} and _conclusion(result):
-                    reviews.append(qid + ":FINDING_DERIVATION:" + reason)
-                continue
-            finding_id = _finding_identity(result)
-            history = document["findings"].setdefault(finding_id, [])
-            previous = history[-1] if history else None
-            action = _finding_action(previous, result)
-            if action == "NO_FINDING_CHANGE":
-                continue
-            finding = _finding_record(finding_id, len(history) + 1, result, action, previous)
-            history.append(finding)
-            finding_ref = f"{finding_id}:v{finding['finding_version']}"
-            document["current"]["findings"][finding_id] = finding_ref
-            if action == "NEW_FINDING":
-                created.append(finding_ref)
-            elif action == "FINDING_STRENGTHENED":
-                strengthened.append(finding_ref)
-            elif action == "FINDING_WEAKENED":
-                weakened.append(finding_ref)
-            elif action in {"FINDING_AMENDED", "FINDING_SUPERSEDED"}:
-                amended.append(finding_ref)
-            elif action == "FINDING_INVALIDATED":
-                invalidated.append(finding_ref)
-
-            hypothesis_id = _hypothesis_id(finding_id)
-            # Reconcile an explicitly named pre-existing hypothesis rather than minting a duplicate.
-            supplied_hypothesis = _metric(result, "source_hypothesis_id", "hypothesis_id")
-            if supplied_hypothesis and registry.get_hypothesis(str(supplied_hypothesis)):
-                hypothesis_id = str(supplied_hypothesis)
-            existing_hypothesis = registry.get_hypothesis(hypothesis_id)
-            if existing_hypothesis is not None and existing_hypothesis.source_finding != finding_id:
-                raise ScientificStateBridgeError(
-                    "HYPOTHESIS_IDENTITY_COLLISION:" + hypothesis_id)
-            mechanism = str(_metric(result, "mechanism") or "")
-            if action == "FINDING_INVALIDATED":
-                if existing_hypothesis:
-                    existing_hypothesis.status = "INVALIDATED_UPSTREAM"
-                    existing_hypothesis.version += 1
-                    existing_hypothesis.history.append({
-                        "version": existing_hypothesis.version,
-                        "status": existing_hypothesis.status,
-                        "finding_version": finding_ref,
-                        "snapshot_id": cycle.snapshot_id,
-                    })
-                    hypotheses_invalidated.append(hypothesis_id)
-                else:
-                    reviews.append(finding_ref + ":NO_DEPENDENT_HYPOTHESIS_TO_INVALIDATE")
-                    continue
-            elif existing_hypothesis is None:
-                falsification_criteria = _falsification_criteria(result)
-                if not falsification_criteria:
-                    reviews.append(finding_ref + ":FALSIFICATION_CRITERIA_REQUIRED")
-                    continue
-                hypothesis = ResearchHypothesis(
-                    hypothesis_id=hypothesis_id,
-                    source_finding=finding_id,
-                    source_question=qid,
-                    domain=qid.split("-")[0],
-                    created_at=result.evaluated_at,
-                    statement=_conclusion(result),
-                    target_component=str(_metric(result, "target_component") or "Unknown"),
-                    expected_effect=str(_metric(result, "expected_effect") or _effect_direction(result)),
-                    confidence=str(result.confidence or "LOW"),
-                    evidence_strength=str(_metric(result, "evidence_strength") or reason),
-                    status="PROPOSED",
-                    hypothesis_type=("MECHANISTIC_HYPOTHESIS" if mechanism else "OBSERVATIONAL_HYPOTHESIS"),
-                    mechanism=mechanism,
-                    mechanism_unknown=not bool(mechanism),
-                    target_population=_population(result),
-                    falsification_criteria=falsification_criteria,
-                    required_evidence=list(result.evidence_datasets),
-                    source_finding_versions=[finding_ref],
-                    source_question_results=[result.result_id],
-                    evidence_lineage={"snapshot_id": cycle.snapshot_id, "result_id": result.result_id},
-                    history=[{"version": 1, "status": "PROPOSED", "finding_version": finding_ref}],
-                )
-                registry.add_hypothesis(hypothesis)
-                hypotheses_created.append(hypothesis_id)
-                if not mechanism:
-                    reviews.append(hypothesis_id + ":MECHANISM_UNKNOWN")
-            else:
-                existing_hypothesis.version += 1
-                existing_hypothesis.source_finding_versions.append(finding_ref)
-                existing_hypothesis.source_question_results.append(result.result_id)
-                existing_hypothesis.confidence = str(result.confidence or existing_hypothesis.confidence)
-                if action == "FINDING_WEAKENED":
-                    existing_hypothesis.status = "EVIDENCE_WEAKENED_REVIEW_REQUIRED"
-                elif action in {"FINDING_AMENDED", "FINDING_SUPERSEDED"}:
-                    existing_hypothesis.status = "AMENDED_REVIEW_REQUIRED"
-                existing_hypothesis.history.append({
-                    "version": existing_hypothesis.version,
-                    "status": existing_hypothesis.status,
-                    "finding_version": finding_ref,
-                    "snapshot_id": cycle.snapshot_id,
-                })
-                hypotheses_updated.append(hypothesis_id)
-
-            document["hypothesis_history"].setdefault(hypothesis_id, []).append({
-                "hypothesis_id": hypothesis_id,
-                "finding_version": finding_ref,
-                "action": action,
-                "snapshot_id": cycle.snapshot_id,
-                "result_id": result.result_id,
-            })
-            document["current"]["hypotheses"][hypothesis_id] = finding_ref
-            deps = document["dependencies"].setdefault(finding_id, {
-                "hypotheses": [], "candidates": [],
-            })
-            if hypothesis_id not in deps["hypotheses"]:
-                deps["hypotheses"].append(hypothesis_id)
-
-            # Upstream deterioration propagates before any candidate design.
-            if action in {"FINDING_WEAKENED", "FINDING_INVALIDATED"}:
-                for candidate_id in list(deps["candidates"]):
-                    candidate = registry.get_candidate(candidate_id)
-                    if candidate is None:
-                        raise ScientificStateBridgeError(
-                            "DEPENDENCY_GRAPH_CANDIDATE_MISSING:" + candidate_id)
-                    if candidate.status in _LIVE_CANDIDATE_STATUSES:
-                        governance.append({
-                            "candidate_id": candidate_id,
-                            "signal": "UPSTREAM_" + action,
-                            "action": "GOVERNANCE_REVIEW_REQUIRED_NO_RUNTIME_MUTATION",
-                        })
-                    elif candidate.status in _MUTABLE_RESEARCH_CANDIDATE_STATUSES:
-                        if action == "FINDING_INVALIDATED":
-                            candidate.status = "BLOCKED_UPSTREAM_INVALIDATED"
-                        candidate.provenance["evidence_state"] = action
-                        candidate.status_history.append({
-                            "status": candidate.status,
-                            "timestamp": result.evaluated_at,
-                            "reason": action,
-                        })
-                        candidates_updated.append(candidate_id)
-                if action == "FINDING_INVALIDATED":
-                    continue
-
-            policy_id = str(_metric(result, "governed_policy_id", "policy_id") or "")
-            if not policy_id:
-                designs.append(hypothesis_id)
-                reviews.append(hypothesis_id + ":CANDIDATE_DESIGN_REQUIRED")
-                continue
-            policy = policies.get(policy_id)
-            if policy is None:
-                designs.append(hypothesis_id)
-                reviews.append(hypothesis_id + ":UNGOVERNED_POLICY_ID:" + policy_id)
-                continue
-            supplied_parameters = _metric(result, "governed_policy_parameters", "treatment_parameters")
-            if supplied_parameters is not None and dict(supplied_parameters) != policy:
-                raise ScientificStateBridgeError("GOVERNED_POLICY_PARAMETERS_MISMATCH:" + policy_id)
-            criteria = _complete_validation_criteria(result)
-            if criteria is None:
-                designs.append(hypothesis_id)
-                reviews.append(hypothesis_id + ":VALIDATION_CRITERIA_REQUIRED")
-                continue
-            treatment_hash = _treatment_hash(policy)
-            signature = _treatment_signature(qid, policy, result)
-            known = _known_treatment(
-                policy_id, treatment_hash, _population(result), signature, registry)
-            if known is not None:
-                suppressed.append(known.candidate_id)
-                if known.candidate_id not in deps["candidates"]:
-                    deps["candidates"].append(known.candidate_id)
-                document["current"]["candidates"][known.candidate_id] = "EXTERNAL_OPTIMISATION_REGISTRY"
-                continue
-            memory_decision = _memory_assessment(
-                policy_id, treatment_hash, cycle.snapshot_id, signature, memory)
-            if memory_decision["decision"] == "DUPLICATE_OR_REJECTED_TREATMENT":
-                suppressed.append(policy_id + ":TREATMENT_MEMORY")
-                reviews.append(policy_id + ":REVISIT_NOT_AUTHORISED")
-                continue
-            candidate_id = _candidate_id(hypothesis_id, policy_id, _population(result))
-            existing_candidate = registry.get_candidate(candidate_id)
-            if existing_candidate is not None:
-                if (
-                    existing_candidate.hypothesis_id != hypothesis_id
-                    or existing_candidate.policy_id != policy_id
-                    or existing_candidate.treatment_hash != treatment_hash
-                ):
-                    raise ScientificStateBridgeError(
-                        "DUPLICATE_CONFLICTING_CANDIDATE_IDENTITY:" + candidate_id)
-                suppressed.append(candidate_id)
-                continue
-            candidate = OptimisationCandidate(
-                candidate_id=candidate_id,
-                hypothesis_id=hypothesis_id,
-                baseline_id=str(_metric(result, "baseline_id") or cycle.snapshot_id),
-                created_at=result.evaluated_at,
-                component=signature.component.value,
-                changes={"policy_id": policy_id, "frozen_policy": policy},
-                expected_outcome=str(_metric(result, "expected_effect") or _effect_direction(result)),
-                risk_level=classify_change_risk(policy),
-                status="PROPOSED",
-                notes="Block 3 proposal only; validation and runtime activation are forbidden.",
-                policy_id=policy_id,
-                treatment_hash=treatment_hash,
-                source_finding_versions=[finding_ref],
-                source_question_results=[result.result_id],
-                target_population=_population(result),
-                validation_objective=str(_metric(result, "validation_objective") or _conclusion(result)),
-                validation_requirements=dict(criteria or {}),
-                limitations=[str(item) for item in result.limitations],
-                provenance={
-                    "source_cycle_id": cycle.cycle_id,
-                    "snapshot_id": cycle.snapshot_id,
-                    "investigation_epoch": cycle.investigation_epoch,
-                    "finding_id": finding_id,
-                    "finding_version": finding_ref,
-                    "question_id": qid,
-                    "question_result_id": result.result_id,
-                    "policy_authority": (
-                        "research_engine.registry.exit_policy_adjudication.CANDIDATE_POLICIES_V1"
-                    ),
-                    "treatment_memory": memory_decision,
-                    "treatment_signature": signature.to_dict(),
-                    "target_population": _population(result),
-                    "reported_target_component": _metric(result, "target_component"),
-                },
-            )
-            plan = _validation_plan(candidate, result)
-            registry.add_candidate(candidate)
-            registry.add_plan(plan)
-            candidates_created.append(candidate_id)
-            deps["candidates"].append(candidate_id)
-            document["current"]["candidates"][candidate_id] = finding_ref
-            document["candidate_history"].setdefault(candidate_id, []).append({
-                "candidate_id": candidate_id,
-                "status": "PROPOSED",
-                "finding_version": finding_ref,
-                "hypothesis_id": hypothesis_id,
-                "question_result_id": result.result_id,
-                "snapshot_id": cycle.snapshot_id,
-                "policy_id": policy_id,
-                "treatment_hash": treatment_hash,
-            })
-            handoff.append({
-                "candidate_id": candidate_id,
-                "status": "PROPOSED",
-                "policy_id": policy_id,
-                "treatment_hash": treatment_hash,
-                "validation_plan": plan.to_dict(),
-                "source_finding_version": finding_ref,
-                "source_hypothesis_id": hypothesis_id,
-                "source_question_result_id": result.result_id,
-            })
-        except ScientificStateBridgeError:
-            raise
-        except Exception as exc:
-            document = item_document
-            registry._hypotheses = item_hypotheses
-            registry._candidates = item_candidates
-            registry._plans = item_plans
-            failures.append({
-                "question_id": qid,
-                "category": type(exc).__name__,
-                "reason": str(exc),
-            })
-
+    context = _ReconciliationContext(
+        document=document, registry=registry, policies=policies,
+        memory=memory, cycle_id=cycle.cycle_id,
+        snapshot_id=cycle.snapshot_id,
+        investigation_epoch=cycle.investigation_epoch,
+        sinks=_new_reconciliation_sinks(), failures=failures,
+        handoff=handoff)
+    _reconcile_changed_results(changed_results, context)
+    document = context.document
+    created = context.sinks["findings_created"]
+    strengthened = context.sinks["findings_strengthened"]
+    weakened = context.sinks["findings_weakened"]
+    amended = context.sinks["findings_amended"]
+    invalidated = context.sinks["findings_invalidated"]
+    hypotheses_created = context.sinks["hypotheses_created"]
+    hypotheses_updated = context.sinks["hypotheses_updated"]
+    hypotheses_invalidated = context.sinks["hypotheses_invalidated"]
+    candidates_created = context.sinks["candidates_created"]
+    candidates_updated = context.sinks["candidates_updated"]
+    designs = context.sinks["candidate_design_required"]
+    suppressed = context.sinks["duplicate_equivalent_treatments_suppressed"]
+    reviews = context.sinks["review_required"]
+    governance = context.sinks["governance_signals"]
     timestamp = cycle.completed_at
     material_change = any((
         created, strengthened, weakened, amended, invalidated,
@@ -985,46 +1161,182 @@ def run_scientific_state_bridge(
         scientific_state_path=str(sstore.state_path),
         optimisation_registry_path=str(registry._dir / "registry.json"),
         validation_handoff=tuple(handoff),
+        source_kind=CANONICAL_SOURCE_KIND,
     )
 
-    registry_path = registry._dir / "registry.json"
-    original_registry = registry_path.read_bytes() if registry_path.exists() else None
-    try:
-        if persistence_hook:
-            persistence_hook("before_registry")
-        registry.save()
-        if persistence_hook:
-            persistence_hook("before_scientific_state")
-        sstore.commit(document, result.to_dict())
-    except Exception as exc:
-        try:
-            _restore_registry_file(registry_path, original_registry)
-        except Exception as restore_exc:
-            raise ScientificStateBridgeError(
-                f"BRIDGE_PERSISTENCE_AND_REGISTRY_RECOVERY_FAILED:{exc}:{restore_exc}"
-            ) from restore_exc
-        raise ScientificStateBridgeError(
-            f"BRIDGE_PERSISTENCE_FAILED:{type(exc).__name__}:{exc}"
-        ) from exc
+    return _commit_bridge_run(
+        result=result, document=document, registry=registry, sstore=sstore,
+        reconciled_id=reconciled_id, reconciled_before=reconciled_before,
+        persistence_hook=persistence_hook)
 
-    # Historical consistency invariant: reconciliation may never mutate live binding.
-    if reconciled_id and reconciled_before:
-        after = registry.get_candidate(reconciled_id)
-        if after is None or {
-            "treatment_hash": after.treatment_hash,
-            "status": after.status,
-            "shadow_binding": dict(after.shadow_binding),
-        } != {
-            "treatment_hash": reconciled_before["treatment_hash"],
-            "status": reconciled_before["status"],
-            "shadow_binding": reconciled_before["shadow_binding"],
-        }:
-            raise ScientificStateBridgeError("OPT_DP1_002_RUNTIME_STATE_MUTATED")
-    return result
+
+def _load_generated_batch(
+    batch_input: Any, result_store: Any,
+) -> tuple[Any, dict[str, CanonicalQuestionResult]]:
+    """Load and verify one immutable generated-question execution batch.
+
+    Every result is re-read from its own immutable artifact and compared, so a
+    mutable index can never substitute a different scientific claim.
+    """
+    if isinstance(batch_input, GeneratedQuestionExecutionBatch):
+        supplied = batch_input
+    elif isinstance(batch_input, str):
+        supplied = result_store.load_batch(batch_input)
+        if supplied is None:
+            raise ScientificStateBridgeError(
+                "SOURCE_GENERATED_BATCH_NOT_FOUND:" + batch_input)
+    else:
+        raise ScientificStateBridgeError("INVALID_SOURCE_GENERATED_BATCH_TYPE")
+    persisted = result_store.load_batch(supplied.batch_id)
+    if persisted is None or persisted.to_dict() != supplied.to_dict():
+        raise ScientificStateBridgeError(
+            "SOURCE_GENERATED_BATCH_IDENTITY_UNVERIFIED")
+    results: dict[str, CanonicalQuestionResult] = {}
+    for entry in persisted.entries:
+        question_id = str(entry.get("generated_question_id") or "")
+        result_id = str(entry.get("result_id") or "")
+        if not question_id or not result_id:
+            raise ScientificStateBridgeError(
+                "GENERATED_BATCH_ENTRY_INCOMPLETE:" + question_id)
+        stored = result_store.load_result(result_id)
+        if stored is None or stored.result_id != result_id:
+            raise ScientificStateBridgeError(
+                "MISSING_IMMUTABLE_GENERATED_RESULT:" + result_id)
+        if stored.generated_question_id != question_id:
+            raise ScientificStateBridgeError(
+                "GENERATED_RESULT_QUESTION_MISMATCH:" + result_id)
+        if stored.execution_status != str(entry.get("execution_status") or ""):
+            raise ScientificStateBridgeError(
+                "GENERATED_RESULT_STATUS_MISMATCH:" + result_id)
+        if stored.snapshot_fingerprint != persisted.snapshot_fingerprint:
+            raise ScientificStateBridgeError(
+                "GENERATED_RESULT_EVIDENCE_MISMATCH:" + result_id)
+        results[question_id] = stored.transport()
+    return persisted, results
+
+
+def run_generated_scientific_bridge(
+    batch: Any,
+    *,
+    generated_result_directory: Path | str = DEFAULT_GENERATED_RESULT_DIRECTORY,
+    generated_result_store: Any | None = None,
+    scientific_state_directory: Path | str = DEFAULT_SCIENTIFIC_STATE_DIRECTORY,
+    optimisation_registry_directory: Path | str = "data/research/optimisation",
+    treatment_memory_path: Path | str | None = None,
+    scientific_store: ScientificStateStore | None = None,
+    optimisation_registry: OptimisationRegistry | None = None,
+    treatment_store: TreatmentMemoryStore | None = None,
+    policy_catalog: Sequence[Mapping[str, Any]] = CANDIDATE_POLICIES_V1,
+    persistence_hook: Callable[[str], None] | None = None,
+) -> ScientificStateBridgeResult:
+    """Reconcile one immutable generated-question batch into scientific state.
+
+    This calls the *same* reconciliation helper as the canonical bridge.  No rule
+    is relaxed for generated questions: a generated result creates a finding,
+    hypothesis or candidate only under exactly the canonical conditions.
+    """
+    rstore = generated_result_store or GeneratedQuestionResultStore(
+        generated_result_directory)
+    execution_batch, changed_results = _load_generated_batch(batch, rstore)
+    bridge_run_id = "GSBRIDGE-" + fingerprint({
+        "batch_id": execution_batch.batch_id,
+        "result_ids": sorted(
+            str(item.get("result_id")) for item in execution_batch.entries),
+    })[:32].upper()
+    sstore = scientific_store or ScientificStateStore(scientific_state_directory)
+    existing = sstore.load_run(bridge_run_id)
+    if existing is not None:
+        return ScientificStateBridgeResult.from_dict(existing)
+    registry = optimisation_registry or OptimisationRegistry(
+        str(optimisation_registry_directory))
+    if optimisation_registry is None:
+        try:
+            registry.load()
+        except Exception as exc:
+            raise ScientificStateBridgeError(
+                "AUTHORITATIVE_OPTIMISATION_REGISTRY_INVALID:"
+                f"{type(exc).__name__}:{exc}") from exc
+    try:
+        memory = treatment_store or TreatmentMemoryStore(treatment_memory_path)
+    except Exception as exc:
+        raise ScientificStateBridgeError(
+            f"TREATMENT_MEMORY_CORRUPT:{type(exc).__name__}:{exc}") from exc
+    policies = {str(row.get("policy_id")): dict(row) for row in policy_catalog}
+    if len(policies) != len(tuple(policy_catalog)) or "" in policies:
+        raise ScientificStateBridgeError("GOVERNED_POLICY_CATALOG_INVALID")
+    document = sstore.document
+    failures: list[dict[str, Any]] = []
+    handoff: list[dict[str, Any]] = []
+    reconciled_id, reconciled_before = _reconcile_opt_dp1_002(document, registry)
+    generated_result_ids = {
+        str(item.get("generated_question_id")): str(item.get("result_id") or "")
+        for item in execution_batch.entries
+        if item.get("result_id")
+    }
+    context = _ReconciliationContext(
+        document=document, registry=registry, policies=policies, memory=memory,
+        cycle_id=execution_batch.batch_id,
+        snapshot_id=execution_batch.snapshot_id,
+        investigation_epoch=execution_batch.investigation_epoch,
+        sinks=_new_reconciliation_sinks(), failures=failures, handoff=handoff,
+        generated_result_ids=generated_result_ids)
+    _reconcile_changed_results(changed_results, context)
+    document = context.document
+    sinks = context.sinks
+    timestamp = execution_batch.recorded_at
+    material_change = any((
+        sinks["findings_created"], sinks["findings_strengthened"],
+        sinks["findings_weakened"], sinks["findings_amended"],
+        sinks["findings_invalidated"], sinks["hypotheses_created"],
+        sinks["hypotheses_updated"], sinks["hypotheses_invalidated"],
+        sinks["candidates_created"], sinks["candidates_updated"],
+        sinks["candidate_design_required"], sinks["governance_signals"],
+    ))
+    status = (
+        COMPLETED_WITH_ITEM_FAILURES if failures
+        else NO_SCIENTIFIC_STATE_CHANGE if not material_change
+        else COMPLETED_WITH_REVIEW if sinks["review_required"] else COMPLETED
+    )
+    result = ScientificStateBridgeResult(
+        bridge_run_id=bridge_run_id,
+        snapshot_id=execution_batch.snapshot_id,
+        source_cycle_id=execution_batch.batch_id,
+        question_changes_processed=tuple(sorted(changed_results)),
+        findings_created=tuple(sinks["findings_created"]),
+        findings_strengthened=tuple(sinks["findings_strengthened"]),
+        findings_weakened=tuple(sinks["findings_weakened"]),
+        findings_amended=tuple(sinks["findings_amended"]),
+        findings_invalidated=tuple(sinks["findings_invalidated"]),
+        hypotheses_created=tuple(sinks["hypotheses_created"]),
+        hypotheses_updated=tuple(sinks["hypotheses_updated"]),
+        hypotheses_invalidated=tuple(sinks["hypotheses_invalidated"]),
+        candidates_created=tuple(sinks["candidates_created"]),
+        candidates_updated=tuple(sinks["candidates_updated"]),
+        candidate_design_required=tuple(sinks["candidate_design_required"]),
+        duplicate_equivalent_treatments_suppressed=tuple(sorted(set(
+            sinks["duplicate_equivalent_treatments_suppressed"]))),
+        review_required=tuple(sinks["review_required"]),
+        governance_signals=tuple(sinks["governance_signals"]),
+        failures=tuple(failures),
+        status=status,
+        started_at=timestamp,
+        completed_at=timestamp,
+        scientific_state_path=str(sstore.state_path),
+        optimisation_registry_path=str(registry._dir / "registry.json"),
+        validation_handoff=tuple(handoff),
+        source_kind=GENERATED_SOURCE_KIND,
+    )
+    return _commit_bridge_run(
+        result=result, document=document, registry=registry, sstore=sstore,
+        reconciled_id=reconciled_id, reconciled_before=reconciled_before,
+        persistence_hook=persistence_hook)
 
 
 __all__ = [
+    "CANONICAL_SOURCE_KIND",
+    "GENERATED_SOURCE_KIND",
     "ScientificStateBridgeError",
     "ScientificStateBridgeResult",
+    "run_generated_scientific_bridge",
     "run_scientific_state_bridge",
 ]

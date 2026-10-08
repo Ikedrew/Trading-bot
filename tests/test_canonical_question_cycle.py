@@ -676,8 +676,17 @@ def test_bounded_incremental_cycle_closes_delta_retains_and_publishes(tmp_path):
         "canonical_questions"]] == [question.id for question in REGISTRY]
     assert len({row["result"]["result_id"] for row in second_projection[
         "canonical_questions"]}) == 70
-    assert second_projection["generated_questions"] == [
-        {"generated_question_id": "Q71-SYNTHETIC"}]
+    generated_rows = second_projection["generated_questions"]
+    assert [row["generated_question_id"] for row in generated_rows] == [
+        "Q71-SYNTHETIC"]
+    # The Q71+ payload is carried through the projection and enriched with the
+    # governed lifecycle/execution derivation (Repair Block 2).  A generated
+    # question with no execution state is never reported as scientific.
+    assert generated_rows[0]["latest_result_id"] is None
+    assert generated_rows[0]["execution_status"] is None
+    assert generated_rows[0]["question_answered"] is False
+    assert generated_rows[0]["question_scientifically_actionable"] is False
+    assert generated_rows[0]["execution_freshness"] == "NEVER_EXECUTED"
     assert "Q71-SYNTHETIC" not in {
         row["question_id"] for row in second_projection["canonical_questions"]}
 

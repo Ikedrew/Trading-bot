@@ -310,7 +310,7 @@ def test_unchanged_frontier_without_projection_bootstraps_downstream(tmp_path):
     assert progress["status"] == "COMPLETED"
     assert set(progress["stages"]) == {
         "FRONTIER", "QUESTIONS", "SCIENTIFIC_STATE", "Q71_PLUS",
-        "VALIDATION_QUEUE", "PROJECTION",
+        "Q71_EXECUTION", "VALIDATION_QUEUE", "PROJECTION",
     }
     assert all(item["finished_at"] and item["elapsed_seconds"] is not None
                for item in progress["stages"].values())

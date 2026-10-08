@@ -158,6 +158,34 @@ def build_lab_view(projection: Mapping[str, Any]) -> dict[str, Any]:
         "generated_questions": list(projection.get("generated_questions") or []),
         "generated_question_count": len(
             projection.get("generated_questions") or []),
+        # The five generated-question distinctions, taken from the projection's
+        # own derivation so the lab view can never invent scientific meaning.
+        "generated_question_lifecycle_counts": dict(
+            queues.get("generated_question_lifecycle_counts") or {}),
+        "generated_question_execution_counts": dict(
+            queues.get("generated_question_execution_counts") or {}),
+        "generated_question_freshness_counts": dict(
+            queues.get("generated_question_freshness_counts") or {}),
+        "generated_questions_executable": [
+            row.get("generated_question_id")
+            for row in (projection.get("generated_questions") or [])
+            if row.get("question_executable")],
+        "generated_questions_running": [
+            row.get("generated_question_id")
+            for row in (projection.get("generated_questions") or [])
+            if row.get("question_running")],
+        "generated_questions_answered": [
+            row.get("generated_question_id")
+            for row in (projection.get("generated_questions") or [])
+            if row.get("question_answered")],
+        "generated_questions_scientifically_actionable": [
+            row.get("generated_question_id")
+            for row in (projection.get("generated_questions") or [])
+            if row.get("question_scientifically_actionable")],
+        "generated_questions_missing_evaluator": list(
+            queues.get("missing_evaluator_investigations") or []),
+        "generated_questions_waiting": list(
+            queues.get("waiting_investigations") or []),
         # ── Validation / investigation queues ───────────────────────────────
         "validation_queue": list(queues.get("validation_queue") or []),
         "deep_research_queue": list(queues.get("deep_research_queue") or []),
@@ -205,6 +233,12 @@ def render_lab_terminal(view: dict[str, Any]) -> str:
         f"{view['waiting_count']} waiting  "
         f"{view['deep_pending_count']} deep-pending",
         f"Q71+ generated questions: {view['generated_question_count']}",
+        f"  Q71+ lifecycle: "
+        + "  ".join(f"{k}={v}" for k, v in sorted(
+            (view.get('generated_question_lifecycle_counts') or {}).items()))
+        + f"  | answered={len(view.get('generated_questions_answered') or [])}"
+        + f"  scientifically_actionable="
+        + f"{len(view.get('generated_questions_scientifically_actionable') or [])}",
         f"Findings: {len(view['findings'])}  "
         f"Hypotheses: {len(view['hypotheses'])}  "
         f"Candidates: {len(view['candidates'])}",
