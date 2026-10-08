@@ -23,6 +23,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from research_engine.v10.continuous.production_coverage import (
+    NO_PRODUCTION_OBSERVATION_SPACE,
+)
 from research_engine.v10.continuous.research_projection import (
     PROJECTION_SCHEMA,
     ResearchProjectionError,
@@ -186,6 +189,20 @@ def build_lab_view(projection: Mapping[str, Any]) -> dict[str, Any]:
             queues.get("missing_evaluator_investigations") or []),
         "generated_questions_waiting": list(
             queues.get("waiting_investigations") or []),
+        # ── Observation space / governed coverage (production autonomy) ──────
+        # The surface is projected verbatim from the observation-space stage.
+        # With no materialized snapshot the status is explicitly
+        # NO_PRODUCTION_OBSERVATION_SPACE - the Lab never shows an empty-looking
+        # success state for a missing observation space.
+        "observation_coverage": dict(
+            projection.get("observation_coverage")
+            or {"status": NO_PRODUCTION_OBSERVATION_SPACE,
+                "reason": "projection carries no observation coverage surface",
+                "observation_space_snapshot_id": None,
+                "production_coverage_snapshot_id": None,
+                "total_governed_observation_cells": 0,
+                "cell_count": 0,
+                "conserved": False}),
         # ── Validation / investigation queues ───────────────────────────────
         "validation_queue": list(queues.get("validation_queue") or []),
         "deep_research_queue": list(queues.get("deep_research_queue") or []),
@@ -246,6 +263,26 @@ def render_lab_terminal(view: dict[str, Any]) -> str:
     ]
     if view["changed_datasets"]:
         lines.append("Changed datasets: " + ", ".join(view["changed_datasets"]))
+    coverage = view.get("observation_coverage") or {}
+    if coverage.get("status") == NO_PRODUCTION_OBSERVATION_SPACE:
+        lines.append(f"Observation space: {NO_PRODUCTION_OBSERVATION_SPACE}"
+                     f"  ({coverage.get('reason') or 'not materialized'})")
+    else:
+        lines.append(
+            f"Observation space: {coverage.get('observation_space_snapshot_id')}"
+            f"  cells={coverage.get('cell_count')}"
+            f"  blind_spots={coverage.get('blind_spot_count')}"
+            f"  waiting={coverage.get('waiting_cells')}"
+            f"  missing_evaluator="
+            f"{len(coverage.get('missing_evaluator_cells') or [])}"
+            f"  candidate_capable="
+            f"{len(coverage.get('candidate_capable_cells') or [])}"
+            f"  conserved={coverage.get('conserved')}")
+        lines.append(
+            f"Coverage snapshot : {coverage.get('production_coverage_snapshot_id')}"
+            f"  states="
+            + "  ".join(f"{k}={v}" for k, v in sorted(
+                (coverage.get("coverage_states") or {}).items())))
     what = view.get("what_changed") or {}
     changed_qs = what.get("questions_changed") or []
     if changed_qs:

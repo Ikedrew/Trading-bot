@@ -9,6 +9,9 @@ from typing import Any, Mapping, Sequence
 
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
 from research_engine.registry.baseline_manifest import BASELINE_QUESTION_IDS
+from research_engine.v10.continuous.production_coverage import (
+    NO_PRODUCTION_OBSERVATION_SPACE,
+)
 from research_engine.v10.continuous.scientific_state_store import ScientificStateStore
 from research_engine.v10.continuous.q71_worker import relevant_evidence_identity
 from research_engine.v10.continuous.research_work_queue import ResearchWorkQueueStore
@@ -194,6 +197,7 @@ def build_unified_research_projection(
     generated_result_store: GeneratedQuestionResultStore | None = None,
 
     research_work_store: ResearchWorkQueueStore | None = None,
+    observation_coverage: Mapping[str, Any] | None = None,
     projection_generated_at: str | None = None,
 ) -> dict[str, Any]:
     """Compose authorities without becoming one; no status is derived from wall time."""
@@ -410,6 +414,17 @@ def build_unified_research_projection(
         },
         "research_lag": research_lag,
         "what_changed": changed,
+        "observation_coverage": (
+            dict(observation_coverage) if observation_coverage is not None
+            else {
+                "status": NO_PRODUCTION_OBSERVATION_SPACE,
+                "reason": "no production observation space published for this cycle",
+                "observation_space_snapshot_id": None,
+                "production_coverage_snapshot_id": None,
+                "total_governed_observation_cells": 0,
+                "cell_count": 0,
+                "conserved": False,
+            }),
         "predecessor_projection_version": (predecessor_projection or {}).get("projection_version"),
     }
     version = "RPROJ-" + hashlib.sha256(canonical_json(material).encode("utf-8")).hexdigest()[:32].upper()

@@ -13,6 +13,12 @@ from typing import Any, Callable, Mapping
 
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
 from research_engine.registry.baseline_manifest import BASELINE_QUESTION_IDS
+from research_engine.lifecycle.generated_research_store import (
+    GeneratedResearchStore,
+)
+from research_engine.lifecycle.research_coverage_store import (
+    ResearchCoverageStore,
+)
 from research_engine.v10.continuous.canonical_question_cycle import run_canonical_question_cycle
 from research_engine.v10.continuous.cycle_state import (
     ContinuousCycleLease, ContinuousCycleProgressStore, ContinuousCycleStore,
@@ -32,7 +38,17 @@ from research_engine.v10.continuous.q71_evaluator_registry import (
 from research_engine.v10.continuous.q71_worker import (
     GeneratedExecutionPolicy, run_generated_question_worker,
 )
-from research_engine.v10.continuous.q71_orchestration import run_q71_orchestration
+from research_engine.v10.continuous.q71_orchestration import (
+    load_q71_state, run_q71_orchestration,
+)
+from research_engine.v10.continuous.production_coverage import (
+    DEFAULT_PRODUCTION_COVERAGE_DIRECTORY,
+    DEFAULT_PRODUCTION_COVERAGE_STORE_PATH,
+    NO_PRODUCTION_OBSERVATION_SPACE,
+    materialize_production_coverage,
+    write_q71_coverage_source_mapping,
+)
+from research_engine.v10.investigation_snapshot import MANIFEST_DIRECTORY
 from research_engine.v10.continuous.question_cycle_state import QuestionCycleStore
 from research_engine.v10.continuous.research_projection import (
     ResearchProjectionStore, build_evaluation_refresh_projection,
@@ -40,6 +56,8 @@ from research_engine.v10.continuous.research_projection import (
 )
 from research_engine.v10.continuous.research_work_queue import (
     FAILED as DEEP_FAILED,
+    PENDING,
+    RUNNING,
     ResearchExecutionPolicy,
     ResearchWorkQueueError,
     ResearchWorkQueueStore,
@@ -55,8 +73,8 @@ from research_engine.v10.continuous.validation_queue import (
 from research_engine.v10.optimisation.optimisation_registry import OptimisationRegistry
 
 
-STAGES = ("FRONTIER", "QUESTIONS", "SCIENTIFIC_STATE", "Q71_PLUS",
-          "Q71_EXECUTION", "VALIDATION_QUEUE", "PROJECTION")
+STAGES = ("FRONTIER", "QUESTIONS", "SCIENTIFIC_STATE", "OBSERVATION_SPACE",
+          "Q71_PLUS", "Q71_EXECUTION", "VALIDATION_QUEUE", "PROJECTION")
 
 
 class ContinuousResearchLoopError(RuntimeError):
@@ -228,6 +246,11 @@ def run_continuous_research_cycle(
     forward_executor: Callable[..., Mapping[str, Any]] | None = None,
     max_validation_jobs: int = 1,
     q71_capacity: int = 10,
+    observation_space_materializer: Callable[..., Any] = materialize_production_coverage,
+    observation_space_manifest_directory: Path | str | None = None,
+    observation_space_directory: Path | str | None = None,
+    production_coverage_directory: Path | str | None = None,
+    production_coverage_store_path: Path | str | None = None,
     shadow_evidence: Mapping[str, Mapping[str, Any]] | None = None,
     enable_deep_work: bool = True,
     execution_policy: ResearchExecutionPolicy | None = None,
@@ -254,6 +277,19 @@ def run_continuous_research_cycle(
     frontier = question = bridge = None
     q71: Mapping[str, Any] = {}
     projection_path = None
+    # The observation/coverage surface is explicit from the start: the Lab must
+    # never show an empty-looking success state when no snapshot exists.
+    observation_coverage: dict[str, Any] = {
+        "status": NO_PRODUCTION_OBSERVATION_SPACE,
+        "reason": "observation space stage has not run",
+        "observation_space_snapshot_id": None,
+        "production_coverage_snapshot_id": None,
+        "total_governed_observation_cells": 0,
+        "cell_count": 0,
+        "conserved": False,
+    }
+    q71_coverage_store: ResearchCoverageStore | None = None
+    q71_coverage_artifact: Any | None = None
     started = previous.completed_at if previous else ""
     evaluation_only_question_ids: tuple[str, ...] | None = None
     retained_projection: Mapping[str, Any] | None = None
@@ -323,8 +359,8 @@ def run_continuous_research_cycle(
             registry_loader=question_registry_loader)
         if _is_current_successful_projection(
                 latest, frontier, stale_questions, canonical_projection):
-            for stage in ("QUESTIONS", "SCIENTIFIC_STATE", "Q71_PLUS",
-                          "Q71_EXECUTION", "VALIDATION_QUEUE"):
+            for stage in ("QUESTIONS", "SCIENTIFIC_STATE", "OBSERVATION_SPACE",
+                          "Q71_PLUS", "Q71_EXECUTION", "VALIDATION_QUEUE"):
                 stages[stage] = "SKIPPED_NO_NEW_EVIDENCE"
                 progress("skip_stage", stage, "NO_NEW_EVIDENCE_WITH_CURRENT_PROJECTION")
             stages["PROJECTION"] = "RETAINED"
@@ -411,7 +447,8 @@ def run_continuous_research_cycle(
 
     material_question_changes = tuple(_value(question, "changed_question_ids", ()) or ())
     if evaluation_only_question_ids is not None and not material_question_changes:
-        for stage in ("SCIENTIFIC_STATE", "Q71_PLUS", "VALIDATION_QUEUE"):
+        for stage in ("SCIENTIFIC_STATE", "OBSERVATION_SPACE", "Q71_PLUS",
+                      "VALIDATION_QUEUE"):
             stages[stage] = "SKIPPED_NO_MATERIAL_QUESTION_CHANGE"
             progress("skip_stage", stage, "EVALUATION_REFRESH_WITH_EQUIVALENT_SCIENCE")
         progress("enter_stage", "PROJECTION")
@@ -477,12 +514,80 @@ def run_continuous_research_cycle(
             "failure": f"{type(exc).__name__}:{exc}"})
         return failed("SCIENTIFIC_STATE", exc, identity={"question_cycle": _value(question, "cycle_id")})
 
+    # OBSERVATION_SPACE: materialize the governed observation space from the real
+    # frozen evidence frontier, build the immutable coverage snapshot and hand it
+    # to Q71+ generation through the governed coverage store.  This is the
+    # "eyes" of autonomous discovery: without it, generation has no governed
+    # coverage to reason over, and the stage fails closed instead of inventing
+    # one.
+    progress("enter_stage", "OBSERVATION_SPACE")
+    try:
+        coverage_projection = QuestionCycleStore(
+            question_state_dir).load_current()
+        active_research: dict[str, list[str]] = {}
+        for job in research_work_store.ordered():
+            if job.state in {PENDING, RUNNING}:
+                active_research.setdefault(job.question_id, []).append(job.job_id)
+        materialized = observation_space_materializer(
+            snapshot_id=str(_value(frontier, "snapshot_id")),
+            manifest_directory=Path(
+                observation_space_manifest_directory or MANIFEST_DIRECTORY),
+            observation_directory=Path(
+                observation_space_directory or (root / "observation_space")),
+            coverage_directory=Path(
+                production_coverage_directory
+                or DEFAULT_PRODUCTION_COVERAGE_DIRECTORY),
+            coverage_store_path=Path(
+                production_coverage_store_path
+                or DEFAULT_PRODUCTION_COVERAGE_STORE_PATH),
+            canonical_question_projection=coverage_projection,
+            active_research_by_question={
+                key: tuple(value) for key, value in active_research.items()},
+            evaluator_registry=q71_evaluator_registry,
+            q71_state=load_q71_state(root / "q71_state.json"),
+            created_at=str(_value(question, "completed_at", started)),
+            observed_at=str(_value(question, "completed_at", started)),
+        )
+        q71_coverage_store = materialized.coverage_store
+        q71_coverage_artifact = materialized.coverage
+        observation_coverage = dict(materialized.surface)
+        stages["OBSERVATION_SPACE"] = "COMPLETED"
+        progress("exit_stage", "OBSERVATION_SPACE", status="COMPLETED", details={
+            "observation_space_snapshot_id":
+                materialized.observation_space_snapshot_id,
+            "production_coverage_snapshot_id":
+                materialized.production_coverage_snapshot_id,
+            "cell_count": materialized.coverage.cell_count,
+            "blind_spot_count": observation_coverage.get("blind_spot_count"),
+        })
+    except Exception as exc:
+        # Fail closed: Q71+ generation is handed an empty governed coverage
+        # store, so no question can be minted from an unmaterialized space.
+        stages["OBSERVATION_SPACE"] = "FAILED_CLOSED"
+        observation_coverage = {
+            "status": NO_PRODUCTION_OBSERVATION_SPACE,
+            "reason": f"{type(exc).__name__}:{exc}",
+            "observation_space_snapshot_id": None,
+            "production_coverage_snapshot_id": None,
+            "total_governed_observation_cells": 0,
+            "cell_count": 0,
+            "conserved": False,
+        }
+        q71_coverage_store = ResearchCoverageStore(
+            root / "observation_space" / "failed_closed_coverage.json")
+        progress("exit_stage", "OBSERVATION_SPACE", status="FAILED_CLOSED",
+                 details={"failure": f"{type(exc).__name__}:{exc}"})
+
     progress("enter_stage", "Q71_PLUS")
     try:
         qkwargs = dict(q71_kwargs or {})
         qkwargs.setdefault("snapshot_id", str(_value(frontier, "snapshot_id")))
         qkwargs.setdefault("capacity", q71_capacity)
         qkwargs.setdefault("state_path", root / "q71_state.json")
+        if q71_coverage_store is not None:
+            # The materialized production coverage snapshot is the ONLY coverage
+            # authority Q71+ generation may read.
+            qkwargs.setdefault("coverage_store", q71_coverage_store)
         if q71_evaluator_registry is not None:
             # The governed registry is the single eligibility authority: the
             # question generation declares executable must be exactly the
@@ -497,6 +602,24 @@ def run_continuous_research_cycle(
         stages["Q71_PLUS"] = "FAILED_OPTIONAL"
         progress("exit_stage", "Q71_PLUS", status="FAILED_OPTIONAL", details={
             "failure": f"{type(exc).__name__}:{exc}"})
+
+    # Bind every generated coverage question back to the observation cell and
+    # coverage snapshot that caused it to exist.  This is a pointer document: it
+    # names the immutable coverage artifact it was derived from.
+    if q71_coverage_artifact is not None:
+        try:
+            mapping_path = write_q71_coverage_source_mapping(
+                q71_coverage_artifact,
+                load_q71_state(root / "q71_state.json"),
+                directory=Path(
+                    production_coverage_directory
+                    or DEFAULT_PRODUCTION_COVERAGE_DIRECTORY),
+                generated_store=GeneratedResearchStore())
+            progress("exit_stage", "OBSERVATION_SPACE", status="MAPPED", details={
+                "q71_source_mapping_path": str(mapping_path)})
+        except Exception as exc:  # diagnostics must not alter science
+            print("q71 coverage source mapping failed: "
+                  f"{type(exc).__name__}:{exc}", file=sys.stderr)
 
     progress("enter_stage", "Q71_EXECUTION")
     generated_execution: dict[str, Any] = {}
@@ -618,6 +741,7 @@ def run_continuous_research_cycle(
             validation_store=validation_store, q71=q71,
             shadow_evidence=shadow_evidence, predecessor_projection=previous_projection,
             research_work_store=research_work_store,
+            observation_coverage=observation_coverage,
             generated_execution_store=(
                 generated_execution_store or GeneratedQuestionExecutionStore(
                     root / "q71_execution_state.json")),

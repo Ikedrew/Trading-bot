@@ -24,6 +24,9 @@ from urllib.request import urlopen
 REPO = Path(__file__).resolve().parents[3]
 STATIC = Path(__file__).with_name("static")
 STATE_ROOT = REPO / "data" / "research" / "continuous"
+PRODUCTION_COVERAGE_DIR = STATE_ROOT / "production_coverage"
+OBSERVATION_SPACE_DIR = STATE_ROOT / "observation_space"
+NO_PRODUCTION_OBSERVATION_SPACE = "NO_PRODUCTION_OBSERVATION_SPACE"
 OPT_REGISTRY = REPO / "data" / "research" / "optimisation" / "registry.json"
 LEGACY_COCKPIT = REPO / "reports" / "research" / "cockpit.html"
 LOCK_PATH = STATE_ROOT / "lab_run.lock"
@@ -530,6 +533,18 @@ def build_state() -> dict[str, Any]:
         },
         "findings": findings, "hypotheses": hypotheses, "candidates": candidates,
         "candidate_lifecycle": lifecycle,
+        # Observation space / governed coverage.  Projected verbatim from the
+        # unified projection; a missing production snapshot is reported as
+        # NO_PRODUCTION_OBSERVATION_SPACE rather than as an empty success.
+        "observation_coverage": dict(
+            src.get("observation_coverage")
+            or {"status": NO_PRODUCTION_OBSERVATION_SPACE,
+                "reason": "no unified projection observation coverage surface",
+                "observation_space_snapshot_id": None,
+                "production_coverage_snapshot_id": None,
+                "total_governed_observation_cells": 0,
+                "cell_count": 0,
+                "conserved": False}),
         "investigations": investigations, "work_queues": work,
         "data_frontier": src.get("data_frontier"),
         "what_changed_cycle": src.get("what_changed"),

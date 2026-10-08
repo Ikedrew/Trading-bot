@@ -58,12 +58,44 @@ from research_engine.v10.continuous.q71_production_registry import (
     verify_production_registry,
     write_production_evaluator_registry,
 )
+from research_engine.v10.continuous.production_observation_space import (
+    ObservationSpaceSnapshot,
+    ObservationSpaceSnapshotStore,
+    ProductionObservationPolicy,
+    ProductionObservationSpaceError,
+    governed_observation_space,
+    materialize_observation_space,
+    production_observation_policy,
+)
+from research_engine.v10.continuous.production_coverage import (
+    NO_PRODUCTION_OBSERVATION_SPACE,
+    ProductionCoverageMaterialization,
+    ProductionCoverageSnapshot,
+    ProductionCoverageSnapshotStore,
+    coverage_surface,
+    materialize_production_coverage,
+    q71_coverage_source_mapping,
+)
 from research_engine.v10.continuous.state import CycleState, CycleStatus, TriggerStatus
 
 __all__ = [
     "ContinuousResearchOrchestrator",
     "CanonicalQuestionCycleError",
     "GeneratedExecutionPolicy",
+    "NO_PRODUCTION_OBSERVATION_SPACE",
+    "ObservationSpaceSnapshot",
+    "ObservationSpaceSnapshotStore",
+    "ProductionCoverageMaterialization",
+    "ProductionCoverageSnapshot",
+    "ProductionCoverageSnapshotStore",
+    "ProductionObservationPolicy",
+    "ProductionObservationSpaceError",
+    "coverage_surface",
+    "governed_observation_space",
+    "materialize_observation_space",
+    "materialize_production_coverage",
+    "production_observation_policy",
+    "q71_coverage_source_mapping",
     "GeneratedQuestionEvaluatorRegistration",
     "GeneratedQuestionEvaluatorRegistry",
     "GeneratedQuestionEvaluatorRegistryError",

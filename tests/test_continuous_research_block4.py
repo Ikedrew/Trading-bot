@@ -309,8 +309,8 @@ def test_unchanged_frontier_without_projection_bootstraps_downstream(tmp_path):
         (tmp_path / "continuous" / "cycle_progress.json").read_text(encoding="utf-8"))
     assert progress["status"] == "COMPLETED"
     assert set(progress["stages"]) == {
-        "FRONTIER", "QUESTIONS", "SCIENTIFIC_STATE", "Q71_PLUS",
-        "Q71_EXECUTION", "VALIDATION_QUEUE", "PROJECTION",
+        "FRONTIER", "QUESTIONS", "SCIENTIFIC_STATE", "OBSERVATION_SPACE",
+        "Q71_PLUS", "Q71_EXECUTION", "VALIDATION_QUEUE", "PROJECTION",
     }
     assert all(item["finished_at"] and item["elapsed_seconds"] is not None
                for item in progress["stages"].values())
