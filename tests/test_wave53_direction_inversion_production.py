@@ -23,6 +23,38 @@ def make_spec(scope, treatment_id="historical-treatment"):
     })
 
 
+def grant_production_authority(tmp_path, monkeypatch, state, *, candidate_id="C1",
+                               application_id="APP-C1-REC-E1",
+                               treatment_id="historical-treatment"):
+    """Repair Block 3: file presence alone is never runtime authority.
+
+    Runtime policy consumption now requires an ACTIVE governed production
+    authority row (human ACCEPT -> governed approval -> verified governed
+    deployment).  This helper creates exactly that row in the test's tmp
+    governance directory so live-consumption tests exercise the governed path.
+    """
+    import research_engine.control_plane.production_authority as authority
+    from core.research_events import compute_config_hash
+
+    monkeypatch.setattr(authority, "DEFAULT_AUTHORITY_PATH",
+                        tmp_path / "production_authority.jsonl")
+    ledger = authority.ProductionAuthorityLedger(tmp_path / "production_authority.jsonl")
+    governed = dict(state)
+    governed["application_id"] = application_id
+    governed["candidate_id"] = candidate_id
+    authority.issue_authority(
+        candidate_id=candidate_id, decision_id="REC-E1", application_id=application_id,
+        treatment_id=treatment_id, treatment_spec=governed.get("treatment_spec"),
+        baseline_id="BASELINE-TEST", baseline_config_hash=compute_config_hash(),
+        policy_state=governed, actor="human", reason="test governed approval",
+        ledger=ledger)
+    authority.activate_authority(
+        application_id=application_id, deployment_id="OP-TEST",
+        verification_status="VERIFIED", policy_state=governed,
+        actor="application_service", reason="test verified deployment", ledger=ledger)
+    return governed
+
+
 class TestAPolicyAuthority:
     def test_normal_representation(self):
         assert normal_state() == {"kind": "normal"}
@@ -570,10 +602,10 @@ class TestNLiveConsumption:
 
         monkeypatch.chdir(tmp_path)
         monkeypatch.setattr(pol, "_DEFAULT_PATH", tmp_path / "policy.json")
-        pol.write_policy_file(
-            {"kind": "direction_inversion", "treatment_id": "historical-treatment",
-             "treatment_spec": make_spec({"symbols": ["EURUSD"], "patterns": None})},
-            tmp_path / "policy.json")
+        state = {"kind": "direction_inversion", "treatment_id": "historical-treatment",
+                 "treatment_spec": make_spec({"symbols": ["EURUSD"], "patterns": None})}
+        governed = grant_production_authority(tmp_path, monkeypatch, state)
+        pol.write_policy_file(governed, tmp_path / "policy.json")
         import core.runtime.engine_execution_handler as h
         from unittest.mock import patch as _patch
 
@@ -609,10 +641,10 @@ class TestNLiveOutOfScope:
 
         monkeypatch.chdir(tmp_path)
         monkeypatch.setattr(pol, "_DEFAULT_PATH", tmp_path / "policy.json")
-        pol.write_policy_file(
-            {"kind": "direction_inversion", "treatment_id": "historical-treatment",
-             "treatment_spec": make_spec({"symbols": ["GBPUSD"], "patterns": None})},
-            tmp_path / "policy.json")
+        state = {"kind": "direction_inversion", "treatment_id": "historical-treatment",
+                 "treatment_spec": make_spec({"symbols": ["GBPUSD"], "patterns": None})}
+        governed = grant_production_authority(tmp_path, monkeypatch, state)
+        pol.write_policy_file(governed, tmp_path / "policy.json")
         import core.runtime.engine_execution_handler as h
         from unittest.mock import patch as _patch
 
@@ -644,10 +676,10 @@ class TestNLiveOutOfScope:
 
         monkeypatch.chdir(tmp_path)
         monkeypatch.setattr(pol, "_DEFAULT_PATH", tmp_path / "policy.json")
-        pol.write_policy_file(
-            {"kind": "direction_inversion", "treatment_id": "historical-treatment",
-             "treatment_spec": make_spec({"symbols": ["EURUSD"], "patterns": None})},
-            tmp_path / "policy.json")
+        state = {"kind": "direction_inversion", "treatment_id": "historical-treatment",
+                 "treatment_spec": make_spec({"symbols": ["EURUSD"], "patterns": None})}
+        governed = grant_production_authority(tmp_path, monkeypatch, state)
+        pol.write_policy_file(governed, tmp_path / "policy.json")
         import core.runtime.engine_execution_handler as h
         from unittest.mock import patch as _patch
 

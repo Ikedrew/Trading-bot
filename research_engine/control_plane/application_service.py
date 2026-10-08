@@ -56,7 +56,8 @@ class ApplicationService:
 
     def __init__(self, *, adapter: PolicyAdapter, application_path, decisions_dir,
                  recommendations_dir, registry_dir, evaluations_dir, operations_dir,
-                 baselines_dir, pointer_file, failpoint=None):
+                 baselines_dir, pointer_file, failpoint=None,
+                 authority_path=None, lifecycle_ledger_path=None):
         self.adapter = adapter
         self.application_path = Path(application_path)
         self.decisions_dir = Path(decisions_dir)
@@ -67,6 +68,107 @@ class ApplicationService:
         self.registry = SnapshotRegistry(str(baselines_dir))
         self.pointer_file = Path(pointer_file)
         self.failpoint = failpoint or (lambda name: None)
+        # Repair Block 3: the governed production-authority ledger lives beside
+        # the application ledger it derives from, so an injected (test) path
+        # never writes into the real production governance directory.
+        governance_dir = self.application_path.parent
+        self.authority_path = (Path(authority_path) if authority_path is not None
+                               else governance_dir / "production_authority.jsonl")
+        self.lifecycle_ledger_path = (
+            Path(lifecycle_ledger_path) if lifecycle_ledger_path is not None
+            else governance_dir / "candidate_lifecycle.jsonl")
+
+    # ─── Repair Block 3: governed production authority ──────────────────────
+    def _authority_ledger(self):
+        from research_engine.control_plane.production_authority import (
+            ProductionAuthorityLedger,
+        )
+
+        return ProductionAuthorityLedger(self.authority_path)
+
+    def _ensure_authority_issued(self, app, application_id):
+        """Guarantee a governed approval record exists for this application.
+
+        Issuance is downstream of an already-proven human ACCEPT (``_authorize``
+        has run).  An existing record is never rewritten.
+        """
+        from research_engine.control_plane.production_authority import (
+            issue_authority,
+        )
+
+        ledger = self._authority_ledger()
+        existing = ledger.get_for_application(application_id)
+        if existing is not None:
+            require(existing.candidate_id == app["candidate_id"],
+                    "Governed authority candidate mismatch")
+            require(existing.treatment_id == app["treatment_id"],
+                    "Governed authority treatment mismatch")
+            return existing
+        intended = self._intended_from_app(app, application_id)
+        scope = None
+        if self._uses_real_policy():
+            from core.optimisation_policy import policy_scope
+            try:
+                scope = policy_scope(intended)
+            except Exception:
+                scope = None
+        return issue_authority(
+            candidate_id=app["candidate_id"],
+            decision_id=app.get("recommendation_id", ""),
+            application_id=application_id,
+            treatment_id=app["treatment_id"],
+            treatment_spec=app.get("treatment_spec"),
+            baseline_id=app["baseline_id"],
+            baseline_config_hash=app["baseline_config_hash"],
+            policy_state=intended,
+            actor=app.get("actor") or "application_service",
+            reason=f"governed approval:{application_id}",
+            scope=scope,
+            ledger=ledger,
+        )
+
+    def _activate_authority(self, op):
+        from research_engine.control_plane.production_authority import (
+            activate_authority,
+        )
+
+        app = op["application"]
+        self._ensure_authority_issued(app, app["application_id"])
+        return activate_authority(
+            application_id=app["application_id"],
+            deployment_id=op["operation_id"],
+            verification_status="VERIFIED",
+            policy_state=op["intended_state"],
+            deployment_reference=op["operation_id"],
+            actor="application_service",
+            reason="verified governed deployment",
+            ledger=self._authority_ledger(),
+        )
+
+    def _record_lifecycle(self, *, candidate_id, event, from_state, to_state,
+                          authority_name, reason, application_id="", authority_id=""):
+        """Append audit history.  A history failure never corrupts deployment."""
+        try:
+            from research_engine.control_plane.candidate_lifecycle_authority import (
+                record_lifecycle_event,
+            )
+
+            record_lifecycle_event(
+                candidate_id=candidate_id, event=event, from_state=from_state,
+                to_state=to_state, authority=authority_name,
+                actor="application_service", reason=reason,
+                application_id=application_id, authority_id=authority_id,
+                ledger=self._lifecycle_ledger(),
+            )
+        except Exception:
+            pass
+
+    def _lifecycle_ledger(self):
+        from research_engine.control_plane.candidate_lifecycle_authority import (
+            CandidateLifecycleLedger,
+        )
+
+        return CandidateLifecycleLedger(self.lifecycle_ledger_path)
 
     def _path(self, application_id):
         require(isinstance(application_id, str) and application_id.strip(), "Application ID required")
@@ -201,6 +303,10 @@ class ApplicationService:
         if op["phase"] == "INTENT":
             self.failpoint("before_mutation")
             self._authorize(application_id, op)
+            # Repair Block 3: the governed approval record must exist before any
+            # mutation, and it is issued ONLY behind the already-proven human
+            # ACCEPT checked by _authorize().
+            self._ensure_authority_issued(app, application_id)
             require(self._old(app).to_dict() == op["old_snapshot"], "Old baseline content changed")
             require(self._active() == op["old_pointer"], "Stale baseline before mutation")
             require(self.adapter.read_effective_state() == op["previous_state"], "Starting state drift")
@@ -242,6 +348,18 @@ class ApplicationService:
         require(op["verification"]["actual"] == op["intended_state"], "Invalid verification evidence")
         self._transition(op, "DEPLOYED")
         self._transition(op, "VERIFIED")
+        # Repair Block 3: runtime authority exists ONLY after a verified governed
+        # deployment.  Any failure here leaves the candidate without runtime
+        # authority (fail closed) rather than with ambiguous authority.
+        authority_record = self._activate_authority(op)
+        _app = op["application"]
+        self._record_lifecycle(
+            candidate_id=_app["candidate_id"], event="VERIFIED",
+            from_state="APPROVED_NOT_DEPLOYED", to_state="VERIFIED",
+            authority_name="APPLICATION_SERVICE",
+            reason=f"verified governed deployment:{op['operation_id']}",
+            application_id=_app["application_id"],
+            authority_id=authority_record.authority_id)
         if "snapshot" not in op:
             if self._uses_real_policy():
                 snapshot = SnapshotBuilder.from_verified_real_state(
@@ -295,6 +413,12 @@ class ApplicationService:
         if op["phase"] == "COMPLETED":
             require(self._active() == op["activated_pointer"], "Independent baseline transition")
             require(self.adapter.read_effective_state() == op["intended_state"], "Rollback starting state drift")
+            self._record_lifecycle(
+                candidate_id=app["candidate_id"], event="ROLLBACK_REQUESTED",
+                from_state="VERIFIED", to_state="VERIFIED",
+                authority_name="APPLICATION_SERVICE",
+                reason=f"rollback requested:{op['operation_id']}",
+                application_id=app["application_id"])
             op["phase"] = "RESTORING"
             self._save(op)
             try:
@@ -322,4 +446,19 @@ class ApplicationService:
         self._transition(op, "ROLLED_BACK")
         op["phase"] = "ROLLED_BACK"
         self._save(op)
+        # Repair Block 3: rollback withdraws runtime authority for the reverted
+        # candidate.  Rollback is NOT rejection: the candidate's history and the
+        # application ledger rows are preserved unchanged.
+        from research_engine.control_plane.production_authority import mark_rolled_back
+
+        mark_rolled_back(
+            application_id=app["application_id"], actor="application_service",
+            reason=f"rollback:{op['operation_id']}",
+            ledger=self._authority_ledger())
+        self._record_lifecycle(
+            candidate_id=app["candidate_id"], event="ROLLED_BACK",
+            from_state="VERIFIED", to_state="ROLLED_BACK",
+            authority_name="APPLICATION_SERVICE",
+            reason=f"rollback:{op['operation_id']}",
+            application_id=app["application_id"])
         return op

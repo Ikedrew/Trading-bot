@@ -29,6 +29,10 @@ LEGACY_COCKPIT = REPO / "reports" / "research" / "cockpit.html"
 LOCK_PATH = STATE_ROOT / "lab_run.lock"
 LAST_RUN_PATH = STATE_ROOT / "lab_last_run.json"
 PROGRESS_PATH = STATE_ROOT / "cycle_progress.json"
+# Repair Block 3: canonical candidate lifecycle authorities (read-only).
+CANDIDATE_REGISTRY_DIR = REPO / "data" / "research" / "candidates"
+OPTIMISATION_REGISTRY_DIR = REPO / "data" / "research" / "optimisation"
+GOVERNANCE_DIR = REPO / "data" / "research" / "governance"
 HOST, PORT = "127.0.0.1", 8765
 APP_ID = "research-lab-v1"
 
@@ -268,6 +272,37 @@ def _fallback_from_optimisation() -> dict[str, Any]:
     return {"hypotheses": hyps, "candidates": cands, "findings": findings, "plans": plans}
 
 
+def _candidate_lifecycle_state() -> dict[str, Any]:
+    """Repair Block 3 — exact authoritative candidate lifecycle for the Lab.
+
+    Reads ONLY the governed authorities (production authority ledger,
+    application ledger, human-decision store, candidate lifecycle ledger) plus
+    the compatibility registries, and projects them onto ONE canonical
+    vocabulary.  Failure is reported, never invented.
+    """
+    try:
+        from research_engine.control_plane.candidate_lifecycle_service import (
+            build_candidate_lifecycle_projection,
+        )
+
+        projection = build_candidate_lifecycle_projection(
+            registry_dir=str(CANDIDATE_REGISTRY_DIR),
+            optimisation_registry_dir=str(OPTIMISATION_REGISTRY_DIR),
+            application_path=GOVERNANCE_DIR / "application.jsonl",
+            authority_path=GOVERNANCE_DIR / "production_authority.jsonl",
+            decisions_dir=str(CANDIDATE_REGISTRY_DIR),
+            validation_queue_path=STATE_ROOT / "validation_queue.json",
+            lifecycle_ledger_path=GOVERNANCE_DIR / "candidate_lifecycle.jsonl",
+        )
+    except Exception as exc:
+        return {"schema_version": "research_lab_candidate_lifecycle_v1",
+                "available": False, "error": f"{type(exc).__name__}:{exc}",
+                "candidates": [], "review_ready": [], "runtime_effective": [],
+                "action_required": [], "disagreements": [], "state_counts": {}}
+    projection["available"] = True
+    return projection
+
+
 def _status_events(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
     events = []
     for c in candidates:
@@ -423,6 +458,32 @@ def build_state() -> dict[str, Any]:
     counts: dict[str, int] = {}
     for q in questions:
         counts[q["status"]] = counts.get(q["status"], 0) + 1
+    # Repair Block 3: ONE canonical candidate lifecycle.  The Lab shows the
+    # exact authoritative state, never a legacy status re-interpreted by the UI.
+    lifecycle = _candidate_lifecycle_state()
+    lifecycle_by_id = {row["candidate_id"]: row for row in lifecycle.get("candidates", [])}
+    for c in candidates:
+        view = lifecycle_by_id.get(c.get("candidate_id"))
+        if view is None:
+            continue
+        c["canonical_lifecycle"] = {
+            "canonical_state": view["canonical_state"],
+            "source": view["source"],
+            "runtime_effective": view["runtime_effective"],
+            "required_action": view["required_action"],
+            "review_notice": view["review_notice"],
+            "disagreements": view["disagreements"],
+            "authoritative_sources": view["authoritative_sources"],
+            "compatibility_sources": view["compatibility_sources"],
+            "superseded_by": view["superseded_by"],
+            "evidence_frontier": view["evidence_frontier"],
+            "baseline_config_hash": view["baseline_config_hash"],
+        }
+    for entry in investigations:
+        view = lifecycle_by_id.get(entry.get("id"))
+        if view is not None:
+            entry["canonical_state"] = view["canonical_state"]
+            entry["runtime_effective"] = view["runtime_effective"]
     return {
         "generated_at": _now(), "source": source, "errors": errors,
         "freshness": {
@@ -468,6 +529,7 @@ def build_state() -> dict[str, Any]:
                            if row.get("lifecycle_status") == "SUPERSEDED"],
         },
         "findings": findings, "hypotheses": hypotheses, "candidates": candidates,
+        "candidate_lifecycle": lifecycle,
         "investigations": investigations, "work_queues": work,
         "data_frontier": src.get("data_frontier"),
         "what_changed_cycle": src.get("what_changed"),

@@ -1026,7 +1026,9 @@ def test_one_governed_autonomous_candidate_path_has_no_parallel_writer():
         if "run_scientific_state_bridge" in text:
             bridge_callers.add(relative)
     # The governed registry is touched only by the bridge, its store, the
-    # validation queue, the unified projection and the research loop.
+    # validation queue, the unified projection, the research loop, and the
+    # Repair Block 3 control-plane modules that READ it to derive ONE canonical
+    # candidate lifecycle.  Those readers must never mutate it (asserted below).
     assert bridge_writers == {
         "v10/continuous/research_loop.py",
         "v10/continuous/research_projection.py",
@@ -1034,7 +1036,18 @@ def test_one_governed_autonomous_candidate_path_has_no_parallel_writer():
         "v10/continuous/validation_queue.py",
         "v10/optimisation/optimisation_registry.py",
         "v10/optimisation/__init__.py",
+        "control_plane/candidate_lifecycle_authority.py",
+        "control_plane/candidate_lifecycle_service.py",
     }, sorted(bridge_writers)
+    # The Repair Block 3 lifecycle modules are READ-ONLY consumers of the
+    # governed registry: no mutation primitive may ever appear in them.
+    for relative in ("control_plane/candidate_lifecycle_authority.py",
+                     "control_plane/candidate_lifecycle_service.py"):
+        text = (root / relative).read_text(encoding="utf-8", errors="ignore")
+        for mutation in ("add_candidate(", "add_hypothesis(", "add_plan(",
+                         "update_candidate_status(", "update_hypothesis_status(",
+                         "bind_shadow_candidate("):
+            assert mutation not in text, (relative, mutation)
     # The legacy proposal/designer workflow never touches the governed registry.
     assert [item for item in bridge_writers if "proposals" in item] == []
     assert bridge_callers == {

@@ -183,6 +183,53 @@ def read_policy_file(path: str | Path | None = None) -> dict[str, Any]:
     return validate_effective_state(raw)
 
 
+def verify_production_authority(
+    state: dict[str, Any], *, authority_path: str | Path | None = None,
+    require_baseline: bool = False,
+) -> Any:
+    """Verify that a durable policy state holds GOVERNED production authority.
+
+    This is the runtime enforcement boundary (Repair Block 3 Step 4).  A
+    syntactically valid policy file written directly is NOT sufficient: the
+    governed production-authority ledger must independently prove that a human
+    ACCEPT produced a governed approval record and that a verified governed
+    deployment activated it, and that it has not since been disabled, revoked,
+    superseded or rolled back.
+    """
+    from research_engine.control_plane.production_authority import (
+        ProductionAuthorityLedger, verify_runtime_authority,
+    )
+
+    ledger = (ProductionAuthorityLedger(authority_path) if authority_path is not None
+              else None)
+    return verify_runtime_authority(
+        policy_state=validate_effective_state(json.loads(canonical(state))),
+        ledger=ledger, require_baseline=require_baseline,
+    )
+
+
+def read_authorized_policy_file(
+    path: str | Path | None = None,
+    *,
+    authority_path: str | Path | None = None,
+    require_baseline: bool = False,
+) -> dict[str, Any]:
+    """THE governed runtime read: file presence alone is never authority.
+
+    Returns NORMAL (no optimisation policy) whenever governed production
+    authority cannot be independently proven.  A malformed policy file still
+    fails closed by raising, exactly as ``read_policy_file`` does.
+    """
+    state = read_policy_file(path)
+    if is_normal(state):
+        return state
+    verdict = verify_production_authority(
+        state, authority_path=authority_path, require_baseline=require_baseline)
+    if not verdict.ok:
+        return normal_state()
+    return state
+
+
 def write_policy_file(state: dict[str, Any], path: str | Path | None = None) -> dict[str, Any]:
     cleaned = validate_effective_state(state)
     target = Path(path) if path is not None else _DEFAULT_PATH
