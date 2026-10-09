@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import sys
 import uuid
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 
 from research_engine.control_plane.governed_counterfactual_evidence import (
     COUNTERFACTUAL_EVIDENCE_CLASS,
@@ -418,6 +418,108 @@ def _produce_governed_counterfactual_evidence(
     return artifact, binding, state
 
 
+def _run_validation_queue_stage(
+    *,
+    root: Path,
+    registry_dir: Path,
+    frontier_snapshot_id: str,
+    cycle_id: str,
+    timestamp: str,
+    canonical_handoff: Iterable[Mapping[str, Any]] = (),
+    generated_handoff: Iterable[Mapping[str, Any]] = (),
+    validation_executor: Callable[..., Mapping[str, Any]] | None = None,
+    forward_executor: Callable[..., Mapping[str, Any]] | None = None,
+    max_validation_jobs: int = 1,
+    counterfactual_evidence_store: CounterfactualEvidenceStore | None = None,
+    counterfactual_evidence_directory: Path | str | None = None,
+    observation_coverage: dict[str, Any] | None = None,
+) -> tuple[ValidationQueueStore, dict[str, Any], str, OptimisationRegistry]:
+    """Run the governed validation maintenance shared by every cycle shape.
+
+    A cadence tick must be able to progress pending validation and forward
+    validation work whether or not new canonical research evidence arrived this
+    tick.  This helper performs exactly the authoritative queue operations:
+
+    * reconcile candidate observation registrations (idempotent);
+    * enqueue any supplied canonical/generated validation handoffs;
+    * process eligible pending jobs (including ``WAITING_FOR_DATA`` rechecks
+      against the latest persisted governed counterfactual evidence);
+    * register forward-validation handoffs for ``VALIDATED`` candidates;
+    * process eligible forward-validation jobs.
+
+    It never invents evidence, never reconstructs a handoff from free-text
+    metadata and never grants live approval.
+    """
+    validation_store = ValidationQueueStore(root / "validation_queue.json")
+    registry = OptimisationRegistry(str(registry_dir))
+    registry.load()
+
+    # Wire 4: generically reconcile candidate observation registrations and
+    # attribute candidate-specific governed evidence.  No candidate ID is
+    # hard-coded and no manual registration is required for a newly created
+    # eligible candidate to become observable.
+    from research_engine.v10.continuous.candidate_observation import (
+        CandidateObservationStore, candidate_evidence_accounting,
+        reconcile_candidate_observations,
+    )
+    observation_store = CandidateObservationStore(
+        root / "candidate_observations.json")
+    observation_reconcile = reconcile_candidate_observations(
+        registry, observation_store, snapshot_id=frontier_snapshot_id)
+    evidence_store = (
+        counterfactual_evidence_store
+        or CounterfactualEvidenceStore(
+            counterfactual_evidence_directory
+            if counterfactual_evidence_directory is not None
+            else DEFAULT_COUNTERFACTUAL_EVIDENCE_DIRECTORY))
+    observation_accounting = candidate_evidence_accounting(
+        observation_store.load(), evidence_store)
+    if observation_coverage is not None:
+        observation_coverage["candidate_observation"] = {
+            "reconcile": observation_reconcile,
+            "accounting": observation_accounting,
+        }
+
+    # Both the canonical and the generated scientific bridges feed their
+    # eligible governed handoffs through the SAME authoritative queue.  The
+    # queue boundary deduplicates by deterministic job identity, so a candidate
+    # surfaced by both bridges enqueues exactly once and a conflicting identity
+    # fails closed rather than being silently dropped.
+    for handoff in (canonical_handoff, generated_handoff):
+        enqueue_validation_handoff(
+            handoff, registry=registry, store=validation_store,
+            snapshot_id=frontier_snapshot_id, cycle_id=cycle_id)
+
+    processed = process_validation_queue(
+        store=validation_store, registry=registry,
+        validation_executor=validation_executor, forward_executor=forward_executor,
+        max_jobs=max_validation_jobs)
+
+    # Scan the authority, not only this process's transitions.  This closes
+    # the crash window between a persisted VALIDATED transition and its
+    # forward-validation handoff.
+    for candidate in sorted(registry.list_candidates("VALIDATED"),
+                            key=lambda row: row.candidate_id):
+        plan = registry.get_plan(candidate.candidate_id)
+        if plan:
+            enqueue_forward_validation(
+                candidate, plan.to_dict(), store=validation_store,
+                snapshot_id=frontier_snapshot_id, cycle_id=cycle_id,
+                timestamp=timestamp)
+
+    if forward_executor is not None:
+        follow = process_validation_queue(
+            store=validation_store, registry=registry,
+            validation_executor=validation_executor, forward_executor=forward_executor,
+            max_jobs=max_validation_jobs)
+        processed["transitions"].extend(follow["transitions"])
+        processed["shadow_eligibility"] = follow["shadow_eligibility"]
+
+    queue_version = hashlib.sha256(canonical_json(
+        [job.to_dict() for job in validation_store.ordered()]).encode("utf-8")).hexdigest()
+    return validation_store, processed, queue_version, registry
+
+
 @_exclusive_continuous_cycle
 def run_continuous_research_cycle(
     *, state_root: Path | str = Path("data/research/continuous"),
@@ -568,9 +670,36 @@ def run_continuous_research_cycle(
         if _is_current_successful_projection(
                 latest, frontier, stale_questions, canonical_projection):
             for stage in ("QUESTIONS", "SCIENTIFIC_STATE", "OBSERVATION_SPACE",
-                          "Q71_PLUS", "Q71_EXECUTION", "VALIDATION_QUEUE"):
+                          "Q71_PLUS", "Q71_EXECUTION"):
                 stages[stage] = "SKIPPED_NO_NEW_EVIDENCE"
                 progress("skip_stage", stage, "NO_NEW_EVIDENCE_WITH_CURRENT_PROJECTION")
+            # An unchanged frontier must not stall pending validation work,
+            # governed retry checks or recoverable forward-validation handoffs.
+            # These operations consume only already-persisted state, so they run
+            # even though no new canonical research evidence arrived this tick.
+            try:
+                _validation_store, processed, queue_version, _registry = (
+                    _run_validation_queue_stage(
+                        root=root, registry_dir=registry_dir,
+                        frontier_snapshot_id=str(_value(frontier, "snapshot_id")),
+                        cycle_id=(predecessor_id
+                                  or str(_value(frontier, "snapshot_id") or "")),
+                        timestamp=started,
+                        validation_executor=validation_executor,
+                        forward_executor=forward_executor,
+                        max_validation_jobs=max_validation_jobs,
+                        counterfactual_evidence_store=counterfactual_evidence_store,
+                        counterfactual_evidence_directory=counterfactual_evidence_directory,
+                        observation_coverage=observation_coverage))
+                stages["VALIDATION_QUEUE"] = "COMPLETED_RETAINED_FRONTIER"
+                progress("exit_stage", "VALIDATION_QUEUE",
+                         status="COMPLETED_RETAINED_FRONTIER",
+                         details={"transition_count": len(processed["transitions"])})
+            except Exception as exc:
+                progress("exit_stage", "VALIDATION_QUEUE", status="FAILED",
+                         details={"failure": f"{type(exc).__name__}:{exc}"})
+                return failed("VALIDATION_QUEUE", exc,
+                              identity={"frontier": _value(frontier, "frontier_id")})
             stages["PROJECTION"] = "RETAINED"
             progress("skip_stage", "PROJECTION", "CURRENT_PROJECTION_RETAINED")
             material = {"outcome": "NO_NEW_RESEARCH_EVIDENCE",
@@ -586,10 +715,12 @@ def run_continuous_research_cycle(
                 cycle_outcome="NO_NEW_RESEARCH_EVIDENCE",
                 frontier_snapshot_id=_value(frontier, "snapshot_id"), question_cycle_id=None,
                 bridge_run_id=None, q71_agenda_id=None, q71_queue_id=None,
-                validation_queue_version=None,
+                validation_queue_version=queue_version,
                 projection_version=latest.get("projection_version"),
                 predecessor_cycle_id=predecessor_id, started_at=started, completed_at=started,
                 stage_statuses=stages,
+                validation_transitions=tuple(processed["transitions"]),
+                shadow_eligibility=tuple(processed["shadow_eligibility"]),
                 projection_path=str(projection_store.latest_path),
                 cycle_attempt_id=cycle_attempt_id, evidence_identity=evidence_identity,
             )
@@ -955,67 +1086,19 @@ def run_continuous_research_cycle(
 
     progress("enter_stage", "VALIDATION_QUEUE", details={"max_jobs": max_validation_jobs})
     try:
-        validation_store = ValidationQueueStore(root / "validation_queue.json")
-        registry = OptimisationRegistry(str(registry_dir))
-        registry.load()
-        # Wire 4: generically reconcile candidate observation registrations and
-        # attribute candidate-specific governed evidence.  No candidate ID is
-        # hard-coded and no manual registration is required for a newly created
-        # eligible candidate to become observable.
-        from research_engine.v10.continuous.candidate_observation import (
-            CandidateObservationStore, candidate_evidence_accounting,
-            reconcile_candidate_observations,
-        )
-        observation_store = CandidateObservationStore(
-            root / "candidate_observations.json")
-        observation_reconcile = reconcile_candidate_observations(
-            registry, observation_store,
-            snapshot_id=str(_value(frontier, "snapshot_id")))
-        evidence_store = (
-            counterfactual_evidence_store
-            or CounterfactualEvidenceStore(
-                counterfactual_evidence_directory
-                if counterfactual_evidence_directory is not None
-                else DEFAULT_COUNTERFACTUAL_EVIDENCE_DIRECTORY))
-        observation_accounting = candidate_evidence_accounting(
-            observation_store.load(), evidence_store)
-        observation_coverage["candidate_observation"] = {
-            "reconcile": observation_reconcile,
-            "accounting": observation_accounting,
-        }
-        enqueue_validation_handoff(
-            _value(bridge, "validation_handoff", ()), registry=registry,
-            store=validation_store, snapshot_id=str(_value(frontier, "snapshot_id")),
+        validation_store, processed, queue_version, registry = _run_validation_queue_stage(
+            root=root, registry_dir=registry_dir,
+            frontier_snapshot_id=str(_value(frontier, "snapshot_id")),
             cycle_id=str(_value(question, "cycle_id")),
-        )
-        processed = process_validation_queue(
-            store=validation_store, registry=registry,
-            validation_executor=validation_executor, forward_executor=forward_executor,
-            max_jobs=max_validation_jobs,
-        )
-        # Scan the authority, not only this process's transitions.  This closes
-        # the crash window between a persisted VALIDATED transition and its
-        # forward-validation handoff.
-        for candidate in sorted(registry.list_candidates("VALIDATED"),
-                                key=lambda row: row.candidate_id):
-            plan = registry.get_plan(candidate.candidate_id)
-            if plan:
-                enqueue_forward_validation(
-                    candidate, plan.to_dict(), store=validation_store,
-                    snapshot_id=str(_value(frontier, "snapshot_id")),
-                    cycle_id=str(_value(question, "cycle_id")),
-                    timestamp=str(_value(question, "completed_at", "")),
-                )
-        if forward_executor is not None:
-            follow = process_validation_queue(
-                store=validation_store, registry=registry,
-                validation_executor=validation_executor, forward_executor=forward_executor,
-                max_jobs=max_validation_jobs,
-            )
-            processed["transitions"].extend(follow["transitions"])
-            processed["shadow_eligibility"] = follow["shadow_eligibility"]
-        queue_version = hashlib.sha256(canonical_json(
-            [job.to_dict() for job in validation_store.ordered()]).encode("utf-8")).hexdigest()
+            timestamp=str(_value(question, "completed_at", "")),
+            canonical_handoff=_value(bridge, "validation_handoff", ()),
+            generated_handoff=_value(generated_bridge, "validation_handoff", ()),
+            validation_executor=validation_executor,
+            forward_executor=forward_executor,
+            max_validation_jobs=max_validation_jobs,
+            counterfactual_evidence_store=counterfactual_evidence_store,
+            counterfactual_evidence_directory=counterfactual_evidence_directory,
+            observation_coverage=observation_coverage)
         stages["VALIDATION_QUEUE"] = "COMPLETED"
         progress("exit_stage", "VALIDATION_QUEUE", status="COMPLETED", details={
             "transition_count": len(processed["transitions"]),
