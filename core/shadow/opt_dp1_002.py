@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from core.shadow.candidate_models import TreatmentResult
 from core.shadow.candidate_runtime import CandidateRegistration
@@ -71,6 +71,50 @@ class OptDp1002TreatmentAdapter:
                direction: str, bar, prior_state: dict) -> TreatmentResult:
         step = advance_frozen_trailing(
             policy=POLICY,
+            entry_price=entry_geometry["entry_price"],
+            stop_loss=entry_geometry["stop_loss"],
+            take_profit=entry_geometry["take_profit"],
+            risk_distance=risk_distance,
+            direction=direction,
+            bar_high=bar.bar_high,
+            bar_low=bar.bar_low,
+            bar_close=bar.bar_close,
+            prior_state=prior_state,
+        )
+        return TreatmentResult(
+            treatment_state=step.state,
+            terminal=step.terminal,
+            exit_reason=step.exit_reason,
+            exit_price=step.exit_price,
+        )
+
+
+class GovernedTrailingTreatmentAdapter:
+    """Policy-parameterised candidate treatment adapter for TRAILING policies.
+
+    The generic counterpart of ``OptDp1002TreatmentAdapter``: identical frozen
+    HD09 transition, but bound to any governed TRAILING policy rather than the
+    single historical policy.
+    """
+
+    def __init__(self, policy: Mapping[str, Any]) -> None:
+        if str(policy.get("policy_type") or "") != "TRAILING":
+            raise ValueError("GOVERNED_TRAILING_ADAPTER_POLICY_TYPE_MISMATCH")
+        self._policy = dict(policy)
+
+    def initialize(self, *, entry_geometry: dict) -> dict:
+        return initialise_frozen_trailing(
+            entry_price=entry_geometry["entry_price"],
+            stop_loss=entry_geometry["stop_loss"],
+            take_profit=entry_geometry["take_profit"],
+            risk_distance=entry_geometry["risk_distance"],
+            timeout_bars=int(entry_geometry["timeout_bars"]),
+        )
+
+    def on_bar(self, *, entry_geometry: dict, risk_distance: float,
+               direction: str, bar, prior_state: dict) -> TreatmentResult:
+        step = advance_frozen_trailing(
+            policy=self._policy,
             entry_price=entry_geometry["entry_price"],
             stop_loss=entry_geometry["stop_loss"],
             take_profit=entry_geometry["take_profit"],
@@ -204,9 +248,94 @@ def register_opt_dp1_002(runtime) -> bool:
     return runtime.register(registration)
 
 
+def register_governed_shadow_candidates(runtime) -> dict[str, Any]:
+    """Register every eligible prospective shadow-bound candidate generically.
+
+    Reads the authoritative optimisation registry and registers any candidate
+    carrying a prospective, non-live shadow binding whose governed policy is a
+    TRAILING policy.  Non-TRAILING families are blocked explicitly rather than
+    forced through an incompatible adapter.  When the registry is unavailable,
+    falls back to the strict historical OPT-DP1-002 binding so live-runtime
+    behaviour never silently drops the one verified candidate.
+    """
+    from research_engine.control_plane.exit_candidate_replay import (
+        CANDIDATE_POLICY_BY_ID,
+    )
+    from research_engine.v10.optimisation.optimisation_registry import (
+        OptimisationRegistry,
+    )
+
+    registry = OptimisationRegistry(str(REGISTRY_PATH.parent))
+    try:
+        registry.load()
+    except Exception as exc:
+        logger.debug("[SHADOW_CANDIDATE_REGISTRY_UNAVAILABLE] %s", exc)
+        register_opt_dp1_002(runtime)
+        return {"registered": [], "blocked": [
+            {"candidate_id": "", "reason": "REGISTRY_UNAVAILABLE"}]}
+
+    registered: list[str] = []
+    blocked: list[dict[str, str]] = []
+    for candidate in sorted(registry.list_candidates(), key=lambda c: c.candidate_id):
+        binding = dict(candidate.shadow_binding or {})
+        if not binding:
+            continue
+        cid = str(candidate.candidate_id or "")
+        if binding.get("live_approved") is not False:
+            blocked.append({"candidate_id": cid, "reason": "LIVE_APPROVED_FORBIDDEN"})
+            continue
+        if binding.get("prospective_only") is not True:
+            blocked.append({"candidate_id": cid, "reason": "NOT_PROSPECTIVE_ONLY"})
+            continue
+        policy_id = str(binding.get("policy_id") or candidate.policy_id or "")
+        policy = CANDIDATE_POLICY_BY_ID.get(policy_id)
+        if policy is None:
+            blocked.append({"candidate_id": cid,
+                            "reason": "UNGOVERNED_POLICY:" + policy_id})
+            continue
+        if str(policy.get("policy_type") or "") != "TRAILING":
+            blocked.append({"candidate_id": cid, "reason":
+                            "UNSUPPORTED_TREATMENT_FAMILY:" + str(policy.get("policy_type"))})
+            continue
+        treatment_hash = str(binding.get("treatment_hash") or candidate.treatment_hash or "")
+        if not treatment_hash:
+            blocked.append({"candidate_id": cid, "reason": "MISSING_TREATMENT_HASH"})
+            continue
+        frontier = int(binding.get("activation_frontier_epoch_s") or 0)
+        plan = registry.get_plan(cid)
+        try:
+            registry_provenance = str(REGISTRY_PATH.relative_to(ROOT))
+        except ValueError:
+            registry_provenance = str(REGISTRY_PATH)
+        registration = CandidateRegistration(
+            candidate_id=cid,
+            policy_id=policy_id,
+            treatment_hash=treatment_hash,
+            adapter=GovernedTrailingTreatmentAdapter(policy),
+            provenance={
+                "candidate_registry": registry_provenance,
+                "policy_authority":
+                    "research_engine.registry.exit_policy_adjudication.CANDIDATE_POLICIES_V1",
+                "activated_at": str(binding.get("activated_at") or ""),
+                "activation_frontier_epoch_s": frontier,
+            },
+            required_experiment_arm="CANDIDATE",
+            activation_frontier_epoch_s=frontier,
+            minimum_sample_requirement=(int(plan.minimum_sample)
+                                        if plan is not None and plan.minimum_sample else None),
+        )
+        if runtime.register(registration):
+            registered.append(cid)
+    if not registered and not blocked:
+        register_opt_dp1_002(runtime)
+    return {"registered": registered, "blocked": blocked}
+
+
 __all__ = [
     "ACTIVATED_AT", "ACTIVATION_FRONTIER_EPOCH_S", "CANDIDATE_ID",
+    "GovernedTrailingTreatmentAdapter",
     "OptDp1002AuthorityUnavailable", "OptDp1002TreatmentAdapter", "POLICY",
     "POLICY_ID", "READINESS_CRITERIA", "TREATMENT_HASH",
+    "register_governed_shadow_candidates",
     "register_opt_dp1_002", "verify_binding_authority",
 ]

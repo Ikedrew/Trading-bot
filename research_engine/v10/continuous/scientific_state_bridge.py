@@ -622,23 +622,32 @@ def _complete_validation_criteria(result: CanonicalQuestionResult) -> dict[str, 
     return criteria
 
 
-def _reconcile_opt_dp1_002(
+def _reconcile_external_candidate_lineage(
     document: dict[str, Any], registry: OptimisationRegistry,
-) -> tuple[str | None, dict[str, Any] | None]:
-    hypothesis = registry.get_hypothesis("HYP-DP1-002")
-    candidate = registry.get_candidate("OPT-DP1-002")
-    if not hypothesis or not candidate or hypothesis.source_finding != "F-DP1-006":
-        return None, None
-    before = {
-        "candidate_id": candidate.candidate_id,
-        "hypothesis_id": hypothesis.hypothesis_id,
-        "finding_id": hypothesis.source_finding,
-        "treatment_hash": candidate.treatment_hash,
-        "status": candidate.status,
-        "shadow_binding": dict(candidate.shadow_binding),
-    }
-    document["reconciled_external_lineage"][candidate.candidate_id] = before
-    return candidate.candidate_id, before
+) -> list[tuple[str, dict[str, Any]]]:
+    """Reconcile every external/historical candidate's lineage without mutation.
+
+    Records the finding lineage for every candidate that names a hypothesis with
+    a source finding, and returns the identity snapshot of every candidate that
+    carries a prospective shadow binding — the "live binding" set whose runtime
+    state reconciliation must never mutate.  No candidate ID is special-cased.
+    """
+    live_bindings: list[tuple[str, dict[str, Any]]] = []
+    for candidate in sorted(registry.list_candidates(), key=lambda c: c.candidate_id):
+        hypothesis = registry.get_hypothesis(str(candidate.hypothesis_id or ""))
+        finding_id = str(hypothesis.source_finding) if hypothesis else ""
+        before = {
+            "candidate_id": candidate.candidate_id,
+            "hypothesis_id": str(candidate.hypothesis_id or ""),
+            "finding_id": finding_id,
+            "treatment_hash": candidate.treatment_hash,
+            "status": candidate.status,
+            "shadow_binding": dict(candidate.shadow_binding),
+        }
+        document["reconciled_external_lineage"][candidate.candidate_id] = before
+        if candidate.shadow_binding:
+            live_bindings.append((candidate.candidate_id, before))
+    return live_bindings
 
 
 @dataclass
@@ -991,7 +1000,7 @@ def _reconcile_changed_results(
 def _commit_bridge_run(
     *, result: ScientificStateBridgeResult, document: Mapping[str, Any],
     registry: OptimisationRegistry, sstore: ScientificStateStore,
-    reconciled_id: str | None, reconciled_before: Mapping[str, Any] | None,
+    reconciled_bindings: Sequence[tuple[str, Mapping[str, Any]]],
     persistence_hook: Callable[[str], None] | None,
 ) -> ScientificStateBridgeResult:
     """Persist one reconciliation run with the canonical rollback contract.
@@ -1019,8 +1028,10 @@ def _commit_bridge_run(
         raise ScientificStateBridgeError(
             f"BRIDGE_PERSISTENCE_FAILED:{type(exc).__name__}:{exc}") from exc
 
-    # Historical consistency invariant: reconciliation may never mutate live binding.
-    if reconciled_id and reconciled_before:
+    # Historical consistency invariant: reconciliation may never mutate a live
+    # candidate binding.  This applies to every prospective shadow-bound
+    # candidate, not to any single hard-coded candidate ID.
+    for reconciled_id, reconciled_before in reconciled_bindings:
         after = registry.get_candidate(reconciled_id)
         if after is None or {
             "treatment_hash": after.treatment_hash,
@@ -1031,7 +1042,8 @@ def _commit_bridge_run(
             "status": reconciled_before["status"],
             "shadow_binding": reconciled_before["shadow_binding"],
         }:
-            raise ScientificStateBridgeError("OPT_DP1_002_RUNTIME_STATE_MUTATED")
+            raise ScientificStateBridgeError(
+                "CANDIDATE_RUNTIME_STATE_MUTATED:" + reconciled_id)
     return result
 
 
@@ -1099,7 +1111,7 @@ def run_scientific_state_bridge(
     failures: list[dict[str, Any]] = []
     handoff: list[dict[str, Any]] = []
 
-    reconciled_id, reconciled_before = _reconcile_opt_dp1_002(document, registry)
+    reconciled_bindings = _reconcile_external_candidate_lineage(document, registry)
 
     context = _ReconciliationContext(
         document=document, registry=registry, policies=policies,
@@ -1166,7 +1178,7 @@ def run_scientific_state_bridge(
 
     return _commit_bridge_run(
         result=result, document=document, registry=registry, sstore=sstore,
-        reconciled_id=reconciled_id, reconciled_before=reconciled_before,
+        reconciled_bindings=reconciled_bindings,
         persistence_hook=persistence_hook)
 
 
@@ -1267,7 +1279,7 @@ def run_generated_scientific_bridge(
     document = sstore.document
     failures: list[dict[str, Any]] = []
     handoff: list[dict[str, Any]] = []
-    reconciled_id, reconciled_before = _reconcile_opt_dp1_002(document, registry)
+    reconciled_bindings = _reconcile_external_candidate_lineage(document, registry)
     generated_result_ids = {
         str(item.get("generated_question_id")): str(item.get("result_id") or "")
         for item in execution_batch.entries
@@ -1328,7 +1340,7 @@ def run_generated_scientific_bridge(
     )
     return _commit_bridge_run(
         result=result, document=document, registry=registry, sstore=sstore,
-        reconciled_id=reconciled_id, reconciled_before=reconciled_before,
+        reconciled_bindings=reconciled_bindings,
         persistence_hook=persistence_hook)
 
 

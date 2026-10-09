@@ -958,6 +958,31 @@ def run_continuous_research_cycle(
         validation_store = ValidationQueueStore(root / "validation_queue.json")
         registry = OptimisationRegistry(str(registry_dir))
         registry.load()
+        # Wire 4: generically reconcile candidate observation registrations and
+        # attribute candidate-specific governed evidence.  No candidate ID is
+        # hard-coded and no manual registration is required for a newly created
+        # eligible candidate to become observable.
+        from research_engine.v10.continuous.candidate_observation import (
+            CandidateObservationStore, candidate_evidence_accounting,
+            reconcile_candidate_observations,
+        )
+        observation_store = CandidateObservationStore(
+            root / "candidate_observations.json")
+        observation_reconcile = reconcile_candidate_observations(
+            registry, observation_store,
+            snapshot_id=str(_value(frontier, "snapshot_id")))
+        evidence_store = (
+            counterfactual_evidence_store
+            or CounterfactualEvidenceStore(
+                counterfactual_evidence_directory
+                if counterfactual_evidence_directory is not None
+                else DEFAULT_COUNTERFACTUAL_EVIDENCE_DIRECTORY))
+        observation_accounting = candidate_evidence_accounting(
+            observation_store.load(), evidence_store)
+        observation_coverage["candidate_observation"] = {
+            "reconcile": observation_reconcile,
+            "accounting": observation_accounting,
+        }
         enqueue_validation_handoff(
             _value(bridge, "validation_handoff", ()), registry=registry,
             store=validation_store, snapshot_id=str(_value(frontier, "snapshot_id")),

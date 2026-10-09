@@ -493,8 +493,8 @@ def get_candidate_runtime() -> CandidateRuntime:
     global _CANDIDATE_RUNTIME
     if _CANDIDATE_RUNTIME is None:
         _CANDIDATE_RUNTIME = CandidateRuntime()
-        from core.shadow.opt_dp1_002 import register_opt_dp1_002
-        register_opt_dp1_002(_CANDIDATE_RUNTIME)
+        from core.shadow.opt_dp1_002 import register_governed_shadow_candidates
+        register_governed_shadow_candidates(_CANDIDATE_RUNTIME)
     return _CANDIDATE_RUNTIME
 
 
