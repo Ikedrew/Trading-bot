@@ -124,6 +124,12 @@ def _row(dataset: str, marker: str = "base") -> dict:
         "trade_horizon": "SCALP",
         "result_ok": True,
         "protection_status": "VERIFIED",
+        **({"symbol": "EURUSD", "action": "HOLD"}
+           if dataset == "decision_trace" else {}),
+        **({"symbol": "EURUSD"}
+           if dataset in ("execution_context", "market_context") else {}),
+        **({"symbol": "EURUSD", "observation_id": "SO1"}
+           if dataset == "strategy_observations" else {}),
     }
 
 

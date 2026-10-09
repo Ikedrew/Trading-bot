@@ -37,11 +37,22 @@ def _body(
     marker: str = "base",
     timestamp: str = "2026-09-25T12:00:00Z",
 ) -> str:
+    required = {
+        "decision_trace": {"symbol": "EURUSD", "entity_id": "E1", "action": "HOLD"},
+        "shadow_runtime": {"symbol": "EURUSD", "canonical_opportunity_id": "O1"},
+        "execution_context": {"symbol": "EURUSD", "entity_id": "E1", "correlation_id": "C1"},
+        "market_context": {"symbol": "EURUSD", "entity_id": "E1"},
+        "strategy_observations": {
+            "symbol": "EURUSD", "canonical_opportunity_id": "O1",
+            "observation_id": "SO1", "entity_id": "E1",
+        },
+    }
     return json.dumps({
         "schema_version": current_schema(dataset),
         "dataset": dataset,
         "marker": marker,
         "timestamp_utc": timestamp,
+        **required.get(dataset, {}),
     }, sort_keys=True) + "\n"
 
 
@@ -150,6 +161,41 @@ def test_scope_reuses_investigation_policy_and_excludes_local_candidates():
     assert DATASET_SCOPE["portfolio_rankings"]["classification"] == "EXCLUDED"
     assert DATASET_SCOPE["shadow_candidate"]["classification"] == "EXCLUDED"
     assert DATASET_SCOPE["shadow_candidate_evaluation"]["classification"] == "EXCLUDED"
+
+
+def test_frontier_rejects_decision_trace_missing_canonical_fields(tmp_path):
+    fake = MemoryS3(_objects())
+    fake.objects[_key("decision_trace")] = json.dumps({
+        "schema_version": current_schema("decision_trace"),
+        "timestamp_utc": "2026-09-25T12:00:00Z",
+    }) + "\n"
+    result = _run(tmp_path, fake)
+    assert result.status == FRONTIER_INVALID
+    assert "SNAPSHOT_RECORD_PROFILE_INVALID:decision_trace" in result.failure_reason
+    assert result.verification_status == "FAILED"
+    assert not (tmp_path / "state" / "latest_success.json").exists()
+    assert not list((tmp_path / "manifests").glob("*.json"))
+
+
+def test_invalid_profiled_delta_preserves_previous_frontier(tmp_path):
+    fake = MemoryS3(_objects())
+    first = _run(tmp_path, fake)
+    assert first.status == SNAPSHOT_READY
+    manifest = tmp_path / "manifests" / f"{first.snapshot_id}.json"
+    history = tmp_path / "state" / "history" / f"{first.snapshot_id}.json"
+    pointer = tmp_path / "state" / "latest_success.json"
+    before = (manifest.read_bytes(), history.read_bytes(), pointer.read_bytes())
+
+    fake.objects[_key("decision_trace", part="part-001.jsonl")] = json.dumps({
+        "schema_version": current_schema("decision_trace"),
+        "timestamp_utc": "2026-09-25T13:00:00Z",
+    }) + "\n"
+    failed = _run(tmp_path, fake)
+    assert failed.status == FRONTIER_INVALID
+    assert "SNAPSHOT_RECORD_PROFILE_INVALID:decision_trace" in failed.failure_reason
+    assert failed.snapshot_id == first.snapshot_id
+    assert (manifest.read_bytes(), history.read_bytes(), pointer.read_bytes()) == before
+    assert len(list((tmp_path / "state" / "failures").glob("*.json"))) == 1
 
 
 def test_first_cycle_freezes_exact_membership_updates_pointer_and_rerun_is_noop(tmp_path):
@@ -473,6 +519,7 @@ def test_future_dated_required_record_fails_closed_even_in_valid_partition(tmp_p
     objects = _objects()
     objects[_key("decision_trace")] = json.dumps({
         "schema_version": current_schema("decision_trace"),
+        "symbol": "EURUSD", "entity_id": "E1", "action": "HOLD",
         "timestamp_utc": "2026-10-04T00:00:00Z",
     }) + "\n"
     result = _run(tmp_path, MemoryS3(objects))

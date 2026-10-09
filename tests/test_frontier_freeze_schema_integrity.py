@@ -23,6 +23,7 @@ import json
 import pytest
 
 from core.production_data_contract import current_schema, s3_base_prefix
+from core.canonical_profiles import validate_record
 from research_engine.data_access.s3_source import (
     ResearchDataSourceError,
     S3ResearchDataSource,
@@ -94,6 +95,45 @@ def _valid_trade_truth_row() -> dict:
 
 def _manifest(dataset: str) -> list[dict]:
     return [{"identifier": _key(dataset), "content_sha256": "", "row_count": 1}]
+
+
+def test_freeze_rejects_profiled_record_missing_required_fields():
+    row = {"schema_version": current_schema("decision_trace")}
+    valid, violations = validate_record("decision_trace", row)
+    assert not valid
+    assert "required field missing: symbol" in violations
+    source = _source({_key("decision_trace"): _jsonl(row)})
+    with pytest.raises(ResearchDataSourceError, match="SNAPSHOT_RECORD_PROFILE_INVALID"):
+        source.read_objects_for_freeze(
+            "decision_trace", _manifest("decision_trace"),
+            expected_schema_version=current_schema("decision_trace"))
+
+
+def test_freeze_accepts_complete_profiled_record():
+    row = {
+        "schema_version": current_schema("decision_trace"),
+        "symbol": "EURUSD", "entity_id": "E1", "action": "HOLD",
+    }
+    assert validate_record("decision_trace", row) == (True, [])
+    source = _source({_key("decision_trace"): _jsonl(row)})
+    assert source.read_objects_for_freeze(
+        "decision_trace", _manifest("decision_trace"),
+        expected_schema_version=current_schema("decision_trace")) == [row]
+
+
+def test_live_read_dataset_keeps_incomplete_profiled_record():
+    row = {"schema_version": current_schema("decision_trace")}
+    source = _source({_key("decision_trace"): _jsonl(row)})
+    assert source.read_dataset("decision_trace", symbol="EURUSD") == [row]
+
+
+def test_direct_bound_read_keeps_existing_profile_scope():
+    row = {"schema_version": current_schema("decision_trace")}
+    source = _source({_key("decision_trace"): _jsonl(row)})
+    assert source.read_bound_objects(
+        "decision_trace", _manifest("decision_trace"),
+        expected_schema_version=current_schema("decision_trace"),
+        _verify_content=False) == [row]
 
 # ─── DEFECT 1: non-object rows silently reduce the frozen count ─────────────────
 

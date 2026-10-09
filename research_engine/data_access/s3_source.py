@@ -41,6 +41,7 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Sequence
 
 from core.config import NEW_RUNTIME_S3_BUCKET
+from core.canonical_profiles import has_profile, validate_record
 from core.production_data_contract import (
     PRODUCTION_SCHEMA_REGISTRY,
     RETIRED_DATASETS,
@@ -248,25 +249,18 @@ class MalformedReport:
 
 
 def _assert_freeze_record_schema(dataset: str, record: Any) -> None:
-    """Reject a wrong-schema record at the freeze boundary (schema identity).
+    """Enforce schema identity at the bound-object read boundary.
 
-    This is the strict per-record gate used ONLY when acquiring a frozen
-    frontier (``read_bound_objects``/``read_objects_for_freeze``). It is
-    deliberately NOT used by the live ``read_dataset`` path, whose contract is
-    to skip-and-report malformed lines rather than fail closed, so no existing
-    loader regresses.
+    This gate is used by bound-object reads, including frontier acquisition.
+    The live ``read_dataset`` path keeps its skip-and-report behavior.
 
     Rule (never inventing fields, never weakening a production contract):
       * For a governed production dataset the record's ``schema_version`` must
         equal the contract's canonical schema for that dataset. This enforces
         schema IDENTITY for every one of the ten bound datasets.
 
-    Scope note: the richer field/type rules of ``core.canonical_profiles``
-    (required fields, version-field baselines) are the WRITER/ingestion
-    obligation enforced on the persist path; they are intentionally not
-    re-imposed on the freeze READ boundary, which legitimately consumes the
-    exact governed bytes the writer already validated. Unprofiled datasets
-    therefore receive schema identity here and never a fabricated field set.
+    Registered profile rules are checked by ``read_objects_for_freeze`` only.
+    Unprofiled datasets receive schema identity only.
     A non-object record (never a legitimate governed record) is rejected by
     the caller before this runs.
     """
@@ -624,12 +618,20 @@ class S3ResearchDataSource:
         end_date: str | None = None,
     ) -> list[dict[str, Any]]:
         """Acquire exactly a just-discovered key set before its digest exists."""
-        return self.read_bound_objects(
+        records = self.read_bound_objects(
             dataset, objects,
             expected_schema_version=expected_schema_version,
             start_date=start_date, end_date=end_date,
             _verify_content=False,
         )
+        if has_profile(dataset):
+            for record in records:
+                valid, violations = validate_record(dataset, record)
+                if not valid:
+                    raise ResearchDataSourceError(
+                        f"SNAPSHOT_RECORD_PROFILE_INVALID:{dataset}:"
+                        + ";".join(violations))
+        return records
 
     # ─── object read + decode ─────────────────────────────────────────────────
 
@@ -669,9 +671,7 @@ class S3ResearchDataSource:
                     report.keys_with_errors.append(key)
                 return
             if strict:
-                # Freeze boundary only: enforce schema identity for the
-                # dataset and its registered canonical profile (where one
-                # exists). Never fabricate fields for unprofiled datasets.
+                # Bound-object reads enforce schema identity; live reads do not.
                 _assert_freeze_record_schema(dataset, rec)
             out.append(rec)
 

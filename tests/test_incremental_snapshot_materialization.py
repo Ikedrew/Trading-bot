@@ -42,11 +42,22 @@ def _key(dataset: str, day: str = "2026-09-25", part: str = "part-000.jsonl") ->
 
 
 def _body(dataset: str, marker: str = "base") -> str:
+    required = {
+        "decision_trace": {"symbol": "EURUSD", "entity_id": "E1", "action": "HOLD"},
+        "shadow_runtime": {"symbol": "EURUSD", "canonical_opportunity_id": "O1"},
+        "execution_context": {"symbol": "EURUSD", "entity_id": "E1", "correlation_id": "C1"},
+        "market_context": {"symbol": "EURUSD", "entity_id": "E1"},
+        "strategy_observations": {
+            "symbol": "EURUSD", "canonical_opportunity_id": "O1",
+            "observation_id": "SO1", "entity_id": "E1",
+        },
+    }
     return json.dumps({
         "schema_version": current_schema(dataset),
         "dataset": dataset,
         "marker": marker,
         "timestamp_utc": "2026-09-25T12:00:00Z",
+        **required.get(dataset, {}),
     }, sort_keys=True) + "\n"
 
 
