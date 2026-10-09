@@ -247,6 +247,43 @@ class MalformedReport:
     keys_with_errors: list[str] = field(default_factory=list)
 
 
+def _assert_freeze_record_schema(dataset: str, record: Any) -> None:
+    """Reject a wrong-schema record at the freeze boundary (schema identity).
+
+    This is the strict per-record gate used ONLY when acquiring a frozen
+    frontier (``read_bound_objects``/``read_objects_for_freeze``). It is
+    deliberately NOT used by the live ``read_dataset`` path, whose contract is
+    to skip-and-report malformed lines rather than fail closed, so no existing
+    loader regresses.
+
+    Rule (never inventing fields, never weakening a production contract):
+      * For a governed production dataset the record's ``schema_version`` must
+        equal the contract's canonical schema for that dataset. This enforces
+        schema IDENTITY for every one of the ten bound datasets.
+
+    Scope note: the richer field/type rules of ``core.canonical_profiles``
+    (required fields, version-field baselines) are the WRITER/ingestion
+    obligation enforced on the persist path; they are intentionally not
+    re-imposed on the freeze READ boundary, which legitimately consumes the
+    exact governed bytes the writer already validated. Unprofiled datasets
+    therefore receive schema identity here and never a fabricated field set.
+    A non-object record (never a legitimate governed record) is rejected by
+    the caller before this runs.
+    """
+    if dataset not in PRODUCTION_SCHEMA_REGISTRY:
+        # Not a governed production dataset (e.g. derived artifacts): the freeze
+        # boundary does not impose a schema contract here.
+        return
+
+    expected = current_schema(dataset)
+    claimed = record.get("schema_version") if isinstance(record, dict) else None
+    if claimed != expected:
+        raise ResearchDataSourceError(
+            f"SNAPSHOT_RECORD_SCHEMA_MISMATCH:{dataset}:"
+            f"record={claimed!r}!={expected!r}")
+
+
+
 class S3ResearchDataSource:
     """Shared, dataset-oriented S3 reader for the Research Engine.
 
@@ -546,7 +583,8 @@ class S3ResearchDataSource:
             records.extend(self._read_object(
                 dataset, key,
                 version_id=(None if item.get("version_id") is None
-                            else str(item.get("version_id")))))
+                            else str(item.get("version_id"))),
+                strict=True))
             actual = dict(self._read_objects[(dataset, key)])
             expected_digest = str(item.get("content_sha256") or "")
             if _verify_content:
@@ -597,6 +635,7 @@ class S3ResearchDataSource:
 
     def _read_object(
         self, dataset: str, key: str, *, version_id: str | None = None,
+        strict: bool = False,
     ) -> list[dict[str, Any]]:
         client = self._get_client()
         response: Mapping[str, Any] = {}
@@ -617,8 +656,24 @@ class S3ResearchDataSource:
                 if key not in report.keys_with_errors:
                     report.keys_with_errors.append(key)
                 return
-            if isinstance(rec, dict):
-                out.append(rec)
+            if not isinstance(rec, dict):
+                # A valid-JSON non-object row is never a legitimate
+                # governed record. On the freeze path this MUST fail
+                # closed rather than silently reduce the frozen count;
+                # on the live path preserve the skip-and-report contract.
+                if strict:
+                    raise ResearchDataSourceError(
+                        f"SNAPSHOT_RECORD_NOT_OBJECT:{dataset}:{key}")
+                report.malformed_lines += 1
+                if key not in report.keys_with_errors:
+                    report.keys_with_errors.append(key)
+                return
+            if strict:
+                # Freeze boundary only: enforce schema identity for the
+                # dataset and its registered canonical profile (where one
+                # exists). Never fabricate fields for unprofiled datasets.
+                _assert_freeze_record_schema(dataset, rec)
+            out.append(rec)
 
         try:
             request: dict[str, Any] = {"Bucket": self._bucket, "Key": key}
@@ -649,6 +704,11 @@ class S3ResearchDataSource:
             if pending:
                 decode_line(pending.rstrip(b"\r"))
         except MemoryError:
+            raise
+        except ResearchDataSourceError:
+            # A freeze-boundary schema/profile rejection is already an
+            # actionable, secret-free error; re-raise it unchanged instead of
+            # masking it as a generic AWS get_object failure.
             raise
         except Exception as exc:
             raise self._diagnose(
