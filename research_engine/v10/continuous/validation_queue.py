@@ -28,6 +28,7 @@ COMPLETED = "COMPLETED"
 FAILED = "FAILED"
 BLOCKED = "BLOCKED"
 REVIEW_REQUIRED = "REVIEW_REQUIRED"
+WAITING_FOR_DATA = "WAITING_FOR_DATA"
 TERMINAL = {COMPLETED, FAILED, BLOCKED, REVIEW_REQUIRED}
 
 
@@ -68,6 +69,7 @@ class ValidationJob:
         job = cls(**fields)
         if job.kind not in {VALIDATION, FORWARD_VALIDATION} or job.status not in {
             QUEUED, RUNNING, COMPLETED, FAILED, BLOCKED, REVIEW_REQUIRED,
+            WAITING_FOR_DATA,
         }:
             raise ValidationQueueError("VALIDATION_JOB_STATE_INVALID")
         if job.job_id != validation_job_id(job.kind, job.candidate_id, job.policy_id,
@@ -254,20 +256,52 @@ def process_validation_queue(
     transitions: list[dict[str, Any]] = []
     remaining = max(0, int(max_jobs))
     for job in store.ordered():
-        if remaining == 0 or job.status != QUEUED:
-            continue
         executor = validation_executor if job.kind == VALIDATION else forward_executor
+        executor_retry = (
+            job.status == BLOCKED
+            and job.failure_reason == "VALIDATION_EXECUTOR_UNAVAILABLE"
+            and executor is not None
+        )
+        if (remaining == 0
+                or (job.status not in {QUEUED, WAITING_FOR_DATA}
+                    and not executor_retry)):
+            continue
         if executor is None:
+            if (job.status == BLOCKED
+                    and job.failure_reason == "VALIDATION_EXECUTOR_UNAVAILABLE"):
+                continue
+            job.status = BLOCKED
+            job.failure_reason = "VALIDATION_EXECUTOR_UNAVAILABLE"
+            job.transitions.append({"status": BLOCKED,
+                                    "reason": job.failure_reason})
+            store.save()
+            transitions.append({"job_id": job.job_id,
+                                "candidate_id": job.candidate_id,
+                                "kind": job.kind, "status": BLOCKED,
+                                "failure_reason": job.failure_reason})
             continue
         candidate = registry.get_candidate(job.candidate_id)
         if candidate is None:
-            raise ValidationQueueError("QUEUED_CANDIDATE_MISSING:" + job.candidate_id)
+            job.status = BLOCKED
+            job.failure_reason = "QUEUED_CANDIDATE_MISSING:" + job.candidate_id
+            job.transitions.append({"status": BLOCKED,
+                                    "reason": job.failure_reason})
+            store.save()
+            transitions.append({"job_id": job.job_id,
+                                "candidate_id": job.candidate_id,
+                                "kind": job.kind, "status": BLOCKED,
+                                "failure_reason": job.failure_reason})
+            continue
         expected = "PROPOSED" if job.kind == VALIDATION else "VALIDATED"
         if candidate.status != expected:
             job.status = BLOCKED
             job.failure_reason = "CANDIDATE_STATE_INELIGIBLE:" + candidate.status
             store.save()
             continue
+        prior_status = job.status
+        prior_attempts = job.attempts
+        prior_output = deepcopy(job.output_validation_record)
+        prior_transition_count = len(job.transitions)
         job.status, job.attempts = RUNNING, job.attempts + 1
         job.transitions.append({"status": RUNNING, "attempt": job.attempts})
         store.save()
@@ -276,10 +310,19 @@ def process_validation_queue(
         try:
             output = dict(executor(candidate, job.validation_plan, job))
             outcome = str(output.get("status") or "").upper()
-            if outcome not in {"VALIDATED", "FORWARD_VALIDATED", "FAILED", "REJECTED"}:
+            if outcome not in {
+                "VALIDATED", "FORWARD_VALIDATED", "FAILED", "REJECTED",
+                WAITING_FOR_DATA, BLOCKED, REVIEW_REQUIRED,
+            }:
                 raise ValidationQueueError("VALIDATION_EXECUTOR_OUTCOME_INVALID:" + outcome)
-            if str(output.get("snapshot_id") or "") != job.source_snapshot_id:
+            output_snapshot = str(output.get("snapshot_id") or "")
+            if job.kind == VALIDATION and output_snapshot != job.source_snapshot_id:
                 raise ValidationQueueError("VALIDATION_OUTPUT_SNAPSHOT_MISMATCH")
+            if job.kind == FORWARD_VALIDATION and (
+                    not output_snapshot
+                    or str(output.get("source_snapshot_id") or job.source_snapshot_id)
+                    != job.source_snapshot_id):
+                raise ValidationQueueError("FORWARD_VALIDATION_OUTPUT_SNAPSHOT_MISMATCH")
             if output.get("candidate_id") not in (None, job.candidate_id):
                 raise ValidationQueueError("VALIDATION_OUTPUT_CANDIDATE_MISMATCH")
             if output.get("treatment_hash") not in (None, job.treatment_hash):
@@ -292,8 +335,27 @@ def process_validation_queue(
                 registry.update_candidate_status(job.candidate_id, outcome)
                 job.status = COMPLETED
             else:
-                registry.update_candidate_status(job.candidate_id, "VALIDATION_FAILED")
-                job.status, job.failure_reason = FAILED, str(output.get("reason") or outcome)
+                reason = str(output.get("reason") or outcome)
+                if outcome in {"FAILED", "REJECTED"}:
+                    registry.update_candidate_status(job.candidate_id, "VALIDATION_FAILED")
+                    job.status, job.failure_reason = FAILED, reason
+                elif outcome == WAITING_FOR_DATA:
+                    job.status, job.failure_reason = WAITING_FOR_DATA, reason
+                elif outcome == REVIEW_REQUIRED:
+                    job.status, job.review_reason = REVIEW_REQUIRED, reason
+                else:
+                    job.status, job.failure_reason = BLOCKED, reason
+            # Re-checking an unchanged waiting population is intentionally a
+            # no-op: duplicate cadence ticks do not manufacture attempts or
+            # transition history while the producer has supplied no new data.
+            if (job.status == WAITING_FOR_DATA and prior_status == WAITING_FOR_DATA
+                    and prior_output is not None
+                    and canonical_json(prior_output) == canonical_json(output)):
+                job.attempts = prior_attempts
+                job.transitions = job.transitions[:prior_transition_count]
+                store.save()
+                remaining += 1
+                continue
             job.transitions.append({"status": job.status, "outcome": outcome})
             registry.save()
             store.save()
@@ -306,8 +368,8 @@ def process_validation_queue(
             # then persist one explicit failed attempt.  Never leave a VALIDATED
             # candidate behind a failed queue receipt.
             registry._candidates[job.candidate_id] = candidate_before
-            job.status, job.failure_reason = FAILED, f"{type(exc).__name__}:{exc}"
-            job.transitions.append({"status": FAILED, "reason": job.failure_reason})
+            job.status, job.failure_reason = BLOCKED, f"{type(exc).__name__}:{exc}"
+            job.transitions.append({"status": BLOCKED, "reason": job.failure_reason})
             try:
                 registry.save()
                 store.save()
@@ -315,7 +377,7 @@ def process_validation_queue(
                 raise ValidationQueueError(
                     "VALIDATION_TRANSITION_RECOVERY_FAILED") from persist_exc
             transitions.append({"job_id": job.job_id, "candidate_id": job.candidate_id,
-                                "kind": job.kind, "status": FAILED,
+                                "kind": job.kind, "status": BLOCKED,
                                 "failure_reason": job.failure_reason})
     shadow_eligibility = [
         {"candidate_id": candidate.candidate_id,
@@ -331,7 +393,7 @@ def process_validation_queue(
 
 __all__ = [
     "BLOCKED", "COMPLETED", "FAILED", "FORWARD_VALIDATION", "QUEUED",
-    "REVIEW_REQUIRED", "RUNNING", "VALIDATION", "ValidationJob",
+    "REVIEW_REQUIRED", "RUNNING", "VALIDATION", "WAITING_FOR_DATA", "ValidationJob",
     "ValidationQueueError", "ValidationQueueStore", "enqueue_forward_validation",
     "enqueue_validation_handoff", "process_validation_queue", "validation_job_id",
 ]

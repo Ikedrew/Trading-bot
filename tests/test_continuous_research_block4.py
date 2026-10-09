@@ -127,7 +127,9 @@ def test_validation_queue_dedup_review_block_and_existing_lifecycle(tmp_path):
     process_validation_queue(
         store=wrong_store, registry=wrong_snapshot, max_jobs=1,
         validation_executor=lambda *_: {"status": "VALIDATED", "snapshot_id": "CURRENT"})
-    assert wrong_store.ordered()[0].status == "FAILED"
+    # Executor/authority faults are operationally blocked; they are not a
+    # negative scientific result and must not reject the candidate.
+    assert wrong_store.ordered()[0].status == "BLOCKED"
     assert wrong_snapshot.get_candidate("OPT-T1").status == "PROPOSED"
 
     already, _, already_plan = _registry(tmp_path / "already", status="VALIDATED")

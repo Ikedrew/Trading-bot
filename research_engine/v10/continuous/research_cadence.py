@@ -199,8 +199,15 @@ def run_cadence_tick(
                 evaluator_registry = _production_evaluator_registry()
             except Exception:
                 evaluator_registry = None
+            from research_engine.v10.continuous.production_validation import (
+                production_executors,
+            )
+            validation_executor, forward_executor = production_executors(
+                state_root=root)
             result = run_continuous_research_cycle(
-                state_root=root, q71_evaluator_registry=evaluator_registry)
+                state_root=root, q71_evaluator_registry=evaluator_registry,
+                validation_executor=validation_executor,
+                forward_executor=forward_executor)
             fast_outcome = str(getattr(result, "cycle_outcome", "UNKNOWN"))
         except Exception as exc:
             fast_outcome = f"EXCEPTION:{type(exc).__name__}:{exc}"

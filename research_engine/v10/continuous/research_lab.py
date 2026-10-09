@@ -96,6 +96,11 @@ def build_lab_view(projection: Mapping[str, Any]) -> dict[str, Any]:
     lag = dict(projection.get("research_lag") or {})
     queues = dict(projection.get("investigations_and_work_queues") or {})
     changed = dict(projection.get("what_changed") or {})
+    validation_jobs = list(queues.get("validation_queue") or [])
+    forward_jobs = list(queues.get("forward_validation_queue") or [])
+    validation_by_status: dict[str, list[dict[str, Any]]] = {}
+    for job in validation_jobs:
+        validation_by_status.setdefault(str(job.get("status") or "UNKNOWN"), []).append(job)
 
     # Determine execution freshness for the whole system.
     pending_deep = int(lag.get("pending_deep_jobs") or 0)
@@ -234,7 +239,15 @@ def build_lab_view(projection: Mapping[str, Any]) -> dict[str, Any]:
                 "cell_count": 0,
                 "conserved": False}),
         # ── Validation / investigation queues ───────────────────────────────
-        "validation_queue": list(queues.get("validation_queue") or []),
+        "validation_queue": validation_jobs,
+        "forward_validation_queue": forward_jobs,
+        "validation_queue_by_status": validation_by_status,
+        "validation_waiting_for_evidence": list(
+            validation_by_status.get("WAITING_FOR_DATA", [])),
+        "validation_blocked": list(validation_by_status.get("BLOCKED", [])),
+        "validation_failed": list(validation_by_status.get("FAILED", [])),
+        "validation_running": list(validation_by_status.get("RUNNING", [])),
+        "validation_queued": list(validation_by_status.get("QUEUED", [])),
         "deep_research_queue": list(queues.get("deep_research_queue") or []),
         "review_required": list(queues.get("review_required") or []),
         # ── Full research lag ───────────────────────────────────────────────
@@ -400,6 +413,16 @@ def render_lab_terminal(view: dict[str, Any]) -> str:
     if view.get("review_required"):
         lines.append("")
         lines.append("REVIEW REQUIRED: " + ", ".join(str(r) for r in view["review_required"]))
+    if view.get("validation_queue"):
+        lines.append("")
+        lines.append("VALIDATION WORK:")
+        for job in view["validation_queue"]:
+            reason = (job.get("failure_reason") or job.get("review_reason")
+                      or (job.get("output_validation_record") or {}).get("reason") or "-")
+            lines.append(
+                f"  {job.get('candidate_id','?'):32s}  "
+                f"kind={job.get('kind','?')}  status={job.get('status','?')}  "
+                f"reason={reason}")
     lines.append("=" * 100)
     return "\n".join(lines)
 
