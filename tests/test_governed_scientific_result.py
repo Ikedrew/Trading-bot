@@ -1031,6 +1031,7 @@ def test_one_governed_autonomous_candidate_path_has_no_parallel_writer():
     # candidate lifecycle.  Those readers must never mutate it (asserted below).
     assert bridge_writers == {
         "v10/continuous/research_loop.py",
+        "v10/continuous/candidate_observation.py",
         "v10/continuous/research_projection.py",
         "v10/continuous/scientific_state_bridge.py",
         "v10/continuous/validation_queue.py",
@@ -1042,7 +1043,8 @@ def test_one_governed_autonomous_candidate_path_has_no_parallel_writer():
     # The Repair Block 3 lifecycle modules are READ-ONLY consumers of the
     # governed registry: no mutation primitive may ever appear in them.
     for relative in ("control_plane/candidate_lifecycle_authority.py",
-                     "control_plane/candidate_lifecycle_service.py"):
+                     "control_plane/candidate_lifecycle_service.py",
+                     "v10/continuous/candidate_observation.py"):
         text = (root / relative).read_text(encoding="utf-8", errors="ignore")
         for mutation in ("add_candidate(", "add_hypothesis(", "add_plan(",
                          "update_candidate_status(", "update_hypothesis_status(",

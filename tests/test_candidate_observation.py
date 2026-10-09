@@ -11,6 +11,10 @@ trajectory.
 from __future__ import annotations
 
 import pytest
+from dataclasses import replace
+
+from research_engine.control_plane.governed_counterfactual_evidence import CounterfactualEvidenceStore
+from tests.test_production_validation_executors import _evidence
 
 from research_engine.v10.continuous.candidate_observation import (
     CandidateObservationStore,
@@ -37,7 +41,7 @@ def _catalog():
 
 
 def _candidate(cid, policy_id, *, baseline_id="BASE-1", status="PROPOSED",
-               treatment=None, shadow_binding=None):
+               treatment=None, shadow_binding=None, provenance=None):
     catalog = _catalog()
     return OptimisationCandidate(
         candidate_id=cid,
@@ -48,6 +52,9 @@ def _candidate(cid, policy_id, *, baseline_id="BASE-1", status="PROPOSED",
         treatment_hash=(treatment if treatment is not None
                         else treatment_hash(catalog[policy_id])),
         shadow_binding=dict(shadow_binding or {}),
+        provenance=dict(provenance or {}),
+        target_population={"scope": "governed",
+                           "canonical_authority_question_id": "EX1"},
     )
 
 
@@ -220,15 +227,20 @@ def _fake_evidence_store(policy_rows):
 
 def test_candidate_evidence_accounting_is_policy_specific(tmp_path):
     registry = _registry(tmp_path, [
-        (_candidate("CAND-A", POLICY_A), _plan("CAND-A")),
-        (_candidate("CAND-B", POLICY_B), _plan("CAND-B")),
+        (_candidate("CAND-A", POLICY_A, baseline_id="S1", provenance={
+            "snapshot_id": "S1", "investigation_epoch": "E-S1"}),
+         _plan("CAND-A", baseline_id="S1")),
+        (_candidate("CAND-B", POLICY_B, baseline_id="S1", provenance={
+            "snapshot_id": "S1", "investigation_epoch": "E-S1"}),
+         _plan("CAND-B", baseline_id="S1")),
     ])
     store = CandidateObservationStore(tmp_path / "obs.json")
     reconcile_candidate_observations(registry, store, _catalog())
-    accounting = candidate_evidence_accounting(
-        store.load(), _fake_evidence_store({POLICY_A: 3, POLICY_B: 7}))
-    assert accounting["CAND-A"]["sample_count"] == 3
-    assert accounting["CAND-B"]["sample_count"] == 7
+    evidence = CounterfactualEvidenceStore(tmp_path / "evidence")
+    evidence.register(_evidence("S1", n=4))
+    accounting = candidate_evidence_accounting(store.load(), evidence)
+    assert accounting["CAND-A"]["sample_count"] == 4
+    assert accounting["CAND-B"]["sample_count"] == 4
     assert accounting["CAND-A"]["row_digests"] != accounting["CAND-B"]["row_digests"]
 
 
@@ -244,16 +256,28 @@ def test_no_evidence_yields_zero_samples(tmp_path):
 
 def test_sample_accumulation_grows_with_new_evidence(tmp_path):
     registry = _registry(tmp_path, [
-        (_candidate("CAND-A", POLICY_A), _plan("CAND-A")),
+        (_candidate("CAND-A", POLICY_A, baseline_id="S1", provenance={
+            "snapshot_id": "S1", "investigation_epoch": "E-S1"}),
+         _plan("CAND-A", baseline_id="S1")),
     ])
     store = CandidateObservationStore(tmp_path / "obs.json")
     reconcile_candidate_observations(registry, store, _catalog())
-    accounting_1 = candidate_evidence_accounting(
-        store.load(), _fake_evidence_store({POLICY_A: 1}))
-    accounting_2 = candidate_evidence_accounting(
-        store.load(), _fake_evidence_store({POLICY_A: 5}))
-    assert accounting_1["CAND-A"]["sample_count"] == 1
-    assert accounting_2["CAND-A"]["sample_count"] == 5
+    evidence = CounterfactualEvidenceStore(tmp_path / "evidence")
+    first = _evidence("S1", n=4)
+    evidence.register(first)
+    accounting_1 = candidate_evidence_accounting(store.load(), evidence)
+    assert accounting_1["CAND-A"]["sample_count"] == 4
+    assert candidate_evidence_accounting(store.load(), evidence) == accounting_1
+    evidence.register(replace(first, dataset_id="CFE-DS-S1-COPY"))
+    assert candidate_evidence_accounting(store.load(), evidence)["CAND-A"]["sample_count"] == 4
+    evidence.register(replace(_evidence("S1", n=4, offset=100),
+                              dataset_id="CFE-DS-S1-NEW"))
+    accounting_2 = candidate_evidence_accounting(store.load(), evidence)
+    assert accounting_2["CAND-A"]["sample_count"] == 8
+    assert len(accounting_2["CAND-A"]["evidence_dataset_ids"]) == 3
+    assert accounting_2["CAND-A"]["validation_eligible_sample_count"] == 0
+    assert accounting_2["CAND-A"]["validation_authority_status"] == (
+        "AMBIGUOUS_MULTIPLE_DATASETS")
 
 
 def test_identity_conflict_raises(tmp_path):

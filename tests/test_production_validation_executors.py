@@ -24,6 +24,9 @@ from research_engine.control_plane.governed_counterfactual_evidence import (
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
 from research_engine.registry.exit_policy_adjudication import CANDIDATE_POLICIES_V1
 from research_engine.v10.continuous.production_validation import production_executors
+from research_engine.v10.continuous.candidate_observation import (
+    CandidateObservationStore, reconcile_candidate_observations,
+)
 from research_engine.v10.continuous.research_cadence import run_cadence_tick
 from research_engine.v10.continuous.validation_queue import (
     BLOCKED,
@@ -77,7 +80,7 @@ def _registry(path, *, delta=1.0, required=4, extra_condition=None):
         treatment_hash=_hash(policy), target_population={
             "scope": "governed", "canonical_authority_question_id": "EX1"},
         validation_requirements=requirements,
-        provenance={"snapshot_id": "S1"},
+        provenance={"snapshot_id": "S1", "investigation_epoch": "E-S1"},
     )
     plan = ValidationPlan(
         candidate_id=candidate.candidate_id, baseline_id="S1",
@@ -144,6 +147,9 @@ def _evidence(snapshot, *, delta=1.0, n=4, frontier_start="2026-01-01T00:00:00Z"
 
 
 def _enqueue(registry, candidate, plan, store):
+    reconcile_candidate_observations(
+        registry, CandidateObservationStore(
+            store.path.parent / "candidate_observations.json"), snapshot_id="S1")
     enqueue_validation_handoff([{
         "candidate_id": candidate.candidate_id,
         "policy_id": candidate.policy_id,

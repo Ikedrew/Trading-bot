@@ -33,6 +33,9 @@ from research_engine.v10.continuous.validation_queue import (
     ValidationJob,
     ValidationQueueStore,
 )
+from research_engine.v10.continuous.candidate_observation import (
+    CandidateObservationStore, observation_registration_problem,
+)
 from research_engine.v10.optimisation.models import OptimisationCandidate
 
 
@@ -58,6 +61,19 @@ def _not_before(value: str, boundary: str) -> bool:
             boundary.replace("Z", "+00:00"))
     except (TypeError, ValueError):
         return False
+
+
+def _membership(rows: Any) -> list[dict[str, Any]]:
+    """Unique observation roots across the complete tested policy family."""
+    roots = {
+        (row.canonical_opportunity_id, tuple(row.lifecycle_identity))
+        for row in rows
+    }
+    return sorted(({
+        "canonical_opportunity_id": opportunity,
+        "lifecycle_identity": list(lifecycle),
+    } for opportunity, lifecycle in roots), key=lambda item: (
+        item["canonical_opportunity_id"], item["lifecycle_identity"]))
 
 
 def _result(job: ValidationJob, status: str, reason: str, **extra: Any) -> dict[str, Any]:
@@ -113,6 +129,7 @@ class ProductionValidationExecutor:
 
     evidence_store: CounterfactualEvidenceStore
     queue_path: Path
+    observation_store_path: Path
     kind: str = VALIDATION
 
     def _artifacts(self) -> tuple[GovernedCounterfactualEvidence, ...]:
@@ -162,6 +179,18 @@ class ProductionValidationExecutor:
         if (plan.get("candidate_id") != candidate.candidate_id
                 or plan.get("baseline_id") != candidate.baseline_id):
             return _result(job, "REVIEW_REQUIRED", "FROZEN_PLAN_IDENTITY_MISMATCH")
+        try:
+            registration = CandidateObservationStore(self.observation_store_path).load().get(
+                candidate.candidate_id)
+        except Exception as exc:
+            return _result(job, "BLOCKED", "CANDIDATE_OBSERVATION_REGISTRATION_INVALID",
+                           registration_error=f"{type(exc).__name__}:{exc}")
+        registration_problem = observation_registration_problem(
+            registration, candidate, plan)
+        if registration_problem:
+            return _result(job, "BLOCKED", registration_problem)
+        if self.kind == VALIDATION and registration.source_snapshot_id != job.source_snapshot_id:
+            return _result(job, "BLOCKED", "REGISTRATION_JOB_SNAPSHOT_MISMATCH")
         requirements = candidate.validation_requirements or {}
         expected_metrics = list(requirements.get("primary_metrics") or [])
         expected_metrics += [item for item in requirements.get("secondary_metrics", [])
@@ -187,7 +216,8 @@ class ProductionValidationExecutor:
         if str(frozen.get("policy_id") or "") != candidate.policy_id:
             return _result(job, "BLOCKED", "TREATMENT_POLICY_ID_MISMATCH")
         authority_question = str(
-            (candidate.target_population or {}).get("canonical_authority_question_id") or "")
+            (candidate.target_population or {}).get("canonical_authority_question_id")
+            or (candidate.target_population or {}).get("question_id") or "")
         if authority_question not in {"EX1", "EX9"}:
             return _result(
                 job, "REVIEW_REQUIRED", "MEASUREMENT_PROTOCOL_UNSUPPORTED",
@@ -209,15 +239,43 @@ class ProductionValidationExecutor:
             if (initial.get("candidate_id") != candidate.candidate_id
                     or initial.get("treatment_hash") != candidate.treatment_hash
                     or initial.get("baseline_id") != candidate.baseline_id
-                    or initial.get("plan_digest") != _digest(dict(plan))):
+                    or initial.get("plan_digest") != _digest(dict(plan))
+                    or initial.get("observation_registration_id") != registration.registration_id):
                 return _result(job, "BLOCKED", "INITIAL_VALIDATION_IDENTITY_MISMATCH")
-            initial_rows = frozenset(initial.get("evidence_row_digests") or ())
+            manifest = initial.get("evidence_observation_membership")
+            manifest_digest = initial.get("evidence_membership_digest")
+            if (not isinstance(manifest, list) or not manifest
+                    or not isinstance(manifest_digest, str)
+                    or _digest({"members": manifest}) != manifest_digest):
+                return _result(job, "BLOCKED", "INITIAL_MEMBERSHIP_INVALID_OR_MISSING")
+            if any(
+                    not isinstance(item, Mapping)
+                    or not isinstance(item.get("canonical_opportunity_id"), str)
+                    or not item["canonical_opportunity_id"]
+                    or not isinstance(item.get("lifecycle_identity"), list)
+                    or len(item["lifecycle_identity"]) != 3
+                    or not all(isinstance(part, str) and part
+                               for part in item["lifecycle_identity"])
+                    for item in manifest):
+                return _result(job, "BLOCKED", "INITIAL_MEMBERSHIP_INVALID_OR_MISSING")
+            initial_artifact = next((item for item in artifacts
+                                     if item.dataset_id == initial.get("evidence_dataset_id")), None)
+            if (initial_artifact is None
+                    or initial_artifact.content_digest != initial.get("evidence_content_digest")
+                    or _membership(initial_artifact.rows) != manifest):
+                return _result(job, "BLOCKED", "INITIAL_MEMBERSHIP_AUTHORITY_UNVERIFIABLE")
+            initial_opportunities = {item.get("canonical_opportunity_id")
+                                     for item in manifest if isinstance(item, Mapping)}
+            initial_lifecycles = {tuple(item.get("lifecycle_identity") or ())
+                                  for item in manifest if isinstance(item, Mapping)}
+            if (None in initial_opportunities or "" in initial_opportunities
+                    or len(initial_opportunities) != len(manifest)
+                    or len(initial_lifecycles) != len(manifest)):
+                return _result(job, "BLOCKED", "INITIAL_MEMBERSHIP_INVALID_OR_MISSING")
             initial_end = str(initial.get("evidence_frontier_end") or "")
             artifacts = tuple(item for item in artifacts
                               if item.dataset_id != initial.get("evidence_dataset_id")
-                              and _not_before(item.frontier_start, initial_end)
-                              and not initial_rows.intersection(
-                                  row.row_digest for row in item.rows_for_policy(candidate.policy_id)))
+                              and _not_before(item.frontier_start, initial_end))
         else:
             artifacts = tuple(item for item in artifacts if item.snapshot_id == job.source_snapshot_id)
 
@@ -246,11 +304,45 @@ class ProductionValidationExecutor:
         if self.kind == VALIDATION and candidate.baseline_id != evidence.snapshot_id:
             return _result(job, "BLOCKED", "FROZEN_BASELINE_SNAPSHOT_MISMATCH",
                            evidence_dataset_id=evidence.dataset_id)
+        if self.kind == VALIDATION and (
+                evidence.snapshot_id != registration.source_snapshot_id
+                or evidence.investigation_epoch != registration.investigation_epoch):
+            return _result(job, "BLOCKED", "REGISTRATION_EVIDENCE_SOURCE_MISMATCH",
+                           evidence_dataset_id=evidence.dataset_id)
 
         rows = evidence.rows_for_policy(candidate.policy_id)
         identities = [tuple(row.lifecycle_identity) for row in rows]
         if len(set(identities)) != len(identities):
             return _result(job, "BLOCKED", "DUPLICATE_EVIDENCE_GRAIN",
+                           evidence_dataset_id=evidence.dataset_id)
+        opportunities = [row.canonical_opportunity_id for row in rows]
+        if (not all(opportunities) or len(set(opportunities)) != len(opportunities)):
+            return _result(job, "BLOCKED", "DUPLICATE_OR_MISSING_OPPORTUNITY_ID",
+                           evidence_dataset_id=evidence.dataset_id)
+        family_grains = [(row.governed_policy_id, row.canonical_opportunity_id)
+                         for row in evidence.rows]
+        if (len(set(family_grains)) != len(family_grains)
+                or any(row.governed_policy_id not in CANDIDATE_POLICY_IDS
+                       or row.validity != VALIDITY_ELIGIBLE
+                       or row.baseline_policy_id != evidence.baseline_policy_id
+                       or not row.canonical_opportunity_id
+                       or row.lifecycle_identity[1] != row.canonical_opportunity_id
+                       or row.lifecycle_identity[2] != row.trade_horizon
+                       for row in evidence.rows)):
+            return _result(job, "BLOCKED", "FAMILY_EVIDENCE_MEMBERSHIP_INVALID",
+                           evidence_dataset_id=evidence.dataset_id)
+        family_membership = _membership(evidence.rows)
+        if (not family_membership
+                or len({item["canonical_opportunity_id"] for item in family_membership})
+                != len(family_membership)):
+            return _result(job, "BLOCKED", "AMBIGUOUS_FAMILY_OBSERVATION_MEMBERSHIP",
+                           evidence_dataset_id=evidence.dataset_id)
+        if initial is not None and (
+                {item["canonical_opportunity_id"] for item in family_membership}
+                .intersection(initial_opportunities)
+                or {tuple(item["lifecycle_identity"]) for item in family_membership}
+                .intersection(initial_lifecycles)):
+            return _result(job, "BLOCKED", "FORWARD_OBSERVATION_POPULATION_OVERLAP",
                            evidence_dataset_id=evidence.dataset_id)
         for row in rows:
             if (row.validity != VALIDITY_ELIGIBLE
@@ -258,6 +350,8 @@ class ProductionValidationExecutor:
                     or row.governed_policy_id != candidate.policy_id
                     or dict(row.treatment_parameters) != dict(frozen)
                     or row.treatment_signature != treatment_signature(dict(frozen))
+                    or row.lifecycle_identity[1] != row.canonical_opportunity_id
+                    or row.lifecycle_identity[2] != row.trade_horizon
                     or row.replay_method != evidence.replay_method
                     or row.replay_version != evidence.replay_version
                     or not all((row.leakage_guard.get("post_entry_only"),
@@ -401,12 +495,15 @@ class ProductionValidationExecutor:
             baseline_policy_id=evidence.baseline_policy_id,
             snapshot_id=evidence.snapshot_id,
             plan_digest=_digest(dict(plan)),
+            observation_registration_id=registration.registration_id,
             evidence_dataset_id=evidence.dataset_id,
             evidence_content_digest=evidence.content_digest,
             evidence_snapshot_fingerprint=evidence.snapshot_fingerprint,
             evidence_frontier_start=evidence.frontier_start,
             evidence_frontier_end=evidence.frontier_end,
             evidence_row_digests=[row.row_digest for row in rows],
+            evidence_observation_membership=family_membership,
+            evidence_membership_digest=_digest({"members": family_membership}),
             measured=measured,
             evaluated_success_conditions={key: {"passed": value[0], "detail": value[1]}
                                           for key, value in success_results.items()},
@@ -429,9 +526,10 @@ def production_executors(
 ) -> tuple[ProductionValidationExecutor, ProductionValidationExecutor]:
     store = CounterfactualEvidenceStore(evidence_directory)
     queue_path = Path(state_root) / "validation_queue.json"
+    observation_store_path = Path(state_root) / "candidate_observations.json"
     return (
-        ProductionValidationExecutor(store, queue_path, VALIDATION),
-        ProductionValidationExecutor(store, queue_path, FORWARD_VALIDATION),
+        ProductionValidationExecutor(store, queue_path, observation_store_path, VALIDATION),
+        ProductionValidationExecutor(store, queue_path, observation_store_path, FORWARD_VALIDATION),
     )
 
 

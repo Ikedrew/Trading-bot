@@ -292,6 +292,18 @@ def process_validation_queue(
                                 "kind": job.kind, "status": BLOCKED,
                                 "failure_reason": job.failure_reason})
             continue
+        frozen_plan = registry.get_plan(job.candidate_id)
+        if frozen_plan is None or canonical_json(frozen_plan.to_dict()) != canonical_json(
+                job.validation_plan):
+            job.status = BLOCKED
+            job.failure_reason = "QUEUED_FROZEN_PLAN_IDENTITY_MISMATCH"
+            job.transitions.append({"status": BLOCKED, "reason": job.failure_reason})
+            store.save()
+            transitions.append({"job_id": job.job_id,
+                                "candidate_id": job.candidate_id,
+                                "kind": job.kind, "status": BLOCKED,
+                                "failure_reason": job.failure_reason})
+            continue
         expected = "PROPOSED" if job.kind == VALIDATION else "VALIDATED"
         if candidate.status != expected:
             job.status = BLOCKED
