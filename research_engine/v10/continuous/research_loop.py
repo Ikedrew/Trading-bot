@@ -905,7 +905,15 @@ def run_continuous_research_cycle(
                    if q71_manifest_directory is not None else {}),
                 **({"source": q71_evidence_source}
                    if q71_evidence_source is not None else {}),
-                policy=q71_execution_policy or GeneratedExecutionPolicy())
+                policy=q71_execution_policy or GeneratedExecutionPolicy(),
+                # Wire 1: hand the SAME cycle's frozen governed counterfactual
+                # evidence artifact and its snapshot-pinned governed membership
+                # to the worker.  The worker never reads storage; it admits only
+                # what verifies against this exact frontier.  When the artifact
+                # is absent both are None and the worker keeps its existing
+                # fail-closed path (it never falls back to latest/global state).
+                governed_counterfactual_evidence=counterfactual_evidence,
+                governed_counterfactual_binding=counterfactual_binding)
             batch_id = generated_execution.get("batch_id")
             if batch_id:
                 generated_bridge = generated_bridge_runner(
