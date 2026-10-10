@@ -13,6 +13,7 @@ import json
 import pytest
 
 from core.production_data_contract import current_schema, s3_base_prefix
+from core.trade_truth import build_trade_truth
 from research_engine.data_access.s3_source import S3ResearchDataSource
 from research_engine.v10.investigation_snapshot import (
     BOUND_DATASETS,
@@ -42,6 +43,14 @@ def _key(dataset: str, day: str = "2026-09-25", part: str = "part-000.jsonl") ->
 
 
 def _body(dataset: str, marker: str = "base") -> str:
+    if dataset == "trade_truth":
+        row = build_trade_truth(
+            trade_id=f"trade_{marker}", correlation_id="C1", symbol="EURUSD",
+            entry_fill_price=1.1, exit_fill_price=1.2, volume_executed=0.1,
+            entry_timestamp_broker=1790334000.0,
+            exit_timestamp_broker=1790337600.0,
+        )
+        return json.dumps(row, sort_keys=True) + "\n"
     required = {
         "decision_trace": {"symbol": "EURUSD", "entity_id": "E1", "action": "HOLD"},
         "shadow_runtime": {"symbol": "EURUSD", "canonical_opportunity_id": "O1"},
@@ -50,6 +59,25 @@ def _body(dataset: str, marker: str = "base") -> str:
         "strategy_observations": {
             "symbol": "EURUSD", "canonical_opportunity_id": "O1",
             "observation_id": "SO1", "entity_id": "E1",
+        },
+        "execution_results": {
+            "symbol": "EURUSD", "correlation_id": "C1", "result_ok": False,
+            "retcode": 0, "request": {}, "submission": {}, "response": {},
+            "fill": {}, "protection_confirmation": {},
+        },
+        "execution_attempts": {
+            "attempt_id": f"AT-{marker}", "symbol": "EURUSD",
+            "action_type": "ENTRY", "broker_result": {},
+        },
+        "protection_audit": {
+            "symbol": "EURUSD", "position_ticket": 1,
+            "correlation_id": "C1", "protection_status": "VERIFIED",
+        },
+        "risk_deviation": {
+            "trade_id": f"trade_{marker}", "symbol": "EURUSD",
+            "risk_classification": "NO_RISK_DATA",
+            "semantic_stage": "post_outcome_analysis",
+            "authority": "diagnostic_projection",
         },
     }
     return json.dumps({

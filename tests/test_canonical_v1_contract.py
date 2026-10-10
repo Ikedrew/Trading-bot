@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import core.production_data_contract as pc
 import core.canonical_profiles as cprof
+from core.trade_truth import build_trade_truth
 from research_engine.data_access.s3_source import S3ResearchDataSource
 
 
@@ -52,15 +53,12 @@ _SAMPLES = {
     # Stage A five: producer-shaped minimal records (schema identity + the
     # writer's own mandatory spine; lifecycle-nullable evidence omitted or
     # None where the producer legitimately emits it).
-    "trade_truth": {
-        "symbol": "EURUSD",
-        "identity": {"trade_id": "T1", "correlation_id": "COR-1",
-                     "symbol": "EURUSD"},
-        "execution": {"entry_fill_price": 1.1, "volume_executed": 0.1},
-        "timestamps": {"exit_timestamp_broker": 1},
-        "outcome": {"r_multiple_realised": None},
-        "exit": {"exit_reason": "take_profit_hit"},
-    },
+    "trade_truth": build_trade_truth(
+        trade_id="T1", correlation_id="COR-1", symbol="EURUSD",
+        entry_fill_price=1.1, exit_fill_price=1.2, volume_executed=0.1,
+        entry_timestamp_broker=1.0, exit_timestamp_broker=2.0,
+        exit_reason="take_profit_hit",
+    ),
     "execution_results": {
         "symbol": "EURUSD", "timestamp_utc": "2026-09-25T09:00:00Z",
         "correlation_id": "COR-1", "result_ok": False, "retcode": 0,

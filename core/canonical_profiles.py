@@ -146,7 +146,7 @@ _PROFILES: dict[str, CanonicalProfile] = {
     "trade_truth": CanonicalProfile(
         dataset="trade_truth", schema_version=current_schema("trade_truth"),
         generation=current_generation("trade_truth"),
-        required_fields=("schema_version", "symbol"),
+        required_fields=("schema_version",),
         optional_fields=("correlation_id", "account_id",
                           "canonical_opportunity_id",
                           "decision_id", "entity_id", "cycle_id",

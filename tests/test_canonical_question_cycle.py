@@ -11,6 +11,7 @@ from types import SimpleNamespace
 import pytest
 
 from core.production_data_contract import current_schema, s3_base_prefix
+from core.trade_truth import build_trade_truth
 import research_engine.v10.continuous.canonical_question_cycle as question_cycle_module
 from research_engine.control_plane.evidence_resolver import (
     EvidenceSnapshot,
@@ -102,6 +103,35 @@ def _shadow_events() -> tuple[dict, dict]:
 
 
 def _row(dataset: str, marker: str = "base") -> dict:
+    if dataset == "trade_truth":
+        return build_trade_truth(
+            trade_id=f"trade_{marker}", correlation_id="corr_1",
+            symbol="EURUSD", entry_fill_price=1.1,
+            exit_fill_price=1.12, volume_executed=0.1,
+            entry_timestamp_broker=1790334000.0,
+            exit_timestamp_broker=1790337600.0,
+            r_multiple_realised=2.0, exit_reason="take_profit_hit",
+        )
+    stage_a_fields = {
+        "execution_results": {
+            "symbol": "EURUSD", "retcode": 0,
+            "request": {}, "submission": {}, "response": {},
+            "fill": {}, "protection_confirmation": {},
+        },
+        "execution_attempts": {
+            "attempt_id": f"AT-{marker}", "symbol": "EURUSD",
+            "action_type": "ENTRY", "broker_result": {},
+        },
+        "protection_audit": {
+            "symbol": "EURUSD", "position_ticket": 1,
+            "correlation_id": "corr_1",
+        },
+        "risk_deviation": {
+            "symbol": "EURUSD", "risk_classification": "NO_RISK_DATA",
+            "semantic_stage": "post_outcome_analysis",
+            "authority": "diagnostic_projection",
+        },
+    }
     return {
         "schema_version": current_schema(dataset),
         "data_epoch": "CURRENT",
@@ -130,6 +160,7 @@ def _row(dataset: str, marker: str = "base") -> dict:
            if dataset in ("execution_context", "market_context") else {}),
         **({"symbol": "EURUSD", "observation_id": "SO1"}
            if dataset == "strategy_observations" else {}),
+        **stage_a_fields.get(dataset, {}),
     }
 
 

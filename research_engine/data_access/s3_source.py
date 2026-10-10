@@ -806,6 +806,16 @@ class S3ResearchDataSource:
         guard_by_key = self._guard_cohort.setdefault(dataset, {})
         for item in objects:
             key = str(item.get("identifier") or "")
+            partition_symbol: str | None = None
+            if dataset == "trade_truth":
+                prefix = canonical_s3_list_prefix(dataset)
+                parts = key[len(prefix):].split("/") if key.startswith(prefix) else []
+                if (len(parts) != 3 or not parts[0].startswith("symbol=")
+                        or not parts[0][len("symbol="):] or not parts[1].startswith("date=")
+                        or not parts[1][len("date="):] or not parts[2]):
+                    raise ResearchDataSourceError(
+                        f"SNAPSHOT_TRADE_TRUTH_SYMBOL_PARTITION_INVALID:{key}")
+                partition_symbol = parts[0][len("symbol="):]
             object_records = self.read_bound_objects(
                 dataset, (item,),
                 expected_schema_version=expected_schema_version,
@@ -837,6 +847,10 @@ class S3ResearchDataSource:
                         raise ResearchDataSourceError(
                             f"SNAPSHOT_RECORD_PROFILE_INVALID:{dataset}:"
                             + ";".join(violations))
+                    if (dataset == "trade_truth"
+                            and record["identity"]["symbol"] != partition_symbol):
+                        raise ResearchDataSourceError(
+                            f"SNAPSHOT_TRADE_TRUTH_SYMBOL_PARTITION_MISMATCH:{key}")
             # Idempotent per verified object: re-reading the same key assigns the
             # same count, so incremental and repeated freezes never inflate the
             # cohort. Zero-eligible objects are simply not recorded.

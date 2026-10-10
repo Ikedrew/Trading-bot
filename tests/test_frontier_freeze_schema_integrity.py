@@ -25,6 +25,7 @@ import pytest
 
 from core.production_data_contract import current_schema, s3_base_prefix
 from core.canonical_profiles import validate_record
+from core.trade_truth import build_trade_truth
 from research_engine.data_access.s3_source import (
     ResearchDataSourceError,
     S3ResearchDataSource,
@@ -89,18 +90,13 @@ def _source(objects: dict[str, str]) -> S3ResearchDataSource:
     return S3ResearchDataSource(bucket="test-bucket", client=MemoryS3(objects))
 
 
-def _valid_trade_truth_row() -> dict:
-    # Minimal producer-shaped trade truth record. Lifecycle evidence may be
-    # null, while the writer always supplies its identity and section spine.
-    return {
-        "schema_version": current_schema("trade_truth"), "symbol": "EURUSD",
-        "identity": {"trade_id": "T1", "correlation_id": "C1",
-                     "symbol": "EURUSD"},
-        "execution": {"entry_fill_price": 1.1, "volume_executed": 0.1},
-        "timestamps": {"exit_timestamp_broker": 1},
-        "outcome": {"r_multiple_realised": None},
-        "exit": {"exit_reason": "manual_close"},
-    }
+def _valid_trade_truth_row(symbol: str = "EURUSD") -> dict:
+    return build_trade_truth(
+        trade_id="T1", correlation_id="C1", symbol=symbol,
+        entry_fill_price=1.1, exit_fill_price=1.2, volume_executed=0.1,
+        entry_timestamp_broker=1.0, exit_timestamp_broker=2.0,
+        exit_reason="manual_close",
+    )
 
 
 def _manifest(dataset: str) -> list[dict]:
@@ -252,6 +248,58 @@ def test_freeze_accepts_a_record_with_the_governed_schema_identity():
         "trade_truth", _manifest("trade_truth"),
         expected_schema_version=current_schema("trade_truth"))
     assert rows == [good]
+
+
+def test_freeze_accepts_producer_shape_at_historical_audusd_partition():
+    key = (f"{s3_base_prefix('trade_truth')}/schema_version=trade_truth_v1/"
+           "symbol=AUDUSD/date=2026-09-04/part-000.jsonl")
+    row = _valid_trade_truth_row("AUDUSD")
+    assert "symbol" not in row
+    assert validate_record("trade_truth", row) == (True, [])
+    source = _source({key: _jsonl(row)})
+    assert source.read_objects_for_freeze(
+        "trade_truth", [{"identifier": key}],
+        expected_schema_version=current_schema("trade_truth")) == [row]
+
+
+@pytest.mark.parametrize("nested_symbol", [None, ""])
+def test_trade_truth_freeze_rejects_missing_or_empty_nested_symbol(nested_symbol):
+    row = _valid_trade_truth_row()
+    if nested_symbol is None:
+        del row["identity"]["symbol"]
+    else:
+        row["identity"]["symbol"] = nested_symbol
+    source = _source({_key("trade_truth"): _jsonl(row)})
+    with pytest.raises(ResearchDataSourceError, match="SNAPSHOT_RECORD_PROFILE_INVALID:trade_truth"):
+        source.read_objects_for_freeze(
+            "trade_truth", _manifest("trade_truth"),
+            expected_schema_version=current_schema("trade_truth"))
+
+
+def test_trade_truth_freeze_rejects_symbol_partition_mismatch():
+    row = _valid_trade_truth_row()
+    row["identity"]["symbol"] = "AUDUSD"
+    source = _source({_key("trade_truth"): _jsonl(row)})
+    with pytest.raises(ResearchDataSourceError,
+                       match="SNAPSHOT_TRADE_TRUTH_SYMBOL_PARTITION_MISMATCH"):
+        source.read_objects_for_freeze(
+            "trade_truth", _manifest("trade_truth"),
+            expected_schema_version=current_schema("trade_truth"))
+
+
+@pytest.mark.parametrize("suffix", [
+    "date=2026-09-25/part-000.jsonl",
+    "symbol=/date=2026-09-25/part-000.jsonl",
+    "symbol=EURUSD/symbol=AUDUSD/date=2026-09-25/part-000.jsonl",
+])
+def test_trade_truth_freeze_rejects_missing_or_ambiguous_partition(suffix):
+    key = f"{s3_base_prefix('trade_truth')}/schema_version={current_schema('trade_truth')}/{suffix}"
+    source = _source({key: _jsonl(_valid_trade_truth_row())})
+    with pytest.raises(ResearchDataSourceError,
+                       match="SNAPSHOT_TRADE_TRUTH_SYMBOL_PARTITION_INVALID"):
+        source.read_objects_for_freeze(
+            "trade_truth", [{"identifier": key}],
+            expected_schema_version=current_schema("trade_truth"))
 
 
 
