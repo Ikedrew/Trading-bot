@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import date
 
 import pytest
 
@@ -28,6 +29,7 @@ from research_engine.data_access.s3_source import (
     ResearchDataSourceError,
     S3ResearchDataSource,
 )
+from research_engine.v10.continuous.frontier_coordinator import _read_frontier_object
 
 
 class MemoryS3:
@@ -88,9 +90,17 @@ def _source(objects: dict[str, str]) -> S3ResearchDataSource:
 
 
 def _valid_trade_truth_row() -> dict:
-    # trade_truth has NO registered canonical profile, so only schema identity
-    # applies. We must NOT invent required fields for it.
-    return {"schema_version": current_schema("trade_truth")}
+    # Minimal producer-shaped trade truth record. Lifecycle evidence may be
+    # null, while the writer always supplies its identity and section spine.
+    return {
+        "schema_version": current_schema("trade_truth"), "symbol": "EURUSD",
+        "identity": {"trade_id": "T1", "correlation_id": "C1",
+                     "symbol": "EURUSD"},
+        "execution": {"entry_fill_price": 1.1, "volume_executed": 0.1},
+        "timestamps": {"exit_timestamp_broker": 1},
+        "outcome": {"r_multiple_realised": None},
+        "exit": {"exit_reason": "manual_close"},
+    }
 
 
 def _manifest(dataset: str) -> list[dict]:
@@ -119,6 +129,32 @@ def test_freeze_accepts_complete_profiled_record():
     assert source.read_objects_for_freeze(
         "decision_trace", _manifest("decision_trace"),
         expected_schema_version=current_schema("decision_trace")) == [row]
+
+
+def test_frontier_object_carries_exact_historical_cohort_count():
+    canonical = {"schema_version": current_schema("decision_trace"),
+                 "symbol": "EURUSD", "entity_id": "E1", "action": "HOLD",
+                 "timestamp_utc": "2026-09-25T12:00:00Z"}
+    historical = {
+        "schema_version": current_schema("decision_trace"),
+        "symbol": "EURUSD", "record_role": "runtime_guard_rejection",
+        "event_type": "RISK_REJECTION", "rejection_type": "RISK_GUARD",
+        "guard": "risk_limit", "reason": "limit", "should_trade": False,
+        "cycle_id": 2, "correlation_id": "C2",
+        "timestamp_utc": "2026-09-25T09:00:00Z",
+    }
+    key = _key("decision_trace")
+    body = _jsonl(canonical, historical, historical)
+    source = _source({key: body})
+    listed = source.discover_dataset_objects("decision_trace")
+    record = _read_frontier_object(source, "decision_trace", listed[0],
+                                   date(2026, 9, 25))
+    assert record["row_count"] == 3
+    assert record["historical_guard_rows"] == 2
+    assert record["event_time_coverage"]["start"] == "2026-09-25T12:00:00+00:00"
+    assert source.guard_cohort_count("decision_trace", key) == 2
+    assert source.guard_cohort_report("decision_trace").eligible_objects == 1
+    assert source._get_client().objects[key] == body
 
 
 def test_live_read_dataset_keeps_incomplete_profiled_record():
@@ -209,10 +245,8 @@ def test_freeze_enforces_schema_identity_for_each_bound_dataset():
 
 
 def test_freeze_accepts_a_record_with_the_governed_schema_identity():
-    # Positive control: a record carrying the correct governed schema_version is
-    # accepted at the freeze boundary (schema identity is the gate, not an
-    # over-reaching per-field profile check).
-    good = {"schema_version": current_schema("trade_truth")}
+    # Positive control: schema identity and the verified producer spine pass.
+    good = _valid_trade_truth_row()
     source = _source({_key("trade_truth"): _jsonl(good)})
     rows = source.read_objects_for_freeze(
         "trade_truth", _manifest("trade_truth"),

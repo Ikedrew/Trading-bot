@@ -22,8 +22,11 @@ from core.production_data_contract import (
 )
 from research_engine.control_plane import stage4_dataset_snapshot as D
 from research_engine.data_access.s3_source import (
+    GUARD_COHORT_ELIGIBLE,
+    GUARD_COHORT_AMBIGUOUS,
     ResearchDataSourceError,
     S3ResearchDataSource,
+    classify_guard_cohort_record,
     get_default_source,
 )
 
@@ -86,11 +89,14 @@ class BoundObject:
     content_sha256: str
     byte_size: int
     row_count: int
+    historical_guard_rows: int = 0
 
     def __post_init__(self) -> None:
         if not self.identifier or not _is_sha256(self.content_sha256):
             raise InvestigationSnapshotError("INVALID_BOUND_OBJECT_IDENTITY")
-        if self.size < 0 or self.byte_size < 0 or self.row_count < 0:
+        if (self.size < 0 or self.byte_size < 0 or self.row_count < 0
+                or self.historical_guard_rows < 0
+                or self.historical_guard_rows > self.row_count):
             raise InvestigationSnapshotError("NEGATIVE_BOUND_OBJECT_COUNT")
 
     @classmethod
@@ -109,6 +115,7 @@ class BoundObject:
             content_sha256=str(value.get("content_sha256") or ""),
             byte_size=int(value.get("byte_size") or value.get("byte_count") or 0),
             row_count=int(value.get("row_count") or 0),
+            historical_guard_rows=int(value.get("historical_guard_rows") or 0),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -143,6 +150,11 @@ class DatasetBinding:
             raise InvestigationSnapshotError("DATASET_OBJECT_COUNT_MISMATCH")
         if self.source_row_count != sum(item.row_count for item in self.objects):
             raise InvestigationSnapshotError("DATASET_ROW_COUNT_MISMATCH")
+        if self.dataset != "decision_trace" and any(
+                item.historical_guard_rows for item in self.objects):
+            raise InvestigationSnapshotError("GUARD_COHORT_WRONG_DATASET")
+        if self.dataset == "decision_trace" and self.objects and not self.canonical_row_count:
+            raise InvestigationSnapshotError("REQUIRED_CANONICAL_DECISION_TRACE_EMPTY")
         if not _is_sha256(self.content_digest):
             raise InvestigationSnapshotError("INVALID_DATASET_CONTENT_DIGEST")
         keys = [item.identifier for item in self.objects]
@@ -161,6 +173,16 @@ class DatasetBinding:
             if snapshot.dataset_snapshot_id != self.dataset_snapshot_id \
                     or snapshot.dataset_name != self.dataset:
                 raise InvestigationSnapshotError("STAGE4_DATASET_SNAPSHOT_MISMATCH")
+            if snapshot.record_count != self.canonical_row_count:
+                raise InvestigationSnapshotError("STAGE4_CANONICAL_ROW_COUNT_MISMATCH")
+
+    @property
+    def historical_guard_rows(self) -> int:
+        return sum(item.historical_guard_rows for item in self.objects)
+
+    @property
+    def canonical_row_count(self) -> int:
+        return self.source_row_count - self.historical_guard_rows
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -175,6 +197,8 @@ class DatasetBinding:
                 else json.loads(self.dataset_snapshot_json)),
             "source_object_count": self.source_object_count,
             "source_row_count": self.source_row_count,
+            "historical_guard_rows": self.historical_guard_rows,
+            "canonical_row_count": self.canonical_row_count,
             "content_digest": self.content_digest,
             "objects": [item.to_dict() for item in self.objects],
             "stage4_evidence_epochs": list(self.stage4_evidence_epochs),
@@ -183,7 +207,7 @@ class DatasetBinding:
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> "DatasetBinding":
         child = value.get("dataset_snapshot")
-        return cls(
+        binding = cls(
             dataset=str(value.get("dataset") or ""),
             requirement=str(value.get("requirement") or ""),
             presence=str(value.get("presence") or ""),
@@ -202,6 +226,11 @@ class DatasetBinding:
             stage4_evidence_epochs=tuple(
                 str(item) for item in value.get("stage4_evidence_epochs", ())),
         )
+        if (int(value.get("historical_guard_rows", 0)) != binding.historical_guard_rows
+                or int(value.get("canonical_row_count", binding.canonical_row_count))
+                != binding.canonical_row_count):
+            raise InvestigationSnapshotError("GUARD_COHORT_ACCOUNTING_MISMATCH")
+        return binding
 
 
 def _identity_material(
@@ -438,6 +467,10 @@ def _child_snapshot_from_objects(
     })
     snapshot = None
     source_row_count = sum(item.row_count for item in objects)
+    canonical_row_count = source_row_count - sum(
+        item.historical_guard_rows for item in objects)
+    if dataset == "decision_trace" and objects and not canonical_row_count:
+        raise InvestigationSnapshotError("REQUIRED_CANONICAL_DECISION_TRACE_EMPTY")
     if objects:
         key_digest = D.fingerprint([item.identifier for item in objects])
         snapshot = D.freeze_population(
@@ -466,7 +499,7 @@ def _child_snapshot_from_objects(
             ),
             temporal_bounds=(start_date, end_date),
             population_class=D.AUDIT_BOUNDARY_POPULATION,
-            record_count=source_row_count,
+            record_count=canonical_row_count,
             content_digest=content_digest,
             producer_version=None,
             producer_fingerprint=None,
@@ -588,7 +621,11 @@ def freeze_investigation_snapshot(
             raise InvestigationSnapshotError(
                 f"MALFORMED_BOUND_OBJECT_ROWS:{name}:{malformed.malformed_lines}")
         first_objects[name] = tuple(
-            BoundObject.from_metadata(item)
+            BoundObject.from_metadata({
+                **item,
+                "historical_guard_rows": resolved.guard_cohort_count(
+                    name, str(item["identifier"])),
+            })
             for item in resolved.object_metadata(name))
         if name in REQUIRED_DATASETS and not rows:
             raise InvestigationSnapshotError("REQUIRED_DATASET_EMPTY:" + name)
@@ -615,7 +652,11 @@ def freeze_investigation_snapshot(
             expected_schema_version=schema_by_dataset[name],
             start_date=start, end_date=end)
         second_objects = tuple(
-            BoundObject.from_metadata(item)
+            BoundObject.from_metadata({
+                **item,
+                "historical_guard_rows": resolved.guard_cohort_count(
+                    name, str(item["identifier"])),
+            })
             for item in resolved.object_metadata(name))
         if second_objects != first_objects[name] or len(second_rows) != first_row_counts[name]:
             raise InvestigationSnapshotError(
@@ -688,6 +729,10 @@ def _same_object_identity(prior: BoundObject, current: Mapping[str, Any]) -> boo
     if (prior_version is None) != (current_version is None):
         return False
     if prior_version is not None and str(prior_version) != str(current_version):
+        return False
+    if ("historical_guard_rows" in current
+            and prior.historical_guard_rows != int(
+                current.get("historical_guard_rows") or 0)):
         return False
     return True
 
@@ -854,7 +899,11 @@ def freeze_investigation_snapshot_incremental(
                 if len(metadata) != 1:
                     raise InvestigationSnapshotError(
                         "OBJECT_DISCOVERY_VERIFICATION_COUNT_MISMATCH:" + name)
-                actual = BoundObject.from_metadata(metadata[0])
+                actual = BoundObject.from_metadata({
+                    **metadata[0],
+                    "historical_guard_rows": resolved.guard_cohort_count(
+                        name, str(metadata[0]["identifier"])),
+                })
                 if not _same_listing_identity(actual, item):
                     raise InvestigationSnapshotError(
                         "OBJECT_CONTENT_CHANGED_DURING_FREEZE:" + name)
@@ -1021,19 +1070,38 @@ class SnapshotBoundDatasetReader:
             if binding.presence == "ABSENT":
                 self._cache[name] = []
                 continue
-            rows = self._source.read_bound_objects(
-                name, [item.to_dict() for item in binding.objects],
-                expected_schema_version=binding.schema_version,
-                start_date=snapshot.start_date, end_date=snapshot.end_date)
+            rows: list[dict[str, Any]] = []
+            observed: list[BoundObject] = []
+            for item in binding.objects:
+                object_rows = self._source.read_bound_objects(
+                    name, [item.to_dict()],
+                    expected_schema_version=binding.schema_version,
+                    start_date=snapshot.start_date, end_date=snapshot.end_date)
+                actual_guard_rows = 0
+                for row in object_rows:
+                    classification = classify_guard_cohort_record(
+                        name, row, item.identifier)
+                    if classification == GUARD_COHORT_AMBIGUOUS:
+                        raise InvestigationSnapshotError(
+                            "HISTORICAL_GUARD_REJECTION_UNVERIFIED:" + item.identifier)
+                    if classification == GUARD_COHORT_ELIGIBLE:
+                        actual_guard_rows += 1
+                    else:
+                        rows.append(row)
+                if actual_guard_rows != item.historical_guard_rows:
+                    raise InvestigationSnapshotError(
+                        "GUARD_COHORT_COUNT_CHANGED:" + item.identifier)
+                observed.append(BoundObject.from_metadata({
+                    **self._source.object_metadata(name)[0],
+                    "historical_guard_rows": actual_guard_rows,
+                }))
             malformed = self._source.malformed_report(name)
             if malformed and malformed.malformed_lines:
                 raise InvestigationSnapshotError(
                     "MALFORMED_BOUND_OBJECT_ROWS:" + name)
-            if len(rows) != binding.source_row_count:
+            if len(rows) != binding.canonical_row_count:
                 raise InvestigationSnapshotError("SNAPSHOT_DATASET_ROW_COUNT_CHANGED:" + name)
-            actual_metadata = tuple(
-                BoundObject.from_metadata(item)
-                for item in self._source.object_metadata(name))
+            actual_metadata = tuple(observed)
             if actual_metadata != binding.objects:
                 raise InvestigationSnapshotError("SNAPSHOT_DATASET_OBJECTS_CHANGED:" + name)
             if D.fingerprint({

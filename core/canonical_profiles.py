@@ -22,7 +22,7 @@ is never on the trading hot path (persistence/observability layer).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Mapping
 
 from core.production_data_contract import (
     PRODUCTION_SCHEMA_REGISTRY,
@@ -41,6 +41,13 @@ class CanonicalProfile:
     optional_fields: tuple[str, ...] = ()  # may be present (lifecycle-dependent)
     # Additional numeric version-bearing fields that MUST equal 1 on this baseline.
     version_fields: tuple[str, ...] = ()
+    # Dotted nested identities/sections that must be present AND non-empty
+    # (e.g. "identity.trade_id"). ``required_fields`` never invents nested
+    # structure: the parent section itself must first be a mapping.
+    required_nested_fields: tuple[str, ...] = ()
+    # Dotted nested sections that must at least be a mapping when present-ish
+    # (structural gate only; inner evidence/nullable rules live downstream).
+    required_nested_sections: tuple[str, ...] = ()
 
 
 # ─── V1 PROFILES ──────────────────────────────────────────────────────────────
@@ -136,6 +143,74 @@ _PROFILES: dict[str, CanonicalProfile] = {
         optional_fields=("selected_symbol", "dataset_version"),
         version_fields=("dataset_version",),
     ),
+    "trade_truth": CanonicalProfile(
+        dataset="trade_truth", schema_version=current_schema("trade_truth"),
+        generation=current_generation("trade_truth"),
+        required_fields=("schema_version", "symbol"),
+        optional_fields=("correlation_id", "account_id",
+                          "canonical_opportunity_id",
+                          "decision_id", "entity_id", "cycle_id",
+                          "timestamp_utc"),
+        required_nested_sections=("identity", "execution", "timestamps",
+                                  "outcome", "exit"),
+        required_nested_fields=("identity.trade_id",
+                                "identity.correlation_id",
+                                "identity.symbol"),
+    ),
+    "execution_results": CanonicalProfile(
+        dataset="execution_results",
+        schema_version=current_schema("execution_results"),
+        generation=current_generation("execution_results"),
+        required_fields=("schema_version", "symbol", "timestamp_utc",
+                          "correlation_id", "result_ok", "retcode"),
+        optional_fields=("cycle_id", "decision_id", "entity_id",
+                          "observation_id", "canonical_opportunity_id",
+                          "account_id", "broker", "broker_server",
+                          "position_ticket", "broker_symbol",
+                          "deal", "order_ticket", "comment", "fill_price",
+                          "slippage", "response", "fill", "request",
+                          "submission", "protection_confirmation"),
+        required_nested_sections=("request", "submission", "response",
+                                  "fill", "protection_confirmation"),
+    ),
+    "execution_attempts": CanonicalProfile(
+        dataset="execution_attempts",
+        schema_version=current_schema("execution_attempts"),
+        generation=current_generation("execution_attempts"),
+        required_fields=("schema_version", "attempt_id", "symbol",
+                          "action_type", "timestamp_utc"),
+        optional_fields=("correlation_id", "decision_id",
+                          "canonical_opportunity_id", "observation_id",
+                          "trade_id", "account_id", "cycle_id",
+                          "attempt_number", "broker_result",
+                          "protection_status", "broker_confirmed_sl",
+                          "broker_confirmed_tp"),
+        required_nested_sections=("broker_result",),
+    ),
+    "protection_audit": CanonicalProfile(
+        dataset="protection_audit",
+        schema_version=current_schema("protection_audit"),
+        generation=current_generation("protection_audit"),
+        required_fields=("schema_version", "symbol", "position_ticket",
+                          "correlation_id", "protection_status"),
+        optional_fields=("account_id", "trade_id", "decision_id", "broker",
+                          "broker_server", "broker_symbol", "requested_sl",
+                          "requested_tp", "broker_confirmed_sl",
+                          "broker_confirmed_tp", "timestamp_utc",
+                          "verification_timestamp_utc"),
+    ),
+    "risk_deviation": CanonicalProfile(
+        dataset="risk_deviation",
+        schema_version=current_schema("risk_deviation"),
+        generation=current_generation("risk_deviation"),
+        required_fields=("schema_version", "trade_id", "symbol",
+                          "risk_classification", "semantic_stage",
+                          "authority"),
+        optional_fields=("correlation_id", "account_id",
+                          "canonical_opportunity_id", "planned_risk_R",
+                          "actual_risk_R", "risk_deviation", "timestamp_utc",
+                          "pre_trade_authority"),
+    ),
 }
 
 
@@ -155,6 +230,21 @@ def registered_profiles() -> tuple[str, ...]:
 
 def _empty(v: Any) -> bool:
     return v is None or v == "" or v == {} or v == []
+
+
+_MISSING: Any = object()
+
+
+def _dig(record: Mapping[str, Any], dotted: str) -> Any:
+    """Resolve a dotted path; _MISSING when any hop is absent/non-mapping."""
+    cur: Any = record
+    for part in dotted.split("."):
+        if not isinstance(cur, Mapping):
+            return _MISSING
+        if part not in cur:
+            return _MISSING
+        cur = cur[part]
+    return cur
 
 
 def validate_record(dataset: str, record: dict[str, Any]) -> tuple[bool, list[str]]:
@@ -184,11 +274,31 @@ def validate_record(dataset: str, record: dict[str, Any]) -> tuple[bool, list[st
         violations.append(f"unregistered _v1 claim: {claimed!r}")
 
     # Required fields present + non-empty.
+    # ``result_ok``/``retcode``-style booleans/zeros are legitimate evidence:
+    # only _MISSING/None/""/{}/[] count as empty, never False or 0.
     for f in profile.required_fields:
         if f not in record:
             violations.append(f"required field missing: {f}")
         elif _empty(record.get(f)):
             violations.append(f"required field empty: {f}")
+
+    # Nested sections must at least be mappings (structural gate only; inner
+    # evidence nullability stays governed downstream).
+    for section in profile.required_nested_sections:
+        value = _dig(record, section)
+        if value is _MISSING:
+            violations.append(f"required section missing: {section}")
+        elif not isinstance(value, Mapping):
+            violations.append(f"required section not an object: {section}")
+
+    # Nested identities must be present AND non-empty (False/0 still count as
+    # present; only None/""/{}/[] are empty).
+    for path in profile.required_nested_fields:
+        value = _dig(record, path)
+        if value is _MISSING:
+            violations.append(f"required field missing: {path}")
+        elif _empty(value):
+            violations.append(f"required field empty: {path}")
 
     # Version-bearing fields must be clean-baseline generation 1.
     for f in profile.version_fields:

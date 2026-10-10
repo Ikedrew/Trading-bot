@@ -15,8 +15,10 @@ from typing import Any, Callable, Mapping, Sequence
 from core.production_data_contract import PRODUCTION_SCHEMA_REGISTRY, current_schema
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json, fingerprint
 from research_engine.data_access.s3_source import (
+    GUARD_COHORT_ELIGIBLE,
     ResearchDataSourceError,
     S3ResearchDataSource,
+    classify_guard_cohort_record,
     get_default_source,
 )
 from research_engine.v10.investigation_snapshot import (
@@ -195,6 +197,7 @@ def _full_object_record(
         "content_sha256": str(item.get("content_sha256") or ""),
         "last_modified": str(item.get("last_modified") or ""),
         "row_count": int(item.get("row_count") or 0),
+        "historical_guard_rows": int(item.get("historical_guard_rows") or 0),
         "byte_count": int(item.get("byte_size") or 0),
         "byte_size": int(item.get("byte_size") or 0),
         "size": int(item.get("size") or 0),
@@ -546,7 +549,12 @@ def _read_frontier_object(
 ) -> dict[str, Any]:
     rows = source.read_objects_for_freeze(
         dataset, (item,), expected_schema_version=current_schema(dataset))
-    contribution = _event_time_coverage(dataset, rows, as_of_date)
+    key = str(item.get("identifier") or "")
+    canonical_rows = [
+        row for row in rows
+        if classify_guard_cohort_record(dataset, row, key) != GUARD_COHORT_ELIGIBLE
+    ]
+    contribution = _event_time_coverage(dataset, canonical_rows, as_of_date)
     malformed = source.malformed_report(dataset)
     if malformed and malformed.malformed_lines:
         raise FrontierCoordinatorError(
@@ -560,6 +568,8 @@ def _read_frontier_object(
             "OBJECT_DISCOVERY_VERIFICATION_COUNT_MISMATCH:" + dataset,
         )
     record = _full_object_record(dataset, metadata[0], contribution)
+    record["historical_guard_rows"] = source.guard_cohort_count(
+        dataset, str(item.get("identifier") or ""))
     if not _same_frontier_listing_identity(record, item):
         raise FrontierCoordinatorError(
             FRONTIER_INVALID, "OBJECT_CHANGED_DURING_DISCOVERY:" + dataset)
@@ -604,7 +614,9 @@ def _discover_verified(
 
         for key, item in listed_by_key.items():
             prior = prior_by_key.get(key)
-            if prior is None or not _same_frontier_listing_identity(prior, item):
+            if (prior is None or not _same_frontier_listing_identity(prior, item)
+                    or (dataset == "decision_trace"
+                        and "historical_guard_rows" not in prior)):
                 to_read[key] = item
             elif prior.get("version_id") is None and item.get("version_id") is None:
                 records[key] = prior

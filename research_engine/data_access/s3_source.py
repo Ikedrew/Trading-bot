@@ -248,6 +248,22 @@ class MalformedReport:
     keys_with_errors: list[str] = field(default_factory=list)
 
 
+@dataclass
+class GuardCohortReport:
+    """Explicit governed accounting for the historical guard-rejection cohort.
+
+    Records are never dropped and never fabricated. This report makes the exact
+    number of verified historical guard-rejection variants admitted under the
+    narrow Stage A compatibility classification auditable, so they can be held
+    separate from canonical decision-trace denominators, eligibility and
+    research-question evidence.
+    """
+    dataset: str
+    eligible_rows: int = 0
+    eligible_objects: int = 0
+    eligible_keys: list[str] = field(default_factory=list)
+
+
 def _assert_freeze_record_schema(dataset: str, record: Any) -> None:
     """Enforce schema identity at the bound-object read boundary.
 
@@ -275,6 +291,154 @@ def _assert_freeze_record_schema(dataset: str, record: Any) -> None:
         raise ResearchDataSourceError(
             f"SNAPSHOT_RECORD_SCHEMA_MISMATCH:{dataset}:"
             f"record={claimed!r}!={expected!r}")
+
+
+# ─── Historical runtime_guard_rejection compatibility (Stage A) ──────────────
+# A narrow, evidence-bounded historical compatibility classification for the
+# freeze ingestion boundary ONLY. It exists solely so governed frontier
+# construction can admit a specific, already-written legacy cohort without
+# weakening canonical validation and without rewriting source evidence.
+#
+# Defect (established from immutable git provenance):
+#   * commit 0b243d778 (2026-09-02) made core.decision_audit.persist_risk_rejection
+#     S3-mirror risk-guard rejection records via core.decision_trace._write_s3,
+#     i.e. under the canonical decision_trace_v1 key prefix.
+#   * Those records carried record_role=runtime_guard_rejection but the legacy
+#     producer never emitted the canonical entity_id / action identity fields.
+#   * commit 5fe33a74a (2026-10-02) removed that S3 mirror; the record became
+#     local-only because it "lacks decision_trace's governed entity_id".
+# The defect window is therefore bounded by the deployment boundaries
+# 2026-09-02 (inclusive) .. 2026-10-02 (inclusive). The upper bound is the fix
+# commit date; a live read confirmed the cohort's last observed date partition
+# is 2026-10-02 (192 rows across 43 objects, all lacking entity_id/action).
+# Because commit 5fe33a74a made persist_risk_rejection LOCAL-ONLY (no S3 write
+# at all), any runtime_guard_rejection record under the canonical S3 prefix —
+# including one dated 2026-10-02 (written before that day's deploy) — is
+# necessarily legacy. No legitimate post-fix record can appear on/after the fix.
+_GUARD_COHORT_DATASET = "decision_trace"
+_GUARD_COHORT_RECORD_ROLE = "runtime_guard_rejection"
+_GUARD_COHORT_EVENT_TYPE = "RISK_REJECTION"
+_GUARD_COHORT_REJECTION_TYPE = "RISK_GUARD"
+# Deployment boundaries (both inclusive) of the defect window.
+_GUARD_COHORT_START_DATE = "2026-09-02"
+_GUARD_COHORT_END_DATE_INCLUSIVE = "2026-10-02"
+# Legacy record fields that must be present and non-empty for a genuine
+# persist_risk_rejection mirror. These are NEVER the canonical identity spine
+# (entity_id / action), which the legacy producer omitted by defect.
+_GUARD_COHORT_REQUIRED_LEGACY_FIELDS = (
+    "schema_version",
+    "symbol",
+    "record_role",
+    "event_type",
+    "rejection_type",
+    "guard",
+    "reason",
+    "should_trade",
+    "cycle_id",
+    "correlation_id",
+    "timestamp_utc",
+)
+# A canonical decision trace always declares a distinct record role. Requiring
+# that the canonical identity fields be ABSENT (not merely empty) prevents a
+# spoofed/ambiguous record from being mis-binned as the historical cohort.
+_GUARD_COHORT_FORBIDDEN_CANONICAL_FIELDS = ("entity_id", "action")
+# Governed reason codes returned to the freeze boundary. A record is either a
+# verified historical guard variant or an ordinary (canonical) record; anything
+# else is rejected with one of these codes and NEVER silently accepted.
+GUARD_COHORT_ELIGIBLE = "HISTORICAL_GUARD_REJECTION_VARIANT"
+GUARD_COHORT_NOT_HISTORICAL = "ORDINARY_RECORD"
+GUARD_COHORT_AMBIGUOUS = "HISTORICAL_GUARD_REJECTION_AMBIGUOUS"
+
+
+def _object_date_partition(identifier: str) -> str | None:
+    """Return the date= partition of an S3 object key, if present."""
+    for part in str(identifier or "").split("/"):
+        if part.startswith("date="):
+            return part[5:]
+    return None
+
+
+def _within_guard_cohort_window(identifier: str) -> bool:
+    """True only when the object's date partition is inside the defect window.
+
+    Bounded by immutable deployment provenance. The window is closed:
+    [2026-09-02, 2026-10-02]. This is a necessary (not sufficient) condition —
+    the record body must ALSO satisfy the historical contract below.
+    """
+    date_part = _object_date_partition(identifier)
+    if date_part is None:
+        return False
+    return (_GUARD_COHORT_START_DATE <= date_part
+            <= _GUARD_COHORT_END_DATE_INCLUSIVE)
+
+
+def _guard_candidate_record(record: Any) -> bool:
+    """Cheap positive signal that a record CLAIMS the historical guard role.
+
+    This only identifies a candidate; it does not establish eligibility. A
+    candidate that fails the full contract is rejected, never accepted.
+    """
+    return (isinstance(record, dict)
+            and record.get("record_role") == _GUARD_COHORT_RECORD_ROLE)
+
+
+def classify_guard_cohort_record(
+    dataset: str, record: Any, object_identifier: str,
+) -> str:
+    """Classify one freeze-boundary record as historical-guard variant or ordinary.
+
+    Returns exactly one governed label:
+      * ORDINARY_RECORD — not a guard candidate; canonical validation applies.
+      * HISTORICAL_GUARD_REJECTION_VARIANT — a verified historical guard variant
+        eligible for the narrowly scoped compatibility classification.
+      * HISTORICAL_GUARD_REJECTION_AMBIGUOUS — the record CLAIMS the guard role
+        but cannot be safely distinguished from a malformed canonical record;
+        the caller MUST reject it (fail closed).
+
+    This never fabricates canonical fields and never mutates the record. It is
+    only ever consulted at the freeze ingestion boundary; the live read_dataset
+    path is unaffected.
+    """
+    if dataset != _GUARD_COHORT_DATASET:
+        return GUARD_COHORT_NOT_HISTORICAL
+    if not _guard_candidate_record(record):
+        return GUARD_COHORT_NOT_HISTORICAL
+
+    # From here the record explicitly claims record_role=runtime_guard_rejection.
+    # It is eligible ONLY if every immutable condition holds; otherwise it is an
+    # ambiguous claim and must fail closed (a spoofed label is not ordinary).
+    if not _within_guard_cohort_window(object_identifier):
+        return GUARD_COHORT_AMBIGUOUS
+
+    # The canonical identity fields must be ABSENT (the legacy defect omitted
+    # them). Their presence means this is not the historical variant — treat as
+    # ambiguous so canonical validation still governs, and never silently bin a
+    # record that carries the guard label but real canonical identity.
+    for field_name in _GUARD_COHORT_FORBIDDEN_CANONICAL_FIELDS:
+        if field_name in record:
+            return GUARD_COHORT_AMBIGUOUS
+
+    # Semantic role consistency: the record must be a risk-guard RISK_REJECTION.
+    if record.get("event_type") != _GUARD_COHORT_EVENT_TYPE:
+        return GUARD_COHORT_AMBIGUOUS
+    if record.get("rejection_type") != _GUARD_COHORT_REJECTION_TYPE:
+        return GUARD_COHORT_AMBIGUOUS
+
+    # All legacy provenance fields must be present and non-empty.
+    for field_name in _GUARD_COHORT_REQUIRED_LEGACY_FIELDS:
+        value = record.get(field_name)
+        if value is None or value == "" or value == {} or value == []:
+            return GUARD_COHORT_AMBIGUOUS
+
+    # A risk-guard rejection is a no-trade decision by definition.
+    if record.get("should_trade") is not False:
+        return GUARD_COHORT_AMBIGUOUS
+
+    # Schema identity must still hold exactly (never a different/absent schema).
+    if record.get("schema_version") != current_schema(_GUARD_COHORT_DATASET):
+        return GUARD_COHORT_AMBIGUOUS
+
+    return GUARD_COHORT_ELIGIBLE
 
 
 
@@ -309,6 +473,11 @@ class S3ResearchDataSource:
         # Run-level cache keyed by (dataset, symbol, start, end, schema-set).
         self._cache: dict[tuple, list[dict[str, Any]]] = {}
         self._malformed: dict[str, MalformedReport] = {}
+        # Historical guard-rejection accounting, idempotent per (dataset, key):
+        # dataset -> {source object key -> verified eligible row count}. Keyed by
+        # object so repeated/incremental reads of the same verified object never
+        # double-count, and the per-key cohort window can be re-proven on demand.
+        self._guard_cohort: dict[str, dict[str, int]] = {}
         self._listed_objects: dict[str, dict[str, Any]] = {}
         self._dataset_objects: dict[str, tuple[dict[str, Any], ...]] = {}
         self._read_objects: dict[tuple[str, str], dict[str, Any]] = {}
@@ -617,21 +786,70 @@ class S3ResearchDataSource:
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Acquire exactly a just-discovered key set before its digest exists."""
-        records = self.read_bound_objects(
-            dataset, objects,
-            expected_schema_version=expected_schema_version,
-            start_date=start_date, end_date=end_date,
-            _verify_content=False,
-        )
-        if has_profile(dataset):
-            for record in records:
-                valid, violations = validate_record(dataset, record)
-                if not valid:
-                    raise ResearchDataSourceError(
-                        f"SNAPSHOT_RECORD_PROFILE_INVALID:{dataset}:"
-                        + ";".join(violations))
+        """Acquire exactly a just-discovered key set before its digest exists.
+
+        Each record is classified at the freeze ingestion boundary against the
+        immutable source object key it came from. Canonical ``decision_trace_v1``
+        records are validated against their registered profile exactly as
+        before. The narrow Stage A historical compatibility classification may
+        admit a *verified* legacy ``runtime_guard_rejection`` variant (which the
+        historical producer wrote under the canonical prefix without the
+        canonical ``entity_id``/``action`` spine); such rows are counted in an
+        explicit :class:`GuardCohortReport` and are NEVER allowed to satisfy a
+        canonical profile check. Ambiguous or spoofed guard labels fail closed
+        with a governed reason code. No canonical field is fabricated and no
+        source byte is rewritten.
+        """
+        profiled = has_profile(dataset)
+        records: list[dict[str, Any]] = []
+        observed: list[dict[str, Any]] = []
+        guard_by_key = self._guard_cohort.setdefault(dataset, {})
+        for item in objects:
+            key = str(item.get("identifier") or "")
+            object_records = self.read_bound_objects(
+                dataset, (item,),
+                expected_schema_version=expected_schema_version,
+                start_date=start_date, end_date=end_date,
+                _verify_content=False,
+            )
+            observed.append(dict(self._read_objects[(dataset, key)]))
+            eligible_in_object = 0
+            if profiled:
+                for record in object_records:
+                    classification = classify_guard_cohort_record(
+                        dataset, record, key)
+                    if classification == GUARD_COHORT_AMBIGUOUS:
+                        # The record claims the historical guard role but cannot
+                        # be safely distinguished from a malformed canonical
+                        # record. Fail closed; never accept, never drop.
+                        raise ResearchDataSourceError(
+                            "HISTORICAL_GUARD_REJECTION_UNVERIFIED:"
+                            + dataset + ":" + key)
+                    if classification == GUARD_COHORT_ELIGIBLE:
+                        # Verified historical variant: admitted under the narrow
+                        # compatibility classification and accounted explicitly.
+                        # It does NOT satisfy the canonical profile. Its exact
+                        # original bytes are preserved in ``records`` unchanged.
+                        eligible_in_object += 1
+                        continue
+                    valid, violations = validate_record(dataset, record)
+                    if not valid:
+                        raise ResearchDataSourceError(
+                            f"SNAPSHOT_RECORD_PROFILE_INVALID:{dataset}:"
+                            + ";".join(violations))
+            # Idempotent per verified object: re-reading the same key assigns the
+            # same count, so incremental and repeated freezes never inflate the
+            # cohort. Zero-eligible objects are simply not recorded.
+            if eligible_in_object:
+                guard_by_key[key] = eligible_in_object
+            else:
+                guard_by_key.pop(key, None)
+            records.extend(object_records)
+        order_keys = _ORDER_KEYS.get(dataset, _DEFAULT_ORDER_KEYS)
+        records.sort(key=lambda row: _order_value(row, order_keys))
+        self._dataset_objects[dataset] = tuple(observed)
         return records
+
 
     # ─── object read + decode ─────────────────────────────────────────────────
 
@@ -844,6 +1062,30 @@ class S3ResearchDataSource:
         """Return the malformed-record accounting for a dataset, if any."""
         return self._malformed.get(dataset)
 
+    def guard_cohort_report(self, dataset: str) -> GuardCohortReport | None:
+        """Return the historical guard-rejection accounting for a dataset.
+
+        Only populated on freeze-boundary reads that admitted verified
+        historical guard-rejection variants. ``None`` means no such variant was
+        seen for the dataset in this run — never a silent drop. The returned
+        report is deterministic: rows are the sum of per-object eligible counts
+        and keys are sorted, so repeated and incremental freezes are stable.
+        """
+        by_key = self._guard_cohort.get(dataset)
+        if not by_key:
+            return None
+        eligible_keys = sorted(key for key, count in by_key.items() if count)
+        return GuardCohortReport(
+            dataset=dataset,
+            eligible_rows=sum(by_key.values()),
+            eligible_objects=len(eligible_keys),
+            eligible_keys=eligible_keys,
+        )
+
+    def guard_cohort_count(self, dataset: str, key: str) -> int:
+        """Return the verified historical row count for one source object."""
+        return self._guard_cohort.get(dataset, {}).get(key, 0)
+
     def object_metadata(self, dataset: str) -> tuple[dict[str, Any], ...]:
         """Objects consumed by the current cached dataset read, in key order."""
         return self._dataset_objects.get(dataset, ())
@@ -864,6 +1106,7 @@ class S3ResearchDataSource:
         self._listed_objects.clear()
         self._read_objects.clear()
         self._headed_objects.clear()
+        self._guard_cohort.clear()
 
 
 # ─── Run-scoped default source ────────────────────────────────────────────────

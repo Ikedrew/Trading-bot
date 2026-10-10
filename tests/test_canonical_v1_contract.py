@@ -49,6 +49,42 @@ _SAMPLES = {
     "strategy_candidates": {"symbol": "EURUSD"},
     "shadow_runtime": {"symbol": "EURUSD", "canonical_opportunity_id": "EURUSD*1*P"},
     "portfolio_rankings": {"ranking_id": "r1", "cycle_id": 5},
+    # Stage A five: producer-shaped minimal records (schema identity + the
+    # writer's own mandatory spine; lifecycle-nullable evidence omitted or
+    # None where the producer legitimately emits it).
+    "trade_truth": {
+        "symbol": "EURUSD",
+        "identity": {"trade_id": "T1", "correlation_id": "COR-1",
+                     "symbol": "EURUSD"},
+        "execution": {"entry_fill_price": 1.1, "volume_executed": 0.1},
+        "timestamps": {"exit_timestamp_broker": 1},
+        "outcome": {"r_multiple_realised": None},
+        "exit": {"exit_reason": "take_profit_hit"},
+    },
+    "execution_results": {
+        "symbol": "EURUSD", "timestamp_utc": "2026-09-25T09:00:00Z",
+        "correlation_id": "COR-1", "result_ok": False, "retcode": 0,
+        "request": {"volume": None}, "submission": {"volume": None},
+        "response": {"retcode": 0}, "fill": {"price": None},
+        "protection_confirmation": {"source": None},
+    },
+    "execution_attempts": {
+        "attempt_id": "AT1", "symbol": "EURUSD", "action_type": "ENTRY",
+        "timestamp_utc": "2026-09-25T09:00:00Z", "trade_id": None,
+        "broker_result": {"ok": False, "retcode": 0},
+    },
+    "protection_audit": {
+        "symbol": "EURUSD", "position_ticket": 1,
+        "correlation_id": "COR-1", "protection_status": "VERIFIED",
+    },
+    "risk_deviation": {
+        "trade_id": "T1", "symbol": "EURUSD",
+        "risk_classification": "NO_RISK_DATA",
+        "semantic_stage": "post_outcome_analysis",
+        "authority": "diagnostic_projection",
+        "planned_risk_R": None, "actual_risk_R": None,
+        "risk_deviation": None,
+    },
 }
 
 
@@ -112,10 +148,13 @@ def test_execution_results_writer_emits_canonical_schema_partition():
     assert key == ("core/execution_results/schema_version=execution_results_v1/"
                    "symbol=USDCAD/date=2026-09-03/part-000.jsonl")
     assert key.startswith(loader_prefix)
-    # The active writer source uses the canonical helper, not a manual key.
+    # The active writer hands off to the canonical outbox, which owns the key.
     import inspect
+    import core.canonical_delivery_outbox as outbox
     src_txt = inspect.getsource(w)
-    assert 'canonical_s3_key("execution_results"' in src_txt
+    assert 'enqueue_canonical_delivery(' in src_txt
+    assert 'dataset="execution_results", payload=record' in src_txt
+    assert "canonical_s3_key(" in inspect.getsource(outbox.canonical_outbox_destination)
     assert '/symbol={symbol}/date={date_str}/part-000.jsonl"' not in src_txt
 
 

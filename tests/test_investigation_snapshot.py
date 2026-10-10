@@ -106,6 +106,7 @@ def _objects() -> dict[str, str]:
     rows = {
         "trade_truth": ({
             "schema_version": "trade_truth_v1",
+            "symbol": "EURUSD",
             "identity": {"trade_id": "T1", "correlation_id": correlation,
                          "account_id": "A1", "position_ticket": 1,
                          "canonical_opportunity_id": "O1", "symbol": "EURUSD",
@@ -119,12 +120,20 @@ def _objects() -> dict[str, str]:
                         "net_profit": 19.0, "mfe_r": 2.1, "mae_r": -0.2},
             "exit": {"exit_reason": "take_profit_hit"},
         },),
-        "execution_results": ({"correlation_id": correlation, "account_id": "A1",
+        "execution_results": ({"schema_version": "execution_results_v1",
+                                "symbol": "EURUSD",
+                                "correlation_id": correlation, "account_id": "A1",
                                 "entity_id": "E1", "position_ticket": 1,
-                                "result_ok": True, "deal_ticket": "D1",
+                                "result_ok": True, "retcode": 0,
+                                "deal_ticket": "D1",
                                 "timestamp_utc": "2026-09-25T09:00:00Z",
-                                "comment": "filled"},),
-        "decision_trace": ({"decision_id": "D1", "entity_id": "E1",
+                                "comment": "filled",
+                                "request": {"volume": 0.1},
+                                "submission": {"volume": 0.1},
+                                "response": {"retcode": 0, "comment": "filled"},
+                                "fill": {"price": 1.1},
+                                "protection_confirmation": {"source": None}},),
+        "decision_trace": ({"schema_version": "decision_trace_v1", "decision_id": "D1", "entity_id": "E1",
                              "correlation_id": correlation, "symbol": "EURUSD",
                              "cycle_id": 1, "action": "EXECUTE",
                              "timestamp_utc": "2026-09-25T09:00:00Z",
@@ -132,24 +141,30 @@ def _objects() -> dict[str, str]:
                              "v10_market_state": {"market_phase": "IMPULSE",
                                                   "regime": {"regime": "TRENDING"}}},),
         "shadow_runtime": tuple(shadow_events()),
-        "execution_attempts": ({"attempt_id": "AT1", "trade_id": "T1",
+        "execution_attempts": ({"schema_version": "execution_attempts_v1", "attempt_id": "AT1", "trade_id": "T1",
                                  "correlation_id": correlation, "account_id": "A1",
                                  "position_ticket": 1, "symbol": "EURUSD",
-                                 "timestamp_utc": "2026-09-25T09:00:00Z"},),
-        "execution_context": ({"correlation_id": correlation, "entity_id": "E1",
+                                 "action_type": "ENTRY",
+                                 "timestamp_utc": "2026-09-25T09:00:00Z",
+                                 "broker_result": {"ok": True, "retcode": 0}},),
+        "execution_context": ({"schema_version": "execution_context_v1", "correlation_id": correlation, "entity_id": "E1",
                                 "symbol": "EURUSD", "cycle_id": 1,
                                 "timestamp_utc": "2026-09-25T09:00:00Z",
                                 "market_access": {"session_state": "LONDON"},
                                 "risk_environment": {"open_positions": 0}},),
-        "market_context": ({"symbol": "EURUSD", "cycle_id": 1,
+        "market_context": ({"schema_version": "market_context_v1", "symbol": "EURUSD", "cycle_id": 1,
                              "entity_id": "E1", "regime": "TRENDING"},),
-        "strategy_observations": ({"entity_id": "E1", "observation_id": "SO1",
+        "strategy_observations": ({"schema_version": "strategy_observation_v1", "entity_id": "E1", "observation_id": "SO1",
+                                    "symbol": "EURUSD", "canonical_opportunity_id": "O1",
                                     "family": "REVERSAL"},),
-        "protection_audit": ({"audit_id": "PA1", "correlation_id": correlation,
-                               "account_id": "A1", "position_ticket": 1,
+        "protection_audit": ({"schema_version": "protection_audit_v1", "audit_id": "PA1", "correlation_id": correlation,
+                               "symbol": "EURUSD", "account_id": "A1", "position_ticket": 1,
                                "protection_status": "VERIFIED"},),
-        "risk_deviation": ({"observation_id": "RD1", "trade_id": "T1",
-                             "correlation_id": correlation},),
+        "risk_deviation": ({"schema_version": "risk_deviation_v1", "observation_id": "RD1", "trade_id": "T1",
+                             "symbol": "EURUSD", "correlation_id": correlation,
+                             "risk_classification": "NORMAL",
+                             "semantic_stage": "post_outcome_analysis",
+                             "authority": "diagnostic_projection"},),
     }
     return {_key(name): _jsonl(*rows[name]) for name in BOUND_DATASETS}
 
@@ -164,6 +179,100 @@ def _freeze(source, **kwargs):
         start_date="2026-09-23", end_date="2026-09-30", source=source,
         **kwargs,
     )
+
+
+def _historical_guard() -> dict:
+    return {
+        "schema_version": "decision_trace_v1",
+        "symbol": "EURUSD", "record_role": "runtime_guard_rejection",
+        "event_type": "RISK_REJECTION", "rejection_type": "RISK_GUARD",
+        "guard": "risk_limit", "reason": "limit reached",
+        "should_trade": False, "cycle_id": 2,
+        "correlation_id": "GUARD-C2",
+        "timestamp_utc": "2026-09-25T09:01:00Z",
+    }
+
+
+def test_historical_guard_cohort_is_counted_but_not_decision_evidence(tmp_path):
+    objects = _objects()
+    guard_key = _key("decision_trace", part="guard.jsonl")
+    original_body = _jsonl(_historical_guard())
+    objects[guard_key] = original_body
+    fake, source = _source(objects)
+
+    snapshot = _freeze(source, manifest_path=tmp_path / "cohort.json")
+    binding = next(item for item in snapshot.datasets
+                   if item.dataset == "decision_trace")
+    assert binding.source_row_count == 2
+    assert binding.historical_guard_rows == 1
+    assert binding.canonical_row_count == 1
+    assert sum(item.historical_guard_rows for item in binding.objects) == 1
+    assert json.loads(binding.dataset_snapshot_json)["record_count"] == 1
+    assert load_investigation_snapshot(tmp_path / "cohort.json") == snapshot
+    assert fake.objects[guard_key] == original_body
+
+    reader = SnapshotBoundDatasetReader(snapshot, source)
+    assert len(reader.read_dataset("decision_trace")) == 1
+    assert reader.reads_by_dataset["decision_trace"] == 1
+    assert reader.read_dataset("decision_trace")[0]["entity_id"] == "E1"
+
+
+def test_closed_frontier_roster_preserves_guard_accounting():
+    objects = _objects()
+    guard_key = _key("decision_trace", part="guard.jsonl")
+    objects[guard_key] = _jsonl(_historical_guard())
+    _, source = _source(objects)
+    membership = {}
+    for name in BOUND_DATASETS:
+        listed = source.discover_dataset_objects(name)
+        source.read_objects_for_freeze(
+            name, listed, expected_schema_version=current_schema(name))
+        membership[name] = tuple({
+            **item,
+            "historical_guard_rows": source.guard_cohort_count(
+                name, item["identifier"]),
+        } for item in source.object_metadata(name))
+
+    snapshot = _freeze(source, object_membership=membership)
+    binding = next(item for item in snapshot.datasets
+                   if item.dataset == "decision_trace")
+    assert binding.source_row_count == 2
+    assert binding.historical_guard_rows == 1
+    assert binding.canonical_row_count == 1
+    assert len(SnapshotBoundDatasetReader(snapshot, source).read_dataset(
+        "decision_trace")) == 1
+
+
+def test_historical_guard_cohort_must_be_nonvacuous_and_exact(tmp_path):
+    objects = _objects()
+    canonical_key = _key("decision_trace")
+    guard_key = _key("decision_trace", part="guard.jsonl")
+    objects[guard_key] = _jsonl(_historical_guard())
+    _, source = _source(objects)
+    snapshot = _freeze(source)
+    altered = snapshot.to_dict()
+    binding = next(item for item in altered["datasets"]
+                   if item["dataset"] == "decision_trace")
+    next(item for item in binding["objects"]
+         if item["identifier"] == guard_key)["historical_guard_rows"] = 0
+    with pytest.raises(InvestigationSnapshotError):
+        InvestigationSnapshot.from_dict(altered)
+
+    objects.pop(canonical_key)
+    _, source = _source(objects)
+    with pytest.raises(InvestigationSnapshotError,
+                       match="REQUIRED_CANONICAL_DECISION_TRACE_EMPTY"):
+        _freeze(source)
+
+
+def test_ambiguous_historical_guard_fails_closed():
+    objects = _objects()
+    objects[_key("decision_trace", part="guard.jsonl")] = _jsonl({
+        **_historical_guard(), "entity_id": "spoofed"})
+    _, source = _source(objects)
+    with pytest.raises(ResearchDataSourceError,
+                       match="HISTORICAL_GUARD_REJECTION_UNVERIFIED"):
+        _freeze(source)
 
 
 def test_same_source_population_reproduces_snapshot_fingerprint(tmp_path):
@@ -200,9 +309,14 @@ def test_changed_object_added_object_removed_object_and_date_bounds_change_ident
 
     added_objects = dict(base_objects)
     added_objects[_key("trade_truth", "2026-09-26", "part-001.jsonl")] = _jsonl(
-        {"identity": {"trade_id": "T2", "correlation_id": "C2",
-                       "account_id": "A1", "symbol": "EURUSD"},
-         "outcome": {"r_multiple_realised": 0.5}})
+        {"schema_version": "trade_truth_v1",
+         "symbol": "EURUSD",
+         "identity": {"trade_id": "T2", "correlation_id": "C2",
+                      "account_id": "A1", "symbol": "EURUSD"},
+         "execution": {"entry_fill_price": 1.1, "volume_executed": 0.1},
+         "timestamps": {"exit_timestamp_broker": "2026-09-26T10:00:00Z"},
+         "outcome": {"r_multiple_realised": 0.5},
+         "exit": {"exit_reason": "manual_close"}})
     _, added_source = _source(added_objects)
     added = _freeze(added_source)
     assert added.snapshot_fingerprint != base.snapshot_fingerprint
@@ -259,7 +373,14 @@ def test_snapshot_reader_fetches_only_bound_keys_and_rejects_scope_widening():
     snapshot = _freeze(source)
     bound_keys = {obj.identifier for binding in snapshot.datasets for obj in binding.objects}
     extra_key = _key("trade_truth", "2026-09-28", "late-arrival.jsonl")
-    fake.objects[extra_key] = _jsonl({"identity": {"trade_id": "late"}})
+    fake.objects[extra_key] = _jsonl(
+        {"schema_version": "trade_truth_v1", "symbol": "EURUSD",
+         "identity": {"trade_id": "late", "correlation_id": "LATE",
+                      "symbol": "EURUSD"},
+         "execution": {"entry_fill_price": 1.1, "volume_executed": 0.1},
+         "timestamps": {"exit_timestamp_broker": "2026-09-28T10:00:00Z"},
+         "outcome": {"r_multiple_realised": None},
+         "exit": {"exit_reason": "manual_close"}})
     list_calls_before_open = len(fake.list_calls)
 
     reader = SnapshotBoundDatasetReader(snapshot, source)
@@ -390,7 +511,16 @@ def test_frozen_capture_cannot_be_mislabeled_if_object_population_changes_mid_fr
             if not self.changed and self.list_calls:
                 self.changed = True
                 self.objects[_key("trade_truth", "2026-09-26", "during-freeze.jsonl")] = _jsonl(
-                    {"identity": {"trade_id": "late"}})
+                    {"schema_version": "trade_truth_v1",
+                     "symbol": "EURUSD",
+                     "identity": {"trade_id": "late", "correlation_id": "LATE",
+                                  "symbol": "EURUSD"},
+                     "execution": {"entry_fill_price": 1.1,
+                                   "volume_executed": 0.1},
+                     "timestamps": {"exit_timestamp_broker":
+                                    "2026-09-26T10:00:00Z"},
+                     "outcome": {"r_multiple_realised": None},
+                     "exit": {"exit_reason": "manual_close"}})
             return response
 
     fake = ChangingS3(_objects())

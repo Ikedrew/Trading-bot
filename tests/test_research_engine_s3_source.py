@@ -327,7 +327,10 @@ def _seed_universe_objects() -> dict[str, str]:
         "outcome": {"r_multiple_realised": 1.5, "pnl_realised": 50.0, "net_profit": 48.0, "commission": -2.0, "swap": 0.0},
         "exit": {"exit_reason": "take_profit_hit"},
     }]
-    er = [{"symbol": "EURUSD", "result_ok": True, "deal": 1, "correlation_id": "COR-1", "entity_id": "EURUSD_1", "timestamp_utc": 100}]
+    er = [{"symbol": "EURUSD", "result_ok": True, "deal": 1,
+           "correlation_id": "COR-1", "entity_id": "EURUSD_1",
+           "fill_price": 1.10, "entry_reference": 1.10, "sl": 1.09,
+           "timestamp_utc": 100}]
     mc = [{"symbol": "EURUSD", "cycle_id": 1, "timestamp_utc": "2026-07-01T10:00:00Z", "regime": "TRENDING"}]
     so = [{
         "schema_version": current_schema("shadow_trades"),
