@@ -7,11 +7,14 @@ imported nor consulted.
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 import builtins
 import gc
 import importlib
 import inspect
+import hashlib
+import sys
+import importlib.metadata
 from pathlib import Path
 import time
 from typing import Any, Callable, Mapping, Sequence
@@ -72,6 +75,8 @@ from research_engine.v10.investigation_snapshot import (
     InvestigationSnapshot,
     SnapshotBoundDatasetReader,
     load_investigation_snapshot_id,
+    authenticate_snapshot_inputs,
+    verify_investigation_snapshot_identity,
 )
 
 
@@ -459,7 +464,10 @@ def _runner_kwargs(
     shadow_population = context.datasets.get("shadow_trades", [])
     common: dict[str, Any] = {
         "shadow_trades": shadow_population,
-        "records": population if question.id in {"L3", "L6", "EX2"} else shadow_population,
+        "records": (
+            population if question.id in {"L3", "L6", "EX2"}
+            else None if question.id == "G3" else shadow_population
+        ),
         "governed_records": population if question.id in {"L3", "L6", "EX2"} else shadow_population,
         "decision_records": context.datasets.get("decision_trace", []),
         "outcome_records": shadow_population,
@@ -499,8 +507,13 @@ def _execute_runner(
     population: list[dict[str, Any]], context: SnapshotQuestionExecutionContext,
 ) -> Mapping[str, Any]:
     kwargs = _runner_kwargs(runner, question, population, context)
-    with _snapshot_only_runner_environment(context.reader):
-        report = runner(**kwargs)
+    from research_engine.control_plane.evidence_provenance import measure_provenance
+    with measure_provenance() as measurement:
+        try:
+            with _snapshot_only_runner_environment(context.reader):
+                report = runner(**kwargs)
+        finally:
+            context.runner_artifacts["performance_provenance"] = measurement
     if not isinstance(report, Mapping):
         raise TypeError("RUNNER_RETURNED_NON_MAPPING")
     return report
@@ -779,7 +792,13 @@ def _normalise_report(
         confidence=report.get("confidence"),
         statistical_output=(report.get("statistical_output") or report.get("statistics")),
         evidence_datasets=tuple(source.value for source in question.data_sources),
-        evidence_references=context.evidence_references(question),
+        # These two blocked reports have no authenticated research-state or
+        # report-history input.  The available shadow object did not support
+        # their result and must not be cited as if it did.
+        evidence_references=(
+            () if question.id in {"G3", "L2"} and status == BLOCKED
+            else context.evidence_references(question)
+        ),
         limitations=tuple(limitations),
         missing_evidence=_missing_evidence(resolution, report),
         implementation_status=("IMPLEMENTED" if status != IMPLEMENTATION_BLOCKED
@@ -815,6 +834,23 @@ def _status_counts(results: Mapping[str, CanonicalQuestionResult]) -> dict[str, 
     }
 
 
+def _replay_implementation_identity():
+    # Conservative replay-only identity. Scientific semantic result identities
+    # remain governed by evaluation_identity.py and are never rewritten.
+    root = Path(__file__).resolve().parents[3]
+    files = {}
+    for directory in (root / "research_engine", root / "core"):
+        for path in sorted(directory.rglob("*.py")):
+            files[path.relative_to(root).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+    versions = {}
+    for name in ("numpy", "scipy", "pandas", "scikit-learn", "statsmodels"):
+        try:
+            versions[name] = importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            versions[name] = None
+    return fingerprint({"files": files, "python": sys.version, "packages": versions})
+
+
 def run_canonical_question_cycle(
     frontier_result_or_snapshot_id: Any,
     *,
@@ -833,6 +869,8 @@ def run_canonical_question_cycle(
     execution_policy: ResearchExecutionPolicy | None = None,
     force_inline_question_ids: Sequence[str] = (),
     execution_revision: str | None = None,
+    shared_inputs: Any | None = None,
+    input_cycle_id: str | None = None,
 ) -> CanonicalQuestionCycleResult:
     """Execute/retain exactly one result for every canonical question."""
     stage_started = time.perf_counter()
@@ -849,19 +887,13 @@ def run_canonical_question_cycle(
     try:
         snapshot = load_investigation_snapshot_id(
             snapshot_id, manifest_directory=Path(manifest_directory))
-        reader = SnapshotBoundDatasetReader(snapshot, source=source)
+        if source is None:
+            from research_engine.data_access.s3_source import get_default_source
+            source = get_default_source()
+        snapshot = authenticate_snapshot_inputs(snapshot, source)
     except Exception as exc:
         raise CanonicalQuestionCycleError(
             "VERIFIED_SNAPSHOT_RESOLUTION_FAILED:" + f"{type(exc).__name__}:{exc}") from exc
-    rss, peak = process_memory_bytes()
-    emit(
-        phase="SNAPSHOT_LOADED",
-        snapshot_load_elapsed_seconds=round(time.perf_counter() - stage_started, 6),
-        snapshot_records_by_dataset=reader.reads_by_dataset,
-        snapshot_records_materialized=sum(reader.reads_by_dataset.values()),
-        process_rss_bytes=rss,
-        process_peak_rss_bytes=peak,
-    )
     supplied_fingerprint = _value(frontier_result_or_snapshot_id, "fingerprint")
     supplied_epoch = _value(frontier_result_or_snapshot_id, "investigation_epoch")
     if supplied_fingerprint and str(supplied_fingerprint) != snapshot.snapshot_fingerprint:
@@ -897,21 +929,97 @@ def run_canonical_question_cycle(
     }
     if execution_revision:
         cycle_identity["execution_revision"] = str(execution_revision)
-    cycle_id = "QCYCLE-" + fingerprint(cycle_identity)[:32].upper()
     resolved_store = store or QuestionCycleStore(state_directory)
-    existing = resolved_store.load_cycle(cycle_id)
-    if existing is not None:
-        # Idempotent repair of a missing/stale convenience projection.
-        projection = resolved_store.load_projection(cycle_id)
-        resolved_store.save_projection(projection)
-        return existing
-
+    resolved_execution_policy = execution_policy or ResearchExecutionPolicy()
+    force_inline = frozenset(str(item) for item in force_inline_question_ids)
+    # Injected executors may depend on opaque mutable state. They must explicitly
+    # declare a revision to opt into replay/recovery; no inferred trust.
+    reuse_eligible = (runners is None and runner_executor is None) or bool(execution_revision)
     previous_projection = resolved_store.load_current()
+    replay_scope = {
+        **cycle_identity,
+        "replay_contract": "governed_cycle_replay_v1",
+        "snapshot_manifest": snapshot.to_dict(),
+        "implementation": _replay_implementation_identity(),
+        "execution_policy": asdict(resolved_execution_policy),
+        "evaluation_only": (None if evaluation_only_question_ids is None else
+                            sorted(evaluation_only_question_ids)),
+        "force_inline": sorted(force_inline),
+        "frontier_predecessor_hint": predecessor_hint,
+        "changed_datasets": sorted(changed_datasets), "changed_known": changed_known,
+        "deep_jobs": (None if deep_work_store is None else
+                      [job.to_dict() for job in deep_work_store.ordered()]),
+        "custom_revision": execution_revision,
+    }
+    scope_digest = fingerprint(replay_scope)
+    implementation_identity = replay_scope["implementation"]
+    if (previous_projection is not None
+            and previous_projection.get("cycle_snapshot_id") == snapshot.snapshot_id
+            and previous_projection.get("replay_implementation_identity") not in (None, implementation_identity)
+            and previous_projection.get("evaluation_identity_fingerprint") == evaluation_identity_fingerprint):
+        raise CanonicalQuestionCycleError("REPLAY_IMPLEMENTATION_CHANGED_REQUIRES_GOVERNED_REVISION")
+    same_scope = (previous_projection or {}).get("replay_scope_digest") == scope_digest
+    predecessor_authority = ((previous_projection or {}).get("replay_predecessor_authority")
+                             if same_scope else fingerprint(previous_projection))
     predecessor_cycle_id = (
+        previous_projection.get("predecessor_cycle_id") if same_scope else
         None if previous_projection is None else str(previous_projection.get("cycle_id")))
-    predecessor_snapshot_id = predecessor_hint or (
-        None if previous_projection is None
-        else str(previous_projection.get("cycle_snapshot_id") or "") or None)
+    predecessor_snapshot_id = (previous_projection.get("predecessor_snapshot_id") if same_scope else
+        predecessor_hint or (None if previous_projection is None else
+            str(previous_projection.get("cycle_snapshot_id") or "") or None))
+    replay_authority = {"scope_digest": scope_digest,
+                        "predecessor_authority": predecessor_authority}
+    cycle_id = "QCYCLE-" + fingerprint(replay_authority)[:32].upper()
+    existing = None
+    if reuse_eligible:
+        existing = resolved_store.load_replay(cycle_id, replay_authority)
+        if existing is not None:
+            # A cached evaluation cannot replace a fresh observation. Versionless
+            # inputs still undergo conservative full-body verification below.
+            versionless = any(obj.version_id in (None, "", "null")
+                              for binding in snapshot.datasets for obj in binding.objects)
+            if not versionless:
+                verify_investigation_snapshot_identity(snapshot.snapshot_id, source=source,
+                    manifest_directory=Path(manifest_directory), fresh_observation=True)
+                cycle, projection = existing
+                resolved_store.save_projection(projection)
+                emit(phase="COMPLETED_CYCLE_REPLAY", snapshot_id=snapshot_id,
+                     snapshot_records_materialized=0, replayed_questions=70,
+                     elapsed_seconds_inclusive=round(time.perf_counter() - stage_started, 6))
+                return cycle
+    try:
+        reader = (shared_inputs.acquire(snapshot, cycle_id=input_cycle_id, source=source,
+                                        consumer="canonical") if shared_inputs is not None
+                  else SnapshotBoundDatasetReader(snapshot, source=source))
+    except Exception as exc:
+        raise CanonicalQuestionCycleError(
+            "VERIFIED_SNAPSHOT_RESOLUTION_FAILED:" + f"{type(exc).__name__}:{exc}") from exc
+    rss, peak = process_memory_bytes()
+    emit(
+        phase="SNAPSHOT_LOADED",
+        snapshot_load_elapsed_seconds=round(time.perf_counter() - stage_started, 6),
+        snapshot_records_by_dataset=reader.reads_by_dataset,
+        snapshot_records_materialized=sum(reader.reads_by_dataset.values()),
+        process_rss_bytes=rss,
+        process_peak_rss_bytes=peak,
+    )
+    if reuse_eligible and existing is not None:
+        cycle, projection = existing
+        resolved_store.save_projection(projection)
+        emit(phase="COMPLETED_CYCLE_REPLAY", snapshot_id=snapshot_id,
+             replayed_questions=70, versionless_body_reverification=True)
+        return cycle
+    # Re-evaluation under an opaque injected executor must compare against the
+    # original predecessor, not manufacture self-predecessor scientific results.
+    completed_same_scope = (resolved_store.load_cycle(cycle_id) if same_scope else None)
+    original_current = previous_projection
+    if (previous_projection is not None
+            and previous_projection.get("cycle_snapshot_id") == snapshot.snapshot_id
+            and previous_projection.get("evaluation_identity_fingerprint") == evaluation_identity_fingerprint):
+        original_predecessor = previous_projection.get("predecessor_cycle_id")
+        previous_projection = (resolved_store.load_projection(original_predecessor)
+                               if original_predecessor else None)
+    context_started = time.perf_counter()
     context = _build_context(
         snapshot, reader,
         predecessor_snapshot_id=predecessor_snapshot_id,
@@ -921,7 +1029,8 @@ def run_canonical_question_cycle(
     rss, peak = process_memory_bytes()
     emit(
         phase="CONTEXT_READY",
-        context_elapsed_seconds=round(time.perf_counter() - stage_started, 6),
+        context_elapsed_seconds=round(time.perf_counter() - context_started, 6),
+        context_ready_elapsed_seconds_inclusive=round(time.perf_counter() - stage_started, 6),
         context_records_by_dataset={name: len(rows) for name, rows in context.datasets.items()},
         process_rss_bytes=rss,
         process_peak_rss_bytes=peak,
@@ -950,13 +1059,12 @@ def run_canonical_question_cycle(
     deep_pending_ids: list[str] = []
     question_timings: list[dict[str, Any]] = []
     evidence_snapshot = EvidenceSnapshot(datasets=context.datasets)
-    resolved_execution_policy = execution_policy or ResearchExecutionPolicy()
-    force_inline = frozenset(str(item) for item in force_inline_question_ids)
 
     for question_index, question in enumerate(questions, start=1):
         qid = question.id
         question_started = time.perf_counter()
         resolution_seconds = 0.0
+        normalization_seconds = 0.0
         population_seconds = 0.0
         runner_seconds = 0.0
         datasets_opened: dict[str, int] = {}
@@ -997,6 +1105,35 @@ def run_canonical_question_cycle(
             if str((entries.get(dependency) or {}).get("work_state") or "")
             in {"DEEP_PENDING", "DEEP_RUNNING", "DEEP_STALE", "WAITING"}
         )
+
+        prerequisites = {dependency: {
+            "result_id": (results[dependency].result_id if dependency in results else None),
+            "work_state": (entries.get(dependency) or {}).get("work_state"),
+        } for dependency in question.depends_on}
+        checkpoint = (resolved_store.load_checkpoint(cycle_id, replay_authority, qid, prerequisites)
+                      if reuse_eligible else None)
+        if checkpoint is not None:
+            entry = checkpoint["entry"]
+            if entry["planning_classification"] != classification or entry["execution_policy"] != execution:
+                raise CanonicalQuestionCycleError("CHECKPOINT_SCHEDULING_MISMATCH:" + qid)
+            result = CanonicalQuestionResult.from_dict(entry["result"])
+            if (result.question_id != qid or result.snapshot_id != snapshot.snapshot_id
+                    or result.snapshot_fingerprint != snapshot.snapshot_fingerprint
+                    or result.investigation_epoch != snapshot.evidence_epoch
+                    or result.evaluation_identity_digest != (identity or {}).get("evaluation_identity_digest")):
+                raise CanonicalQuestionCycleError("CHECKPOINT_EVALUATION_AUTHORITY_MISMATCH:" + qid)
+            results[qid] = result
+            entries[qid] = entry
+            deltas[qid] = checkpoint["delta"]
+            if entry["retained_previous"]:
+                retained_ids.append(qid)
+            elif entry.get("evaluated_this_cycle"):
+                evaluated_ids.append(qid)
+            question_timings.append(entry["execution_timing"])
+            emit(phase="QUESTION_RESUMED", current_question_id=None,
+                 questions_entered=question_index, questions_completed=question_index,
+                 resumed_question_id=qid, result_id=result.result_id)
+            continue
 
         if (
             classification in {AFFECTED, REQUIRES_RECHECK, REQUIRES_REEVALUATION}
@@ -1136,7 +1273,10 @@ def run_canonical_question_cycle(
             try:
                 context.runner_artifacts.clear()
                 resolution_started = time.perf_counter()
-                resolution = resolve_question_evidence(question, evidence_snapshot)
+                from research_engine.control_plane.evidence_resolver import measure_normalization
+                with measure_normalization() as normalization:
+                    resolution = resolve_question_evidence(question, evidence_snapshot)
+                normalization_seconds = normalization["normalization_seconds"]
                 context.runner_artifacts.update(resolution.runner_artifacts)
                 resolution_seconds = time.perf_counter() - resolution_started
                 datasets_opened = {
@@ -1177,8 +1317,10 @@ def run_canonical_question_cycle(
                     runner_failed = True
                 else:
                     runner_started = time.perf_counter()
-                    report = executor(runner_map[qid], question, population, context)
-                    runner_seconds = time.perf_counter() - runner_started
+                    try:
+                        report = executor(runner_map[qid], question, population, context)
+                    finally:
+                        runner_seconds = time.perf_counter() - runner_started
                     result = _normalise_report(
                         question, definition, report, resolution, context, previous,
                         identity)
@@ -1284,8 +1426,11 @@ def run_canonical_question_cycle(
             "question_id": qid,
             "elapsed_seconds": round(elapsed, 6),
             "resolution_seconds": round(resolution_seconds, 6),
+            "normalization_seconds_within_resolution": round(normalization_seconds, 6),
             "population_seconds": round(population_seconds, 6),
             "runner_seconds": round(runner_seconds, 6),
+            "runner_provenance_seconds_within_runner": round(
+                context.runner_artifacts.get("performance_provenance", {}).get("provenance_seconds", 0.0), 6),
             "datasets_opened": datasets_opened,
             "records_materialized": sum(datasets_opened.values()),
             "population_records": population_count,
@@ -1293,6 +1438,10 @@ def run_canonical_question_cycle(
         }
         question_timings.append(timing)
         entries[qid]["execution_timing"] = timing
+        entries[qid]["evaluated_this_cycle"] = qid in evaluated_ids
+        if reuse_eligible and not runner_failed and deep_job is None and not retained:
+            resolved_store.save_checkpoint(cycle_id, replay_authority, qid,
+                entries[qid], delta, prerequisites)
         slowest = sorted(
             question_timings, key=lambda item: item["elapsed_seconds"], reverse=True)[:5]
         rss, peak = process_memory_bytes()
@@ -1331,6 +1480,10 @@ def run_canonical_question_cycle(
         )
     projection = {
         "cycle_schema": QUESTION_CYCLE_SCHEMA,
+        "replay_policy_digest": fingerprint(asdict(resolved_execution_policy)),
+        "replay_implementation_identity": implementation_identity,
+        "replay_scope_digest": scope_digest,
+        "replay_predecessor_authority": predecessor_authority,
         "cycle_id": cycle_id,
         "cycle_snapshot_id": context.snapshot_id,
         "snapshot_fingerprint": context.fingerprint,
@@ -1386,6 +1539,14 @@ def run_canonical_question_cycle(
         execution_policy_id=resolved_execution_policy.policy_id,
         result_ids={qid: results[qid].result_id for qid in BASELINE_QUESTION_IDS},
     )
+    if completed_same_scope is not None and not reuse_eligible:
+        if completed_same_scope.result_ids != cycle.result_ids:
+            raise CanonicalQuestionCycleError("OPAQUE_REEVALUATION_CHANGED_IMMUTABLE_RESULTS")
+        for entry in original_current["questions"].values():
+            resolved_store.verify_entry_history(entry)
+        # Results were independently re-evaluated, not replayed from an opaque
+        # executor. Preserve original cycle/projection identity and timing receipts.
+        return completed_same_scope
     try:
         for qid in BASELINE_QUESTION_IDS:
             if not entries[qid]["retained_previous"]:
@@ -1396,6 +1557,8 @@ def run_canonical_question_cycle(
         immutable_json(resolved_store.projection_path(cycle_id), projection)
         resolved_store.save_projection(projection)
         resolved_store.save_cycle(cycle)
+        if reuse_eligible and not failed_ids and not deep_pending_ids:
+            resolved_store.save_replay_receipt(cycle, projection, replay_authority)
     except Exception as exc:
         try:
             if previous_projection is None:

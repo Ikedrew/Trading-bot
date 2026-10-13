@@ -25,6 +25,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import importlib
 import inspect
+import time
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -117,15 +118,18 @@ class _SnapshotContext:
 def _load_snapshot_context(
     *, snapshot_id: str, manifest_directory: Path | str,
     source: Any | None = None, required_datasets: Sequence[str] = (),
+    shared_inputs: Any | None = None, input_cycle_id: str | None = None,
 ) -> _SnapshotContext:
-    """Load the frozen snapshot and only the datasets the evaluator declares."""
+    """Admit the frozen snapshot and expose the datasets the evaluator declares."""
     try:
         snapshot = load_investigation_snapshot_id(
             snapshot_id, manifest_directory=Path(manifest_directory))
     except Exception as exc:
         return _SnapshotContext(failure=f"{type(exc).__name__}:{exc}")
     try:
-        reader = SnapshotBoundDatasetReader(snapshot, source=source)
+        reader = (shared_inputs.acquire(snapshot, cycle_id=input_cycle_id, source=source,
+                                        consumer="q71") if shared_inputs is not None
+                  else SnapshotBoundDatasetReader(snapshot, source=source))
     except Exception as exc:
         return _SnapshotContext(failure=f"{type(exc).__name__}:{exc}")
     wanted = [name for name in required_datasets if name in BOUND_DATASETS]
@@ -470,6 +474,7 @@ def run_generated_question_worker(
     source: Any | None = None,
     policy: GeneratedExecutionPolicy | None = None,
     recorded_at: str | None = None,
+    shared_inputs: Any | None = None, input_cycle_id: str | None = None,
     governed_counterfactual_evidence: Any = None,
     governed_counterfactual_binding: Any = None,
 ) -> dict[str, Any]:
@@ -561,6 +566,7 @@ def run_generated_question_worker(
             registration=registration, resolution=resolution,
             evidence_identity=evidence_identity,
             registry_identity=registry_identity,
+            shared_inputs=shared_inputs, input_cycle_id=input_cycle_id,
             manifest_directory=manifest_directory, source=source,
             policy=resolved_policy, stamp=stamp,
             execution_store=execution_store, result_store=result_store,
@@ -611,11 +617,13 @@ def _execute_one(
     result_store: GeneratedQuestionResultStore,
     governed_counterfactual_evidence: Any = None,
     governed_counterfactual_binding: Any = None,
+    shared_inputs: Any | None = None, input_cycle_id: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any] | None, str | None]:
     """Verify evidence, execute, transport and persist one generated question."""
     context = _load_snapshot_context(
         snapshot_id=snapshot_id, manifest_directory=manifest_directory,
-        source=source, required_datasets=registration.required_datasets)
+        source=source, required_datasets=registration.required_datasets,
+        shared_inputs=shared_inputs, input_cycle_id=input_cycle_id)
     missing_datasets = sorted(
         name for name in registration.required_datasets
         if not context.datasets.get(name))
@@ -687,8 +695,12 @@ def _execute_one(
             context=context, required_datasets=registration.required_datasets,
             governed_counterfactual_evidence=admitted_evidence,
             governed_counterfactual_binding=admitted_binding)
-        with _snapshot_only_runner_environment(context.reader):
-            report = runner(**kwargs)
+        from research_engine.control_plane.evidence_provenance import measure_provenance
+        runner_started = time.perf_counter()
+        with measure_provenance() as measurement:
+            with _snapshot_only_runner_environment(context.reader):
+                report = runner(**kwargs)
+        runner_seconds = time.perf_counter() - runner_started
         if not isinstance(report, Mapping):
             raise GeneratedQuestionWorkerError("EVALUATOR_RETURNED_NON_MAPPING")
         # Repair Block 1 transport: the evaluator declares its own scientific
@@ -807,6 +819,8 @@ def _execute_one(
         "reason_code": state.get("reason_code"), "reason": state.get("reason"),
         "result_id": result.result_id, "work_item_id": work_item_id,
         "scientific_status": scientific,
+        "performance": {"runner_seconds_inclusive": runner_seconds,
+                        "provenance_seconds_within_runner": measurement["provenance_seconds"]},
     }, entry, result.result_id
 
 

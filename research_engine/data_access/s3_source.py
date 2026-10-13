@@ -34,9 +34,14 @@ from __future__ import annotations
 
 import json
 import hashlib
+import time
 import logging
 import os
-from concurrent.futures import ThreadPoolExecutor
+import tempfile
+import shutil
+from pathlib import Path
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from threading import Lock
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -458,7 +463,18 @@ class S3ResearchDataSource:
         client: Any | None = None,
         region: str | None = None,
         profile: str | None = None,
+        verified_cache_directory: Path | str | None = None,
+        verified_cache_max_bytes: int = 512 * 1024 * 1024,
+        verified_cache_object_max_bytes: int = 64 * 1024 * 1024,
     ):
+        self._verified_cache_directory = (Path(verified_cache_directory)
+                                          if verified_cache_directory is not None else None)
+        self._verified_cache_max_bytes = max(0, int(verified_cache_max_bytes))
+        self._verified_cache_object_max_bytes = max(0, int(verified_cache_object_max_bytes))
+        self._verified_cache_bytes = None
+        self._verified_cache_index: dict[str, Path] | None = None
+        self._verified_cache_identifiers: set[tuple[str, str]] = set()
+        self._head_counter_lock = Lock()
         self._bucket = bucket or NEW_RUNTIME_S3_BUCKET
         self._region = region or os.getenv("AWS_REGION", _CANONICAL_REGION)
         self._client = client  # dependency-injectable for tests
@@ -482,6 +498,25 @@ class S3ResearchDataSource:
         self._dataset_objects: dict[str, tuple[dict[str, Any], ...]] = {}
         self._read_objects: dict[tuple[str, str], dict[str, Any]] = {}
         self._headed_objects: dict[tuple[str, str], dict[str, Any]] = {}
+        self.performance = {"list_calls": 0, "head_calls": 0, "head_retries": 0,
+                            "get_calls": 0,
+                            "head_seconds_inclusive": 0.0,
+                            "get_open_seconds_inclusive": 0.0,
+                            "cache_index_seconds_inclusive": 0.0,
+                            "cache_index_entries": 0,
+                            "cache_body_verify_seconds_inclusive": 0.0,
+                            "body_bytes": 0, "remote_body_bytes": 0, "hash_seconds": 0.0, "decode_seconds": 0.0,
+                            "body_load_seconds_inclusive": 0.0, "verified_cache_hits": 0,
+                            "verified_cache_misses": 0, "verified_cache_writes": 0,
+                            "verified_cache_capacity_skips": 0,
+                            "verified_cache_used_bytes": 0,
+                            "verified_cache_capacity_bytes": self._verified_cache_max_bytes,
+                            "verified_cache_bytes": 0}
+
+    def performance_snapshot(self) -> dict[str, int | float]:
+        """Read concurrent HEAD counters with the rest of the source metrics."""
+        with self._head_counter_lock:
+            return dict(self.performance)
 
     # ─── client ───────────────────────────────────────────────────────────────
 
@@ -498,6 +533,14 @@ class S3ResearchDataSource:
         if self._client is not None:
             return self._client
         try:
+            from botocore.config import Config
+
+            # A shared client serves the 16-worker current-version HEAD batch.
+            # One bounded attempt fails closed; a later checkpointed run can
+            # retry without accepting an unverified object as current.
+            config = Config(connect_timeout=3, read_timeout=5,
+                            retries={"total_max_attempts": 1},
+                            max_pool_connections=16)
             if self._research_profile:
                 session = _build_session(self._research_profile, self._region)
                 # Eager credential resolution: a missing/misnamed/expired profile
@@ -512,10 +555,12 @@ class S3ResearchDataSource:
                         f"SSO profile run: aws sso login --profile "
                         f"{self._research_profile}."
                     )
-                self._client = session.client("s3", region_name=self._region)
+                self._client = session.client(
+                    "s3", region_name=self._region, config=config)
             else:
                 session = _build_session(None, self._region)
-                self._client = session.client("s3", region_name=self._region)
+                self._client = session.client(
+                    "s3", region_name=self._region, config=config)
         except ImportError as exc:  # pragma: no cover - environment dependent
             raise ResearchDataSourceError(
                 "boto3 is required for the Research Engine S3 data source"
@@ -592,6 +637,7 @@ class S3ResearchDataSource:
             if token:
                 kwargs["ContinuationToken"] = token
             try:
+                self.performance["list_calls"] += 1
                 resp = client.list_objects_v2(**kwargs)
             except Exception as exc:
                 raise self._diagnose(
@@ -663,6 +709,7 @@ class S3ResearchDataSource:
         *,
         expected_schema_version: str,
         max_workers: int = 16,
+        progress_callback: Any | None = None,
     ) -> tuple[dict[str, Any], ...]:
         """Resolve exact current object versions without downloading bodies."""
         if expected_schema_version != current_schema(dataset):
@@ -678,13 +725,58 @@ class S3ResearchDataSource:
                     f"SNAPSHOT_OBJECT_OUTSIDE_CANONICAL_DATASET:{dataset}:{key}")
 
         client = self._get_client()
+        if progress_callback is not None:
+            try:
+                progress_callback({"stage": "client_ready", "queued": 0,
+                                   "completed": 0, "successful": 0,
+                                   "failed": 0, "retried": 0,
+                                   "total": len(listed)})
+            except Exception:
+                pass
+        last_report = 0.0
+
+        def retry_count() -> int:
+            with self._head_counter_lock:
+                return self.performance["head_retries"]
+
+        def report(queued: int, completed: int, successful: int,
+                   failed: int, retried: int) -> None:
+            nonlocal last_report
+            now = time.perf_counter()
+            if (completed and not failed and completed != len(listed)
+                    and completed % 25 and now - last_report < 1.0):
+                return
+            last_report = now
+            if progress_callback is not None:
+                try:
+                    progress_callback({"queued": queued, "completed": completed,
+                                       "successful": successful, "failed": failed,
+                                       "retried": retried, "total": len(listed)})
+                except Exception:
+                    pass
 
         def inspect(item: Mapping[str, Any]) -> dict[str, Any]:
             key = str(item["identifier"])
+            started = time.perf_counter()
             try:
+                with self._head_counter_lock:
+                    self.performance["head_calls"] += 1
                 response = client.head_object(Bucket=self._bucket, Key=key)
             except Exception as exc:
+                retries = int((getattr(exc, "response", None) or {}).get(
+                    "ResponseMetadata", {}).get("RetryAttempts", 0) or 0)
+                with self._head_counter_lock:
+                    self.performance["head_retries"] += retries
                 raise self._diagnose(exc, operation=f"head_object key='{key}'") from exc
+            else:
+                retries = int(response.get("ResponseMetadata", {}).get(
+                    "RetryAttempts", 0) or 0)
+                with self._head_counter_lock:
+                    self.performance["head_retries"] += retries
+            finally:
+                elapsed = time.perf_counter() - started
+                with self._head_counter_lock:
+                    self.performance["head_seconds_inclusive"] += elapsed
             modified = response.get("LastModified")
             return {
                 **dict(item),
@@ -697,8 +789,44 @@ class S3ResearchDataSource:
                 "version_id": response.get("VersionId"),
             }
 
-        with ThreadPoolExecutor(max_workers=max(1, min(max_workers, len(listed) or 1))) as pool:
-            headed = tuple(pool.map(inspect, listed))
+        workers = max(1, min(max_workers, len(listed) or 1))
+        headed_slots: list[dict[str, Any] | None] = [None] * len(listed)
+        queued = completed = successful = failed = 0
+        retry_start = retry_count()
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            pending = {}
+            next_index = 0
+
+            def fill() -> None:
+                nonlocal next_index, queued
+                while next_index < len(listed) and len(pending) < 2 * workers:
+                    pending[pool.submit(inspect, listed[next_index])] = next_index
+                    next_index += 1
+                    queued += 1
+                report(queued, completed, successful, failed,
+                       retry_count() - retry_start)
+
+            fill()
+            while pending:
+                done, _ = wait(pending, return_when=FIRST_COMPLETED)
+                error = None
+                for future in done:
+                    index = pending.pop(future)
+                    completed += 1
+                    try:
+                        headed_slots[index] = future.result()
+                        successful += 1
+                    except Exception as exc:
+                        failed += 1
+                        error = exc
+                report(queued, completed, successful, failed,
+                       retry_count() - retry_start)
+                if error is not None:
+                    for future in pending:
+                        future.cancel()
+                    raise error
+                fill()
+        headed = tuple(item for item in headed_slots if item is not None)
         for item in headed:
             self._headed_objects[(dataset, str(item["identifier"]))] = dict(item)
         return headed
@@ -712,6 +840,8 @@ class S3ResearchDataSource:
         start_date: str | None = None,
         end_date: str | None = None,
         _verify_content: bool = True,
+        _cache_discovery: bool = False,
+        _fresh_authority: bool = False,
     ) -> list[dict[str, Any]]:
         """Read only explicitly bound canonical S3 objects and verify each digest.
 
@@ -747,7 +877,10 @@ class S3ResearchDataSource:
                 dataset, key,
                 version_id=(None if item.get("version_id") is None
                             else str(item.get("version_id"))),
-                strict=True))
+                strict=True,
+                expected_object=(
+                    item if (_verify_content or _cache_discovery) else None),
+                fresh_authority=_fresh_authority))
             actual = dict(self._read_objects[(dataset, key)])
             expected_digest = str(item.get("content_sha256") or "")
             if _verify_content:
@@ -785,6 +918,7 @@ class S3ResearchDataSource:
         expected_schema_version: str,
         start_date: str | None = None,
         end_date: str | None = None,
+        _fresh_authority: bool = False,
     ) -> list[dict[str, Any]]:
         """Acquire exactly a just-discovered key set before its digest exists.
 
@@ -821,6 +955,8 @@ class S3ResearchDataSource:
                 expected_schema_version=expected_schema_version,
                 start_date=start_date, end_date=end_date,
                 _verify_content=False,
+                _cache_discovery=True,
+                _fresh_authority=_fresh_authority,
             )
             observed.append(dict(self._read_objects[(dataset, key)]))
             eligible_in_object = 0
@@ -869,20 +1005,25 @@ class S3ResearchDataSource:
 
     def _read_object(
         self, dataset: str, key: str, *, version_id: str | None = None,
-        strict: bool = False,
+        strict: bool = False, expected_object: Mapping[str, Any] | None = None,
+        fresh_authority: bool = False,
     ) -> list[dict[str, Any]]:
-        client = self._get_client()
         response: Mapping[str, Any] = {}
         out: list[dict[str, Any]] = []
         report = self._malformed.setdefault(dataset, MalformedReport(dataset=dataset))
+        load_started = time.perf_counter()
+        decode_seconds = 0.0
+        hash_seconds = 0.0
         byte_size = 0
         content_hasher = hashlib.sha256()
         pending = b""
 
         def decode_line(raw_line: bytes) -> None:
+            nonlocal decode_seconds
             line = raw_line.decode("utf-8").strip()
             if not line:
                 return
+            decode_started = time.perf_counter()
             try:
                 rec = json.loads(line)
             except json.JSONDecodeError:
@@ -890,6 +1031,8 @@ class S3ResearchDataSource:
                 if key not in report.keys_with_errors:
                     report.keys_with_errors.append(key)
                 return
+            finally:
+                decode_seconds += time.perf_counter() - decode_started
             if not isinstance(rec, dict):
                 # A valid-JSON non-object row is never a legitimate
                 # governed record. On the freeze path this MUST fail
@@ -907,13 +1050,46 @@ class S3ResearchDataSource:
                 _assert_freeze_record_schema(dataset, rec)
             out.append(rec)
 
+        stream = None
+        capture = None
+        capture_path = None
+        cached = self._open_verified_body(dataset, expected_object) if strict else None
+        if cached is None and strict and expected_object is not None:
+            # Bounded cold-start discovery: reuse an existing verified entry
+            # found from fresh S3 authority when no content digest is known yet.
+            cached = self._open_discovered_verified_body(
+                dataset, expected_object, fresh_authority=fresh_authority)
+        capture_limit = 0
+        if strict and cached is None and self._verified_cache_directory is not None:
+            self._verified_cache_directory.mkdir(parents=True, exist_ok=True)
+            if self._verified_cache_bytes is None:
+                self._verified_cache_bytes = sum(p.stat().st_size for p in
+                    self._verified_cache_directory.iterdir() if p.is_file())
+            self.performance["verified_cache_used_bytes"] = self._verified_cache_bytes
+            # Leave room for spool + atomic entry + bounded header during publish.
+            capture_limit = min(self._verified_cache_object_max_bytes,
+                max(0, (self._verified_cache_max_bytes - self._verified_cache_bytes - 65536) // 2))
+            if not capture_limit:
+                self.performance["verified_cache_capacity_skips"] += 1
+        if capture_limit:
+            capture = tempfile.NamedTemporaryFile(mode="w+b", suffix=".partial",
+                prefix="body-", dir=self._verified_cache_directory, delete=False)
+            capture_path = Path(capture.name)
         try:
             request: dict[str, Any] = {"Bucket": self._bucket, "Key": key}
             if version_id is not None:
                 request["VersionId"] = version_id
-            resp = client.get_object(**request)
-            response = resp
-            stream = resp["Body"]
+            if cached is None:
+                self.performance["get_calls"] += 1
+                get_started = time.perf_counter()
+                try:
+                    resp = self._get_client().get_object(**request)
+                finally:
+                    self.performance["get_open_seconds_inclusive"] += time.perf_counter() - get_started
+                response = resp
+                stream = resp["Body"]
+            else:
+                response, stream = cached
             while True:
                 one_shot = False
                 try:
@@ -925,7 +1101,17 @@ class S3ResearchDataSource:
                     break
                 chunk_bytes = chunk.encode("utf-8") if isinstance(chunk, str) else bytes(chunk)
                 byte_size += len(chunk_bytes)
+                if capture is not None:
+                    if byte_size <= capture_limit:
+                        capture.write(chunk_bytes)
+                    else:
+                        capture.close()
+                        capture_path.unlink(missing_ok=True)
+                        capture = None
+                        self.performance["verified_cache_capacity_skips"] += 1
+                hash_started = time.perf_counter()
                 content_hasher.update(chunk_bytes)
+                hash_seconds += time.perf_counter() - hash_started
                 pending += chunk_bytes
                 lines = pending.split(b"\n")
                 pending = lines.pop()
@@ -935,17 +1121,26 @@ class S3ResearchDataSource:
                     break
             if pending:
                 decode_line(pending.rstrip(b"\r"))
-        except MemoryError:
+        except BaseException as exc:
+            if capture is not None:
+                capture.close()
+            if capture_path is not None:
+                capture_path.unlink(missing_ok=True)
+            if isinstance(exc, Exception) and not isinstance(exc, (ResearchDataSourceError, MemoryError)):
+                raise self._diagnose(exc, operation=f"get_object key='{key}'") from exc
             raise
-        except ResearchDataSourceError:
-            # A freeze-boundary schema/profile rejection is already an
-            # actionable, secret-free error; re-raise it unchanged instead of
-            # masking it as a generic AWS get_object failure.
-            raise
-        except Exception as exc:
-            raise self._diagnose(
-                exc, operation=f"get_object key='{key}'"
-            ) from exc
+        finally:
+            self.performance["body_bytes"] += byte_size
+            if cached is None:
+                self.performance["remote_body_bytes"] += byte_size
+            self.performance["hash_seconds"] += hash_seconds
+            self.performance["decode_seconds"] += decode_seconds
+            self.performance["body_load_seconds_inclusive"] += time.perf_counter() - load_started
+            if stream is not None and hasattr(stream, "close"):
+                try:
+                    stream.close()
+                except Exception:
+                    pass
         listed = dict(self._listed_objects.get(key, {"identifier": key}))
         response_etag = str(response.get("ETag") or "").strip('"')
         response_last_modified = response.get("LastModified")
@@ -964,9 +1159,283 @@ class S3ResearchDataSource:
             "byte_size": byte_size,
             "row_count": len(out),
         }
+        if capture is not None:
+            try:
+                if not report.malformed_lines:
+                    self._save_verified_body(dataset, self._read_objects[(dataset, key)], capture)
+            finally:
+                capture.close()
+                capture_path.unlink(missing_ok=True)
         return out
 
     # ─── public API ─────────────────────────────────────────────────────────
+
+    def _verified_body_identity(self, dataset, metadata):
+        # Only immutable version IDs are reusable. S3 null versions are mutable.
+        if not metadata or metadata.get("version_id") in (None, "", "null"):
+            return None
+        fields = ("identifier", "version_id", "etag", "size", "last_modified",
+                  "content_sha256", "byte_size", "row_count")
+        if not metadata.get("content_sha256") or any(metadata.get(k) is None for k in fields):
+            return None
+        return {"cache_schema": "verified_s3_body_v1", "bucket": self.bucket,
+                "region": self._region, "profile": self.research_profile,
+                "dataset": dataset, "schema": current_schema(dataset),
+                "object": {k: metadata[k] for k in fields}}
+
+    def _verified_body_path(self, identity):
+        digest = hashlib.sha256(json.dumps(identity, sort_keys=True,
+            separators=(",", ":")).encode()).hexdigest()
+        return self._verified_cache_directory / (digest + ".cache")
+
+    def _open_verified_body(self, dataset, metadata):
+        identity = self._verified_body_identity(dataset, metadata)
+        if self._verified_cache_directory is None or identity is None:
+            return None
+        path = self._verified_body_path(identity)
+        if not path.exists():
+            self.performance["verified_cache_misses"] += 1
+            return None
+        handle = None
+        try:
+            handle = path.open("rb")
+            header_line = handle.readline(65537)
+            if len(header_line) > 65536:
+                raise ValueError("header too large")
+            header = json.loads(header_line)
+            if header != identity or path.stat().st_size - len(header_line) != int(metadata["byte_size"]):
+                raise ValueError("identity/size mismatch")
+            # Cached bytes do not grant authority or prove continued membership.
+            # Require a current authorized HEAD even for an immutable version.
+            current = self.head_bound_objects(dataset, [metadata],
+                expected_schema_version=current_schema(dataset), max_workers=1)[0]
+            for field in ("identifier", "version_id", "etag", "size", "last_modified"):
+                if current.get(field) != metadata.get(field):
+                    raise ValueError("fresh object authority mismatch")
+            self.performance["verified_cache_hits"] += 1
+            self.performance["verified_cache_bytes"] += int(metadata["byte_size"])
+            return {"ETag": metadata["etag"], "ContentLength": metadata["size"],
+                    "LastModified": metadata["last_modified"],
+                    "VersionId": metadata["version_id"]}, handle
+        except Exception as exc:
+            if handle is not None:
+                handle.close()
+            raise ResearchDataSourceError("VERIFIED_BODY_CACHE_INVALID:" + str(path.name)) from exc
+
+    def _discovery_key_from_identity(self, identity):
+        """Authority-only key derived from a full cache identity.
+
+        Uses only the immutable/authoritative object fields — never the content
+        digest or row count — so an existing entry can be found from fresh S3
+        authority (identifier + immutable version + etag/size/last-modified)
+        without a prior read.
+        """
+        if not isinstance(identity, Mapping):
+            return None
+        obj = identity.get("object")
+        if not isinstance(obj, Mapping):
+            return None
+        fields = ("identifier", "version_id", "etag", "size", "last_modified")
+        if obj.get("version_id") in (None, "", "null"):
+            return None
+        if any(obj.get(field) in (None, "") for field in fields):
+            return None
+        return hashlib.sha256(json.dumps({
+            "cache_schema": identity.get("cache_schema"),
+            "bucket": identity.get("bucket"), "region": identity.get("region"),
+            "profile": identity.get("profile"), "dataset": identity.get("dataset"),
+            "schema": identity.get("schema"),
+            "object": {field: obj[field] for field in fields},
+        }, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+    def _verified_discovery_key(self, dataset, metadata):
+        """Authority-only key for fresh metadata that has no content digest."""
+        if not metadata or metadata.get("version_id") in (None, "", "null"):
+            return None
+        identity = {"cache_schema": "verified_s3_body_v1", "bucket": self.bucket,
+                    "region": self._region, "profile": self.research_profile,
+                    "dataset": dataset, "schema": current_schema(dataset),
+                    "object": {field: metadata.get(field) for field in (
+                        "identifier", "version_id", "etag", "size", "last_modified")}}
+        return self._discovery_key_from_identity(identity)
+
+    def _ensure_verified_cache_index(self) -> dict[str, Path]:
+        """Bounded one-time scan of existing entries, keyed by authority only.
+
+        Reads only each entry's header (never a whole body) and never deletes or
+        rewrites anything. Malformed entries are simply not indexed — the normal
+        read path still fails closed if such an entry is ever selected by exact
+        identity.
+        """
+        if self._verified_cache_index is not None:
+            return self._verified_cache_index
+        started = time.perf_counter()
+        index: dict[str, Path] = {}
+        identifiers: set[tuple[str, str]] = set()
+        used_bytes = 0
+        directory = self._verified_cache_directory
+        if directory is not None and directory.exists():
+            for path in sorted(directory.iterdir()):
+                if not path.is_file():
+                    continue
+                used_bytes += path.stat().st_size
+                if path.suffix != ".cache":
+                    continue
+                try:
+                    with path.open("rb") as handle:
+                        header_line = handle.readline(65537)
+                        if len(header_line) > 65536:
+                            continue
+                        identity = json.loads(header_line)
+                except Exception:
+                    continue
+                key = self._discovery_key_from_identity(identity)
+                if key is not None and key not in index:
+                    index[key] = path
+                    identifiers.add((str(identity["dataset"]),
+                                     str(identity["object"]["identifier"])))
+        self._verified_cache_index = index
+        self._verified_cache_identifiers = identifiers
+        if self._verified_cache_bytes is None:
+            self._verified_cache_bytes = used_bytes
+        self.performance["verified_cache_used_bytes"] = self._verified_cache_bytes
+        self.performance["cache_index_entries"] = len(index)
+        self.performance["cache_index_seconds_inclusive"] += time.perf_counter() - started
+        return index
+
+    def cached_authority_candidates(
+        self, dataset: str, objects: Sequence[Mapping[str, Any]],
+    ) -> tuple[dict[str, Any], ...]:
+        """Select only listed objects that may have a verified cached body."""
+        self._ensure_verified_cache_index()
+        return tuple(dict(item) for item in objects
+                     if (dataset, str(item.get("identifier") or ""))
+                     in self._verified_cache_identifiers)
+
+    def _open_discovered_verified_body(
+        self, dataset, metadata, *, fresh_authority=False,
+    ):
+        """Reuse an existing verified entry found from fresh S3 authority.
+
+        Returns ``(response, handle)`` positioned at the start of the cached
+        body, or ``None`` when no entry exists (the caller then falls back to a
+        normal S3 GET). A located-but-invalid entry fails closed rather than
+        silently serving unverified bytes.
+        """
+        if self._verified_cache_directory is None or not metadata:
+            return None
+        if self._verified_body_identity(dataset, metadata) is not None:
+            return None  # exact-identity path already handles this
+        headed = self._headed_objects.get((dataset, str(metadata.get("identifier") or "")))
+        authority_checked = bool(
+            fresh_authority and headed is not None
+            and all(headed.get(field) == metadata.get(field) for field in
+                    ("identifier", "version_id", "etag", "size", "last_modified")))
+        if metadata.get("version_id") in (None, "", "null"):
+            # Cold-start discovery requires immutable version authority; resolve
+            # it with one HEAD (no body download) before looking in the cache.
+            metadata = self.head_bound_objects(
+                dataset, [metadata], expected_schema_version=current_schema(dataset),
+                max_workers=1)[0]
+            authority_checked = True
+        key = self._verified_discovery_key(dataset, metadata)
+        if key is None:
+            return None
+        path = self._ensure_verified_cache_index().get(key)
+        if path is None:
+            self.performance["verified_cache_misses"] += 1
+            return None
+        handle = None
+        try:
+            handle = path.open("rb")
+            header_line = handle.readline(65537)
+            if len(header_line) > 65536:
+                raise ValueError("header too large")
+            header = json.loads(header_line)
+            if self._discovery_key_from_identity(header) != key:
+                raise ValueError("discovery identity mismatch")
+            if path.stat().st_size - len(header_line) != int(header["object"]["byte_size"]):
+                raise ValueError("size mismatch")
+            # Re-verify the cached body against its recorded content digest.
+            hasher = hashlib.sha256()
+            verify_started = time.perf_counter()
+            try:
+                while True:
+                    chunk = handle.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    hasher.update(chunk)
+            finally:
+                self.performance["cache_body_verify_seconds_inclusive"] += (
+                    time.perf_counter() - verify_started)
+            if hasher.hexdigest() != str(header["object"]["content_sha256"]):
+                raise ValueError("cached content digest mismatch")
+            # Fresh authorized HEAD: cached bytes never grant authority.
+            current = metadata if authority_checked else self.head_bound_objects(
+                dataset, [header["object"]],
+                expected_schema_version=current_schema(dataset), max_workers=1)[0]
+            for field in ("identifier", "version_id", "etag", "size", "last_modified"):
+                if current.get(field) != header["object"].get(field):
+                    raise ValueError("fresh object authority mismatch")
+            handle.seek(len(header_line))
+            self.performance["verified_cache_hits"] += 1
+            self.performance["verified_cache_bytes"] += int(header["object"]["byte_size"])
+            return {"ETag": header["object"]["etag"],
+                    "ContentLength": header["object"]["size"],
+                    "LastModified": header["object"]["last_modified"],
+                    "VersionId": header["object"]["version_id"]}, handle
+        except Exception as exc:
+            if handle is not None:
+                handle.close()
+            raise ResearchDataSourceError(
+                "VERIFIED_BODY_CACHE_INVALID:" + str(path.name)) from exc
+
+    def _save_verified_body(self, dataset, metadata, capture):
+        identity = self._verified_body_identity(dataset, metadata)
+        if identity is None:
+            return
+        path = self._verified_body_path(identity)
+        if path.exists():
+            return
+        if self._verified_cache_bytes is None:
+            # Include interrupted temporary files in the quota. Never delete history
+            # or scan outside this explicitly selected disposable cache directory.
+            self._verified_cache_bytes = sum(p.stat().st_size for p in
+                self._verified_cache_directory.iterdir() if p.is_file())
+            self.performance["verified_cache_used_bytes"] = self._verified_cache_bytes
+        header = json.dumps(identity, sort_keys=True, separators=(",", ":")).encode() + b"\n"
+        size = len(header) + int(metadata["byte_size"])
+        if self._verified_cache_bytes + size > self._verified_cache_max_bytes:
+            self.performance["verified_cache_capacity_skips"] += 1
+            return
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="wb", suffix=".partial", prefix="entry-",
+                    dir=self._verified_cache_directory, delete=False) as handle:
+                temporary = Path(handle.name)
+                handle.write(header)
+                capture.seek(0)
+                shutil.copyfileobj(capture, handle, 1024 * 1024)
+                handle.flush()
+                os.fsync(handle.fileno())
+            # Publish atomically without replacing an existing immutable identity.
+            # A competing writer may have created the same path since the check.
+            try:
+                os.link(temporary, path)
+            except FileExistsError:
+                return
+            self._verified_cache_bytes += size
+            self.performance["verified_cache_writes"] += 1
+            self.performance["verified_cache_used_bytes"] = self._verified_cache_bytes
+            if self._verified_cache_index is not None:
+                discovery_key = self._discovery_key_from_identity(identity)
+                if discovery_key is not None and discovery_key not in self._verified_cache_index:
+                    self._verified_cache_index[discovery_key] = path
+                    self._verified_cache_identifiers.add(
+                        (dataset, str(metadata["identifier"])))
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
 
     def read_artifact(self, name: str) -> list[dict[str, Any]]:
         """Read a DERIVED research artifact from S3 (rebuildable, not source-of-truth).

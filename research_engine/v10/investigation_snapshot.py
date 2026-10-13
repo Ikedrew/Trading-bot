@@ -12,6 +12,8 @@ from dataclasses import asdict, dataclass
 from datetime import date, datetime, timezone
 import json
 import os
+import time
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -990,6 +992,7 @@ def verify_investigation_snapshot_identity(
     *,
     source: S3ResearchDataSource | None = None,
     manifest_directory: Path = MANIFEST_DIRECTORY,
+    fresh_observation: bool = False,
 ) -> InvestigationSnapshot:
     """Revalidate bound identities without downloading historical bodies.
 
@@ -1030,7 +1033,8 @@ def verify_investigation_snapshot_identity(
                 raise InvestigationSnapshotError(
                     "SNAPSHOT_DATASET_OBJECTS_CHANGED:" + binding.dataset)
             if prior.version_id is not None:
-                proven = resolved.verified_object_metadata(binding.dataset, key)
+                proven = (None if fresh_observation else
+                          resolved.verified_object_metadata(binding.dataset, key))
                 if proven is not None:
                     if not _same_object_identity(prior, proven):
                         raise InvestigationSnapshotError(
@@ -1049,13 +1053,25 @@ def verify_investigation_snapshot_identity(
     return snapshot
 
 
+def authenticate_snapshot_inputs(snapshot, source):
+    authenticated = InvestigationSnapshot.from_dict(snapshot.to_dict())
+    if D.fingerprint(_authority_material(source)) != D.fingerprint(authenticated.source_authority):
+        raise InvestigationSnapshotError("SOURCE_AUTHORITY_CHANGED")
+    for binding in authenticated.datasets:
+        if current_schema(binding.dataset) != binding.schema_version:
+            raise InvestigationSnapshotError("SCHEMA_AUTHORITY_CHANGED:" + binding.dataset)
+    return authenticated
+
+
 class SnapshotBoundDatasetReader:
     """DatasetReader that can only fetch the objects recorded in one manifest."""
 
     def __init__(
         self, snapshot: InvestigationSnapshot,
         source: S3ResearchDataSource | None = None,
+        *, immutable: bool = False,
     ) -> None:
+        started = time.perf_counter()
         self.snapshot = snapshot
         self._source = source or get_default_source()
         self._bindings = {item.dataset: item for item in snapshot.datasets}
@@ -1068,7 +1084,7 @@ class SnapshotBoundDatasetReader:
         self._cache: dict[str, list[dict[str, Any]]] = {}
         for name, binding in self._bindings.items():
             if binding.presence == "ABSENT":
-                self._cache[name] = []
+                self._cache[name] = _FrozenList() if immutable else []
                 continue
             rows: list[dict[str, Any]] = []
             observed: list[BoundObject] = []
@@ -1110,7 +1126,16 @@ class SnapshotBoundDatasetReader:
                     "objects": [item.to_dict() for item in actual_metadata],
             }) != binding.content_digest:
                 raise InvestigationSnapshotError("SNAPSHOT_DATASET_DIGEST_CHANGED:" + name)
-            self._cache[name] = rows
+            if immutable:
+                # Release each mutable row as it is frozen; avoid two full
+                # decoded populations during admission on memory-limited hosts.
+                for index in range(len(rows)):
+                    rows[index] = _freeze_rows(rows[index])
+                self._cache[name] = _FrozenList(rows)
+            else:
+                self._cache[name] = rows
+        self.load_elapsed_seconds = time.perf_counter() - started
+        self.immutable = immutable
 
     @property
     def snapshot_provenance(self) -> dict[str, Any]:
@@ -1141,7 +1166,8 @@ class SnapshotBoundDatasetReader:
                 raise InvestigationSnapshotError("SNAPSHOT_DATE_SCOPE_MISMATCH:" + name)
         if kwargs.get("all_schemas"):
             raise InvestigationSnapshotError("SNAPSHOT_LEGACY_SCHEMA_READ_FORBIDDEN")
-        return [dict(row) for row in self._cache[dataset]]
+        return (deepcopy(self._cache[dataset]) if self.immutable
+                else [dict(row) for row in self._cache[dataset]])
 
 
 def open_investigation_snapshot(
@@ -1152,3 +1178,81 @@ def open_investigation_snapshot(
     snapshot = load_investigation_snapshot_id(
         snapshot_id, manifest_directory=manifest_directory)
     return SnapshotBoundDatasetReader(snapshot, source=source)
+
+
+class _FrozenDict(dict):
+    def _deny(self, *args, **kwargs):
+        raise InvestigationSnapshotError("SHARED_EVIDENCE_MUTATION_FORBIDDEN")
+    __setitem__ = __delitem__ = clear = pop = popitem = setdefault = update = __ior__ = _deny
+
+    def __deepcopy__(self, memo):
+        return {deepcopy(k, memo): deepcopy(v, memo) for k, v in self.items()}
+
+
+class _FrozenList(list):
+    def _deny(self, *args, **kwargs):
+        raise InvestigationSnapshotError("SHARED_EVIDENCE_MUTATION_FORBIDDEN")
+    __setitem__ = __delitem__ = append = clear = extend = insert = pop = remove = reverse = sort = __iadd__ = __imul__ = _deny
+
+    def __deepcopy__(self, memo):
+        return [deepcopy(v, memo) for v in self]
+
+
+def _freeze_rows(value):
+    # Keep dict/list compatibility for existing scientific consumers and JSON.
+    if isinstance(value, dict):
+        return _FrozenDict({k: _freeze_rows(v) for k, v in value.items()})
+    if isinstance(value, list):
+        return _FrozenList(_freeze_rows(v) for v in value)
+    return value
+
+
+class CycleSnapshotInputs:
+    """One lease-owned verified population; never a global or cross-cycle cache.
+
+    Admission rederives manifest identity and checks current schema/authority.
+    Bodies are verified by the existing reader exactly once. Fresh frontier
+    discovery/verification is deliberately outside this mechanism.
+    """
+    def __init__(self, cycle_id: str):
+        self.cycle_id = cycle_id
+        self._reader = None
+        self._closed = False
+        self.constructions = 0
+        self.reuses = 0
+        self.consumer_seconds = {}
+
+    def acquire(self, snapshot, *, cycle_id, source=None, consumer="unknown"):
+        started = time.perf_counter()
+        if self._closed or cycle_id != self.cycle_id:
+            raise InvestigationSnapshotError("SHARED_INPUT_CYCLE_MISMATCH")
+        authenticated = authenticate_snapshot_inputs(snapshot, source or (
+            self._reader._source if self._reader is not None else get_default_source()))
+        if self._reader is None:
+            self._reader = SnapshotBoundDatasetReader(authenticated, source=source, immutable=True)
+            self.constructions += 1
+        else:
+            reader = self._reader
+            if authenticated.to_dict() != reader.snapshot.to_dict():
+                raise InvestigationSnapshotError("SHARED_INPUT_SNAPSHOT_MISMATCH")
+            resolved = source or reader._source
+            if source is not None and source is not reader._source:
+                raise InvestigationSnapshotError("SHARED_INPUT_SOURCE_MISMATCH")
+            if D.fingerprint(_authority_material(resolved)) != D.fingerprint(authenticated.source_authority):
+                raise InvestigationSnapshotError("SOURCE_AUTHORITY_CHANGED")
+            for binding in authenticated.datasets:
+                if current_schema(binding.dataset) != binding.schema_version:
+                    raise InvestigationSnapshotError("SCHEMA_AUTHORITY_CHANGED:" + binding.dataset)
+            self.reuses += 1
+        self.consumer_seconds[consumer] = self.consumer_seconds.get(consumer, 0.0) + time.perf_counter() - started
+        return self._reader
+
+    def diagnostics(self):
+        return {"reader_constructions": self.constructions, "reader_reuses": self.reuses,
+                "reader_construction_seconds_inclusive": self._reader.load_elapsed_seconds if self._reader else 0.0,
+                "consumer_admission_seconds_inclusive": dict(self.consumer_seconds),
+                "source_io_cumulative": dict(getattr(self._reader._source, "performance", {})) if self._reader else {}}
+
+    def close(self):
+        self._closed = True
+        self._reader = None

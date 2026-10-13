@@ -6,7 +6,7 @@ Provides a single deterministic service tick that:
 2. If deep jobs are pending, attempts one deep job (run_deep_research_job).
 
 The caller decides the inter-tick interval (FAST_CYCLE_MIN_INTERVAL).
-This module never enters a loop — callers own the scheduling policy.
+The service entry point loops over bounded ticks; callers choose its interval.
 
 Governed guarantees:
 - Ordinary continuous cycle and deep worker never overlap (shared lease).
@@ -17,7 +17,11 @@ Governed guarantees:
 """
 from __future__ import annotations
 
+import argparse
+from contextlib import contextmanager
 import json
+import os
+import sys
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -45,6 +49,41 @@ DEFAULT_DEEP_WORK_MAX_CONCURRENCY = 1
 
 class ResearchCadenceError(RuntimeError):
     """A cadence configuration or tick is structurally invalid."""
+
+
+# Only these existing deep-worker arguments belong in an offline isolation bundle.
+_DEEP_JOB_ISOLATION_KEYS = frozenset({
+    "question_kwargs", "bridge_kwargs", "deep_work_queue_path",
+})
+
+
+@contextmanager
+def _cadence_service_lease(state_root: Path | str):
+    """Hold one OS file lock for the lifetime of a cadence service."""
+    root = Path(state_root).resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    with (root / "cadence_service.lock").open("a+b") as handle:
+        handle.seek(0)
+        handle.write(b"\0")
+        handle.flush()
+        handle.seek(0)
+        try:
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            raise ResearchCadenceError("CADENCE_SERVICE_ALREADY_RUNNING:" + str(root)) from exc
+        try:
+            yield
+        finally:
+            handle.seek(0)
+            if os.name == "nt":
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 @dataclass(frozen=True)
@@ -134,7 +173,10 @@ def run_cadence_tick(
     last_fast_cycle_at: str | None = None,
     force_fast_cycle: bool = False,
     force_deep_job: bool = False,
+    frontier_diagnostic: bool = False,
+    frontier_diagnostic_cache_directory: Path | str | None = None,
     now: str | None = None,
+    offline_isolation: Mapping[str, Any] | None = None,
 ) -> CadenceTickReport:
     """Execute one cadence tick.
 
@@ -157,6 +199,12 @@ def run_cadence_tick(
 
     resolved_config = config or ResearchCadenceConfig()
     root = Path(state_root)
+    isolation_kwargs = dict(offline_isolation or {})
+    forbidden = {"state_root", "q71_evaluator_registry", "validation_executor",
+                 "forward_executor", "frontier_diagnostic",
+                 "frontier_diagnostic_cache_directory"}
+    if forbidden.intersection(isolation_kwargs):
+        raise ResearchCadenceError("OFFLINE_ISOLATION_OWNED_ARGUMENT")
     stamp = now or _utc_now()
     tick_id = "TICK-" + stamp.replace(":", "").replace("-", "").replace("+", "")[:20]
 
@@ -204,10 +252,15 @@ def run_cadence_tick(
             )
             validation_executor, forward_executor = production_executors(
                 state_root=root)
-            result = run_continuous_research_cycle(
+            cycle_options = dict(
                 state_root=root, q71_evaluator_registry=evaluator_registry,
                 validation_executor=validation_executor,
                 forward_executor=forward_executor)
+            if frontier_diagnostic:
+                cycle_options["frontier_diagnostic"] = True
+                cycle_options["frontier_diagnostic_cache_directory"] = (
+                    frontier_diagnostic_cache_directory)
+            result = run_continuous_research_cycle(**cycle_options, **isolation_kwargs)
             fast_outcome = str(getattr(result, "cycle_outcome", "UNKNOWN"))
         except Exception as exc:
             fast_outcome = f"EXCEPTION:{type(exc).__name__}:{exc}"
@@ -217,7 +270,7 @@ def run_cadence_tick(
 
     # ── Deep job eligibility ────────────────────────────────────────────────
     pending = _pending_deep_count(root)
-    should_deep = (pending > 0 or force_deep_job) and (
+    should_deep = not frontier_diagnostic and (pending > 0 or force_deep_job) and (
         should_fast or force_deep_job
     )
     if should_deep:
@@ -228,6 +281,8 @@ def run_cadence_tick(
                 state_root=root,
                 execution_policy=resolved_config.execution_policy(),
                 now=_utc_now(),
+                **{key: value for key, value in isolation_kwargs.items()
+                   if key in _DEEP_JOB_ISOLATION_KEYS},
             )
             deep_outcome = str(deep_result.get("status", "UNKNOWN"))
             deep_job_id = deep_result.get("job_id")
@@ -270,6 +325,8 @@ def run_cadence_service(
     config: ResearchCadenceConfig | None = None,
     tick_interval_seconds: float = DEFAULT_FAST_CYCLE_MIN_INTERVAL_SECONDS,
     max_ticks: int | None = None,
+    frontier_diagnostic: bool = False,
+    frontier_diagnostic_cache_directory: Path | str | None = None,
     on_tick: Any = None,
 ) -> None:
     """Simple deterministic service loop.
@@ -279,33 +336,67 @@ def run_cadence_service(
     None.  ``on_tick`` is an optional callable that receives the
     CadenceTickReport — use it for logging/monitoring.
 
-    This never raises — individual tick failures are captured in reports and
-    reported via on_tick.  The loop itself only exits on KeyboardInterrupt or
-    when max_ticks is reached.
+    Individual tick failures are captured in reports. Invalid service settings
+    and duplicate service ownership raise ResearchCadenceError before a tick.
     """
+    if tick_interval_seconds <= 0 or (max_ticks is not None and max_ticks < 1):
+        raise ResearchCadenceError("CADENCE_SERVICE_INTERVAL_OR_TICK_LIMIT_INVALID")
     resolved_config = config or ResearchCadenceConfig()
-    last_fast_at: str | None = None
-    tick_count = 0
-    while True:
-        report = run_cadence_tick(
-            state_root=state_root,
-            config=resolved_config,
-            last_fast_cycle_at=last_fast_at,
-        )
-        if report.fast_cycle_attempted:
-            last_fast_at = report.tick_started_at
-        if on_tick is not None:
+    with _cadence_service_lease(state_root):
+        last_fast_at: str | None = None
+        tick_count = 0
+        while True:
+            report = run_cadence_tick(
+                state_root=state_root,
+                config=resolved_config,
+                last_fast_cycle_at=last_fast_at,
+                frontier_diagnostic=frontier_diagnostic,
+                frontier_diagnostic_cache_directory=frontier_diagnostic_cache_directory,
+            )
+            if report.fast_cycle_attempted:
+                last_fast_at = report.tick_started_at
+            if on_tick is not None:
+                try:
+                    on_tick(report)
+                except Exception:
+                    pass
+            tick_count += 1
+            if max_ticks is not None and tick_count >= max_ticks:
+                break
             try:
-                on_tick(report)
-            except Exception:
-                pass
-        tick_count += 1
-        if max_ticks is not None and tick_count >= max_ticks:
-            break
-        try:
-            time.sleep(tick_interval_seconds)
-        except KeyboardInterrupt:
-            break
+                time.sleep(tick_interval_seconds)
+            except KeyboardInterrupt:
+                break
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Run the existing continuous research cadence service")
+    parser.add_argument("--state-root", type=Path, required=True)
+    parser.add_argument("--tick-interval-seconds", type=float,
+                        default=DEFAULT_FAST_CYCLE_MIN_INTERVAL_SECONDS)
+    parser.add_argument("--max-ticks", type=int, default=None,
+                        help="Bounded operator acceptance runs only")
+    parser.add_argument("--frontier-diagnostic", action="store_true",
+                        help="Stop after FRONTIER; skip questions and deep work")
+    parser.add_argument("--diagnostic-cache-directory", type=Path,
+                        help="Existing verified bodies to read without cache writes")
+    args = parser.parse_args(argv)
+    try:
+        run_cadence_service(
+            state_root=args.state_root, tick_interval_seconds=args.tick_interval_seconds,
+            max_ticks=args.max_ticks,
+            frontier_diagnostic=args.frontier_diagnostic,
+            frontier_diagnostic_cache_directory=args.diagnostic_cache_directory,
+            on_tick=lambda report: print(json.dumps(report.to_dict(), sort_keys=True), flush=True),
+        )
+    except ResearchCadenceError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
 
 
 __all__ = [

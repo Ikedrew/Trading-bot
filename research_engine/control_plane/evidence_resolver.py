@@ -10,6 +10,10 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 import math
+import time
+from contextlib import contextmanager
+from contextvars import ContextVar
+from functools import wraps
 from typing import Any, Callable, Mapping
 
 from research_engine.data_quality.classifier import DataEpoch, classify_record
@@ -18,6 +22,33 @@ from core.production_data_contract import (
     PRODUCTION_SCHEMA_REGISTRY,
     current_schema,
 )
+
+
+# Scoped diagnostic counters only; never retain source records.
+_NORMALIZATION_TIMING = ContextVar("normalization_timing", default=None)
+
+@contextmanager
+def measure_normalization():
+    measurement = {"normalization_seconds": 0.0}
+    token = _NORMALIZATION_TIMING.set(measurement)
+    try:
+        yield measurement
+    finally:
+        _NORMALIZATION_TIMING.reset(token)
+
+
+def _timed_normalization(function):
+    @wraps(function)
+    def measured(*args, **kwargs):
+        measurement = _NORMALIZATION_TIMING.get()
+        if measurement is None:
+            return function(*args, **kwargs)
+        started = time.perf_counter()
+        try:
+            return function(*args, **kwargs)
+        finally:
+            measurement["normalization_seconds"] += time.perf_counter() - started
+    return measured
 
 
 _PHYSICAL_DATASETS = {
@@ -547,6 +578,7 @@ def classify_authoritative_evidence_record(
 _record_epoch = classify_evidence_record
 
 
+@_timed_normalization
 def _normalise(record: dict[str, Any], source: str) -> dict[str, Any]:
     result = dict(record)
     fields = set(_JOIN_FIELDS)

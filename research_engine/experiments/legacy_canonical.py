@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import statistics
 from collections import Counter, defaultdict
-from pathlib import Path
 from typing import Any
 
 from research_engine.data_access.s3_source import get_default_source
@@ -78,7 +77,9 @@ def _shadow_outcomes() -> list[dict]:
     return outcomes
 
 
-def _current_shadow_outcomes_for_e2() -> tuple[list[dict], dict]:
+def _current_shadow_outcomes_for_e2(
+    shadow_trades: list[dict] | None = None,
+) -> tuple[list[dict], dict]:
     """Return E2 outcomes and provenance from one authoritative selection."""
     from research_engine.control_plane.evidence_provenance import (
         build_evidence_provenance,
@@ -88,10 +89,11 @@ def _current_shadow_outcomes_for_e2() -> tuple[list[dict], dict]:
         ingest_completed_shadow_trades,
     )
 
-    selection = select_current_evidence(
-        "shadow_trades",
-        [*ingest_completed_shadow_trades(), *_load_jsonl(_SHADOW_DATASET)],
+    supplied = (
+        ingest_completed_shadow_trades()
+        if shadow_trades is None else list(shadow_trades)
     )
+    selection = select_current_evidence("shadow_trades", supplied)
     outcomes = []
     for rec in selection.records_for_analysis():
         o = rec.get("simulated_outcome", {})
@@ -280,15 +282,16 @@ def run_q14() -> dict[str, Any]:
 
 def run_q15() -> dict[str, Any]:
     """Q15/L2: Learning velocity."""
-    reports_dir = Path("analysis/reports")
-    reports = list(reports_dir.glob("*.json")) if reports_dir.exists() else []
-    n = len(reports)
-
-    return build_report(question_id="Q15", status=ReadinessStatus.COMPLETE,
-        overall={"reports_generated": n, "finding": f"{n} research reports exist. System learning infrastructure active."},
-        confidence=compute_confidence(n), dataset={"source": "research_reports", "sample_size": n},
-        fingerprint=build_fingerprint(n, 0, "research_reports"),
-        recommendation="COMPLETE", provenance=_provenance("Q15", "run_q15"))
+    # A local report directory has no membership in the authenticated
+    # investigation snapshot and cannot establish scientific improvement.
+    return build_report(question_id="Q15", status=ReadinessStatus.BLOCKED,
+        overall={"reports_generated": None,
+                 "finding": "Snapshot-bound report history is unavailable."},
+        confidence="INSUFFICIENT_DATA",
+        dataset={"source": "unbound_research_reports", "sample_size": 0},
+        fingerprint=build_fingerprint(0, 0, "unbound_research_reports"),
+        recommendation="BLOCKED", provenance=_provenance("Q15", "run_q15"),
+        reason_code="SNAPSHOT_REPORT_HISTORY_UNAVAILABLE")
 
 
 def run_q17() -> dict[str, Any]:
@@ -368,9 +371,9 @@ def run_q04() -> dict[str, Any]:
         recommendation=rec, provenance=_provenance("Q4", "run_q04"))
 
 
-def run_q05() -> dict[str, Any]:
+def run_q05(shadow_trades: list[dict] | None = None) -> dict[str, Any]:
     """Q5/E2/L1: Pattern degradation/expectancy."""
-    shadows, evidence_provenance = _current_shadow_outcomes_for_e2()
+    shadows, evidence_provenance = _current_shadow_outcomes_for_e2(shadow_trades)
     n = len(shadows)
     by_pattern = defaultdict(list)
     for s in shadows:
@@ -384,11 +387,13 @@ def run_q05() -> dict[str, Any]:
             avg_r = statistics.mean([t["r"] for t in trades])
             degradation[pat] = {"n": len(trades), "wr": round(wr, 4), "avg_r": round(avg_r, 4)}
 
-    return build_report(question_id="Q5", status=ReadinessStatus.COMPLETE if n > 0 else ReadinessStatus.INSUFFICIENT_DATA,
+    return build_report(question_id="Q5", status=(ReadinessStatus.COMPLETE
+        if degradation else ReadinessStatus.INSUFFICIENT_DATA),
         overall={"pattern_performance": degradation, "finding": f"{len(degradation)} patterns analysed from {n} trades"},
         confidence=compute_confidence(n), dataset={"source": "shadow_trades", "sample_size": n},
         fingerprint=build_fingerprint_from_provenance(evidence_provenance),
-        recommendation="COMPLETE", provenance=_provenance("Q5", "run_q05"))
+        recommendation="COMPLETE" if degradation else "INSUFFICIENT_DATA",
+        provenance=_provenance("Q5", "run_q05"))
 
 
 def run_q13() -> dict[str, Any]:

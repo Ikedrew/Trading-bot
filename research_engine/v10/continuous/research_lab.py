@@ -20,6 +20,8 @@ Operator questions answered:
 """
 from __future__ import annotations
 
+import copy
+import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -37,6 +39,24 @@ LAB_VIEW_SCHEMA = "research_lab_view_v1"
 DEFAULT_PROJECTION_DIRECTORY = Path("reports/research/continuous_projection")
 
 _CANONICAL_COUNT = 70
+
+# Bounded in-process lab-view recall.  Keyed by (directory, mtime_ns, size)
+# of the authoritative latest.json and validated by projection version on
+# use; any stat change or version mismatch falls back to a full rebuild.
+_LAB_VIEW_CACHE: dict[str, Any] = {}
+
+
+def _lab_cache_key(latest_path: Path) -> tuple[str, int, int] | None:
+    try:
+        stat = latest_path.stat()
+    except OSError:
+        return None
+    return (str(latest_path), stat.st_mtime_ns, stat.st_size)
+
+
+def clear_lab_view_cache() -> None:
+    """Reset the in-process lab-view recall (tests and long-lived hosts)."""
+    _LAB_VIEW_CACHE.clear()
 
 
 class ResearchLabError(RuntimeError):
@@ -264,13 +284,40 @@ def load_lab_view(
     schema is invalid.
     """
     store = ResearchProjectionStore(projection_directory)
+    cache_key = _lab_cache_key(store.latest_path)
+    if cache_key is not None and _LAB_VIEW_CACHE.get("key") == cache_key:
+        # Same file identity (path, mtime, size) as the cached derivation.
+        # Re-read the authoritative file and verify its governed version
+        # matches before returning recall: this keeps fail-closed behavior
+        # on corruption (unreadable/schema-invalid falls through to the
+        # standard path which raises) while skipping the expensive
+        # build_lab_view derivation on a true hit.  Callers receive an
+        # independent copy so the cached authority is never mutated.
+        try:
+            probe = json.loads(store.latest_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            probe = None
+        if (isinstance(probe, Mapping)
+                and probe.get("projection_schema") == PROJECTION_SCHEMA
+                and str(probe.get("projection_version") or "")
+                == str(_LAB_VIEW_CACHE.get("projection_version") or "")):
+            return copy.deepcopy(_LAB_VIEW_CACHE["view"])
+        _LAB_VIEW_CACHE.clear()
     try:
         projection = store.load_latest()
     except ResearchProjectionError as exc:
         raise ResearchLabError("LAB_PROJECTION_UNREADABLE:" + str(exc)) from exc
     if projection is None:
         raise ResearchLabError("LAB_NO_PROJECTION_PUBLISHED_YET")
-    return build_lab_view(projection)
+    view = build_lab_view(projection)
+    if cache_key is not None:
+        _LAB_VIEW_CACHE.clear()
+        _LAB_VIEW_CACHE.update({
+            "key": _lab_cache_key(store.latest_path),
+            "projection_version": str(projection.get("projection_version") or ""),
+            "view": copy.deepcopy(view),
+        })
+    return view
 
 
 def render_lab_terminal(view: dict[str, Any]) -> str:

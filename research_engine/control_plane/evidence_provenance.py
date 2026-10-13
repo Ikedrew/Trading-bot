@@ -7,6 +7,10 @@ selection; callers cannot ask this module to stamp an arbitrary epoch.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
+from functools import wraps
+import time
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -22,6 +26,34 @@ from research_engine.control_plane.evidence_resolver import (
     classify_authoritative_evidence_record,
 )
 from research_engine.data_quality.classifier import DataEpoch
+
+# Diagnostic scope only; no evidence or results are cached here.
+_PROVENANCE_TIMING = ContextVar("provenance_timing", default=None)
+
+@contextmanager
+def measure_provenance():
+    measurement = {"provenance_seconds": 0.0}
+    token = _PROVENANCE_TIMING.set(measurement)
+    try:
+        yield measurement
+    finally:
+        _PROVENANCE_TIMING.reset(token)
+
+
+def _timed_provenance(function):
+    @wraps(function)
+    def measured(*args, **kwargs):
+        measurement = _PROVENANCE_TIMING.get()
+        if measurement is None:
+            return function(*args, **kwargs)
+        started = time.perf_counter()
+        try:
+            return function(*args, **kwargs)
+        finally:
+            if measurement is not None:
+                measurement["provenance_seconds"] += time.perf_counter() - started
+    return measured
+
 
 PROVENANCE_VERSION = "evidence_provenance_v1"
 CURRENT = "CURRENT"
@@ -63,6 +95,26 @@ def evidence_digest(records: Iterable[Mapping[str, Any]]) -> str:
     encoded = sorted(_canonical_json(record) for record in records)
     payload = "\n".join(encoded).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
+
+
+def _multiset_digest_from_canonicals(canonicals: list[str]) -> str:
+    """Hash pre-computed canonical JSON strings without re-canonicalizing.
+
+    Per-operation reuse only: ``canonicals`` must have been produced from
+    the exact private record objects being attested in this call.  The
+    encoding (sorted canonicals joined by ``"\\n"``) is identical to
+    :func:`evidence_digest`, so governed digests are byte-for-byte equal.
+    """
+    payload = "\n".join(sorted(canonicals)).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _single_digests_from_canonicals(canonicals: list[str]) -> list[str]:
+    """Single-record digests from pre-computed canonical JSON strings."""
+    return [
+        hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        for canonical in canonicals
+    ]
 
 
 def _empty_counts() -> dict[str, int]:
@@ -170,6 +222,10 @@ def _select(
     for _, label in used_pairs:
         used_counts[label] += 1
     state = _state_from_used_counts(used_counts)
+    # Per-operation verified reuse: each isolated private record is
+    # canonicalized exactly once in this call; its canonical JSON feeds
+    # both digest paths below.  Records were deep-copied above, so no
+    # caller-supplied mutable object is trusted by identity.
     component = {
         "source": str(source),
         "schema": declared_schema,
@@ -181,11 +237,14 @@ def _select(
         "used_epoch_counts": used_counts,
         "state": state,
         "digest_algorithm": "sha256",
-        "digest": evidence_digest(selected),
+        "digest": _multiset_digest_from_canonicals(
+            [_canonical_json(record) for record in selected]
+        ),
     }
     return EvidenceSelection(records=selected, component=component)
 
 
+@_timed_provenance
 def select_current_evidence(
     source: str,
     records: Iterable[Mapping[str, Any]],
@@ -200,6 +259,7 @@ def select_current_evidence(
     )
 
 
+@_timed_provenance
 def use_evidence_as_supplied(
     source: str,
     records: Iterable[Mapping[str, Any]],
@@ -210,6 +270,7 @@ def use_evidence_as_supplied(
     return _select(source, records, schema=schema, current_only=False)
 
 
+@_timed_provenance
 def attest_current_subset(
     source: str,
     input_records: Iterable[Mapping[str, Any]],
@@ -239,6 +300,12 @@ def attest_current_subset(
     declared_schema = str(schema or expected_schema or "")
     counts = _empty_counts()
     current_material: Counter[str] = Counter()
+    # Per-operation verified reuse: each isolated private record is
+    # canonicalized exactly once in this call.  The canonical JSON feeds
+    # both the duplicate-sensitive subset check and the final multiset
+    # digest, with byte-identical encoding to evidence_digest.  No
+    # caller-supplied object is trusted by identity: both populations were
+    # deep-copied above before canonicalization.
     for record in supplied:
         epoch = classify_authoritative_evidence_record(
             record, source, schema=declared_schema or None,
@@ -246,9 +313,16 @@ def attest_current_subset(
         label = epoch.value if isinstance(epoch, DataEpoch) else INCOMPATIBLE
         counts[label] += 1
         if label == CURRENT:
-            current_material[evidence_digest((record,))] += 1
+            current_material[
+                hashlib.sha256(
+                    _canonical_json(record).encode("utf-8")
+                ).hexdigest()
+            ] += 1
 
-    selected_material = Counter(evidence_digest((record,)) for record in selected)
+    selected_canonicals = [_canonical_json(record) for record in selected]
+    selected_material = Counter(
+        _single_digests_from_canonicals(selected_canonicals)
+    )
     if selected_material - current_material:
         raise ValueError(
             "Selected evidence must be a duplicate-preserving subset of the "
@@ -268,11 +342,14 @@ def attest_current_subset(
         "used_epoch_counts": used_counts,
         "state": _subset_state(counts, used_counts),
         "digest_algorithm": "sha256",
-        "digest": evidence_digest(selected),
+        # Reuse the canonicals already computed for the subset check, so
+        # each analysed record is canonicalized exactly once in this call.
+        "digest": _multiset_digest_from_canonicals(selected_canonicals),
     }
     return EvidenceSelection(records=tuple(selected), component=component)
 
 
+@_timed_provenance
 def build_evidence_provenance(
     *selections: EvidenceSelection,
 ) -> dict[str, Any]:

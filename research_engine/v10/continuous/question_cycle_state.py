@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 import json
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -20,18 +21,31 @@ class QuestionCycleStateError(RuntimeError):
     """Question history/current projection could not be safely persisted."""
 
 
-def atomic_json(path: Path, payload: Mapping[str, Any]) -> None:
+def atomic_json(path: Path, payload: Mapping[str, Any], *, immutable: bool = False) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(path.name + ".tmp")
+    temporary = None
     try:
-        with open(temporary, "x", encoding="utf-8", newline="\n") as handle:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n",
+                prefix=".question-", suffix=".tmp", dir=path.parent, delete=False) as handle:
+            temporary = Path(handle.name)
             json.dump(payload, handle, indent=2, sort_keys=True)
             handle.write("\n")
-        os.replace(temporary, path)
-    except Exception:
-        temporary.unlink(missing_ok=True)
-        raise
+            handle.flush()
+            os.fsync(handle.fileno())
+        if immutable:
+            try:
+                # Publish without overwriting a concurrently completed identity.
+                os.link(temporary, path)
+            except FileExistsError:
+                existing = json.loads(path.read_text(encoding="utf-8"))
+                if canonical_json(existing) != canonical_json(payload):
+                    raise QuestionCycleStateError("IMMUTABLE_HISTORY_ID_COLLISION:" + str(path))
+        else:
+            os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def immutable_json(path: Path, payload: Mapping[str, Any]) -> None:
@@ -44,7 +58,7 @@ def immutable_json(path: Path, payload: Mapping[str, Any]) -> None:
         if canonical_json(existing) != canonical_json(payload):
             raise QuestionCycleStateError("IMMUTABLE_HISTORY_ID_COLLISION:" + str(path))
         return
-    atomic_json(path, payload)
+    atomic_json(path, payload, immutable=True)
 
 
 @dataclass(frozen=True)
@@ -319,6 +333,74 @@ class QuestionCycleStore:
             raise QuestionCycleStateError("PROJECTION_WITHOUT_CYCLE_ID")
         immutable_json(self.projection_path(cycle_id), projection)
         atomic_json(self.current_path, projection)
+
+    def _checked_receipt(self, path: Path, authority: Mapping[str, Any]):
+        if not path.exists():
+            return None
+        try:
+            if path.stat().st_size > 16 * 1024 * 1024:
+                raise ValueError("receipt too large")
+            envelope = json.loads(path.read_text(encoding="utf-8"))
+            payload = envelope["payload"]
+            if envelope["sha256"] != fingerprint(payload) or payload["authority"] != authority:
+                raise ValueError("authority/digest mismatch")
+            return payload
+        except Exception as exc:
+            raise QuestionCycleStateError("QUESTION_RECEIPT_INVALID:" + path.name) from exc
+
+    def save_checkpoint(self, cycle_id, authority, question_id, entry, delta, prerequisites):
+        result = CanonicalQuestionResult.from_dict(entry["result"])
+        if result.question_id != question_id:
+            raise QuestionCycleStateError("CHECKPOINT_QUESTION_MISMATCH")
+        # Immutable result is durable BEFORE the checkpoint advertises it.
+        self.save_question_result(result)
+        payload = {"authority": authority, "question_id": question_id,
+                   "entry": entry, "delta": delta, "prerequisites": prerequisites}
+        if len(canonical_json(payload).encode()) > 16 * 1024 * 1024:
+            return  # bounded checkpoint; full cycle persistence remains authoritative
+        immutable_json(self.directory / "checkpoints" / cycle_id / (question_id + ".json"),
+                       {"payload": payload, "sha256": fingerprint(payload)})
+
+    def load_checkpoint(self, cycle_id, authority, question_id, prerequisites):
+        payload = self._checked_receipt(
+            self.directory / "checkpoints" / cycle_id / (question_id + ".json"), authority)
+        if payload is None:
+            return None
+        if payload["question_id"] != question_id or payload["prerequisites"] != prerequisites:
+            raise QuestionCycleStateError("CHECKPOINT_DEPENDENCY_MISMATCH")
+        self.verify_entry_history(payload["entry"])
+        return payload
+
+    def verify_entry_history(self, entry):
+        result = CanonicalQuestionResult.from_dict(entry["result"])
+        history = self.load_question_result(result.question_id, result.snapshot_id,
+                                            result.evaluation_identity_digest)
+        if history is None or canonical_json(history.to_dict()) != canonical_json(result.to_dict()):
+            raise QuestionCycleStateError("REPLAY_IMMUTABLE_RESULT_MISMATCH")
+        return result
+
+    def save_replay_receipt(self, cycle, projection, authority):
+        payload = {"authority": authority, "cycle_sha256": fingerprint(cycle.to_dict()),
+                   "projection_sha256": fingerprint(projection)}
+        immutable_json(self.directory / "replay" / (cycle.cycle_id + ".json"),
+                       {"payload": payload, "sha256": fingerprint(payload)})
+
+    def load_replay(self, cycle_id, authority):
+        payload = self._checked_receipt(self.directory / "replay" / (cycle_id + ".json"), authority)
+        if payload is None:
+            return None
+        cycle = self.load_cycle(cycle_id)
+        projection = self.load_projection(cycle_id)
+        if (cycle is None or fingerprint(cycle.to_dict()) != payload["cycle_sha256"]
+                or fingerprint(projection) != payload["projection_sha256"]
+                or set(projection["questions"]) != set(cycle.result_ids)
+                or len(cycle.result_ids) != 70):
+            raise QuestionCycleStateError("COMPLETED_REPLAY_MISMATCH")
+        for qid, entry in projection["questions"].items():
+            result = self.verify_entry_history(entry)
+            if result.question_id != qid or cycle.result_ids[qid] != result.result_id:
+                raise QuestionCycleStateError("COMPLETED_REPLAY_RESULT_MISMATCH")
+        return cycle, projection
 
     def save_cycle(self, result: CanonicalQuestionCycleResult) -> None:
         immutable_json(self.cycle_path(result.cycle_id), result.to_dict())

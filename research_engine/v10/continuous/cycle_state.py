@@ -290,6 +290,7 @@ class ContinuousCycleStore:
         self.directory = Path(directory)
         self.history_directory = self.directory / "history"
         self.latest_path = self.directory / "latest_success.json"
+        self.latest_completed_path = self.directory / "latest_completed.json"
         self.latest_attempt_path = self.directory / "latest_attempt.json"
 
     def load_latest_success(self) -> ContinuousResearchCycleResult | None:
@@ -334,6 +335,15 @@ class ContinuousCycleStore:
                 "projection_version": result.projection_version,
                 "predecessor_cycle_id": result.predecessor_cycle_id,
             })
+            if result.cycle_outcome == "COMPLETED":
+                self._atomic(self.latest_completed_path, {
+                    "cycle_schema": CYCLE_SCHEMA,
+                    "continuous_cycle_id": result.continuous_cycle_id,
+                    "cycle_outcome": result.cycle_outcome,
+                    "completed_at": result.completed_at,
+                    "projection_version": result.projection_version,
+                    "predecessor_cycle_id": result.predecessor_cycle_id,
+                })
         self._atomic(self.latest_attempt_path, {
             "cycle_schema": CYCLE_SCHEMA,
             "continuous_cycle_id": result.continuous_cycle_id,

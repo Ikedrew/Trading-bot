@@ -38,6 +38,8 @@ OPTIMISATION_REGISTRY_DIR = REPO / "data" / "research" / "optimisation"
 GOVERNANCE_DIR = REPO / "data" / "research" / "governance"
 HOST, PORT = "127.0.0.1", 8765
 APP_ID = "research-lab-v1"
+READ_ONLY = False
+HISTORICAL_ARCHIVE = REPO / "reports/research_lab_archive"
 
 _run_guard = threading.Lock()
 _run: dict[str, Any] = {"status": "IDLE"}
@@ -227,16 +229,26 @@ def _cycles() -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
             row = _read_json(path)
         except (OSError, ValueError):
             continue
-        row["recorded_at"] = _mtime_iso(path)
+        # imported_at: when THIS Lab wrote the local copy (file mtime).
+        # completed_at: the production cycle's real completion time, read from
+        # the record itself.  recorded_at remains the ordering key but now
+        # prefers the real completion time so the operator timeline reflects
+        # research reality, not the local import moment.
+        row["imported_at"] = _mtime_iso(path)
+        row["completed_at"] = row.get("completed_at")
+        row["recorded_at"] = row.get("completed_at") or row["imported_at"]
         row["failure"] = (humanise_failure(row.get("failure_stage"), row.get("failure_reason"))
                           if row.get("cycle_outcome") == "FAILED" else None)
         rows.append(row)
     rows.sort(key=lambda r: r.get("recorded_at") or "", reverse=True)
-    pointer = STATE_ROOT / "cycles" / "latest_success.json"
+    completed_pointer = STATE_ROOT / "cycles" / "latest_completed.json"
+    pointer = (completed_pointer if completed_pointer.exists()
+               else STATE_ROOT / "cycles" / "latest_success.json")
     success = None
     if pointer.exists():
         try:
-            success = _read_json(pointer)
+            value = _read_json(pointer)
+            success = value if value.get("cycle_outcome") == "COMPLETED" else None
         except (OSError, ValueError):
             success = None
     return rows, success
@@ -374,20 +386,421 @@ def _projection_events(projection: dict[str, Any] | None, questions: list[dict[s
     return events
 
 
+def _local_scientific_records() -> tuple[list, list]:
+    """Read existing registries verbatim; never create findings from references."""
+    import hashlib
+    hypotheses, candidates = [], []
+    seen = {}
+    def accept(row, path, identity, collection):
+        if not isinstance(row, dict) or not row.get(identity) or not row.get("status"):
+            raise ValueError("LOCAL_RECORD_IDENTITY_OR_STATUS_MISSING:" + str(path))
+        key = (identity, row[identity])
+        if key in seen:
+            if seen[key] != row:
+                raise ValueError("LOCAL_RECORD_IDENTITY_CONFLICT:" + row[identity])
+            return
+        seen[key] = dict(row)
+        item = dict(row)
+        item["display_provenance"] = {
+            "path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "scope": "SEPARATE_LOCAL_PERSISTED_REGISTRY",
+            "belongs_to_displayed_question_cycle": False,
+            "live_currentness_verified": False,
+        }
+        collection.append(item)
+    if OPT_REGISTRY.exists():
+        reg = _read_json(OPT_REGISTRY)
+        for identity, rows, collection in (
+                ("hypothesis_id", reg["hypotheses"], hypotheses),
+                ("candidate_id", reg["candidates"], candidates)):
+            for key, row in rows.items():
+                if row.get(identity) != key:
+                    raise ValueError("LOCAL_REGISTRY_KEY_MISMATCH:" + key)
+                accept(row, OPT_REGISTRY, identity, collection)
+        for candidate in candidates:
+            candidate["plan"] = next((p for p in reg.get("plans", {}).values()
+                                      if p.get("candidate_id") == candidate["candidate_id"]), {})
+    path = CANDIDATE_REGISTRY_DIR / "candidates.jsonl"
+    if path.exists():
+        with path.open(encoding="utf-8-sig") as stream:
+            for line in stream:
+                if line.strip():
+                    accept(json.loads(line), path, "candidate_id", candidates)
+    return hypotheses, candidates
+
+
+def _completed_read_only_state() -> dict[str, Any]:
+    """Adapt verified existing historical artifacts to the ORIGINAL Lab API.
+
+    No unified projection is fabricated, persisted, or substituted. Local
+    registry records retain separate provenance and are not part of that cycle.
+    """
+    from research_engine.v10.continuous.research_lab_archive import (
+        load_archive, verified_file,
+    )
+    directory, catalog, summary, _ = load_archive(HISTORICAL_ARCHIVE)
+    def fields(entity):
+        row = {}
+        omitted = {}
+        for descriptor in entity["fields"]:
+            name = descriptor["field"]
+            name = name[7:] if name.startswith("result.") else name
+            info = catalog["files"][descriptor["path"]]
+            # Large original collections remain available through explicit
+            # verified downloads. Never read megabytes merely to render a card.
+            if name == "evidence_references" or info["bytes"] > 256 * 1024:
+                omitted[name] = {"total": descriptor.get("count"),
+                                 "bytes": info["bytes"], "download": "/api/artifact?path=" + descriptor["path"]}
+                continue
+            row[name] = _read_json(verified_file(directory, catalog, descriptor["path"]))
+        row["operator_view_omitted_fields"] = omitted
+        row["display_provenance"] = {
+            "scope": "VERIFIED_COMPLETED_TRANSFER", "archive_id": summary["archive_id"],
+            "source_cycle_id": summary["cycle_id"], "bridge_run_id": summary["bridge_run_id"],
+            "completed_at": summary["completed_at"], "live_currentness_verified": False}
+        return row
+    questions = []
+    for item in summary["questions"]:
+        row = fields(item)
+        definition = row.pop("definition", {}) or {}
+        row.update({key: definition[key] for key in ("title", "description", "category", "priority", "depends_on", "legacy_ids") if key in definition})
+        row.setdefault("title", item["title"])
+        row["question_id"] = item["question_id"]
+        row["status_source"] = "block2_projection"
+        row["registry_status"] = "PERSISTED_RESULT"
+        row["evaluation_currency"] = "NOT_CHECKED_OFFLINE"
+        evidence = row["operator_view_omitted_fields"].get("evidence_references", {})
+        row["evidence_reference_count"] = evidence.get("total", 0)
+        row["evidence_references_shown"] = 0
+        row["evidence_references_truncated"] = bool(evidence.get("total"))
+        row["evidence_references"] = []
+        questions.append(row)
+    findings = [fields(x) for x in summary["entities"]["finding"]]
+    hypotheses = [fields(x) for x in summary["entities"]["hypothesis"]]
+    candidates = [fields(x) for x in summary["entities"]["candidate"]]
+    local_hypotheses, local_candidates = _local_scientific_records()
+    def append_distinct(target, additions, identity):
+        existing = {r[identity]: r for r in target}
+        for row in additions:
+            if row[identity] in existing:
+                original = existing[row[identity]]
+                keys = set(row) - {"display_provenance", "plan"}
+                if any(original.get(k) != row[k] for k in keys):
+                    raise ValueError("TRANSFER_LOCAL_RECORD_CONFLICT:" + row[identity])
+            else:
+                target.append(row); existing[row[identity]] = row
+    append_distinct(hypotheses, local_hypotheses, "hypothesis_id")
+    append_distinct(candidates, local_candidates, "candidate_id")
+    hyp_by_id = {h["hypothesis_id"]: h for h in hypotheses}
+    finding_by_id = {f["finding_id"]: f for f in findings}
+    for h in hypotheses:
+        h["dependent_candidates"] = [c["candidate_id"] for c in candidates if c.get("hypothesis_id") == h["hypothesis_id"]]
+    for f in findings:
+        f["summary"] = f.get("proposition")
+        f["dependent_hypotheses"] = [h["hypothesis_id"] for h in hypotheses if h.get("source_finding") == f["finding_id"]]
+        f["dependent_candidates"] = [c["candidate_id"] for c in candidates if c.get("hypothesis_id") in f["dependent_hypotheses"]]
+    for c in candidates:
+        h = hyp_by_id.get(c.get("hypothesis_id"), {})
+        fid = h.get("source_finding") or (c.get("change_definition") or {}).get("source_finding_id")
+        c["source_finding_ids"] = [fid] if fid else []
+        c["source_question_ids"] = [h["source_question"]] if h.get("source_question") else []
+        c["lineage_gaps"] = []
+        if not h:
+            c["lineage_gaps"].append("Persisted hypothesis missing: " + str(c.get("hypothesis_id")))
+        if fid and fid not in finding_by_id:
+            c["lineage_gaps"].append("Persisted finding missing: " + fid)
+        c["runtime_authority"] = "NOT_VERIFIED_OFFLINE"
+        c["human_approval_required"] = True
+        c["decision_boundary"] = "Record existence is not validation, profitability, test eligibility or live authorization. Review evidence and governed validation plan."
+    _bound_evidence_references(questions)
+    for row in questions:
+        evidence = row["operator_view_omitted_fields"].get("evidence_references", {})
+        row["evidence_reference_count"] = evidence.get("total", 0)
+        row["evidence_references_shown"] = 0
+        row["evidence_references_truncated"] = bool(evidence.get("total"))
+    _bound_evidence_references(findings)
+    counts = {}
+    for q in questions:
+        counts[q["status"]] = counts.get(q["status"], 0) + 1
+    return {
+        "generated_at": _now(), "source": "VERIFIED_COMPLETED_TRANSFER_WITH_SEPARATE_LOCAL_REGISTRIES",
+        "read_only": True, "errors": [],
+        "source_notice": "Latest locally imported completed cycle; separate local registry records retain their own dates and provenance. Live production freshness is NOT verified.",
+        "freshness": {"projection_version": None, "projection_persisted_at": None,
+                      "last_attempt_at": None, "last_attempt_outcome": None,
+                      "last_success": {"completed_at": summary["completed_at"]},
+                      "last_successful_cycle_id": summary["cycle_id"],
+                      "historical_completed_at": summary["completed_at"], "research_lag": {}},
+        "question_counts": counts, "questions": questions,
+        "findings": findings, "hypotheses": hypotheses, "candidates": candidates,
+        "candidate_lifecycle": {"status": "NOT_VERIFIED_OFFLINE", "candidates": []},
+        "q71": {"generated": [], "queue": [], "available": False},
+        "investigations": [{"id": q["question_id"], "type": "CANONICAL_QUESTION",
+                            "status": q["status"], "state": q.get("work_state") or q["status"],
+                            "sample_n": q.get("sample_n"), "minimum_sample": q.get("minimum_required_n"),
+                            "note": q.get("failure_reason") or "; ".join(q.get("missing_evidence") or [])}
+                           for q in questions if q["status"] not in ("COMPLETE", "NEGATIVE_RESULT", "ALIAS_OR_SUPERSEDED")],
+        "work_queues": {"review_required": summary["review_required"],
+                        "candidate_design_required": summary["candidate_design_required"],
+                        "validation_queue_available": False},
+        "data_frontier": {"snapshot_id": summary["snapshot_id"], "status": "HISTORICAL_OFFLINE_COPY",
+                           "frontier_start": None, "frontier_end": None},
+        "what_changed_cycle": None, "changes": [], "cycles": [], "last_run": None,
+        "latest_failure": None, "run": {"status": "READ_ONLY", "read_only": True},
+        "legacy_diagnostics": {"available": False},
+        "invariants": {"live_approved_any": False, "live_authority_verified": False,
+                       "canonical_question_count": len(questions)},
+        "completed_transfer": {k: summary[k] for k in ("cycle_id", "snapshot_id", "bridge_run_id", "completed_at", "verification")},
+    }
+
+def _parse_iso(value: Any) -> "datetime | None":
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _elapsed_human(seconds: float) -> str:
+    if seconds < 0:
+        return "in the future (clock skew)"
+    if seconds >= 86400:
+        return f"{seconds / 86400:.1f}d"
+    if seconds >= 3600:
+        return f"{seconds / 3600:.1f}h"
+    if seconds >= 60:
+        return f"{seconds / 60:.0f}m"
+    return f"{seconds:.0f}s"
+
+
+def _freshness_block(*, projection, cycles, success, projection_imported_at,
+                     research_lag, bridge_status) -> dict[str, Any]:
+    """Compose freshness that NEVER conflates distinct times.
+
+    Separately reports: the real production research completion time, the
+    projection publication time (where independently evidenced), the local
+    import/sync time, the last attempt + its real outcome, the last successful
+    cycle, and the elapsed time since GENUINE research completion.
+    """
+    marker = {}
+    try:
+        marker_path = STATE_ROOT / "continuous_bridge_state.json"
+        if marker_path.exists():
+            marker = _read_json(marker_path) or {}
+    except (OSError, ValueError):
+        marker = {}
+
+    latest = cycles[0] if cycles else None
+    # Production's latest ATTEMPT (may be FAILED/in-progress) is surfaced by the
+    # bridge as a read-only diagnostic — it is never imported.  Prefer it for
+    # the "last attempt + outcome" display so the Lab reflects production
+    # reality, not just the locally-imported successful cycles.
+    prod_attempt = (bridge_status or {}).get("latest_attempt") or {}
+    # Real completion of the latest SUCCESSFUL cycle (authoritative research
+    # time) comes from the success pointer / bridge marker, never a file mtime.
+    production_completed_at = (
+        (success or {}).get("completed_at")
+        or marker.get("production_completed_at"))
+    completed_dt = _parse_iso(production_completed_at)
+    seconds_since_completion = (
+        (datetime.now(timezone.utc) - completed_dt).total_seconds()
+        if completed_dt else None)
+
+    return {
+        "projection_version": (projection or {}).get("projection_version"),
+        # Distinct, explicitly-labelled timestamps.
+        "production_cycle_completed_at": production_completed_at,
+        "projection_published_at": marker.get("projection_published_at"),
+        "projection_imported_at": projection_imported_at,
+        "synced_at": marker.get("imported_at") or projection_imported_at,
+        "seconds_since_completion": seconds_since_completion,
+        "time_since_completion": (
+            _elapsed_human(seconds_since_completion)
+            if seconds_since_completion is not None else "unknown"),
+        # Last attempt: prefer production's real latest attempt (incl. a FAILED
+        # one that was never imported); fall back to the locally-imported cycle.
+        "last_attempt_cycle_id": (
+            prod_attempt.get("continuous_cycle_id")
+            or (latest or {}).get("continuous_cycle_id")),
+        "last_attempt_completed_at": (latest or {}).get("completed_at"),
+        "last_attempt_observed_at": (
+            prod_attempt.get("observed_at") or (latest or {}).get("imported_at")),
+        "last_attempt_outcome": (
+            prod_attempt.get("cycle_outcome")
+            or (latest or {}).get("cycle_outcome")),
+        "last_attempt_failure_stage": prod_attempt.get("failure_stage"),
+        "last_attempt_failure_reason": prod_attempt.get("failure_reason"),
+        "last_attempt_imported": prod_attempt.get("imported", None),
+        "production_latest_attempt": prod_attempt or None,
+        "last_success": success,
+        "last_successful_cycle_id": (success or {}).get("continuous_cycle_id"),
+        # Deprecated alias retained for any older client; now points at the
+        # real completion time, NOT the import mtime, so the UI cannot present
+        # an import as a completion.  Prefer the explicit fields above.
+        "projection_persisted_at": production_completed_at,
+        "last_attempt_at": (latest or {}).get("completed_at"),
+        "freshness_basis": (
+            "production_cycle_completed_at is the authoritative research "
+            "completion time; projection_imported_at/synced_at are LOCAL import "
+            "times and are never presented as a completed cycle."),
+        "research_lag": research_lag,
+        # Provenance of the live production bridge that feeds this Lab the
+        # newest verified completed cycle (import/no-op/fail-closed state).
+        "continuous_bridge": bridge_status,
+    }
+
+
+def _additional_records(projection: dict[str, Any] | None) -> dict[str, Any]:
+    """Inspectable historical + separate-local records that are NOT part of the
+    authoritative production projection.
+
+    The production projection remains the sole authority for its own scientific
+    state.  This block exposes, SEPARATELY and clearly labelled, records that
+    would otherwise disappear from view once a projection becomes authoritative:
+
+      * historical archive findings / hypotheses / candidates (verified offline
+        completed transfer), and
+      * separate local persisted registry hypotheses / candidates.
+
+    Records are NEVER merged into the projection's arrays and are de-duplicated
+    against the projection's own IDs so nothing is double-counted or implied to
+    be produced by the current projection.  Each record keeps its own source,
+    identity, completion time, lineage and authority labels.
+    """
+    proj = projection or {}
+    proj_finding_ids = {str(f.get("finding_id")) for f in proj.get("findings", [])}
+    proj_hyp_ids = {str(h.get("hypothesis_id")) for h in proj.get("hypotheses", [])}
+    proj_cand_ids = {str(c.get("candidate_id")) for c in proj.get("candidates", [])}
+
+    hist = {"available": False, "findings": [], "hypotheses": [], "candidates": [],
+            "source": None}
+    try:
+        from research_engine.v10.continuous.research_lab_archive import load_archive
+        directory, catalog, summary, _ = load_archive(HISTORICAL_ARCHIVE)
+
+        def label(entity_kind, row):
+            return {
+                "id": row.get("id"),
+                "status": row.get("status"),
+                "statement": row.get("statement"),
+                "source": "VERIFIED_COMPLETED_HISTORICAL_ARCHIVE",
+                "archive_id": summary["archive_id"],
+                "source_cycle_id": summary["cycle_id"],
+                "completed_at": summary["completed_at"],
+                "authority": "NON_AUTHORITATIVE_HISTORICAL",
+                "live_currentness_verified": False,
+                "belongs_to_current_projection": False,
+                "kind": entity_kind,
+            }
+        hist["source"] = {
+            "archive_id": summary["archive_id"], "cycle_id": summary["cycle_id"],
+            "completed_at": summary["completed_at"]}
+        hist["findings"] = [label("finding", r)
+                            for r in summary["entities"]["finding"]
+                            if str(r.get("id")) not in proj_finding_ids]
+        hist["hypotheses"] = [label("hypothesis", r)
+                              for r in summary["entities"]["hypothesis"]
+                              if str(r.get("id")) not in proj_hyp_ids]
+        hist["candidates"] = [label("candidate", r)
+                              for r in summary["entities"]["candidate"]
+                              if str(r.get("id")) not in proj_cand_ids]
+        hist["available"] = True
+    except Exception as exc:
+        hist["error"] = f"{type(exc).__name__}: {exc}"
+
+    local = {"available": False, "hypotheses": [], "candidates": [], "error": None}
+    try:
+        local_hyps, local_cands = _local_scientific_records()
+        for h in local_hyps:
+            h["belongs_to_current_projection"] = (
+                str(h.get("hypothesis_id")) in proj_hyp_ids)
+            h["authority"] = "SEPARATE_LOCAL_REGISTRY_NON_AUTHORITATIVE"
+        for c in local_cands:
+            c["belongs_to_current_projection"] = (
+                str(c.get("candidate_id")) in proj_cand_ids)
+            c["authority"] = "SEPARATE_LOCAL_REGISTRY_NON_AUTHORITATIVE"
+            c["runtime_authority"] = "NOT_VERIFIED_LOCAL"
+            c["human_approval_required"] = True
+        # Only expose those not already authoritative in the projection, so the
+        # projection's own records are never duplicated.
+        local["hypotheses"] = [h for h in local_hyps
+                               if not h["belongs_to_current_projection"]]
+        local["candidates"] = [c for c in local_cands
+                               if not c["belongs_to_current_projection"]]
+        local["available"] = bool(local["hypotheses"] or local["candidates"])
+    except Exception as exc:
+        local["error"] = f"{type(exc).__name__}: {exc}"
+
+    return {
+        "notice": "Authoritative scientific state is the production projection "
+                  "above. The records here are historical/local, shown for "
+                  "inspection only, labelled by source and authority, and are "
+                  "NOT part of the current projection or merged into it.",
+        "historical_archive": hist,
+        "separate_local_registry": local,
+        "counts": {
+            "historical_findings": len(hist["findings"]),
+            "historical_hypotheses": len(hist["hypotheses"]),
+            "historical_candidates": len(hist["candidates"]),
+            "local_hypotheses": len(local["hypotheses"]),
+            "local_candidates": len(local["candidates"]),
+        },
+    }
+
+
 def build_state() -> dict[str, Any]:
     errors: list[str] = []
+    # Continuous bridge (read-only consumer): before reading our own STATE_ROOT,
+    # import any NEWLY completed, verified production cycle from the continuous
+    # coordinator's output.  Idempotent + incremental: a stat-only no-op when
+    # nothing advanced, so this never reloads large artifacts per refresh.
+    # Fail-safe: any error leaves prior authoritative Lab state untouched and is
+    # reported, never surfaced as a fabricated cycle. READ_ONLY restricts
+    # investigation execution, not consumption of verified completed results.
+    bridge_status: dict[str, Any] = {"status": "SKIPPED"}
+    try:
+        from research_engine.v10.continuous.continuous_projection_bridge import (
+            sync_latest_completed_cycle,
+        )
+        bridge_status = sync_latest_completed_cycle(STATE_ROOT).to_dict()
+    except Exception as exc:
+        # Fail closed on the import; the Lab keeps whatever it already had.
+        bridge_status = {"status": "ERROR", "reason": f"{type(exc).__name__}: {exc}"}
+        errors.append(f"Continuous bridge: {type(exc).__name__}: {exc}")
     projection = None
     try:
         from research_engine.v10.continuous.research_projection import ResearchProjectionStore
         projection = ResearchProjectionStore(STATE_ROOT / "projection").load_latest()
     except Exception as exc:
         errors.append(f"Projection unreadable: {exc}")
+    if READ_ONLY and projection is not None:
+        try:
+            from research_engine.v10.continuous.continuous_projection_bridge import (
+                _verify_projection,
+            )
+            marker = _read_json(STATE_ROOT / "continuous_bridge_state.json")
+            if (marker.get("schema") != "research_lab_continuous_bridge_v1"
+                    or marker.get("imported_projection_version") != projection.get("projection_version")
+                    or marker.get("imported_cycle_id") != projection.get("continuous_cycle_id")):
+                raise ValueError("LIVE_PROJECTION_NOT_VERIFIED_COMPLETED_CYCLE")
+            _verify_projection(projection, expected_version=str(marker["imported_projection_version"]))
+        except Exception as exc:
+            errors.append(f"Projection not publishable: {type(exc).__name__}: {exc}")
+            projection = None
+    if READ_ONLY and projection is None:
+        historical = _completed_read_only_state()
+        historical["errors"].extend(errors)
+        historical["publication_bridge"] = bridge_status
+        return historical
     overlay: dict[str, Any] = {}
     if projection:
         overlay = {r["question_id"]: r for r in projection.get("canonical_questions", [])}
     try:
         questions = _merge_questions(_registry_questions(), overlay)
-        _annotate_evaluation_currency(questions)
+        if not READ_ONLY:
+            _annotate_evaluation_currency(questions)
         _bound_evidence_references(questions)
     except Exception as exc:
         questions = []
@@ -455,8 +868,10 @@ def build_state() -> dict[str, Any]:
         except (OSError, ValueError):
             pass
     proj_path = STATE_ROOT / "projection" / "latest.json"
-    projection_saved_at = _mtime_iso(proj_path) if projection else None
-    changes.extend(_projection_events(projection, questions, projection_saved_at))
+    # Local file mtime == when THIS Lab wrote the projection copy (import/sync
+    # time), NOT when the research cycle completed.  Labelled as such below.
+    projection_imported_at = _mtime_iso(proj_path) if projection else None
+    changes.extend(_projection_events(projection, questions, projection_imported_at))
     changes.sort(key=lambda e: e.get("time") or "", reverse=True)
     counts: dict[str, int] = {}
     for q in questions:
@@ -488,18 +903,15 @@ def build_state() -> dict[str, Any]:
             entry["canonical_state"] = view["canonical_state"]
             entry["runtime_effective"] = view["runtime_effective"]
     return {
-        "generated_at": _now(), "source": source, "errors": errors,
-        "freshness": {
-            "projection_version": (projection or {}).get("projection_version"),
-            "projection_persisted_at": projection_saved_at,
-            "last_attempt_at": cycles[0]["recorded_at"] if cycles else None,
-            "last_attempt_outcome": cycles[0]["cycle_outcome"] if cycles else None,
-            "last_success": success,
-            "last_successful_cycle_id": (success or {}).get("continuous_cycle_id"),
-            "research_lag": src.get("research_lag") or {},
-        },
+        "generated_at": _now(), "source": source, "errors": errors, "read_only": READ_ONLY,
+        "freshness": _freshness_block(
+            projection=projection, cycles=cycles, success=success,
+            projection_imported_at=projection_imported_at,
+            research_lag=src.get("research_lag") or {},
+            bridge_status=bridge_status),
         "latest_failure": next((c["failure"] | {"cycle_id": c["continuous_cycle_id"],
-                                                  "at": c["recorded_at"],
+                                                  "at": c.get("imported_at") or c.get("recorded_at"),
+                                                  "completed_at": c.get("completed_at"),
                                                   "stage_statuses": c.get("stage_statuses")}
                                 for c in cycles[:1] if c.get("failure")), None),
         "question_counts": counts, "questions": questions,
@@ -532,6 +944,9 @@ def build_state() -> dict[str, Any]:
                            if row.get("lifecycle_status") == "SUPERSEDED"],
         },
         "findings": findings, "hypotheses": hypotheses, "candidates": candidates,
+        # Historical + separate-local records, labelled, never merged into the
+        # authoritative projection arrays above (survives projection changes).
+        "additional_records": _additional_records(projection),
         "candidate_lifecycle": lifecycle,
         # Observation space / governed coverage.  Projected verbatim from the
         # unified projection; a missing production snapshot is reported as
@@ -648,6 +1063,8 @@ def _failed_record(started: str, reason: str, stage: str | None = None,
 
 
 def start_run() -> tuple[int, dict[str, Any]]:
+    if READ_ONLY:
+        return 403, {"error": "READ_ONLY", "message": "Research execution disabled in this Lab session."}
     with _run_guard:
         if _run.get("status") == "RUNNING" or not _acquire_lock():
             return 409, {"error": "ALREADY_RUNNING", "message": "A research cycle is already running.",
@@ -751,7 +1168,26 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(403, {"error": "BAD_HOST"})
         path = self.path.split("?", 1)[0]
         if path == "/api/health":
-            return self._json(200, {"app": APP_ID, "pid": os.getpid()})
+            return self._json(200, {"app": APP_ID, "pid": os.getpid(), "read_only": READ_ONLY, "repository": str(REPO)})
+        if path == "/api/artifact" and READ_ONLY:
+            try:
+                from urllib.parse import parse_qs, urlsplit
+                from research_engine.v10.continuous.research_lab_archive import load_archive, verified_file
+                directory, catalog, _, _ = load_archive(HISTORICAL_ARCHIVE)
+                relative = parse_qs(urlsplit(self.path).query).get("path", [""])[0]
+                artifact = verified_file(directory, catalog, relative)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(artifact.stat().st_size))
+                self.send_header("Content-Disposition", 'attachment; filename="' + artifact.name + '"')
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                with artifact.open("rb") as stream:
+                    for block in iter(lambda: stream.read(1024 * 1024), b""):
+                        self.wfile.write(block)
+                return
+            except Exception as exc:
+                return self._json(409, {"error": "ARTIFACT_FAIL_CLOSED:" + str(exc)})
         if path == "/api/state":
             try:
                 return self._json(200, build_state())
@@ -778,15 +1214,23 @@ class Handler(BaseHTTPRequestHandler):
 def _existing_server() -> bool:
     try:
         with urlopen(f"http://{HOST}:{PORT}/api/health", timeout=1.5) as resp:
-            return json.loads(resp.read()).get("app") == APP_ID
+            health = json.loads(resp.read())
+            return (health.get("app") == APP_ID and health.get("read_only") == READ_ONLY
+                    and health.get("repository") == str(REPO))
     except Exception:
         return False
 
 
 def main(argv: list[str] | None = None) -> int:
+    global READ_ONLY, HISTORICAL_ARCHIVE, PORT
     parser = argparse.ArgumentParser(description="Human Research Lab")
     parser.add_argument("--open", action="store_true", help="open the browser")
+    parser.add_argument("--read-only", action="store_true", default=True, help="disable all research execution (default)")
+    parser.add_argument("--archive", type=Path, default=HISTORICAL_ARCHIVE)
+    parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args(argv)
+    READ_ONLY = args.read_only; HISTORICAL_ARCHIVE = args.archive.resolve(); PORT = args.port
+    if not 1024 <= PORT <= 65535: parser.error("port must be 1024..65535")
     url = f"http://{HOST}:{PORT}/"
     if _existing_server():
         print(f"Research Lab already running at {url}")

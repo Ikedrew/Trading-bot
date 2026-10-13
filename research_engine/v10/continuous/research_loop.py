@@ -5,9 +5,11 @@ import argparse
 from functools import wraps
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
+import time
 import uuid
 from typing import Any, Callable, Iterable, Mapping
 
@@ -69,6 +71,7 @@ from research_engine.v10.investigation_snapshot import MANIFEST_DIRECTORY
 from research_engine.v10.investigation_snapshot import (
     InvestigationSnapshot, load_investigation_snapshot_id,
     open_investigation_snapshot,
+    CycleSnapshotInputs,
 )
 from research_engine.v10.continuous.question_cycle_state import QuestionCycleStore
 from research_engine.v10.continuous.research_projection import (
@@ -97,6 +100,46 @@ from research_engine.v10.optimisation.optimisation_registry import OptimisationR
 STAGES = ("FRONTIER", "QUESTIONS", "SCIENTIFIC_STATE", "OBSERVATION_SPACE",
           "Q71_PLUS", "Q71_EXECUTION", "VALIDATION_QUEUE", "PROJECTION")
 
+# Minimum seconds between persisted same-phase FRONTIER substage updates. Phase
+# transitions are always persisted; repeated events within one phase are
+# throttled so a long acquisition run cannot hammer the progress store. This is
+# diagnostic only and never affects the governed cycle outcome.
+FRONTIER_PROGRESS_MIN_INTERVAL_SECONDS = 5.0
+
+
+def _frontier_substage_emitter(
+    progress: Callable[..., Any], *,
+    min_interval_seconds: float = FRONTIER_PROGRESS_MIN_INTERVAL_SECONDS,
+) -> tuple[Callable[[Mapping[str, Any]], None], dict[str, Any]]:
+    """Bind a throttled FRONTIER substage emitter to a progress store.
+
+    Phase transitions are always persisted; repeated events within the same
+    phase are dropped until ``min_interval_seconds`` elapses. Returns the
+    emitter plus its mutable counters so callers can report event/persisted
+    counts. Diagnostic only — it writes substage details onto the RUNNING
+    progress document and never touches completed-cycle or scientific state.
+    """
+    state: dict[str, Any] = {
+        "events": 0, "persisted": 0, "last_phase": None, "last_at": 0.0}
+
+    def emit(event: Mapping[str, Any]) -> None:
+        state["events"] += 1
+        phase = str(event.get("phase") or "")
+        now = time.perf_counter()
+        if (phase == state["last_phase"]
+                and now - state["last_at"] < min_interval_seconds):
+            return
+        state["last_phase"] = phase
+        state["last_at"] = now
+        state["persisted"] += 1
+        progress("update_stage", "FRONTIER", {
+            "frontier_substage": dict(event),
+            "frontier_substage_events": state["events"],
+            "frontier_substage_persisted": state["persisted"],
+        })
+
+    return emit, state
+
 
 class ContinuousResearchLoopError(RuntimeError):
     pass
@@ -108,7 +151,13 @@ def _exclusive_continuous_cycle(function: Callable[..., Any]) -> Callable[..., A
         root = Path(kwargs.get("state_root", Path("data/research/continuous")))
         lease_id = uuid.uuid4().hex.upper()
         with ContinuousCycleLease(root / "active_cycle.lock", lease_id=lease_id):
-            return function(*args, **kwargs)
+            if function.__name__ != "run_continuous_research_cycle":
+                return function(*args, **kwargs)
+            inputs = CycleSnapshotInputs(lease_id)
+            try:
+                return function(*args, **kwargs, _shared_inputs=inputs)
+            finally:
+                inputs.close()
     return guarded
 
 
@@ -284,7 +333,7 @@ def _governed_candle_authority_state(
 def _materialize_governed_candle_authority(
     *, snapshot_id: str, manifest_directory: Path | str, source: Any,
     store: M5CandleAuthorityStore, producer: Callable[..., Any] | None,
-    created_at: str,
+    created_at: str, shared_inputs: Any | None = None,
 ) -> tuple[Any, Any, dict[str, Any]]:
     """Admit the governed M5 candle authority for exactly this frontier.
 
@@ -306,9 +355,12 @@ def _materialize_governed_candle_authority(
     try:
         snapshot: InvestigationSnapshot = load_investigation_snapshot_id(
             str(snapshot_id), manifest_directory=Path(manifest_directory))
-        reader = open_investigation_snapshot(
-            str(snapshot_id), source=source,
-            manifest_directory=Path(manifest_directory))
+        reader = (shared_inputs.acquire(
+            snapshot, cycle_id=shared_inputs.cycle_id, source=source,
+            consumer="candle_authority") if shared_inputs is not None
+            else open_investigation_snapshot(
+                str(snapshot_id), source=source,
+                manifest_directory=Path(manifest_directory)))
         shadow_rows = reader.cycle_cached_dataset("shadow_runtime")
         authority = producer(
             shadow_runtime_rows=shadow_rows,
@@ -338,7 +390,7 @@ def _produce_governed_counterfactual_evidence(
     *, snapshot_id: str, manifest_directory: Path | str, source: Any,
     candle_authority: Any, candle_authority_binding: Any,
     store: CounterfactualEvidenceStore, producer: Callable[..., Any] | None,
-    produced_at: str,
+    produced_at: str, shared_inputs: Any | None = None,
 ) -> tuple[Any, Any, dict[str, Any]]:
     """Freeze the governed counterfactual evidence upstream of the worker."""
     state: dict[str, Any] = {
@@ -368,9 +420,12 @@ def _produce_governed_counterfactual_evidence(
     try:
         snapshot: InvestigationSnapshot = load_investigation_snapshot_id(
             str(snapshot_id), manifest_directory=Path(manifest_directory))
-        reader = open_investigation_snapshot(
-            str(snapshot_id), source=source,
-            manifest_directory=Path(manifest_directory))
+        reader = (shared_inputs.acquire(
+            snapshot, cycle_id=shared_inputs.cycle_id, source=source,
+            consumer="counterfactual") if shared_inputs is not None
+            else open_investigation_snapshot(
+                str(snapshot_id), source=source,
+                manifest_directory=Path(manifest_directory)))
         shadow_rows = reader.cycle_cached_dataset("shadow_runtime")
         identities = {
             item.dataset: str(item.content_digest)
@@ -523,6 +578,9 @@ def _run_validation_queue_stage(
 @_exclusive_continuous_cycle
 def run_continuous_research_cycle(
     *, state_root: Path | str = Path("data/research/continuous"),
+    frontier_diagnostic: bool = False,
+    frontier_diagnostic_cache_directory: Path | str | None = None,
+    _shared_inputs: Any | None = None,
     frontier_runner: Callable[..., Any] = run_frontier_snapshot_cycle,
     question_runner: Callable[..., Any] = run_canonical_question_cycle,
     bridge_runner: Callable[..., Any] = run_scientific_state_bridge,
@@ -568,6 +626,17 @@ def run_continuous_research_cycle(
     ever receives the frozen artifact plus its snapshot-pinned membership.
     """
     cycle_attempt_id = uuid.uuid4().hex.upper()
+    from research_engine.data_access.s3_source import S3ResearchDataSource
+    cache_directory = (frontier_diagnostic_cache_directory
+                       if frontier_diagnostic_cache_directory is not None
+                       else Path(state_root) / "verified_object_bodies")
+    cycle_source = ((question_kwargs or {}).get("source") or q71_evidence_source
+                    or (frontier_kwargs or {}).get("source") or S3ResearchDataSource(
+                        verified_cache_directory=cache_directory,
+                        verified_cache_max_bytes=(
+                            int(os.environ.get("FRONTIER_DIAGNOSTIC_CACHE_MAX_BYTES",
+                                               str(1024 * 1024 * 1024)))
+                            if frontier_diagnostic else 512 * 1024 * 1024)))
     root = Path(state_root)
     cycle_store = ContinuousCycleStore(root / "cycles")
     progress_store = ContinuousCycleProgressStore(root / "cycle_progress.json")
@@ -606,6 +675,11 @@ def run_continuous_research_cycle(
 
     def progress(method: str, *args: Any, **kwargs: Any) -> None:
         try:
+            if _shared_inputs is not None:
+                if method == "update_stage" and len(args) > 1:
+                    args = (args[0], {**args[1], "snapshot_inputs": _shared_inputs.diagnostics()}, *args[2:])
+                elif method == "exit_stage":
+                    kwargs["details"] = {**kwargs.get("details", {}), "snapshot_inputs": _shared_inputs.diagnostics()}
             getattr(progress_store, method)(*args, **kwargs)
         except Exception as exc:  # diagnostics must not alter scientific outcomes
             print(f"continuous progress persistence failed: {type(exc).__name__}:{exc}",
@@ -640,18 +714,62 @@ def run_continuous_research_cycle(
         progress("finish", "FAILED", failure_stage=stage)
         return result
 
+    def diagnostic_stopped() -> ContinuousResearchCycleResult:
+        progress("finish", "FRONTIER_DIAGNOSTIC_STOPPED")
+        return ContinuousResearchCycleResult(
+            continuous_cycle_id=_attempt_cycle_id(cycle_attempt_id, "FRONTIER_DIAGNOSTIC"),
+            cycle_outcome="FRONTIER_DIAGNOSTIC_STOPPED",
+            frontier_snapshot_id=_value(frontier, "snapshot_id"),
+            question_cycle_id=None, bridge_run_id=None,
+            q71_agenda_id=None, q71_queue_id=None,
+            validation_queue_version=None, projection_version=None,
+            predecessor_cycle_id=predecessor_id, started_at=started,
+            completed_at=str(_value(frontier, "frontier_end", "") or started),
+            stage_statuses=dict(stages), cycle_attempt_id=cycle_attempt_id,
+            evidence_identity=(None if _value(frontier, "snapshot_id") is None
+                               else str(_value(frontier, "snapshot_id"))),
+        )
+
+    frontier_substage, frontier_substage_state = _frontier_substage_emitter(progress)
+
     progress("enter_stage", "FRONTIER")
     try:
-        frontier = frontier_runner(**dict(frontier_kwargs or {}))
+        frontier_options = dict(frontier_kwargs or {})
+        if frontier_diagnostic:
+            frontier_options.setdefault("state_directory", root / "frontier_state")
+            frontier_options.setdefault("manifest_directory", root / "manifests")
+        if frontier_runner is run_frontier_snapshot_cycle:
+            frontier_options.setdefault("source", cycle_source)
+            frontier_options.setdefault("progress_callback", frontier_substage)
+            # Persist resumable-acquisition progress beside the verified-body
+            # cache so an interrupted FRONTIER attempt is resumed by the next
+            # attempt instead of restarting already-completed datasets.
+            frontier_options.setdefault(
+                "checkpoint_directory",
+                Path(cache_directory).parent / "frontier_acquisition_checkpoint")
+        frontier_io_before = dict(getattr(frontier_options.get("source"), "performance", {}))
+        frontier = frontier_runner(**frontier_options)
         stages["FRONTIER"] = str(_value(frontier, "status", "UNKNOWN"))
         progress("exit_stage", "FRONTIER", status=stages["FRONTIER"], details={
             "snapshot_id": _value(frontier, "snapshot_id"),
             "frontier_id": _value(frontier, "frontier_id"),
+            "frontier_substage_events": frontier_substage_state["events"],
+            "frontier_substage_persisted": frontier_substage_state["persisted"],
+            "frontier_source_io_delta": {
+                key: value - frontier_io_before.get(key, 0)
+                for key, value in getattr(frontier_options.get("source"), "performance", {}).items()},
         })
     except Exception as exc:
         progress("exit_stage", "FRONTIER", status="FAILED", details={
             "failure": f"{type(exc).__name__}:{exc}"})
+        if frontier_diagnostic:
+            stages["FRONTIER"] = "FAILED"
+            return diagnostic_stopped()
         return failed("FRONTIER", exc, identity={"predecessor": predecessor_id})
+    if frontier_diagnostic:
+        # Stop at the stage boundary before projection, questions, or deep work.
+        # This is a diagnostic attempt, never a completed scientific cycle.
+        return diagnostic_stopped()
     started = str(_value(frontier, "frontier_end", "") or started)
     bootstrap_from_existing_snapshot = False
     if _retained_coherent_frontier_is_usable(frontier):
@@ -667,6 +785,18 @@ def run_continuous_research_cycle(
         stale_questions = _stale_evaluation_questions(
             latest, question_state_dir=question_state_dir,
             registry_loader=question_registry_loader)
+        if canonical_projection and canonical_projection.get("replay_implementation_identity"):
+            from research_engine.v10.continuous.canonical_question_cycle import _replay_implementation_identity
+            if (canonical_projection["replay_implementation_identity"] != _replay_implementation_identity()
+                    and not stale_questions):
+                return failed("QUESTIONS", ContinuousResearchLoopError(
+                    "REPLAY_IMPLEMENTATION_CHANGED_REQUIRES_GOVERNED_REVISION"),
+                    identity={"snapshot": _value(frontier, "snapshot_id")})
+            from dataclasses import asdict
+            current_policy = (question_kwargs or {}).get("execution_policy") or execution_policy or ResearchExecutionPolicy()
+            if canonical_projection.get("replay_policy_digest") not in (None, fingerprint(asdict(current_policy))):
+                stale_questions.update({qid: "EXECUTION_POLICY_CHANGED"
+                    for qid in canonical_projection.get("questions", {})})
         if _is_current_successful_projection(
                 latest, frontier, stale_questions, canonical_projection):
             for stage in ("QUESTIONS", "SCIENTIFIC_STATE", "OBSERVATION_SPACE",
@@ -756,6 +886,10 @@ def run_continuous_research_cycle(
         "questions_entered": 0, "questions_completed": 0})
     try:
         question_options = dict(question_kwargs or {})
+        if question_runner is run_canonical_question_cycle:
+            question_options["shared_inputs"] = _shared_inputs
+            question_options["input_cycle_id"] = _shared_inputs.cycle_id
+            question_options.setdefault("source", cycle_source)
 
         def question_progress(event: Mapping[str, Any]) -> None:
             progress("update_stage", "QUESTIONS", event)
@@ -882,7 +1016,7 @@ def run_continuous_research_cycle(
                 snapshot_id=str(_value(frontier, "snapshot_id")),
                 manifest_directory=Path(
                     observation_space_manifest_directory or MANIFEST_DIRECTORY),
-                source=q71_evidence_source,
+                source=q71_evidence_source or cycle_source, shared_inputs=_shared_inputs,
                 store=(m5_candle_authority_store or M5CandleAuthorityStore(
                     candle_authority_directory
                     if candle_authority_directory is not None
@@ -1015,7 +1149,7 @@ def run_continuous_research_cycle(
                 snapshot_id=str(_value(frontier, "snapshot_id")),
                 manifest_directory=Path(
                     observation_space_manifest_directory or MANIFEST_DIRECTORY),
-                source=q71_evidence_source,
+                source=q71_evidence_source or cycle_source, shared_inputs=_shared_inputs,
                 candle_authority=candle_authority,
                 candle_authority_binding=candle_authority_binding,
                 store=(counterfactual_evidence_store
@@ -1030,12 +1164,12 @@ def run_continuous_research_cycle(
             generated_execution = run_generated_question_worker(
                 snapshot_id=str(_value(frontier, "snapshot_id")),
                 evaluator_registry=q71_evaluator_registry,
+                shared_inputs=_shared_inputs, input_cycle_id=_shared_inputs.cycle_id,
                 result_store=res_store, execution_store=exec_store,
                 q71_state_path=root / "q71_state.json",
                 **({"manifest_directory": q71_manifest_directory}
                    if q71_manifest_directory is not None else {}),
-                **({"source": q71_evidence_source}
-                   if q71_evidence_source is not None else {}),
+                source=q71_evidence_source or cycle_source,
                 policy=q71_execution_policy or GeneratedExecutionPolicy(),
                 # Wire 1: hand the SAME cycle's frozen governed counterfactual
                 # evidence artifact and its snapshot-pinned governed membership
@@ -1059,6 +1193,12 @@ def run_continuous_research_cycle(
                      status=stages["Q71_EXECUTION"], details={
                          "executed": len(generated_execution.get("outcomes", [])),
                          "results": len(generated_execution.get("result_ids", [])),
+                         "runner_seconds_inclusive_sum": sum(
+                             row.get("performance", {}).get("runner_seconds_inclusive", 0.0)
+                             for row in generated_execution.get("outcomes", [])),
+                         "provenance_seconds_within_runners_sum": sum(
+                             row.get("performance", {}).get("provenance_seconds_within_runner", 0.0)
+                             for row in generated_execution.get("outcomes", [])),
                          "counterfactual_evidence_present":
                              bool(counterfactual_state.get("present")),
                          "counterfactual_fail_closed_reason":

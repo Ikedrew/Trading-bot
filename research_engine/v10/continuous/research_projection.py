@@ -604,6 +604,12 @@ class ResearchProjectionStore:
         self.directory = Path(directory)
         self.history_directory = self.directory / "history"
         self.latest_path = self.directory / "latest.json"
+        # Bounded in-process recall of the last artifact this instance
+        # verified or wrote.  Keyed by projection version and validated by
+        # canonical content on use; never trusted across processes and never
+        # used to skip governed validation of a changed artifact.
+        self._last_saved_canonical: str | None = None
+        self._last_saved_version: str | None = None
 
     def load_latest(self) -> dict[str, Any] | None:
         if not self.latest_path.exists():
@@ -621,14 +627,34 @@ class ResearchProjectionStore:
         if projection.get("projection_schema") != PROJECTION_SCHEMA or not version:
             raise ResearchProjectionError("PROJECTION_IDENTITY_INVALID")
         path = self.history_directory / f"{version}.json"
+        payload_canonical = canonical_json(projection)
+        # Immutable history must match in full even on a same-instance hit.
+        # In-process recall cannot establish persisted artifact integrity.
         if path.exists():
-            existing = json.loads(path.read_text(encoding="utf-8"))
-            if canonical_json(existing) != canonical_json(projection):
+            try:
+                existing = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                raise ResearchProjectionError("HISTORY_PROJECTION_UNREADABLE") from exc
+            if canonical_json(existing) != payload_canonical:
                 raise ResearchProjectionError("PROJECTION_IDENTITY_COLLISION")
         else:
             self._atomic(path, projection)
-        self._atomic(self.latest_path, projection)
+
+        # latest.json is a replaceable read model. Rebuild missing, corrupt or
+        # incomplete content from the submitted payload verified against history.
+        try:
+            latest = json.loads(self.latest_path.read_text(encoding="utf-8"))
+            latest_matches = canonical_json(latest) == payload_canonical
+        except (OSError, ValueError):
+            latest_matches = False
+        if not latest_matches:
+            self._atomic(self.latest_path, projection)
+        self._remember(version, payload_canonical)
         return path
+
+    def _remember(self, version: str, payload_canonical: str) -> None:
+        self._last_saved_version = version
+        self._last_saved_canonical = payload_canonical
 
     @staticmethod
     def _atomic(path: Path, value: Mapping[str, Any]) -> None:

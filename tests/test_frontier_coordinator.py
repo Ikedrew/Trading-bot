@@ -38,6 +38,36 @@ def _body(
     timestamp: str = "2026-09-25T12:00:00Z",
 ) -> str:
     required = {
+        "trade_truth": {
+            "symbol": "EURUSD",
+            "identity": {"trade_id": "T1", "correlation_id": "C1",
+                         "symbol": "EURUSD"},
+            "execution": {"entry_fill_price": 1.1, "volume_executed": 0.1},
+            "timestamps": {"exit_timestamp_broker": timestamp},
+            "outcome": {"r_multiple_realised": None},
+            "exit": {"exit_reason": "manual_close"},
+        },
+        "execution_results": {
+            "symbol": "EURUSD", "correlation_id": "C1",
+            "result_ok": False, "retcode": 0,
+            "request": {"volume": None}, "submission": {"volume": None},
+            "response": {"retcode": 0}, "fill": {"price": None},
+            "protection_confirmation": {"source": None},
+        },
+        "execution_attempts": {
+            "attempt_id": "AT1", "symbol": "EURUSD", "action_type": "ENTRY",
+            "broker_result": {"ok": False, "retcode": 0},
+        },
+        "protection_audit": {
+            "symbol": "EURUSD", "position_ticket": 1,
+            "correlation_id": "C1", "protection_status": "VERIFIED",
+        },
+        "risk_deviation": {
+            "trade_id": "T1", "symbol": "EURUSD",
+            "risk_classification": "NO_RISK_DATA",
+            "semantic_stage": "post_outcome_analysis",
+            "authority": "diagnostic_projection",
+        },
         "decision_trace": {"symbol": "EURUSD", "entity_id": "E1", "action": "HOLD"},
         "shadow_runtime": {"symbol": "EURUSD", "canonical_opportunity_id": "O1"},
         "execution_context": {"symbol": "EURUSD", "entity_id": "E1", "correlation_id": "C1"},

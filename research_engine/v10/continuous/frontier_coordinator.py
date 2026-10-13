@@ -7,8 +7,12 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timezone
+import faulthandler
 import json
 import os
+import sys
+import tempfile
+import time
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -40,7 +44,13 @@ from research_engine.v10.investigation_snapshot import (
 COORDINATOR_SCHEMA = "canonical_research_frontier_v1"
 STATE_SCHEMA = "canonical_research_frontier_state_v1"
 CANDIDATE_SCHEMA = "canonical_research_frontier_candidate_v1"
+CHECKPOINT_SCHEMA = "canonical_research_frontier_acquisition_checkpoint_v1"
+PARTIAL_CHECKPOINT_SCHEMA = "canonical_research_frontier_partial_dataset_v1"
 DEFAULT_STATE_DIRECTORY = MANIFEST_DIRECTORY.parent / "research_frontier"
+# Bounded disk budget for one resumable-acquisition checkpoint. A roster that
+# would exceed it is simply not persisted (never truncated); the run then
+# behaves exactly like a cold acquisition.
+DEFAULT_CHECKPOINT_MAX_BYTES = 64 * 1024 * 1024
 
 _EVENT_TIMESTAMP_ALIASES: dict[str, tuple[str, ...]] = {
     "trade_truth": (
@@ -126,6 +136,105 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _substage(progress_callback: Callable[[Mapping[str, Any]], None] | None):
+    """Return a safe FRONTIER substage emitter.
+
+    Progress is diagnostic only: a failing or absent callback must never alter
+    the governed frontier outcome, so every emit is best-effort and swallows
+    callback errors. The emitted payload never contains partial evidence and is
+    never written to the completed-cycle/scientific-state authority — the
+    caller decides how to persist it.
+    """
+    def report(phase: str, **values: Any) -> None:
+        if progress_callback is None:
+            return
+        try:
+            progress_callback({"phase": phase, **values})
+        except Exception:
+            pass
+
+    return report
+
+
+class _DiagnosticHeadStackCapture:
+    """Opt-in thread dump for a stalled diagnostic HEAD batch only."""
+
+    def __init__(self, dataset: str):
+        self._directory = (os.getenv("FRONTIER_DIAGNOSTIC_HEAD_STACK_DIR")
+                           if dataset == "trade_truth" else None)
+        self._seconds = os.getenv("FRONTIER_DIAGNOSTIC_HEAD_STACK_SECONDS")
+        self._handle = None
+        self._path: Path | None = None
+        self._attempted = False
+        self._batch_completed = False
+
+    @staticmethod
+    def _note(message: str) -> None:
+        try:
+            print("FRONTIER_HEAD_STACK_CAPTURE:" + message,
+                  file=sys.stderr, flush=True)
+        except OSError:
+            pass
+
+    def observe(self, counts: Mapping[str, Any]) -> None:
+        if (self._attempted or not self._directory or not self._seconds
+                or int(counts.get("queued") or 0) == 0
+                or int(counts.get("completed") or 0) != 0):
+            return
+        self._attempted = True
+        try:
+            delay = float(self._seconds)
+            directory = Path(self._directory)
+            if not 0 < delay <= 60 or not directory.is_absolute() or not directory.is_dir():
+                self._note("invalid_diagnostic_configuration")
+                return
+            path = directory / "trade_truth_head_threads.log"
+            handle = path.open("x", encoding="utf-8")
+            try:
+                faulthandler.dump_traceback_later(delay, repeat=False, file=handle)
+            except Exception:
+                handle.close()
+                path.unlink(missing_ok=True)
+                self._note("arm_failed")
+                return
+            self._handle, self._path = handle, path
+            self._note("armed:" + str(path))
+        except (OSError, ValueError) as exc:
+            self._note("arm_failed:" + type(exc).__name__)
+
+    def completed(self) -> None:
+        """Cancel only after the entire HEAD batch returned normally."""
+        self._batch_completed = True
+        self.close()
+
+    def close(self) -> None:
+        if self._handle is None:
+            return
+        handle, path = self._handle, self._path
+        self._handle, self._path = None, None
+        try:
+            faulthandler.cancel_dump_traceback_later()
+            empty = os.fstat(handle.fileno()).st_size == 0
+            if empty and not self._batch_completed:
+                # A watchdog interruption also enters the coordinator's finally
+                # block. Capture the still-stalled workers before closing the file.
+                faulthandler.dump_traceback(file=handle, all_threads=True)
+                empty = os.fstat(handle.fileno()).st_size == 0
+            handle.close()
+            if empty and path is not None:
+                path.unlink(missing_ok=True)
+            if self._batch_completed:
+                self._note("cancelled_after_completion" if empty else "dump_retained")
+            else:
+                self._note("dump_retained" if not empty else "dump_failed")
+        except Exception as exc:
+            try:
+                handle.close()
+            except OSError:
+                pass
+            self._note("dump_failed:" + type(exc).__name__)
+
+
 def _atomic_json(path: Path, payload: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + ".tmp")
@@ -137,6 +246,26 @@ def _atomic_json(path: Path, payload: Mapping[str, Any]) -> None:
     except Exception:
         temporary.unlink(missing_ok=True)
         raise
+
+
+def _atomic_checkpoint_json(path: Path, payload: Mapping[str, Any]) -> None:
+    """Replace a checkpoint after flushing a unique temp file to disk."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", newline="\n",
+                prefix=path.stem + "-", suffix=".tmp",
+                dir=path.parent, delete=False) as handle:
+            temporary = Path(handle.name)
+            json.dump(payload, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def _write_immutable(path: Path, payload: Mapping[str, Any]) -> None:
@@ -488,6 +617,179 @@ class FrontierStateStore:
         _atomic_json(self.latest_candidate_path, payload)
 
 
+def _checkpoint_boundary(source: S3ResearchDataSource) -> dict[str, Any]:
+    """Source authority that must be unchanged for a checkpoint to be reusable.
+
+    A checkpoint only ever reuses *verified immutable object identities*; a
+    changed listing, changed object identity, or changed content is detected per
+    object at resume time (see :func:`_same_frontier_listing_identity` and the
+    fresh authority HEAD). This boundary therefore binds only the authority that
+    would invalidate the stored verified content outright: the canonical schema
+    versions and the bucket/region/profile the identities were resolved against.
+    """
+    return {
+        "schemas": {name: current_schema(name) for name in BOUND_DATASETS},
+        "bucket": source.bucket,
+        "region": str(getattr(source, "_region", "")),
+        "research_profile": source.research_profile,
+    }
+
+
+class FrontierAcquisitionCheckpointStore:
+    """Atomic, integrity-validated progress store for one frontier acquisition.
+
+    This is deliberately **not** a snapshot authority and is never consulted by
+    question evaluation or any downstream scientific stage. It records, per
+    completed dataset, the exact verified immutable object roster (identity,
+    version, content digest, byte size, row count and event-time coverage) that a
+    completed FRONTIER run would have produced. An interrupted attempt leaves a
+    partial checkpoint; the next attempt reuses those datasets after revalidating
+    their S3 authority instead of re-downloading or re-decoding their bodies.
+
+    Only ``latest_success`` / the immutable manifests can advance the frontier.
+    A checkpoint that is unreadable, malformed, integrity-failing,
+    boundary-mismatched or superseded by a newer success is rejected safely by
+    :meth:`load` (it returns ``None``) so the caller performs a full acquisition.
+    """
+
+    def __init__(
+        self, directory: Path | str, *,
+        max_bytes: int = DEFAULT_CHECKPOINT_MAX_BYTES,
+    ):
+        self.directory = Path(directory)
+        self.path = self.directory / "acquisition_checkpoint.json"
+        self.partial_path = self.directory / "in_progress.json"
+        self.max_bytes = max(0, int(max_bytes))
+
+    def _fingerprint(
+        self, boundary: Mapping[str, Any], datasets: Mapping[str, Any],
+    ) -> str:
+        return fingerprint({
+            "checkpoint_schema": CHECKPOINT_SCHEMA,
+            "boundary": dict(boundary),
+            "datasets": dict(datasets),
+        })
+
+    @staticmethod
+    def _is_newer(updated_at: str, reference: str) -> bool:
+        try:
+            return (datetime.fromisoformat(updated_at)
+                    > datetime.fromisoformat(reference))
+        except (TypeError, ValueError):
+            return False
+
+    def load(
+        self, *, boundary: Mapping[str, Any], not_before: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Return reusable dataset rosters, or ``None`` when unusable."""
+        if not self.path.exists():
+            return None
+        try:
+            value = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            return None
+        if (not isinstance(value, Mapping)
+                or value.get("checkpoint_schema") != CHECKPOINT_SCHEMA):
+            return None
+        datasets = value.get("datasets")
+        if not isinstance(datasets, Mapping):
+            return None
+        if value.get("checkpoint_fingerprint") != self._fingerprint(
+                value.get("boundary") or {}, datasets):
+            return None
+        if canonical_json(value.get("boundary") or {}) != canonical_json(
+                dict(boundary)):
+            return None
+        if not_before:
+            if not self._is_newer(str(value.get("updated_at") or ""),
+                                  str(not_before)):
+                return None
+        return {
+            name: dict(item) for name, item in datasets.items()
+            if isinstance(item, Mapping)
+        }
+
+    def save(
+        self, *, boundary: Mapping[str, Any], datasets: Mapping[str, Any],
+    ) -> bool:
+        """Persist the accumulated rosters atomically; ``False`` if over budget."""
+        payload = {
+            "checkpoint_schema": CHECKPOINT_SCHEMA,
+            "boundary": dict(boundary),
+            "updated_at": _utc_now().isoformat(),
+            "dataset_count": len(datasets),
+            "object_count": sum(
+                len((item or {}).get("objects") or ())
+                for item in datasets.values() if isinstance(item, Mapping)),
+            "datasets": {name: dict(item) for name, item in datasets.items()},
+            "checkpoint_fingerprint": self._fingerprint(boundary, datasets),
+        }
+        try:
+            encoded = json.dumps(payload, sort_keys=True, indent=2) + "\n"
+        except (TypeError, ValueError):
+            return False
+        if len(encoded.encode("utf-8")) > self.max_bytes:
+            # Bounded disk: skip rather than persist a truncated roster.
+            return False
+        self.directory.mkdir(parents=True, exist_ok=True)
+        _atomic_checkpoint_json(self.path, payload)
+        return True
+
+    def clear(self) -> None:
+        """Drop the checkpoint once a full success supersedes it."""
+        try:
+            self.path.unlink(missing_ok=True)
+            self.partial_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    def load_partial(self, *, boundary: Mapping[str, Any],
+                     not_before: str | None = None) -> dict[str, Any] | None:
+        """Load an unfinished dataset only as a fresh-authority reuse prior."""
+        try:
+            value = json.loads(self.partial_path.read_text(encoding="utf-8"))
+            records = value["objects"]
+            if (value.get("checkpoint_schema") != PARTIAL_CHECKPOINT_SCHEMA
+                    or value.get("boundary") != dict(boundary)
+                    or value.get("dataset") not in BOUND_DATASETS
+                    or not isinstance(records, list)
+                    or len(records) != len({str(item["s3_key"]) for item in records})
+                    or any(not isinstance(item, Mapping)
+                           or item.get("version_id") in (None, "", "null")
+                           or not item.get("content_sha256") for item in records)
+                    or value.get("checkpoint_fingerprint") != fingerprint({
+                        "checkpoint_schema": PARTIAL_CHECKPOINT_SCHEMA,
+                        "boundary": dict(boundary),
+                        "dataset": value["dataset"], "objects": records,
+                    })
+                    or (not_before and not self._is_newer(
+                        str(value.get("updated_at") or ""), not_before))):
+                return None
+            return {"dataset": value["dataset"], "objects": records}
+        except (OSError, ValueError, TypeError, KeyError):
+            return None
+
+    def save_partial(self, *, boundary: Mapping[str, Any], dataset: str,
+                     objects: Sequence[Mapping[str, Any]]) -> bool:
+        """Atomically retain only fully verified, versioned object records."""
+        records = [dict(item) for item in objects
+                   if item.get("version_id") not in (None, "", "null")]
+        material = {"checkpoint_schema": PARTIAL_CHECKPOINT_SCHEMA,
+                    "boundary": dict(boundary), "dataset": dataset,
+                    "objects": records}
+        payload = {**material, "updated_at": _utc_now().isoformat(),
+                   "checkpoint_fingerprint": fingerprint(material)}
+        encoded = json.dumps(payload, sort_keys=True).encode("utf-8")
+        if len(encoded) > self.max_bytes:
+            return False
+        self.directory.mkdir(parents=True, exist_ok=True)
+        _atomic_checkpoint_json(self.partial_path, payload)
+        return True
+
+    def clear_partial(self) -> None:
+        self.partial_path.unlink(missing_ok=True)
+
+
 def _same_frontier_listing_identity(
     prior: Mapping[str, Any], current: Mapping[str, Any],
 ) -> bool:
@@ -546,9 +848,12 @@ def _read_frontier_object(
     dataset: str,
     item: Mapping[str, Any],
     as_of_date: date,
+    *,
+    fresh_authority: bool = False,
 ) -> dict[str, Any]:
     rows = source.read_objects_for_freeze(
-        dataset, (item,), expected_schema_version=current_schema(dataset))
+        dataset, (item,), expected_schema_version=current_schema(dataset),
+        _fresh_authority=fresh_authority)
     key = str(item.get("identifier") or "")
     canonical_rows = [
         row for row in rows
@@ -582,12 +887,38 @@ def _discover_verified(
     *,
     as_of_date: date,
     previous: Mapping[str, Any] | None = None,
+    resume: Mapping[str, Any] | None = None,
+    partial: Mapping[str, Any] | None = None,
+    on_partial_verified: Callable[
+        [str, Sequence[Mapping[str, Any]]], None
+    ] | None = None,
+    on_dataset_verified: Callable[
+        [str, Sequence[Mapping[str, Any]], Mapping[str, Any]], None
+    ] | None = None,
+    progress_callback: Callable[[Mapping[str, Any]], None] | None = None,
+    metrics: dict[str, Any] | None = None,
 ) -> tuple[
     dict[str, tuple[dict[str, Any], ...]],
     dict[str, dict[str, str | None]],
     str,
 ]:
-    """Close one roster and download only added or replaced object bodies."""
+    """Close one roster and download only added or replaced object bodies.
+
+    ``resume`` is an optional ``{dataset: {"objects": [...],
+    "event_time_coverage": {...}}}`` roster carried over from an interrupted
+    attempt of the same acquisition boundary. It is used *only* as a reuse prior:
+    every resumed object is still matched against fresh S3 authority (listing
+    identity plus a fresh HEAD for versioned objects) and re-read when changed, so
+    the resulting roster is byte-identical to a cold acquisition.
+    ``on_dataset_verified`` is a best-effort hook fired once per completed dataset
+    so a caller can checkpoint progress; it can never change the governed result.
+    ``metrics`` is an optional diagnostic accumulator (never consulted by the
+    governed result). When supplied it is filled with ``datasets_recovered``,
+    ``objects_reused``, ``revalidation_seconds`` (fresh authority HEAD time spent
+    revalidating recovered datasets), ``recovered_datasets_seconds`` and
+    ``remaining_datasets_seconds`` so the caller can report recovery timing.
+    """
+    emit = _substage(progress_callback)
     listed_by_dataset = {
         dataset: tuple(source.discover_dataset_objects(dataset))
         for dataset in BOUND_DATASETS
@@ -596,21 +927,42 @@ def _discover_verified(
     prior_objects = _prior_objects(previous)
     prior_membership = ((previous or {}).get("frontier") or {}).get(
         "dataset_membership") or {}
+    resume_membership = dict(resume or {})
+    resume_objects = (_prior_objects(
+        {"frontier": {"dataset_membership": resume_membership}})
+        if resume_membership else {})
+    partial_dataset = str((partial or {}).get("dataset") or "")
+    partial_objects = list((partial or {}).get("objects") or ())
+    if metrics is not None:
+        metrics["datasets_recovered"] = len(resume_membership)
+        metrics["objects_reused"] = 0
+        metrics["revalidation_seconds"] = 0.0
+        metrics["recovered_datasets_seconds"] = 0.0
+        metrics["remaining_datasets_seconds"] = 0.0
     verified: dict[str, tuple[dict[str, Any], ...]] = {}
     event_coverage: dict[str, dict[str, str | None]] = {}
 
     for dataset in BOUND_DATASETS:
         listed = listed_by_dataset[dataset]
+        # A resume roster reflects verified work from an interrupted attempt of
+        # this same boundary and is at least as fresh as the last success (a
+        # success clears it), so it takes precedence as the reuse prior.
+        reuse_prior = resume_objects.get(dataset) or prior_objects.get(dataset, ())
         prior_by_key = {
             str(item.get("s3_key") or item.get("identifier") or ""): dict(item)
-            for item in prior_objects.get(dataset, ())
+            for item in reuse_prior
         }
+        if dataset == partial_dataset and not resume_objects.get(dataset):
+            prior_by_key.update({
+                str(item["s3_key"]): dict(item) for item in partial_objects
+            })
         listed_by_key = {
             str(item.get("identifier") or ""): dict(item) for item in listed
         }
         records: dict[str, dict[str, Any]] = {}
         to_read: dict[str, dict[str, Any]] = {}
         version_checks: list[dict[str, Any]] = []
+        reused_keys: set[str] = set()
 
         for key, item in listed_by_key.items():
             prior = prior_by_key.get(key)
@@ -620,24 +972,114 @@ def _discover_verified(
                 to_read[key] = item
             elif prior.get("version_id") is None and item.get("version_id") is None:
                 records[key] = prior
+                reused_keys.add(key)
             else:
                 version_checks.append(item)
 
+        dataset_started = time.perf_counter()
+        emit("FRONTIER_DATASET_STARTED", dataset=dataset,
+             dataset_index=len(verified) + 1, dataset_total=len(BOUND_DATASETS),
+             listed_objects=len(listed), initially_selected_for_read=len(to_read),
+             objects_requiring_head=len(version_checks),
+             source_io_cumulative=dict(source.performance))
+        dataset_head_seconds = 0.0
+        headed_keys: set[str] = set()
         if version_checks:
-            headed = source.head_bound_objects(
-                dataset, version_checks,
-                expected_schema_version=current_schema(dataset))
+            head_started = time.perf_counter()
+            stack_capture = _DiagnosticHeadStackCapture(dataset)
+
+            emit("FRONTIER_VERSION_REVALIDATION_STARTED", dataset=dataset,
+                 dataset_index=len(verified) + 1,
+                 dataset_total=len(BOUND_DATASETS), total=len(version_checks),
+                 source_io_cumulative=source.performance_snapshot())
+
+            def version_progress(counts: Mapping[str, Any]) -> None:
+                stack_capture.observe(counts)
+                phase = ("FRONTIER_VERSION_REVALIDATION_CLIENT_READY"
+                         if counts.get("stage") == "client_ready"
+                         else "FRONTIER_VERSION_REVALIDATION_PROGRESS")
+                emit(phase, dataset=dataset,
+                     dataset_index=len(verified) + 1,
+                     dataset_total=len(BOUND_DATASETS), **dict(counts),
+                     source_io_cumulative=source.performance_snapshot())
+
+            try:
+                headed = source.head_bound_objects(
+                    dataset, version_checks,
+                    expected_schema_version=current_schema(dataset),
+                    progress_callback=version_progress)
+                stack_capture.completed()
+            finally:
+                stack_capture.close()
             for item in headed:
                 key = str(item.get("identifier") or "")
+                headed_keys.add(key)
                 prior = prior_by_key[key]
                 if _same_frontier_object_identity(prior, item):
                     records[key] = prior
+                    reused_keys.add(key)
                 else:
                     to_read[key] = dict(item)
+            dataset_head_seconds += time.perf_counter() - head_started
 
-        for key, item in to_read.items():
-            records[key] = _read_frontier_object(
-                source, dataset, item, as_of_date)
+        candidates = {
+            str(item["identifier"]) for item in source.cached_authority_candidates(
+                dataset, tuple(item for key, item in to_read.items()
+                               if key not in headed_keys))
+        }
+        authority_done = {name: 0 for name in
+                          ("queued", "completed", "successful", "failed", "retried")}
+        read_total = len(to_read)
+        last_object_progress = dataset_started
+        read_items = list(to_read.items())
+        for offset in range(0, read_total, 64):
+            batch = read_items[offset:offset + 64]
+            head_inputs = [item for key, item in batch if key in candidates]
+            if head_inputs:
+                before = dict(authority_done)
+                retries_before = source.performance_snapshot()["head_retries"]
+
+                def authority_progress(counts: Mapping[str, int]) -> None:
+                    cumulative = {name: before[name] + counts[name]
+                                  for name in authority_done}
+                    emit("FRONTIER_AUTHORITY_CHECKS", dataset=dataset,
+                         dataset_index=len(verified) + 1,
+                         dataset_total=len(BOUND_DATASETS), **cumulative,
+                         total=len(candidates),
+                         source_io_cumulative=source.performance_snapshot())
+
+                for item in source.head_bound_objects(
+                        dataset, head_inputs,
+                        expected_schema_version=current_schema(dataset),
+                        max_workers=8, progress_callback=authority_progress):
+                    key = str(item["identifier"])
+                    to_read[key] = dict(item)
+                    headed_keys.add(key)
+                authority_done["queued"] += len(head_inputs)
+                authority_done["completed"] += len(head_inputs)
+                authority_done["successful"] += len(head_inputs)
+                authority_done["retried"] += (
+                    source.performance_snapshot()["head_retries"] - retries_before)
+
+            for read_index, (key, _) in enumerate(batch, offset + 1):
+                records[key] = _read_frontier_object(
+                    source, dataset, to_read[key], as_of_date,
+                    fresh_authority=key in headed_keys)
+                now = time.perf_counter()
+                if (read_index == 1 or read_index % 25 == 0 or read_index == read_total
+                        or now - last_object_progress >= 5.0):
+                    emit("FRONTIER_DATASET_READING", dataset=dataset,
+                         dataset_index=len(verified) + 1,
+                         dataset_total=len(BOUND_DATASETS),
+                         objects_processed=read_index, objects_selected_for_read=read_total,
+                         elapsed_seconds=round(now - dataset_started, 3),
+                         source_io_cumulative=dict(source.performance))
+                    last_object_progress = now
+
+            # Save only complete verified records, after a full read batch.
+            # The next attempt still lists and HEADs each versioned object.
+            if on_partial_verified is not None and read_total:
+                on_partial_verified(dataset, tuple(records.values()))
 
         current_keys = set(listed_by_key)
         prior_keys = set(prior_by_key)
@@ -648,7 +1090,8 @@ def _discover_verified(
         }
         ordered = [records[key] for key in sorted(records)]
         prior_coverage = dict(
-            (prior_membership.get(dataset) or {}).get("event_time_coverage")
+            (resume_membership.get(dataset) or {}).get("event_time_coverage")
+            or (prior_membership.get(dataset) or {}).get("event_time_coverage")
             or {"start": None, "end": None})
 
         if not added_keys and not replaced_keys and not removed_keys:
@@ -680,6 +1123,30 @@ def _discover_verified(
 
         verified[dataset] = tuple(ordered)
         event_coverage[dataset] = coverage
+        dataset_elapsed = time.perf_counter() - dataset_started
+        dataset_reused = len(reused_keys)
+        if metrics is not None:
+            metrics["objects_reused"] += dataset_reused
+            if dataset in resume_membership:
+                metrics["revalidation_seconds"] += dataset_head_seconds
+                metrics["recovered_datasets_seconds"] += dataset_elapsed
+            else:
+                metrics["remaining_datasets_seconds"] += dataset_elapsed
+        if on_dataset_verified is not None:
+            try:
+                on_dataset_verified(dataset, verified[dataset], coverage)
+            except Exception:
+                pass
+        emit("FRONTIER_DATASET_VERIFIED", dataset=dataset,
+             dataset_index=len(verified), dataset_total=len(BOUND_DATASETS),
+             objects=len(ordered), downloaded=len(to_read),
+             objects_reused=dataset_reused,
+             objects_selected_for_read=len(to_read),
+             added=len(added_keys), replaced=len(replaced_keys),
+             removed=len(removed_keys),
+             elapsed_seconds=round(dataset_elapsed, 3),
+             revalidation_seconds=round(dataset_head_seconds, 3),
+             source_io_cumulative=dict(source.performance))
 
     return verified, event_coverage, membership_closed_at
 
@@ -991,9 +1458,29 @@ def run_frontier_snapshot_cycle(
     freezer: Callable[..., InvestigationSnapshot] = freeze_investigation_snapshot,
     incremental_freezer: Callable[..., InvestigationSnapshot] = freeze_investigation_snapshot_incremental,
     verifier: Callable[..., Any] | None = None,
+    progress_callback: Callable[[Mapping[str, Any]], None] | None = None,
+    checkpoint_directory: Path | str | None = None,
 ) -> FrontierCycleResult:
-    """Discover, cohere, freeze, verify, and advance one governed frontier."""
+    """Discover, cohere, freeze, verify, and advance one governed frontier.
+
+    ``progress_callback`` is an optional diagnostic hook. It receives ordered
+    substage events (``phase`` plus counts) so a long FRONTIER run can report
+    meaningful progress. It is best-effort only: it never receives partial
+    evidence and can never change the governed result or the persisted
+    snapshot/state authority.
+
+    ``checkpoint_directory`` optionally points the resumable-acquisition
+    checkpoint at a location that survives across attempts (for example beside
+    the persistent verified-body cache). When omitted it defaults to
+    ``<state_directory>/acquisition``. The checkpoint is never a snapshot
+    authority: it only lets a subsequent attempt reuse already-verified datasets
+    after revalidating their S3 authority.
+    """
+    emit = _substage(progress_callback)
     store = FrontierStateStore(state_directory)
+    checkpoint_store = FrontierAcquisitionCheckpointStore(
+        Path(checkpoint_directory) if checkpoint_directory is not None
+        else Path(state_directory) / "acquisition")
     previous: dict[str, Any] | None = None
     frontier: FrontierSelection | None = None
     try:
@@ -1002,8 +1489,70 @@ def run_frontier_snapshot_cycle(
             previous["last_successful_snapshot_id"])
         resolved_source = source or get_default_source()
         resolved_as_of = as_of_date or _utc_now().date()
+        boundary = _checkpoint_boundary(resolved_source)
+        checkpoint_load_started = time.perf_counter()
+        resume = checkpoint_store.load(
+            boundary=boundary,
+            not_before=(None if previous is None else
+                        (str(previous.get("completion_timestamp") or "") or None)))
+        partial = checkpoint_store.load_partial(
+            boundary=boundary,
+            not_before=(None if previous is None else
+                        (str(previous.get("completion_timestamp") or "") or None)))
+        checkpoint_load_seconds = round(
+            time.perf_counter() - checkpoint_load_started, 6)
+        resumed_objects = sum(
+            len((item or {}).get("objects") or ())
+            for item in (resume or {}).values() if isinstance(item, Mapping))
+        accumulated: dict[str, Any] = {
+            name: dict(item) for name, item in (resume or {}).items()}
+
+        def record_dataset(
+            dataset: str, objects: Sequence[Mapping[str, Any]],
+            coverage: Mapping[str, Any],
+        ) -> None:
+            accumulated[dataset] = {
+                "objects": [dict(item) for item in objects],
+                "event_time_coverage": dict(coverage),
+            }
+            if checkpoint_store.save(boundary=boundary, datasets=accumulated):
+                if partial and partial["dataset"] == dataset:
+                    checkpoint_store.clear_partial()
+
+        def record_partial(
+            dataset: str, objects: Sequence[Mapping[str, Any]],
+        ) -> None:
+            if dataset in (resume or {}):
+                # A complete roster already protects this dataset. Preserve
+                # the unfinished later dataset while revalidating it.
+                return
+            if not checkpoint_store.save_partial(
+                    boundary=boundary, dataset=dataset, objects=objects):
+                raise FrontierCoordinatorError(
+                    FRONTIER_INCOMPLETE, "PARTIAL_CHECKPOINT_CAPACITY_EXCEEDED")
+
+        emit("FRONTIER_DISCOVERY_STARTED", as_of_date=resolved_as_of.isoformat(),
+             predecessor_snapshot_id=predecessor,
+             resumed_datasets=len(resume or {}),
+             resumed_objects=resumed_objects,
+             checkpoint_loaded=resume is not None,
+             partial_dataset=(None if partial is None else partial["dataset"]),
+             partial_objects=(0 if partial is None else len(partial["objects"])),
+             checkpoint_path=str(checkpoint_store.path),
+             checkpoint_load_seconds=checkpoint_load_seconds,
+             datasets_total=len(BOUND_DATASETS))
+        discovery_metrics: dict[str, Any] = {}
         discovered, event_coverage, membership_closed_at = _discover_verified(
-            resolved_source, as_of_date=resolved_as_of, previous=previous)
+            resolved_source, as_of_date=resolved_as_of, previous=previous,
+            resume=resume, partial=partial,
+            on_partial_verified=record_partial,
+            on_dataset_verified=record_dataset,
+            progress_callback=progress_callback, metrics=discovery_metrics)
+        emit("FRONTIER_DISCOVERY_COMPLETED",
+             datasets=len(discovered),
+             objects=sum(len(items) for items in discovered.values()),
+             membership_closed_at=membership_closed_at,
+             **discovery_metrics)
         frontier = _select_frontier(
             discovered,
             event_coverage=event_coverage,
@@ -1012,6 +1561,9 @@ def run_frontier_snapshot_cycle(
             membership_closed_at=membership_closed_at,
         )
         delta = _compute_delta(frontier, previous)
+        emit("FRONTIER_SELECTION_READY", frontier_id=frontier.frontier_id,
+             changed_datasets=len(delta["changed_datasets"]),
+             unchanged_datasets=len(delta["unchanged_datasets"]))
         if not delta["changed_datasets"]:
             if frontier.pending_required_objects:
                 candidate_end, missing = _pending_candidate(frontier)
@@ -1045,7 +1597,12 @@ def run_frontier_snapshot_cycle(
                     pending_missing_datasets=missing,
                 )
                 store.save_incomplete_candidate(result, frontier)
+                emit("FRONTIER_INCOMPLETE", status=FRONTIER_INCOMPLETE,
+                     frontier_id=frontier.frontier_id,
+                     pending_missing_datasets=len(missing))
                 return result
+            emit("FRONTIER_NO_NEW_EVIDENCE", status=NO_NEW_GOVERNED_EVIDENCE,
+                 frontier_id=frontier.frontier_id)
             return FrontierCycleResult(
                 status=NO_NEW_GOVERNED_EVIDENCE,
                 snapshot_id=predecessor,
@@ -1079,6 +1636,7 @@ def run_frontier_snapshot_cycle(
                 for name in BOUND_DATASETS
             },
         )
+        emit("FRONTIER_SNAPSHOT_MATERIALIZED", snapshot_id=snapshot.snapshot_id)
         _assert_snapshot_membership(snapshot, frontier)
         manifest_path = manifest_dir / f"{snapshot.snapshot_id}.json"
         save_investigation_snapshot(snapshot, manifest_path)
@@ -1094,6 +1652,8 @@ def run_frontier_snapshot_cycle(
                 source=resolved_source,
                 manifest_directory=manifest_dir,
             )
+        emit("FRONTIER_VERIFIED", snapshot_id=snapshot.snapshot_id,
+             verification_status="VERIFIED")
 
         completed = _utc_now().isoformat()
         state = {
@@ -1123,6 +1683,10 @@ def run_frontier_snapshot_cycle(
         }
         store.save_success(state)
         store.save_candidate_promotion(snapshot=snapshot, frontier=frontier)
+        # The success supersedes any partial acquisition progress.
+        checkpoint_store.clear()
+        emit("FRONTIER_COMPLETED", snapshot_id=snapshot.snapshot_id,
+             frontier_id=frontier.frontier_id)
         return FrontierCycleResult(
             status=SNAPSHOT_READY,
             snapshot_id=snapshot.snapshot_id,
@@ -1146,6 +1710,7 @@ def run_frontier_snapshot_cycle(
     except FrontierCoordinatorError as exc:
         result = _failure_result(exc, previous, frontier)
         store.save_failure(result, None if frontier is None else frontier.to_dict())
+        emit("FRONTIER_FAILED", status=result.status, reason=exc.reason)
         return result
     except Exception as exc:
         error = FrontierCoordinatorError(
@@ -1153,16 +1718,20 @@ def run_frontier_snapshot_cycle(
         )
         result = _failure_result(error, previous, frontier)
         store.save_failure(result, None if frontier is None else frontier.to_dict())
+        emit("FRONTIER_FAILED", status=result.status, reason=error.reason)
         return result
 
 
 __all__ = [
     "CANDIDATE_SCHEMA",
+    "CHECKPOINT_SCHEMA",
     "COORDINATOR_SCHEMA",
     "DATASET_SCOPE",
+    "DEFAULT_CHECKPOINT_MAX_BYTES",
     "DEFAULT_STATE_DIRECTORY",
     "FRONTIER_INCOMPLETE",
     "FRONTIER_INVALID",
+    "FrontierAcquisitionCheckpointStore",
     "FrontierCoordinatorError",
     "FrontierCycleResult",
     "FrontierSelection",
