@@ -1158,6 +1158,8 @@ def _select_frontier(
     predecessor_snapshot_id: str | None,
     as_of_date: date,
     membership_closed_at: str | None = None,
+    frozen_start_date: str | None = None,
+    frozen_end_date: str | None = None,
 ) -> FrontierSelection:
     for dataset in REQUIRED_DATASETS:
         if not discovered.get(dataset):
@@ -1178,8 +1180,16 @@ def _select_frontier(
         name: sorted({str(item["partition_date"]) for item in discovered[name]})
         for name in REQUIRED_DATASETS
     }
-    start = max(values[0] for values in required_dates.values())
-    end = min(values[-1] for values in required_dates.values())
+
+    # When a frozen baseline snapshot exists, respect its date boundaries
+    # to preserve immutable membership across incremental cycles.
+    if frozen_start_date is not None and frozen_end_date is not None:
+        start = frozen_start_date
+        end = frozen_end_date
+    else:
+        start = max(values[0] for values in required_dates.values())
+        end = min(values[-1] for values in required_dates.values())
+
     if start > end:
         raise FrontierCoordinatorError(
             FRONTIER_INCOMPLETE,
@@ -1553,12 +1563,23 @@ def run_frontier_snapshot_cycle(
              objects=sum(len(items) for items in discovered.values()),
              membership_closed_at=membership_closed_at,
              **discovery_metrics)
+
+        # Extract frozen date boundaries from the predecessor snapshot to preserve
+        # the immutable baseline membership across incremental cycles.
+        frozen_start_date = None
+        frozen_end_date = None
+        if predecessor and "coherent_frontier_start" in previous:
+            frozen_start_date = previous.get("coherent_frontier_start")
+            frozen_end_date = previous.get("coherent_frontier_end")
+
         frontier = _select_frontier(
             discovered,
             event_coverage=event_coverage,
             predecessor_snapshot_id=predecessor,
             as_of_date=resolved_as_of,
             membership_closed_at=membership_closed_at,
+            frozen_start_date=frozen_start_date,
+            frozen_end_date=frozen_end_date,
         )
         delta = _compute_delta(frontier, previous)
         emit("FRONTIER_SELECTION_READY", frontier_id=frontier.frontier_id,
