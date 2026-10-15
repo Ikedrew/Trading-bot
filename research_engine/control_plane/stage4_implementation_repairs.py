@@ -3,7 +3,15 @@ from __future__ import annotations
 import hashlib
 import json
 from typing import Any, Mapping, Sequence
-GOVERNED_USABLE = {"R1": 635, "R2": 635, "L3": 95, "L6": 1852, "L7": 14046, "G2": 261, "G3": 1852, "EX2": 8760}
+HISTORICAL_GOVERNED_USABLE = {
+    "R1": 635, "R2": 635, "L3": 95, "L6": 1852, "L7": 14046,
+    "G2": 261, "G3": 1852, "EX2": 8760,
+}
+# Backwards-compatible name for the Stage-4 assurance snapshot.  These values
+# are historical evidence, not a CURRENT-population definition.  HD11 and HD14
+# expressly retire exact CURRENT count enforcement for L3 and G2.
+GOVERNED_USABLE = HISTORICAL_GOVERNED_USABLE
+CURRENT_EXACT_POPULATION_RETIRED = frozenset({"L3", "G2"})
 FORBIDDEN_RUNNER_N = {"R1": 10803, "R2": 10803, "G2": 22521, "EX2": 9045}
 REPAIR_MODULE_VERSION = "stage4_impl_repairs_v2"
 L7_LABEL_CONTRACT_VERSION = "l7_label_contract_v2"

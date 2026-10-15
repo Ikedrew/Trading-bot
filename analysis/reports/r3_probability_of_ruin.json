@@ -1,67 +1,191 @@
 {
-  "question_id": "R3",
-  "status": "COMPLETE",
-  "overall": {
-    "probability_of_ruin_analytical": 0.015625,
-    "probability_of_ruin_monte_carlo": 0.0,
-    "survival_probability": 1.0,
-    "expected_survival_trades": 5000,
-    "ev_per_trade": 1.4,
-    "win_rate": 0.8,
-    "avg_win_r": 2.0,
-    "avg_loss_r": 1.0,
-    "std_dev_r": 1.206,
-    "required_sample_size": 1000
-  },
-  "confidence": "HIGH",
-  "dataset": {
-    "total_records": 100,
-    "r_multiples_used": 100,
-    "wins": 80,
-    "losses": 20,
-    "coverage": {
-      "outcome": 1.0,
-      "lineage": 1.0,
-      "strategy": 1.0,
-      "contamination_rate": 0.0,
-      "sample_size": 100.0
-    }
-  },
-  "fingerprint": {
-    "dataset_id": "shadow_trades_2026-07-27",
-    "records_used": 100,
-    "records_excluded": 0,
-    "source": "shadow_trades",
-    "validation_score": "UNKNOWN",
-    "generated": "2026-07-27"
-  },
-  "recommendation": "PROMOTE",
   "assumptions": [
-    "Risk per trade: 1.0%",
-    "Ruin threshold: 50% drawdown",
-    "Monte Carlo: 100 simulations, 100 trades forward",
-    "R-multiples sampled with replacement from observed distribution"
+    "a model-conditional estimate on the observed R distribution; it is not a guarantee about future accounts or market conditions"
   ],
-  "warnings": [],
-  "generated": "2026-07-27T02:20:56Z",
-  "provenance": {
-    "experiment_module": "research_engine.experiments.probability_of_ruin",
-    "registry_id": "R3",
-    "function": "run_probability_of_ruin",
-    "pipeline": "Question \u2192 Experiment \u2192 Dataset \u2192 Output \u2192 Knowledge \u2192 Command Centre"
+  "confidence": "INSUFFICIENT_DATA",
+  "dataset": {
+    "calibration_opportunities": 0,
+    "eligible_opportunities": 0,
+    "purged_opportunities": 0,
+    "source": "RW9.1 governed chronological risk-policy evidence",
+    "validation_opportunities": 0
   },
-  "monte_carlo": {
-    "simulations": 10000,
-    "trade_horizon": 5000,
-    "ruin_threshold": 0.5,
-    "ruin_count": 0,
-    "ruin_probability": 0.0,
-    "survival_probability": 1.0,
-    "avg_survival_trades": 5000,
-    "avg_max_drawdown": 0.0,
-    "confidence_interval_95": [
-      0,
-      0.0
-    ]
-  }
+  "epoch": "UNVERIFIED",
+  "fingerprint": {
+    "analytical_digest": "0726ed8af9e8342f70eb9ceb2938330fc0e20c610cfef89004f4796aaf0cf7df",
+    "analytical_observations": 0,
+    "architecture_version": "new_pipeline_v1.2",
+    "dataset_id": "evidence_7330b32305dd07b0",
+    "epoch": "UNVERIFIED",
+    "evidence_provenance": {
+      "components": [
+        {
+          "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 0,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 0,
+          "records_excluded": 0,
+          "records_used": 0,
+          "schema": "decision_trace_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "decision_trace",
+          "state": "UNVERIFIED",
+          "used_epoch_counts": {
+            "CURRENT": 0,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        },
+        {
+          "digest": "cf2dc621710f0128560dc776f8c3c88a9e7ca1c4a46835321ed8f403ca431d1e",
+          "digest_algorithm": "sha256",
+          "epoch_counts": {
+            "CURRENT": 1,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          },
+          "input_records": 1,
+          "records_excluded": 0,
+          "records_used": 1,
+          "schema": "shadow_trades_v1",
+          "selection": "CURRENT_ONLY",
+          "source": "shadow_trades",
+          "state": "CURRENT",
+          "used_epoch_counts": {
+            "CURRENT": 1,
+            "INCOMPATIBLE": 0,
+            "LEGACY": 0,
+            "TRANSITIONAL": 0
+          }
+        }
+      ],
+      "digest": "7330b32305dd07b02adb4a94f9ede5fcf4634a2c7922da9277ce4807bfc6b549",
+      "digest_algorithm": "sha256",
+      "epoch": "UNVERIFIED",
+      "input_records": 1,
+      "records_excluded": 0,
+      "records_used": 1,
+      "state": "UNVERIFIED",
+      "version": "evidence_provenance_v1"
+    },
+    "provenance_validation": "Structured evidence provenance is UNVERIFIED",
+    "records_excluded": 0,
+    "records_used": 1,
+    "source": "MULTI_SOURCE",
+    "sources": [
+      "decision_trace",
+      "shadow_trades"
+    ],
+    "validation_score": "HD10_R3_GOVERNED"
+  },
+  "generated": "2026-10-06T04:32:47Z",
+  "overall": {
+    "experiment": "HD10 ruin_model_v1",
+    "finding": "R3 WAITING_DATA: OUTCOME_COVERAGE_BELOW_REQUIRED, CALIBRATION_OPPORTUNITIES_BELOW_REQUIRED, VALIDATION_OPPORTUNITIES_BELOW_REQUIRED."
+  },
+  "provenance": {
+    "analytical_digest": "0726ed8af9e8342f70eb9ceb2938330fc0e20c610cfef89004f4796aaf0cf7df",
+    "baseline_identity_hash": "969026c5e50a7e3c",
+    "baseline_policy_id": "RISK_POLICY_BASELINE_V1",
+    "baseline_policy_version": 1,
+    "chronology": {
+      "calibration_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "calibration_fraction": 0.7,
+      "first_validation_entry_utc": null,
+      "freeze_rule": "R3 ruin inputs, R4 recovery statistics, and R5 sizing inputs are estimated on calibration evidence only and frozen before the validation window is read",
+      "no_retrofit_rule": "changing an earlier question's frozen evidence after a later question was validated invalidates the later question's result",
+      "order_key": [
+        "entry_utc_epoch_s",
+        "canonical_opportunity_id"
+      ],
+      "purge_rule": "calibration evidence whose outcome window closes at or after the first validation entry UTC is excluded",
+      "source_population_digest": "747c1af79374e60e9a611afed972e4b946e010a56b8e63b564611012d5f1fee7",
+      "split_digest": "aad1aa9ff0065bad077f468d49d6390171e7deb909e7a0578b88381400cf4601",
+      "split_schema_version": "risk_policy_chronology_v1",
+      "validation_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "validation_fraction": 0.30000000000000004,
+      "validation_outcomes_used_for_fitting": false
+    },
+    "contract": {
+      "claim_boundary": "a model-conditional estimate on the observed R distribution; it is not a guarantee about future accounts or market conditions",
+      "estimand_kind": "model-conditional probability of reaching the frozen ruin threshold",
+      "independent_verification": "the analytical and the frozen Monte Carlo estimators must both be reported and must agree within the predeclared tolerance",
+      "no_alternative_model": "no alternative ruin model, ruin threshold, risk-per-trade, or simulation horizon may be substituted or searched within this contract version",
+      "question_id": "R3",
+      "required_outputs": [
+        "analytical ruin probability",
+        "Monte Carlo ruin probability with interval",
+        "survival probability and expected survival trades",
+        "required sample size and attained confidence",
+        "model version, parameters, and the exact seed set used"
+      ],
+      "ruin_model": {
+        "acceptable_ruin_threshold": 0.05,
+        "agreement_rule": "the analytical and Monte Carlo estimates must both be reported and must agree within the predeclared absolute tolerance of 0.05; disagreement invalidates the result instead of producing a finding",
+        "agreement_tolerance": 0.05,
+        "analytical_estimator": "classical gambler's ruin odds-ratio approximation on the observed R distribution",
+        "analytical_formula": "P(ruin) = ((q * avg_loss_r) / (p * avg_win_r)) ** (1 / ruin_threshold_pct)",
+        "claim_boundary": "a model-conditional estimate on the observed R distribution; it is not a guarantee about future accounts or market conditions",
+        "determinism_rule": "re-running the frozen model with the frozen seed set reproduces the Monte Carlo estimate and its interval exactly",
+        "minimum_samples": 50,
+        "model_version": "ruin_model_v1",
+        "monte_carlo": {
+          "estimator": "i.i.d. resampling of observed R-multiples with replacement",
+          "interval": "95% Wilson score interval over the frozen simulation set",
+          "n_simulations": 10000,
+          "trade_horizon": 5000
+        },
+        "no_edge_rule": "a non-positive edge makes the analytical ruin estimate 1.0 rather than undefined",
+        "nondeterminism_forbidden": true,
+        "outcome_coverage": 0.95,
+        "population": "governed completed shadow lifecycles with an outcome R-multiple",
+        "risk_per_trade_pct": 0.01,
+        "ruin_threshold_pct": 0.5,
+        "seed_contract": {
+          "ordering": "ascending, single use, one independent generator per simulation",
+          "per_simulation_seed": "simulation s uses random.Random(seed_base + s) for s = 1..n_simulations",
+          "process_global_state_forbidden": true,
+          "required": true,
+          "seed_base": 20240101
+        }
+      },
+      "scientific_intent": "Given the measured edge, variance, and sizing, what is the probability that the account eventually reaches catastrophic drawdown?",
+      "valid_null": "sufficient governed coverage with an estimable ruin probability is COMPLETE"
+    },
+    "hd10_adjudication_version": "hd10_risk_policy_estimation_and_simulation_v1",
+    "question_id": "R3",
+    "readiness": {
+      "blockers": [
+        "OUTCOME_COVERAGE_BELOW_REQUIRED",
+        "CALIBRATION_OPPORTUNITIES_BELOW_REQUIRED",
+        "VALIDATION_OPPORTUNITIES_BELOW_REQUIRED"
+      ],
+      "calibration_opportunities": 0,
+      "outcome_coverage": 0.0,
+      "purged_calibration_opportunities": 0,
+      "required_calibration_opportunities": 50,
+      "required_outcome_coverage": 0.95,
+      "required_validation_opportunities": 50,
+      "state": "WAITING_DATA",
+      "validation_opportunities": 0
+    },
+    "report_digest": "5eb883f649b7088778fe1e1efc7eab76f6b37e3589cd7ceffd884c70b0cf68f9",
+    "runtime_effect": "NONE",
+    "rw91_evidence_provenance_digest": "1033ebc7b85c7e52aba718e3ae0c51d41495b7f10b487434741fdf9c316bf314",
+    "upstream_authority": {}
+  },
+  "question_id": "R3",
+  "recommendation": "WAITING_DATA",
+  "report_schema_version": "r3_probability_of_ruin_v1",
+  "status": "WAITING_DATA",
+  "warnings": [
+    "Research-only result; runtime effect is NONE."
+  ]
 }

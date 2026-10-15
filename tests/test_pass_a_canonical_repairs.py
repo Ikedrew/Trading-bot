@@ -225,9 +225,10 @@ def test_blocked_reason_survives_normalisation_and_result_serialisation():
         resolution, context, None)
     persisted = result.to_dict()
     restored = CanonicalQuestionResult.from_dict(persisted)
-    assert result.status == "IMPLEMENTATION_BLOCKED"
-    assert result.failure_reason == "DUPLICATE_LINEAGE"
-    assert restored.failure_reason == "DUPLICATE_LINEAGE"
+    assert result.status == "BLOCKED"
+    assert result.reason_code == "DUPLICATE_LINEAGE"
+    assert restored.reason_code == "DUPLICATE_LINEAGE"
+    assert result.failure_reason is None
     assert restored.sample_n == 12
     assert restored.key_metrics["join_rate"] == 0.5
     assert restored.statistical_output == {"conflict_count": 2}
@@ -235,7 +236,7 @@ def test_blocked_reason_survives_normalisation_and_result_serialisation():
     assert restored.evidence_references == ({"dataset": "shadow_runtime"},)
 
 
-def test_blocked_without_explicit_reason_gets_truthful_state_fallback():
+def test_blocked_without_explicit_reason_is_not_called_implementation_failure():
     question = REGISTRY_BY_ID["L3"]
     definition = type("Definition", (), {
         "minimum_sample": None, "definition_version": "pass-a-test",
@@ -252,5 +253,7 @@ def test_blocked_without_explicit_reason_gets_truthful_state_fallback():
     resolution = EvidenceResolution("L3", [], 0, 0, {}, [])
     result = _normalise_report(
         question, definition, {"status": "BLOCKED"}, resolution, context, None)
-    assert result.status == "IMPLEMENTATION_BLOCKED"
-    assert result.failure_reason == "RUNNER_STATUS:BLOCKED"
+    assert result.status == "BLOCKED"
+    assert result.reason_code is None
+    assert result.failure_reason is None
+    assert result.implementation_status == "IMPLEMENTED"

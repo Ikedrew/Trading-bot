@@ -191,7 +191,10 @@ RW8_OPERATIONAL_PROGRESS_IDS = frozenset({"EX1", "EX2", "EX9", "EX10"})
 # level/coverage gates and therefore do not enter the operational baseline.
 RW8_HETEROGENEITY_OPERATIONAL_IDS = frozenset({"EX7"})
 RW9_OPERATIONAL_PROGRESS_IDS = frozenset({"R1", "R2", "R3", "R4", "R5"})
-RW10_OPERATIONAL_PROGRESS_IDS = frozenset({"L1", "L4"})
+# L3 now owns its HD11 runner/report and truthfully fails closed on the absent
+# historical weight-profile and mapping authorities.  Scientific blockage is a
+# valid governed result, not a structural implementation gap.
+RW10_OPERATIONAL_PROGRESS_IDS = frozenset({"L1", "L3", "L4"})
 RW11_DATA_GOVERNANCE_OPERATIONAL_IDS = frozenset({"G1", "G2"})
 RW12_RESEARCH_VALIDITY_OPERATIONAL_IDS = frozenset({"G3"})
 OPERATIONAL_IDS = (
@@ -550,12 +553,10 @@ _assign(("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10"), "RW8", "count
         "The current observational diagnostic cannot establish the registry's alternative exit-policy claim.", human=True)
 _assign(("L1", "L2", "L4"), "RW10", "chronology", "LEARNING_CHRONOLOGY_FOUNDATION",
         "The current runner lacks authoritative temporal/change ordering for the canonical learning claim.", human=True)
-_assign(("L3",), "RW10", "runner mismatch", "LEARNING_CHRONOLOGY_FOUNDATION",
-        "D1 component attribution cannot validate weights, regimes, and strategy mappings.", human=True)
 _assign(("L7",), "RW10", "counterfactual design", "LEARNING_CHRONOLOGY_FOUNDATION",
         "Chronological halves are not authoritative control/candidate A/B arms.", human=True)
-_assign(("L6",), "RW11", "no runner", "NO_RUNNER_GOVERNANCE_FOUNDATION",
-        "The frozen proposed governance contract has no runner, report, readiness, or completion implementation.", human=True)
+_assign(("L6",), "RW11", "evidence authority", "LEARNING_CYCLE_EVIDENCE_FOUNDATION",
+        "The HD12 runner/report exist, but CURRENT frozen per-cycle authority remains unavailable for scientific evaluation.", human=True)
 _assign(("G3",), "RW12", "no runner", "NO_RUNNER_GLOBAL_VALIDITY",
         "The HD15-adjudicated global assessment has no runner, owned report, readiness integration, or CURRENT result.", ("G1", "G2", "L6"), False, NEW_RESEARCH_EVIDENCE)
 
@@ -591,7 +592,7 @@ _QUESTION_ACTIONS = {
     "L1": "Implemented: L1 owns the HD11 CURRENT primary-horizon chronological pattern-degradation runner and unique l1 report.",
     "L4": "Implemented: L4 owns the HD11 CURRENT market-behaviour stability runner and unique l4 report.",
     "L2": "Use actual versioned adaptation/change events and before/after chronological populations; do not call report count learning.",
-    "L3": "Create a unique architecture-validation runner/report covering weights, regime classes, and strategy mappings; retain D1 only as an input.",
+    "L3": "Implemented: L3 owns the HD11 three-subtest runner/report, treats Stage-4 n=95 as historical assurance only, and fails closed on absent weight-profile or mapping authority.",
     "L7": "Assign control/candidate arms from authoritative version/change identity, not first-half/second-half chronology.",
     "L6": "Implement the frozen immutable-snapshot per-conclusion confidence design and unique report.",
     "G1": "Implement the frozen all-question evidence-suitability evaluator and unique report without dashboard evidence.",
@@ -640,8 +641,8 @@ def _blocked_gates(qid: str, category: str) -> GateStatus:
     proposed = qid in WAVE_A_NO_RUNNER_TARGETS
     execution_semantics_adjudicated = qid in {"X3", "EXEC1", "X6"}
     future = qid == "G3"
-    runner_pass = qid in {"D1", "E2", "D6", "PORT-1"}
-    report_pass = qid in {"D6", "PORT-1"} or (
+    runner_pass = qid in {"D1", "E2", "D6", "PORT-1", "L6"}
+    report_pass = qid in {"D6", "PORT-1", "L6"} or (
         qid not in WAVE_A_NO_RUNNER_TARGETS
         and qid not in {"D1", "E2", "E3", "S1", "R1", "R2", "L1", "L3"}
     )
@@ -674,7 +675,7 @@ def _blocked_gates(qid: str, category: str) -> GateStatus:
     if qid in {"X3", "EXEC1", "X6"}:
         scientific = PASS
     else:
-        scientific = PASS if definition_pass or qid == "S7" else (HUMAN_DECISION_REQUIRED if proposed else FAIL)
+        scientific = PASS if definition_pass or qid in {"S7", "L6"} else (HUMAN_DECISION_REQUIRED if proposed else FAIL)
     evidence = FUTURE_EVIDENCE_REQUIRED if future else (PASS if qid in {"D1", "E2", "D6", "PORT-1"} else PARTIAL)
     governance = HUMAN_DECISION_REQUIRED if qid in {
         "P1", "R1", "R2", "R3", "R4", "R5", "L2", "L7",

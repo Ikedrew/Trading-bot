@@ -69,6 +69,7 @@ def _render(data: CockpitData) -> str:
 
 <nav>
 <button class="nav-btn active" onclick="showSection('overview')">Overview</button>
+<button class="nav-btn" onclick="showSection('angles')">Angles</button>
 <button class="nav-btn" onclick="showSection('universes')">Universes</button>
 <button class="nav-btn" onclick="showSection('questions')">Questions</button>
 <button class="nav-btn" onclick="showSection('discovery')">Discovery</button>
@@ -109,6 +110,12 @@ def _render(data: CockpitData) -> str:
 </div>
 <p class="meta">Last cycle: {data.cycle_last_timestamp[:19] if data.cycle_last_timestamp else 'never'} | Status: {data.cycle_last_status} | Triggers: {data.cycle_last_triggers} | Investigated: {data.cycle_last_investigated}</p>
 {_render_universes(data)}
+</section>
+
+<!-- ANGLES -->
+<section id="angles" class="section">
+<h2>Research Angles</h2>
+{_render_universes_section(data)}
 </section>
 
 <!-- UNIVERSES -->

@@ -1,4 +1,4 @@
-"""Governed L3 architecture-assumption evidence audit."""
+87 6hbgvfhuiyghtgfgo9  mujnyhbtgvc.l,mk jnhbvcx bn"""Governed L3 architecture-assumption evidence audit."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -9,19 +9,9 @@ from research_engine.control_plane.stage4_impl_ownership_labels import L3_OWNED_
 from research_engine.registry import learning_adaptation_adjudication as A
 
 # Governed evaluator semantic identity; see component_reward for the contract.
+EVALUATOR_SEMANTIC_VERSION = "l3_hd11_architecture_assumption_validity_v3"
+
 REPORT_SCHEMA_VERSION = "l3_architecture_assumption_validity_v3"
-EVALUATOR_SEMANTIC_VERSIONS = {
-    "run_l3": "l3_hd11_architecture_assumption_validity_v3",
-}
-EVALUATOR_REPORT_SCHEMA_VERSIONS = {
-    "run_l3": {"REPORT_SCHEMA_VERSION": REPORT_SCHEMA_VERSION},
-}
-EVALUATOR_GOVERNANCE_CONTRACT_VERSIONS = {
-    "run_l3": {
-        "HD11_VERSION": A.HD11_VERSION,
-        "LEARNING_VERSION": A.LEARNING_VERSION,
-    },
-}
 REPORT_FILENAME = L3_OWNED_REPORT
 
 

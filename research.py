@@ -35,7 +35,7 @@ _ROOT = Path(__file__).resolve().parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from research_engine.v10.universes.question_bank import QUESTION_BANK, get_question
+from research_engine.v10.universes.legacy_question_bank import QUESTION_BANK, get_question
 from research_engine.v10.universes.models import Universe, Population, QuestionStatus
 from research_engine.v10.runner.primitive_mapping import QUESTION_PARAMETERS, build_full_mapping
 from research_engine.v10.runner.primitives.implementations import build_default_registry

@@ -1,7 +1,12 @@
 """Population adapter helpers (additive Stage 4 repair)."""
 from __future__ import annotations
 from typing import Any, Mapping, Sequence
-from research_engine.control_plane.stage4_implementation_repairs import GOVERNED_USABLE, FORBIDDEN_RUNNER_N, Stage4RepairError
+from research_engine.control_plane.stage4_implementation_repairs import (
+    CURRENT_EXACT_POPULATION_RETIRED,
+    GOVERNED_USABLE,
+    FORBIDDEN_RUNNER_N,
+    Stage4RepairError,
+)
 
 def record_identity(row):
     """Return the canonical opportunity identity from flat or governed rows."""
@@ -24,6 +29,10 @@ def enforce_exact_population(question_id, records, identities=None):
     qid = str(question_id or "").strip().upper()
     if qid not in GOVERNED_USABLE:
         raise Stage4RepairError("UNKNOWN_GOVERNED_QUESTION:" + qid)
+    if qid in CURRENT_EXACT_POPULATION_RETIRED:
+        raise Stage4RepairError(
+            "CURRENT_EXACT_POPULATION_RETIRED:" + qid
+            + ":historical_count=" + str(GOVERNED_USABLE[qid]))
     expected = int(GOVERNED_USABLE[qid])
     rows = list(records or [])
     forbidden = FORBIDDEN_RUNNER_N.get(qid)

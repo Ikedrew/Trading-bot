@@ -30,12 +30,16 @@ def _key(dataset: str, day: str = "2026-09-25", part: str = "part-000.jsonl") ->
     )
 
 
-def _body(dataset: str, marker: str = "base") -> str:
+def _body(
+    dataset: str,
+    marker: str = "base",
+    timestamp: str = "2026-09-25T12:00:00Z",
+) -> str:
     return json.dumps({
         "schema_version": current_schema(dataset),
         "dataset": dataset,
         "marker": marker,
-        "timestamp_utc": "2026-09-25T12:00:00Z",
+        "timestamp_utc": timestamp,
     }, sort_keys=True) + "\n"
 
 
@@ -49,10 +53,12 @@ class MemoryS3:
         self.versions = dict(versions or {})
         self.get_calls = 0
         self.head_calls = 0
+        self.list_calls = 0
 
     def list_objects_v2(self, **kwargs):
         import hashlib
 
+        self.list_calls += 1
         prefix = str(kwargs.get("Prefix") or "")
         return {
             "IsTruncated": False,
@@ -172,14 +178,17 @@ def test_first_cycle_freezes_exact_membership_updates_pointer_and_rerun_is_noop(
     assert state["latest_success_pointer"]["frontier_id"] == first.frontier_id
 
     gets_after_first = fake.get_calls
+    heads_after_first = fake.head_calls
     second = _run(tmp_path, fake, freezer=freezer)
     assert second.status == NO_NEW_GOVERNED_EVIDENCE
     assert second.snapshot_id == first.snapshot_id
     assert second.changed_datasets == ()
     assert set(second.unchanged_datasets) == set(BOUND_DATASETS)
     assert len(calls) == 1
+    # A no-op epoch downloads no bodies and only performs one membership-
+    # discovery HEAD pass (one HEAD per dataset, not per historical object).
     assert fake.get_calls == gets_after_first
-    assert fake.head_calls == len(BOUND_DATASETS)
+    assert fake.head_calls == heads_after_first + len(BOUND_DATASETS)
     assert FrontierStateStore(tmp_path / "state").load_latest_success() == state
 
 
@@ -413,3 +422,90 @@ def test_failed_first_run_does_not_consume_then_repair_creates_first_snapshot(tm
     repaired = _run(tmp_path, fake)
     assert repaired.status == SNAPSHOT_READY
     assert repaired.predecessor_snapshot_id is None
+
+
+def test_discovery_body_reads_scale_with_delta_not_historical_population(tmp_path):
+    """Stage B live-acceptance benchmark: discovery reads only ADDED/REPLACED bodies.
+
+    A large historical population (one object per dataset per day) is frozen once.
+    A single new object is then added; the next discovery pass must download only
+    that one new object's body, not re-download the historical population.
+    """
+    from research_engine.v10.continuous.frontier_coordinator import _discover_verified
+
+    objects: dict[str, str] = {}
+    days = [f"2026-09-{day:02d}" for day in range(1, 16)]  # 15 historical days
+    for day in days:
+        for dataset in BOUND_DATASETS:
+            objects[_key(dataset, day)] = _body(dataset, f"base-{day}")
+    fake = MemoryS3(objects)
+
+    first = _run(tmp_path, fake)
+    assert first.status == SNAPSHOT_READY
+    state = FrontierStateStore(tmp_path / "state").load_latest_success()
+
+    # Small delta: one new object in one dataset at an already-covered date.
+    new_key = _key("trade_truth", "2026-09-15", part="part-001.jsonl")
+    fake.objects[new_key] = _body("trade_truth", "new")
+
+    gets_before = fake.get_calls
+    discovered, _coverage = _discover_verified(
+        _source(fake), as_of_date=date(2026, 10, 3), previous=state)
+    delta_gets = fake.get_calls - gets_before
+
+    # Only the single new object's body is read, not the 150-object population.
+    assert delta_gets == 1
+    assert any(item["s3_key"] == new_key for item in discovered["trade_truth"])
+
+
+def test_replacement_recomputes_event_coverage_without_stale_predecessor_extreme(tmp_path):
+    from research_engine.v10.continuous.frontier_coordinator import _discover_verified
+
+    objects = _objects()
+    early_key = _key("trade_truth", part="part-early.jsonl")
+    late_key = _key("trade_truth", part="part-late.jsonl")
+    objects.pop(_key("trade_truth"))
+    objects[early_key] = _body(
+        "trade_truth", "early", timestamp="2026-09-25T01:00:00Z")
+    objects[late_key] = _body(
+        "trade_truth", "late", timestamp="2026-09-25T20:00:00Z")
+    fake = MemoryS3(objects)
+    first = _run(tmp_path, fake)
+    assert first.status == SNAPSHOT_READY
+    state = FrontierStateStore(tmp_path / "state").load_latest_success()
+
+    fake.objects[early_key] = _body(
+        "trade_truth", "replacement", timestamp="2026-09-25T10:00:00Z")
+    _discovered, coverage = _discover_verified(
+        _source(fake), as_of_date=date(2026, 10, 3), previous=state)
+
+    assert coverage["trade_truth"] == {
+        "start": "2026-09-25T10:00:00+00:00",
+        "end": "2026-09-25T20:00:00+00:00",
+    }
+
+
+def test_removal_recomputes_event_coverage_without_stale_predecessor_extreme(tmp_path):
+    from research_engine.v10.continuous.frontier_coordinator import _discover_verified
+
+    objects = _objects()
+    early_key = _key("trade_truth", part="part-early.jsonl")
+    late_key = _key("trade_truth", part="part-late.jsonl")
+    objects.pop(_key("trade_truth"))
+    objects[early_key] = _body(
+        "trade_truth", "early", timestamp="2026-09-25T01:00:00Z")
+    objects[late_key] = _body(
+        "trade_truth", "late", timestamp="2026-09-25T20:00:00Z")
+    fake = MemoryS3(objects)
+    first = _run(tmp_path, fake)
+    assert first.status == SNAPSHOT_READY
+    state = FrontierStateStore(tmp_path / "state").load_latest_success()
+
+    fake.objects.pop(early_key)
+    _discovered, coverage = _discover_verified(
+        _source(fake), as_of_date=date(2026, 10, 3), previous=state)
+
+    assert coverage["trade_truth"] == {
+        "start": "2026-09-25T20:00:00+00:00",
+        "end": "2026-09-25T20:00:00+00:00",
+    }
