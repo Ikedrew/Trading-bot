@@ -1,0 +1,315 @@
+{
+  "baseline_authority": {
+    "g1_reason_code": "HD13_UNKNOWN_REQUIREMENTS",
+    "g1_requirement_count": 720,
+    "g1_reruns_across_milestone4": 0,
+    "g1_status": "BLOCKED",
+    "g1_unknown_prevents_completion": true,
+    "g1_unknown_requirements": [
+      "R3:field:r_multiple",
+      "R3:field:win_rate",
+      "R3:field:position_size",
+      "R4:field:r_multiple",
+      "R4:field:entry_time",
+      "R5:field:r_multiple",
+      "R5:field:win_rate",
+      "OPP-1:field:opportunity_id",
+      "OPP-1:field:state",
+      "OPP-1:field:overall_score"
+    ],
+    "historical_cache": "C:/Users/ikues/Trading-bot-stage-a-restored/data/research/continuous/verified_object_bodies",
+    "objects": 44938,
+    "question_cycle_id": "QCYCLE-716D74E33929D0D5BCF647014D989274",
+    "question_status_counts": {
+      "ALIAS_OR_SUPERSEDED": 1,
+      "BLOCKED": 10,
+      "COMPLETE": 14,
+      "INSUFFICIENT_DATA": 37,
+      "WAITING_FOR_DATA": 8
+    },
+    "snapshot_id": "ISNAP-5FB0DD9FC4D808D6C23789CD"
+  },
+  "cycle_1": {
+    "duration_seconds": 352.281,
+    "finished_at": "2026-10-15T01:53:58.361471+00:00",
+    "historical_objects_loaded": 0,
+    "outcome": "NO_NEW_RESEARCH_EVIDENCE",
+    "publication_status": "IMPORTED",
+    "questions_reevaluated": 0,
+    "questions_reused": 70,
+    "remote_network_requests": 0,
+    "snapshot_id": "ISNAP-5FB0DD9FC4D808D6C23789CD",
+    "started_at": "2026-10-15T01:47:48.819056+00:00"
+  },
+  "cycle_2": {
+    "original_interruption": {
+      "interrupted_stage": "QUESTIONS",
+      "question_progress_completed": 70,
+      "started_at": "2026-10-15T04:55:15.532057+00:00",
+      "successor_cycle_receipt_at_interruption": false,
+      "timed_out_at": "2026-10-15T05:34:51.402332+00:00",
+      "worker_deadline_seconds": 2400
+    },
+    "overall_outcome": "INCOMPLETE",
+    "question_cycle": {
+      "alias": 1,
+      "changed_question_ids": [
+        "X1",
+        "X3",
+        "EXEC1"
+      ],
+      "cycle_id": "QCYCLE-EB2CA76B313ED76A6D67791B06C7D7D5",
+      "evaluated": 11,
+      "evaluated_ids": [
+        "D6",
+        "EXEC1",
+        "HORIZON-1",
+        "MGMT-1",
+        "MGMT-2",
+        "OPP-1",
+        "PORT-1",
+        "STRAT-1",
+        "X1",
+        "X3",
+        "X6"
+      ],
+      "g1_reevaluated": false,
+      "missing_question_records": [],
+      "recovered_checkpoint_ids": [
+        "D6",
+        "EXEC1",
+        "HORIZON-1",
+        "MGMT-1",
+        "MGMT-2",
+        "OPP-1",
+        "PORT-1",
+        "S1",
+        "STRAT-1",
+        "X1",
+        "X3",
+        "X6"
+      ],
+      "retained": 58,
+      "retained_predecessor_ids": [
+        "D1",
+        "D2",
+        "D3",
+        "D4",
+        "D5",
+        "E1",
+        "E2",
+        "E3",
+        "E4",
+        "E5",
+        "EX1",
+        "EX10",
+        "EX2",
+        "EX3",
+        "EX4",
+        "EX5",
+        "EX6",
+        "EX7",
+        "EX8",
+        "EX9",
+        "G1",
+        "G2",
+        "G3",
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5",
+        "L6",
+        "L7",
+        "M1",
+        "M10",
+        "M11",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "P1",
+        "PROT1",
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "RISK-1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6",
+        "S7",
+        "X2",
+        "X4",
+        "X5"
+      ],
+      "snapshot_id": "ISNAP-5DA156EB1082C659C56EF4B7",
+      "status": "COMPLETED",
+      "status_counts": {
+        "ALIAS_OR_SUPERSEDED": 1,
+        "BLOCKED": 10,
+        "COMPLETE": 14,
+        "INSUFFICIENT_DATA": 37,
+        "WAITING_FOR_DATA": 8
+      },
+      "total": 70
+    },
+    "recovery_attempts": [
+      {
+        "duration_seconds": 5549.244,
+        "failure_reason": "CanonicalQuestionCycleError:VERIFIED_SNAPSHOT_RESOLUTION_FAILED:InvestigationSnapshotError:SNAPSHOT_LOAD_DEADLINE_EXCEEDED:44708/44939:dataset=strategy_observations",
+        "failure_stage": "QUESTIONS",
+        "finished_at": "2026-10-15T06:27:44.775845+00:00",
+        "historical_body_bytes": 615468978,
+        "historical_objects_loaded": 44707,
+        "local_head_calls": 89719,
+        "remote_network_requests": 0,
+        "simulated_increment_gets": 1,
+        "stage_statuses": {
+          "FRONTIER": "NEW_VERIFIED_IMMUTABLE_SNAPSHOT_READY",
+          "OBSERVATION_SPACE": "NOT_RUN",
+          "PROJECTION": "NOT_RUN",
+          "Q71_EXECUTION": "NOT_RUN",
+          "Q71_PLUS": "NOT_RUN",
+          "QUESTIONS": "FAILED",
+          "SCIENTIFIC_STATE": "NOT_RUN",
+          "VALIDATION_QUEUE": "NOT_RUN"
+        },
+        "started_at": "2026-10-15T04:55:15.532057+00:00"
+      },
+      {
+        "duration_seconds": 3792.524,
+        "failure_reason": "ResearchProjectionError:PROJECTION_PERSISTENCE_FAILED",
+        "failure_stage": "PROJECTION",
+        "finished_at": "2026-10-15T07:09:41.968377+00:00",
+        "historical_body_bytes": 615861374,
+        "historical_objects_loaded": 44938,
+        "local_head_calls": 89879,
+        "remote_network_requests": 0,
+        "simulated_increment_gets": 1,
+        "stage_statuses": {
+          "FRONTIER": "NEW_VERIFIED_IMMUTABLE_SNAPSHOT_READY",
+          "OBSERVATION_SPACE": "COMPLETED",
+          "PROJECTION": "FAILED",
+          "Q71_EXECUTION": "SKIPPED_NO_EVALUATOR_REGISTRY",
+          "Q71_PLUS": "COMPLETED",
+          "QUESTIONS": "COMPLETED",
+          "SCIENTIFIC_STATE": "NO_SCIENTIFIC_STATE_CHANGE",
+          "VALIDATION_QUEUE": "COMPLETED"
+        },
+        "started_at": "2026-10-15T06:06:29.444163+00:00"
+      },
+      {
+        "duration_seconds": 3159.498,
+        "failure_reason": "CanonicalQuestionCycleError:REPLAY_IMPLEMENTATION_CHANGED_REQUIRES_GOVERNED_REVISION",
+        "failure_stage": "QUESTIONS",
+        "finished_at": "2026-10-15T07:21:43.528089+00:00",
+        "historical_body_bytes": 0,
+        "historical_objects_loaded": 0,
+        "local_head_calls": 44939,
+        "remote_network_requests": 0,
+        "simulated_increment_gets": 0,
+        "stage_statuses": {
+          "FRONTIER": "NEW_VERIFIED_IMMUTABLE_SNAPSHOT_READY",
+          "OBSERVATION_SPACE": "NOT_RUN",
+          "PROJECTION": "NOT_RUN",
+          "Q71_EXECUTION": "NOT_RUN",
+          "Q71_PLUS": "NOT_RUN",
+          "QUESTIONS": "FAILED",
+          "SCIENTIFIC_STATE": "NOT_RUN",
+          "VALIDATION_QUEUE": "NOT_RUN"
+        },
+        "started_at": "2026-10-15T06:29:04.029914+00:00"
+      }
+    ],
+    "replay_identity": {
+      "checkpoint_implementation_fingerprint": "f6870d933cabe11ec070792db52262db331b026269bf526fe0bbc3aca639aff2",
+      "current_implementation_fingerprint": "f9e5366391c9121ba908e2d63d808334bbf234e793d3d6a0834d1d84fda95af8",
+      "match": false,
+      "source_file_change": "research_engine/v10/continuous/research_projection.py raw line endings changed during attempted persistence repair; semantic Git blob matches, governed raw-byte replay fingerprint does not"
+    },
+    "research_lab": {
+      "lab_latest_sha256": "a589d92c65f1d1daf4283753d1b6f06d98f677a65ace2f64f8ffe981862e3b65",
+      "publication_status": "NOT_PUBLISHED",
+      "source_and_lab_last_completed_parity": true,
+      "source_latest_restored_to_last_completed": true,
+      "source_latest_sha256": "a589d92c65f1d1daf4283753d1b6f06d98f677a65ace2f64f8ffe981862e3b65"
+    },
+    "scientific_reconciliation": {
+      "bridge_run_id": "SBRIDGE-BF801904CD51DE154679ED81D655A02A",
+      "candidates_created": [],
+      "findings_amended": [],
+      "findings_created": [],
+      "hypotheses_created": [],
+      "question_changes_processed": [
+        "EXEC1",
+        "X1",
+        "X3"
+      ],
+      "review_required": [
+        "X1:FINDING_DERIVATION:NO_GOVERNED_GENERIC_SCIENTIFIC_THRESHOLD"
+      ],
+      "status": "NO_SCIENTIFIC_STATE_CHANGE"
+    },
+    "unified_projection": {
+      "completed_continuous_cycle_receipt": false,
+      "history_exists": true,
+      "immutable_history_path": "C:\\Users\\ikues\\Trading-bot-stage-a\\milestone4_autonomy_sequence\\continuous\\projection\\history\\RPROJ-869A144143FD34B1639C52F314443D7E.json",
+      "immutable_history_sha256": "e80bafd8b0022516d3efdd81d50162b22e3617b79caa0331711d21326e5df820"
+    }
+  },
+  "cycle_3": {
+    "outcome": "NOT_RUN",
+    "reason": "Cycle 2 did not commit or publish a successful continuous cycle; subsequent replay rejected implementation identity drift."
+  },
+  "discovery": {
+    "executed_generated_questions": 0,
+    "missing_evaluator_count": 6,
+    "question_states": {
+      "GEN-014E4CEF5A4D84A7": "MISSING_EVALUATOR",
+      "GEN-29D208DCD5025BE7": "MISSING_EVALUATOR",
+      "GEN-5C370FDCA967FC30": "MISSING_EVALUATOR",
+      "GEN-9F41DC67991881B4": "MISSING_EVALUATOR",
+      "GEN-BAC1DF25B3BD43DB": "MISSING_EVALUATOR",
+      "GEN-C4863EE2A15974B8": "MISSING_EVALUATOR"
+    }
+  },
+  "generated_at_utc": "2026-10-15T07:35:58.754033+00:00",
+  "integrity_safeguards": {
+    "commits_or_pushes": 0,
+    "digest_validation_disabled": false,
+    "production_s3_writes": 0,
+    "row_count_validation_disabled": false,
+    "scientific_evaluation_bypassed": false,
+    "snapshots_modified": false,
+    "source_authority_bypassed": false
+  },
+  "remaining_autonomy_gaps": [
+    "Production unified projection persistence failed after the immutable history write; underlying OS exception was hidden by ResearchProjectionError.",
+    "The question replay implementation fingerprint no longer matches the committed checkpoint fingerprint after a local source-file line-ending change; production correctly refused reuse.",
+    "No completed Cycle 2 continuous receipt or Research Lab import exists.",
+    "Cycle 3 unchanged-evidence reuse and unattended repetition remain unproven."
+  ],
+  "report_schema": "milestone4_incremental_acceptance_v1",
+  "successor_authority": {
+    "changed_datasets": [
+      "execution_context"
+    ],
+    "distinct_from_baseline": true,
+    "gate_status": "PASS",
+    "remote_network_requests": 0,
+    "simulated_evidence_id": "supporting/execution_context/schema_version=execution_context_v1/symbol=AUDUSD/date=2026-10-09/part-m4-simulated-001.jsonl",
+    "simulated_sha256": "ef57e82779bd25318528989d83fc8a23da3a90db941f08d18ca912d9a86a39fc",
+    "snapshot_id": "ISNAP-5DA156EB1082C659C56EF4B7",
+    "source_authority_and_reader_checks": "PASSED in integrity gate and completed Cycle 2 question stage"
+  },
+  "verdict": "FAIL",
+  "verdict_reason": "Cycle 2 persisted valid question and scientific outputs but did not commit a successful continuous cycle or publish to Research Lab; Cycle 3 did not run. A further replay was rejected by the production implementation-identity guard."
+}
