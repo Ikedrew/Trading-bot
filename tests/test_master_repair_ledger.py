@@ -233,11 +233,16 @@ def test_rw1_ownership_repair_preserves_historical_gain_and_later_progress():
         assert entry.repair_actions == ()
         assert entry.to_dict()["structurally_operational"] is True
 
+    # L3 is truthfully NOT operational: its RW1-unlocked artifacts still resolve
+    # only to D1, and its dedicated RW10 repair (create a distinct architecture-
+    # validation runner/report) has not been implemented.  It remains a
+    # "runner mismatch" blocker rather than inheriting D1/E2 operational status.
     l3 = MASTER_REPAIR_LEDGER["L3"]
-    assert l3.structurally_operational
-    assert l3.gates.report_ownership == "PASS"
-    assert l3.primary_blocker_category == ""
-    assert l3.proposed_repair_wave == ""
+    assert not l3.structurally_operational
+    assert l3.gates.runner == "FAIL"
+    assert l3.gates.report_ownership == "FAIL"
+    assert l3.primary_blocker_category == "runner mismatch"
+    assert l3.proposed_repair_wave == "RW10"
 
     assert MASTER_REPAIR_LEDGER["L1"].structurally_operational
     assert MASTER_REPAIR_LEDGER["L1"].gates.report_ownership == "PASS"
@@ -263,7 +268,10 @@ def test_rw1_and_rw2_are_recorded_as_implemented_waves_with_evidence():
     assert wave.implementation_evidence
     assert all(item.strip() for item in wave.implementation_evidence)
     assert set(wave.unlocked_not_yet_operational) == {"E3", "S1", "R1", "R2", "L1", "L3"}
-    assert MASTER_REPAIR_LEDGER["L3"].structurally_operational
+    # Of the RW1-unlocked IDs, L1 plus E3/S1/R1/R2 later became operational via
+    # their own waves; L3's dedicated runner/report has not been built, so L3
+    # remains structurally non-operational.
+    assert not MASTER_REPAIR_LEDGER["L3"].structurally_operational
     assert MASTER_REPAIR_LEDGER["L1"].structurally_operational
     for qid in {"E3", "S1", "R1", "R2"}:
         assert MASTER_REPAIR_LEDGER[qid].structurally_operational

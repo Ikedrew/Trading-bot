@@ -11,9 +11,14 @@ passes.
 from __future__ import annotations
 
 import json
+import time
 from types import SimpleNamespace
 
 import pytest
+from botocore.exceptions import (
+    ConnectTimeoutError, ConnectionClosedError, EndpointConnectionError,
+    ReadTimeoutError,
+)
 
 from research_engine.data_access.s3_source import S3ResearchDataSource
 from research_engine.v10.investigation_snapshot import (
@@ -105,6 +110,25 @@ class CountingMemoryS3(MemoryS3):
         return response
 
 # ─── fixture helpers ──────────────────────────────────────────────────────────
+
+
+
+class FlakyTransportS3(CountingMemoryS3):
+    """Inject typed botocore GET failures without network access."""
+
+    def __init__(self, objects, versions, *, target, error_type, failures):
+        super().__init__(objects, versions)
+        self.target = target
+        self.error_type = error_type
+        self.failures_remaining = failures
+
+    def get_object(self, **kwargs):
+        if (kwargs["Key"] == self.target and self.failures_remaining):
+            self.failures_remaining -= 1
+            self.get_calls += 1
+            self.get_version_ids.append((kwargs["Key"], kwargs["VersionId"]))
+            raise self.error_type(endpoint_url="https://example.invalid")
+        return super().get_object(**kwargs)
 
 
 def _versioned(objects):
@@ -467,6 +491,130 @@ def test_transport_failure_records_and_resumes(tmp_path):
 
 
 # ─── cache corruption and failure handling ────────────────────────────────────
+
+
+
+@pytest.mark.parametrize("error_type", [
+    ReadTimeoutError, ConnectionClosedError, ConnectTimeoutError,
+    EndpointConnectionError,
+])
+def test_transient_get_retries_then_verifies(tmp_path, monkeypatch, error_type):
+    objects = _objects()
+    healthy = _versioned(objects)
+    snapshot, manifests = _freeze(tmp_path, healthy, tmp_path / "freeze_cache")
+    _, item = _first_object(snapshot)
+    fake = FlakyTransportS3(
+        dict(objects), {key: "v1" for key in objects},
+        target=item.identifier, error_type=error_type, failures=2)
+    delays = []
+    monkeypatch.setattr(recovery.random, "uniform",
+                        lambda lower, upper: upper / 2)
+    monkeypatch.setattr(recovery.time, "sleep", delays.append)
+
+    report = run_recovery(_config(
+        tmp_path, fake, snapshot, manifests, tmp_path / "recovery_cache",
+        workers=1, max_objects=1, order=recovery.ORDER_MANIFEST))
+    assert report["stop_reason"] == "budget_objects"
+    assert report["retrieved_this_run"] == 1
+    assert report["failures_total"] == 0
+    assert report["authoritative_handoff"] is False
+    assert fake.get_calls == 3
+    assert fake.get_version_ids == [(item.identifier, "v1")] * 3
+    assert delays == [0.25, 0.5]
+    assert fake.list_calls == 0
+
+
+def test_exhausted_transient_get_preserves_progress_and_resumes(
+        tmp_path, monkeypatch):
+    objects = _objects()
+    healthy = _versioned(objects)
+    snapshot, manifests = _freeze(tmp_path, healthy, tmp_path / "freeze_cache")
+    bindings = [(binding.dataset, item) for binding in snapshot.datasets
+                for item in binding.objects]
+    target = bindings[1][1].identifier
+    fake = FlakyTransportS3(
+        dict(objects), {key: "v1" for key in objects},
+        target=target, error_type=ReadTimeoutError, failures=4)
+    monkeypatch.setattr(recovery.time, "sleep", lambda _: None)
+    config = _config(
+        tmp_path, fake, snapshot, manifests, tmp_path / "recovery_cache",
+        workers=1, order=recovery.ORDER_MANIFEST)
+
+    failed = run_recovery(config)
+    assert failed["stop_reason"] == "failure"
+    assert failed["verified_total"] == 1
+    assert failed["failures_total"] == 1
+    assert "RECOVERY_TRANSIENT_ATTEMPTS_EXHAUSTED:4:" in (
+        failed["failures"][0]["error"])
+    assert fake.get_calls == 5
+    assert fake.get_version_ids[:5] == [
+        (bindings[0][1].identifier, "v1"), *[(target, "v1")] * 4]
+    progress = json.loads(config.progress_path.read_text(encoding="utf-8"))
+    assert len(progress["verified"]) == 1
+    assert progress["authoritative"] is False
+    assert not config.handoff_path.exists()
+
+    fake.failures_remaining = 0
+    healed = run_recovery(config)
+    assert healed["verified_before_run"] == 1
+    assert healed["revalidated_prior_objects"] == 1
+    assert healed["retrieved_this_run"] == 9
+    assert healed["verified_total"] == 10
+    assert healed["failures_total"] == 0
+    assert healed["stop_reason"] == "complete"
+    assert healed["authoritative_handoff"] is True
+    assert fake.get_calls == 14
+    assert fake.list_calls == 0
+
+
+
+def test_retry_wait_respects_overall_deadline(tmp_path, monkeypatch):
+    objects = _objects()
+    healthy = _versioned(objects)
+    snapshot, manifests = _freeze(tmp_path, healthy, tmp_path / "freeze_cache")
+    dataset, item = _first_object(snapshot)
+    fake = FlakyTransportS3(
+        dict(objects), {key: "v1" for key in objects},
+        target=item.identifier, error_type=ConnectionClosedError, failures=4)
+    cache = tmp_path / "recovery_cache"
+    source = S3ResearchDataSource(
+        bucket=BUCKET, client=fake, verified_cache_directory=cache)
+    config = _config(tmp_path, fake, snapshot, manifests, cache, workers=1)
+    ctx = recovery._RunContext(
+        primary=source, snapshot=snapshot, config=config,
+        index={item.identifier: (dataset, item)},
+        schema_by_dataset={dataset: source_head_schema(dataset)},
+        deadline=time.perf_counter() + 0.25)
+    monkeypatch.setattr(recovery.random, "uniform", lambda lower, upper: upper)
+    sleeps = []
+    monkeypatch.setattr(recovery.time, "sleep", sleeps.append)
+
+    with pytest.raises(RecoveryError, match="RECOVERY_RETRY_DEADLINE_EXCEEDED"):
+        recovery._process_one(ctx, (dataset, item))
+    assert fake.get_calls == 1
+    assert fake.get_version_ids == [(item.identifier, "v1")]
+    assert sleeps == []
+
+
+def test_integrity_failure_is_never_retried_with_transport_policy(
+        tmp_path, monkeypatch):
+    objects = _objects()
+    healthy = _versioned(objects)
+    snapshot, manifests = _freeze(tmp_path, healthy, tmp_path / "freeze_cache")
+    _, item = _first_object(snapshot)
+    fake = CountingMemoryS3(
+        dict(objects), {key: "v1" for key in objects},
+        tamper={item.identifier: "body"})
+    sleeps = []
+    monkeypatch.setattr(recovery.time, "sleep", sleeps.append)
+    report = run_recovery(_config(
+        tmp_path, fake, snapshot, manifests, tmp_path / "recovery_cache",
+        workers=1, order=recovery.ORDER_MANIFEST))
+    assert report["stop_reason"] == "failure"
+    assert "SNAPSHOT_OBJECT_DIGEST_MISMATCH" in report["failures"][0]["error"]
+    assert fake.get_calls == 1
+    assert sleeps == []
+    assert report["authoritative_handoff"] is False
 
 
 def test_corrupted_cached_body_stops_safely(tmp_path):

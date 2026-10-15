@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -658,18 +659,33 @@ class ResearchProjectionStore:
 
     @staticmethod
     def _atomic(path: Path, value: Mapping[str, Any]) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
         temp = path.with_name(path.name + ".tmp")
         try:
+            path.parent.mkdir(parents=True, exist_ok=True)
             with temp.open("w", encoding="utf-8", newline="\n") as handle:
                 json.dump(value, handle, indent=2, sort_keys=True)
                 handle.write("\n")
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temp, path)
+            for attempt in range(8):
+                try:
+                    os.replace(temp, path)
+                    break
+                except PermissionError as exc:
+                    if (os.name != "nt" or getattr(exc, "winerror", None) not in (5, 32)
+                            or attempt == 7):
+                        raise
+                    time.sleep(min(0.32, 0.02 * (2 ** attempt)))
         except Exception as exc:
-            temp.unlink(missing_ok=True)
-            raise ResearchProjectionError("PROJECTION_PERSISTENCE_FAILED") from exc
+            cleanup_error = ""
+            try:
+                temp.unlink(missing_ok=True)
+            except OSError as cleanup_exc:
+                cleanup_error = f"; cleanup={type(cleanup_exc).__name__}: {cleanup_exc}"
+            raise ResearchProjectionError(
+                f"PROJECTION_PERSISTENCE_FAILED: {type(exc).__name__}: {exc}; "
+                f"path={path}; temp={temp}{cleanup_error}"
+            ) from exc
 
 
 __all__ = ["PROJECTION_SCHEMA", "ResearchProjectionError", "ResearchProjectionStore",

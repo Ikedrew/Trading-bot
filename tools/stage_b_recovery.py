@@ -46,6 +46,7 @@ import argparse
 import hashlib
 import json
 import os
+import random
 import sys
 import tempfile
 import time
@@ -57,12 +58,18 @@ from pathlib import Path
 from threading import Lock, local
 from typing import Any, Callable, Mapping, Sequence
 
+from botocore.exceptions import (
+    ConnectTimeoutError, ConnectionClosedError, EndpointConnectionError,
+    ReadTimeoutError,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from research_engine.control_plane import stage4_dataset_snapshot as D  # noqa: E402
 from research_engine.data_access.s3_source import (  # noqa: E402
+    ResearchDataSourceError,
     S3ResearchDataSource,
 )
 from research_engine.v10.investigation_snapshot import (  # noqa: E402
@@ -85,6 +92,15 @@ DEFAULT_STATE_DIRECTORY = ROOT / "_stageb_evidence" / "recovery"
 CACHE_CAPACITY_MIN_BYTES = 1024 * 1024 * 1024
 # Production client config uses max_pool_connections=16; never exceed it.
 MAX_WORKERS = 16
+# Four total pinned GET attempts, including the initial request. Full jitter
+# keeps concurrent workers from retrying the same outage in lockstep.
+TRANSPORT_MAX_ATTEMPTS = 4
+TRANSPORT_BACKOFF_BASE_SECONDS = 0.5
+TRANSPORT_BACKOFF_CAP_SECONDS = 4.0
+TRANSIENT_GET_ERRORS = (
+    ReadTimeoutError, ConnectionClosedError, ConnectTimeoutError,
+    EndpointConnectionError,
+)
 
 PROGRESS_SCHEMA = "stage_b_recovery_progress_v1"
 REPORT_SCHEMA = "stage_b_recovery_report_v1"
@@ -314,6 +330,17 @@ def _revalidate_one(ctx: _RunContext, identifier: str) -> str:
     return "ok"
 
 
+def _is_transient_get_failure(exc: Exception) -> bool:
+    """Accept only a production-reader GET wrapper with a typed transport cause."""
+    cause = exc.__cause__
+    return (
+        isinstance(exc, ResearchDataSourceError)
+        and str(exc).startswith("AWS ")
+        and "get_object" in str(exc)
+        and isinstance(cause, TRANSIENT_GET_ERRORS)
+    )
+
+
 def _process_one(ctx: _RunContext, candidate: tuple[str, Any]) -> str:
     dataset, item = candidate
     try:
@@ -325,12 +352,38 @@ def _process_one(ctx: _RunContext, candidate: tuple[str, Any]) -> str:
     # Only missing bodies are retrieved, only through the production reader,
     # only with the manifest-pinned VersionId.
     source = ctx.thread_source()
-    source.read_bound_objects(
-        dataset, [item.to_dict()],
-        expected_schema_version=ctx.schema_by_dataset[dataset],
-        start_date=ctx.snapshot.start_date,
-        end_date=ctx.snapshot.end_date,
-    )
+    for attempt in range(1, TRANSPORT_MAX_ATTEMPTS + 1):
+        if ctx.deadline is not None and time.perf_counter() >= ctx.deadline:
+            raise RecoveryError(
+                "RECOVERY_RETRY_DEADLINE_EXCEEDED:" + str(item.identifier))
+        try:
+            source.read_bound_objects(
+                dataset, [item.to_dict()],
+                expected_schema_version=ctx.schema_by_dataset[dataset],
+                start_date=ctx.snapshot.start_date,
+                end_date=ctx.snapshot.end_date,
+            )
+            break
+        except Exception as exc:
+            # The production reader wraps GET failures with an explicit cause.
+            # Only its concrete transport cause is retryable; digest, schema,
+            # version, ETag and other evidence failures have no such cause.
+            if not _is_transient_get_failure(exc):
+                raise
+            if attempt == TRANSPORT_MAX_ATTEMPTS:
+                raise RecoveryError(
+                    "RECOVERY_TRANSIENT_ATTEMPTS_EXHAUSTED:"
+                    f"{attempt}:{item.identifier}:{exc}") from exc
+            ceiling = min(
+                TRANSPORT_BACKOFF_CAP_SECONDS,
+                TRANSPORT_BACKOFF_BASE_SECONDS * (2 ** (attempt - 1)))
+            delay = random.uniform(0.0, ceiling)
+            if (ctx.deadline is not None
+                    and time.perf_counter() + delay >= ctx.deadline):
+                raise RecoveryError(
+                    "RECOVERY_RETRY_DEADLINE_EXCEEDED:"
+                    f"{attempt}:{item.identifier}:{exc}") from exc
+            time.sleep(delay)
     try:
         verify_cached_entry(ctx.primary, dataset, item.to_dict())
     except RecoveryError as exc:

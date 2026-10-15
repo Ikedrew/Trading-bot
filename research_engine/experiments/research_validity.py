@@ -216,7 +216,21 @@ def _dependency(
     validity, _ = resolve_report_validity(
         filename, material, expected_question_id=question_id,
     )
-    report_epoch = _label(material.get("epoch") or material.get("fingerprint", {}).get("epoch"))
+    # Validate BOTH the top-level report epoch and the fingerprint epoch.
+    # A dependency may only be trusted as CURRENT authority when every epoch it
+    # carries is CURRENT and they agree with each other.  Reading only one (or
+    # letting a CURRENT top-level mask a LEGACY fingerprint via ``or``) would
+    # silently trust tampered/contradictory provenance; such conflicts must
+    # fail closed as an authority defect.
+    top_level_epoch = _label(material.get("epoch"))
+    fingerprint_epoch = _label(material.get("fingerprint", {}).get("epoch"))
+    declared_epochs = [value for value in (top_level_epoch, fingerprint_epoch) if value]
+    report_epoch = top_level_epoch or fingerprint_epoch
+    epoch_authority_defect = (
+        not declared_epochs
+        or any(value != epoch for value in declared_epochs)
+        or len(set(declared_epochs)) > 1
+    )
     overall = material.get("overall", {})
     result = ""
     if isinstance(overall, Mapping):
@@ -229,7 +243,7 @@ def _dependency(
     authority_defect = (
         not ownership.allowed
         or validity not in {ReportValidity.VALID_CURRENT, ReportValidity.UNKNOWN}
-        or report_epoch != epoch
+        or epoch_authority_defect
     )
     positive = (
         validity == ReportValidity.VALID_CURRENT

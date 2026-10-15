@@ -362,6 +362,65 @@ def test_unchanged_frontier_with_existing_projection_is_noop(tmp_path):
     assert store.load_latest_attempt() == restarted
 
 
+def test_finalized_results_survive_implementation_fingerprint_change_without_replay(tmp_path):
+    qstate = tmp_path / "questions"
+    canonical = {"cycle_schema": "canonical_question_cycle_v1",
+                 "cycle_id": "QCYCLE-FINAL", **_question_projection(),
+                 "replay_implementation_identity": "ARCHIVED-IMPLEMENTATION"}
+    for index, row in enumerate(canonical["questions"].values()):
+        row["result"]["result_id"] = f"QRESULT-FINAL-{index}"
+    QuestionCycleStore(qstate).save_projection(canonical)
+    published = {
+        "projection_schema": "unified_research_projection_v1",
+        "projection_version": "RPROJ-FINAL",
+        "canonical_question_cycle_id": "QCYCLE-FINAL",
+        "data_frontier": {"snapshot_id": "S1",
+                          "last_successful_research_cycle": "CRCYCLE-PRIOR"},
+        "canonical_questions": list(canonical["questions"].values()),
+    }
+    ResearchProjectionStore(tmp_path / "continuous/projection").save(published)
+    frontier = SimpleNamespace(
+        status="NO_NEW_GOVERNED_EVIDENCE", verification_status="NOT_REQUIRED",
+        snapshot_id="S1", fingerprint="FP", investigation_epoch="E1",
+        frontier_id="FR-UNCHANGED", frontier_start="2026-01-01",
+        frontier_end="2026-01-02", predecessor_snapshot_id="S1",
+        changed_datasets=(), stale_datasets=(), missing_optional_datasets=())
+
+    result = run_continuous_research_cycle(
+        state_root=tmp_path / "continuous", frontier_runner=lambda **_: frontier,
+        question_runner=_unexpected_question_call,
+        question_kwargs={"state_directory": qstate})
+    assert result.cycle_outcome == "NO_NEW_RESEARCH_EVIDENCE"
+    assert result.stage_statuses["QUESTIONS"] == "SKIPPED_NO_NEW_EVIDENCE"
+    assert result.stage_statuses["SCIENTIFIC_STATE"] == "SKIPPED_NO_NEW_EVIDENCE"
+    assert result.projection_version == "RPROJ-FINAL"
+
+    # A same-snapshot projection with mismatched result identities is never
+    # admitted to the no-op path under the changed implementation.
+    canonical["questions"][BASELINE_QUESTION_IDS[0]]["result"]["result_id"] = "OTHER"
+    QuestionCycleStore(qstate).current_path.write_text(
+        json.dumps(canonical), encoding="utf-8")
+    rejected = run_continuous_research_cycle(
+        state_root=tmp_path / "continuous", frontier_runner=lambda **_: frontier,
+        question_runner=_unexpected_question_call,
+        question_kwargs={"state_directory": qstate})
+    assert rejected.cycle_outcome == "FAILED"
+    assert rejected.failure_stage == "QUESTIONS"
+    assert "REPLAY_IMPLEMENTATION_CHANGED_REQUIRES_GOVERNED_REVISION" in rejected.failure_reason
+
+    changed_frontier = SimpleNamespace(**{**vars(frontier),
+        "status": "NEW_VERIFIED_IMMUTABLE_SNAPSHOT_READY",
+        "snapshot_id": "S2", "verification_status": "VERIFIED",
+        "changed_datasets": ("execution_context",)})
+    changed = run_continuous_research_cycle(
+        state_root=tmp_path / "continuous",
+        frontier_runner=lambda **_: changed_frontier,
+        question_runner=_unexpected_question_call,
+        question_kwargs={"state_directory": qstate})
+    assert changed.cycle_outcome == "FAILED"
+    assert changed.failure_stage == "QUESTIONS"
+
+
 def test_active_cycle_lease_prevents_overlap_before_frontier_or_publication(tmp_path):
     state_root = tmp_path / "continuous"
     projection_store = ResearchProjectionStore(state_root / "projection")

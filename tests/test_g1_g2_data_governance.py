@@ -151,6 +151,10 @@ def test_g1_g2_unique_integration_tracks_derived_governance_baseline():
         len(REGISTRY_BY_ID) - len(STRUCTURALLY_NON_OPERATIONAL_IDS),
         len(STRUCTURALLY_NON_OPERATIONAL_IDS),
     )
-    assert STRUCTURALLY_NON_OPERATIONAL_IDS == {"EX5", "EX6", "EX8", "L2", "L6", "L7"}
+    # L3 is truthfully structurally non-operational: it has a "runner mismatch"
+    # blocker and its repair action is still to CREATE a distinct architecture-
+    # validation runner/report (RW10).  Only L1 and L4 of the learning family
+    # have become operational, so L3 remains in the non-operational baseline.
+    assert STRUCTURALLY_NON_OPERATIONAL_IDS == {"EX5", "EX6", "EX8", "L2", "L3", "L6", "L7"}
     assert REGISTRY_BY_ID["G3"].runner_module == "research_engine.experiments.research_validity"
     assert REGISTRY_BY_ID["G3"].report_filename == "g3_research_validity.json"

@@ -260,6 +260,7 @@ def governed_candle_authority_for(
                 "ts_utc_ms": ts, "type": "CANDLE", "symbol": symbol,
                 "timeframe": "M5", "source": "mt5_data",
                 "schema_version": "events_v1",
+                "event_layout_version": 1,
                 "payload": {
                     "ts": ts, "o": 1.100, "h": 1.110, "l": 1.090,
                     "c": close, "v": 100.0,
@@ -1545,6 +1546,7 @@ def _events_objects_for(harness: Harness) -> dict:
                 "ts_utc_ms": ts, "type": "CANDLE", "symbol": symbol,
                 "timeframe": "M5", "source": "mt5_data",
                 "schema_version": "events_v1",
+                "event_layout_version": 1,
                 "payload": {
                     "ts": ts, "o": 1.100, "h": 1.110, "l": 1.090,
                     "c": 1.105, "v": 100.0,

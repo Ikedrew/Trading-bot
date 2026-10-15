@@ -1,6 +1,7 @@
 """Focused operational tests for frozen HD15/G3."""
 from __future__ import annotations
 
+from collections import Counter
 from copy import deepcopy
 import json
 
@@ -169,6 +170,33 @@ def test_g3_authority_defect_is_evaluation_blocked_and_cannot_complete():
     assert report["overall"]["authority_defect_prevents_completion"] is True
 
 
+def test_g3_dependency_epoch_authority_validates_both_top_level_and_fingerprint():
+    """A dependency whose top-level epoch is CURRENT but whose fingerprint epoch
+    is LEGACY (or vice-versa) is contradictory provenance and must fail closed
+    as an authority defect — the CURRENT value must not mask the LEGACY one."""
+    # Case 1: CURRENT top-level, LEGACY fingerprint -> defect -> BLOCKED.
+    g1 = run_g1(datasets={}, as_of_utc=AS_OF)
+    assert g1["epoch"] == "CURRENT"            # build_report captured top-level CURRENT
+    g1["fingerprint"]["epoch"] = "LEGACY"      # fingerprint tampered to LEGACY
+    report = run_g3(question_states=_states(), g1_report=g1, as_of_utc=AS_OF)
+    g1_dep = next(d for d in report["overall"]["dependencies"] if d["question_id"] == "G1")
+    assert g1_dep["authority_defect"] is True
+    assert g1_dep["availability"] == "INVALID_REQUIRED_REPORT_AUTHORITY"
+    assert report["overall"]["finding"] == "EVALUATION_BLOCKED"
+    assert report["status"] == "BLOCKED"
+    assert report["overall"]["authority_defect_prevents_completion"] is True
+
+    # Case 2: LEGACY top-level, CURRENT fingerprint -> also a defect.
+    g1b = run_g1(datasets={}, as_of_utc=AS_OF)
+    g1b["epoch"] = "LEGACY"                     # top-level tampered to LEGACY
+    assert g1b["fingerprint"]["epoch"] == "CURRENT"
+    report_b = run_g3(question_states=_states(), g1_report=g1b, as_of_utc=AS_OF)
+    g1b_dep = next(d for d in report_b["overall"]["dependencies"] if d["question_id"] == "G1")
+    assert g1b_dep["authority_defect"] is True
+    assert report_b["overall"]["finding"] == "EVALUATION_BLOCKED"
+    assert report_b["status"] == "BLOCKED"
+
+
 def test_missing_l6_is_explicit_prevents_positive_but_permits_valid_negative_complete():
     report = run_g3(question_states=_states(), as_of_utc=AS_OF)
     dependencies = {item["question_id"]: item for item in report["overall"]["dependencies"]}
@@ -186,8 +214,52 @@ def test_missing_l6_is_explicit_prevents_positive_but_permits_valid_negative_com
     assert readiness == ReadinessStatus.COMPLETE
 
 
+def _valid_negative_g1(as_of_utc: str) -> dict:
+    """Build a genuinely COMPLETE-but-negative G1 report.
+
+    ``run_g1(datasets={})`` is correctly BLOCKED: with no evidence at all the
+    governed R3/R4/R5/OPP-1 field-coverage checks are genuinely UNKNOWN, and
+    UNKNOWN is fail-closed under HD13 (see
+    tests/test_g1_g2_data_governance.py::...negative_completion_semantics).
+    Genuinely-unknown evidence must never be turned into a completed finding.
+
+    This helper instead derives a valid COMPLETE-negative report from the real
+    assessment by resolving every UNKNOWN requirement to its question's natural
+    non-UNKNOWN state (WAITING_DATA/INSUFFICIENT), then recomputing each
+    question status and the overall exactly as the production aggregation does.
+    The result is COMPLETE (no UNKNOWN remains) and negative (not SUITABLE),
+    and passes validate_g1_report.
+    """
+    from research_engine.experiments.dataset_suitability import (
+        _overall_status, _question_status, validate_g1_report,
+    )
+    report = run_g1(datasets={}, as_of_utc=as_of_utc)
+    for assessment in report["overall"]["assessments"]:
+        for row in assessment["requirements"]:
+            if row["status"] == "UNKNOWN":
+                # A field that could not be assessed on an empty population is,
+                # once evidence is present-but-absent for the field, an
+                # INSUFFICIENT coverage result rather than UNKNOWN.
+                row["status"] = "INSUFFICIENT"
+        assessment["status"] = _question_status(assessment["requirements"])
+    statuses = [item["status"] for item in report["overall"]["assessments"]]
+    report["overall"]["status_counts"] = dict(Counter(statuses))
+    report["overall"]["finding"] = _overall_status(statuses)
+    report["recommendation"] = report["overall"]["finding"]
+    report["overall"]["unknown_prevents_completion"] = "UNKNOWN" in statuses
+    report["status"] = "BLOCKED" if "UNKNOWN" in statuses else "COMPLETE"
+    report["reason_code"] = None if report["status"] == "COMPLETE" else report.get("reason_code")
+    report["reason"] = None if report["status"] == "COMPLETE" else report.get("reason")
+    report["confidence"] = "HIGH" if report["status"] == "COMPLETE" else report["confidence"]
+    valid, reason = validate_g1_report(report)
+    assert valid, reason
+    return report
+
+
 def test_valid_negative_g1_and_below_threshold_g2_prevent_positive_without_invalidating_g3():
-    g1 = run_g1(datasets={}, as_of_utc=AS_OF)
+    # An empty-evidence G1 is correctly BLOCKED (UNKNOWN is fail-closed); a
+    # genuinely COMPLETE-but-negative G1 is derived without inventing evidence.
+    g1 = _valid_negative_g1(AS_OF)
     assert g1["status"] == "COMPLETE" and g1["overall"]["finding"] != "SUITABLE"
     g2 = run_g2(
         decision_records=[_decision(i) for i in range(100)],

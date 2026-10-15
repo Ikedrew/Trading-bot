@@ -1168,7 +1168,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(403, {"error": "BAD_HOST"})
         path = self.path.split("?", 1)[0]
         if path == "/api/health":
-            return self._json(200, {"app": APP_ID, "pid": os.getpid(), "read_only": READ_ONLY, "repository": str(REPO)})
+            return self._json(200, {"app": APP_ID, "pid": os.getpid(), "read_only": READ_ONLY, "repository": str(REPO), "state_root": str(STATE_ROOT)})
         if path == "/api/artifact" and READ_ONLY:
             try:
                 from urllib.parse import parse_qs, urlsplit
@@ -1216,20 +1216,29 @@ def _existing_server() -> bool:
         with urlopen(f"http://{HOST}:{PORT}/api/health", timeout=1.5) as resp:
             health = json.loads(resp.read())
             return (health.get("app") == APP_ID and health.get("read_only") == READ_ONLY
-                    and health.get("repository") == str(REPO))
+                    and health.get("repository") == str(REPO)
+                    and health.get("state_root") == str(STATE_ROOT))
     except Exception:
         return False
 
 
 def main(argv: list[str] | None = None) -> int:
-    global READ_ONLY, HISTORICAL_ARCHIVE, PORT
+    global READ_ONLY, HISTORICAL_ARCHIVE, PORT, STATE_ROOT, PRODUCTION_COVERAGE_DIR, OBSERVATION_SPACE_DIR, LOCK_PATH, LAST_RUN_PATH, PROGRESS_PATH
     parser = argparse.ArgumentParser(description="Human Research Lab")
     parser.add_argument("--open", action="store_true", help="open the browser")
     parser.add_argument("--read-only", action="store_true", default=True, help="disable all research execution (default)")
     parser.add_argument("--archive", type=Path, default=HISTORICAL_ARCHIVE)
+    parser.add_argument("--state-root", type=Path, default=STATE_ROOT,
+                        help="Research Lab publication directory (default: production state root)")
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args(argv)
     READ_ONLY = args.read_only; HISTORICAL_ARCHIVE = args.archive.resolve(); PORT = args.port
+    STATE_ROOT = args.state_root.resolve()
+    PRODUCTION_COVERAGE_DIR = STATE_ROOT / "production_coverage"
+    OBSERVATION_SPACE_DIR = STATE_ROOT / "observation_space"
+    LOCK_PATH = STATE_ROOT / "lab_run.lock"
+    LAST_RUN_PATH = STATE_ROOT / "lab_last_run.json"
+    PROGRESS_PATH = STATE_ROOT / "cycle_progress.json"
     if not 1024 <= PORT <= 65535: parser.error("port must be 1024..65535")
     url = f"http://{HOST}:{PORT}/"
     if _existing_server():

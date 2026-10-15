@@ -117,7 +117,25 @@ def test_duplicate_start_does_not_launch_a_second_child(tmp_path, monkeypatch):
     assert json.loads(server.LOCK_PATH.read_text(encoding="utf-8"))["stage"] == "RUNNING"
 
 
-def test_canonical_question_and_projected_candidate_state():
+def test_canonical_question_and_projected_candidate_state(tmp_path, monkeypatch):
+    state_root = isolate_run_state(tmp_path, monkeypatch)
+    projection_dir = state_root / "projection"
+    projection_dir.mkdir(parents=True)
+    questions = server._registry_questions()
+    next(row for row in questions if row["question_id"] == "L6")["status"] = "INSUFFICIENT_DATA"
+    projection = {
+        "projection_schema": "unified_research_projection_v1",
+        "projection_version": "RPROJ-QUESTION-CANDIDATE-TEST",
+        "canonical_questions": questions,
+        "generated_questions": [], "findings": [], "hypotheses": [],
+        "candidates": [{
+            "candidate_id": "OPT-DP1-002", "status": "SHADOW_VALIDATION_ACTIVE",
+            "source_finding_ids": ["F-DP1-006"], "hypothesis_id": "HYP-DP1-002",
+            "policy_id": "TRAIL_ACT_0_25R_DIST_0_10R_V1", "live_approved": False,
+        }],
+        "investigations_and_work_queues": {}, "what_changed": {},
+    }
+    (projection_dir / "latest.json").write_text(json.dumps(projection), encoding="utf-8")
     state = server.build_state()
     questions = {q["question_id"]: q for q in state["questions"]}
 

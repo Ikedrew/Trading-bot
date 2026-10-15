@@ -45,8 +45,11 @@ def _rows(datasets: Mapping[str, Any], name: str) -> list[dict[str, Any]]:
 def _r_multiples(rows: list[dict[str, Any]]) -> list[float]:
     values: list[float] = []
     for row in rows:
-        for key in ("pnl_r_multiple", "r_multiple"):
+        outcome = row.get("outcome") if isinstance(row.get("outcome"), Mapping) else {}
+        for key in ("pnl_r_multiple", "r_multiple", "r_multiple_realised"):
             value = row.get(key)
+            if value is None:
+                value = outcome.get(key)
             if isinstance(value, (int, float)) and not isinstance(value, bool):
                 values.append(float(value))
                 break

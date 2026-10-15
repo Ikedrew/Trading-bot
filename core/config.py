@@ -14,7 +14,8 @@ try:
 except ImportError:
     pass  # dotenv not required — env vars can be set directly
 
-import MetaTrader5 as mt5
+# MT5 import moved to lazy initialization; see get_mt5_timeframe()
+# This allows offline research operations to work without MT5 module
 
 SYMBOL = "EURUSD", "GBPUSD", "USDJPY","USDCHF","USDCAD", "AUDUSD", "NZDUSD"
 
@@ -56,7 +57,15 @@ SYMBOL_ALIASES = {
 }
 
 
-TIMEFRAME: int = mt5.TIMEFRAME_M5
+# MT5 timeframe constant (TIMEFRAME_M5 = 10 in MT5)
+# Hardcoded to avoid requiring MT5 import for offline operations
+TIMEFRAME: int = 10  # mt5.TIMEFRAME_M5
+
+
+def get_mt5():
+    """Lazy MT5 import — only called during live trading initialization."""
+    import MetaTrader5 as mt5
+    return mt5
 
 
 # ==========================================

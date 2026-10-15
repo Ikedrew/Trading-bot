@@ -8,6 +8,8 @@ import json
 import os
 from pathlib import Path
 import sys
+import tempfile
+import time
 from typing import Any, Mapping
 
 from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
@@ -235,17 +237,29 @@ class ContinuousCycleProgressStore:
 
     def _save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = self.path.with_name(self.path.name + ".tmp")
+        temporary = None
         try:
-            with temporary.open("w", encoding="utf-8", newline="\n") as handle:
+            with tempfile.NamedTemporaryFile(
+                    mode="w", encoding="utf-8", newline="\n",
+                    prefix=self.path.name + ".", suffix=".tmp",
+                    dir=self.path.parent, delete=False) as handle:
+                temporary = Path(handle.name)
                 json.dump(self.document, handle, indent=2, sort_keys=True)
                 handle.write("\n")
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temporary, self.path)
-        except Exception:
-            temporary.unlink(missing_ok=True)
-            raise
+            for attempt in range(8):
+                try:
+                    os.replace(temporary, self.path)
+                    return
+                except PermissionError as exc:
+                    if (os.name != "nt" or getattr(exc, "winerror", None) not in (5, 32)
+                            or attempt == 7):
+                        raise
+                    time.sleep(min(0.32, 0.02 * (2 ** attempt)))
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
 
 
 @dataclass(frozen=True)

@@ -529,6 +529,24 @@ def _minimum_required(question: ResearchQuestion, definition: Any) -> int | None
     return None
 
 
+def _definition_receipt(question: ResearchQuestion, definition: Any,
+                        implementation_status: str) -> dict[str, Any]:
+    return {
+        "question_version": f"{REGISTRY_VERSION}:{definition.definition_version}",
+        "title": question.title,
+        "question_text": question.description,
+        "purpose": definition.research_intent,
+        "evidence_requirements": [source.value for source in question.data_sources],
+        "required_fields": list(question.required_fields),
+        "depends_on": list(question.depends_on),
+        "registered_runner": (
+            f"{question.runner_module}.{question.runner_function}"
+            if question.runner_module and question.runner_function else None),
+        "scientific_owner_id": question.scientific_owner_id or None,
+        "implementation_status": implementation_status,
+    }
+
+
 def _sample_n(report: Mapping[str, Any], resolution: EvidenceResolution) -> int | None:
     candidates: list[Any] = [
         report.get("sample_n"), report.get("sample_size"), report.get("n"),
@@ -871,6 +889,9 @@ def run_canonical_question_cycle(
     execution_revision: str | None = None,
     shared_inputs: Any | None = None,
     input_cycle_id: str | None = None,
+    snapshot_load_deadline_seconds: float | None = None,
+    snapshot_load_progress_interval_seconds: float = 10.0,
+    snapshot_load_progress_interval_objects: int = 100,
 ) -> CanonicalQuestionCycleResult:
     """Execute/retain exactly one result for every canonical question."""
     stage_started = time.perf_counter()
@@ -988,9 +1009,16 @@ def run_canonical_question_cycle(
                      elapsed_seconds_inclusive=round(time.perf_counter() - stage_started, 6))
                 return cycle
     try:
+        load_options = {
+            "progress_callback": lambda event: emit(**event),
+            "deadline_seconds": snapshot_load_deadline_seconds,
+            "progress_interval_seconds": snapshot_load_progress_interval_seconds,
+            "progress_interval_objects": snapshot_load_progress_interval_objects,
+        }
         reader = (shared_inputs.acquire(snapshot, cycle_id=input_cycle_id, source=source,
-                                        consumer="canonical") if shared_inputs is not None
-                  else SnapshotBoundDatasetReader(snapshot, source=source))
+                                        consumer="canonical", **load_options)
+                  if shared_inputs is not None else
+                  SnapshotBoundDatasetReader(snapshot, source=source, **load_options))
     except Exception as exc:
         raise CanonicalQuestionCycleError(
             "VERIFIED_SNAPSHOT_RESOLUTION_FAILED:" + f"{type(exc).__name__}:{exc}") from exc
@@ -1114,14 +1142,23 @@ def run_canonical_question_cycle(
                       if reuse_eligible else None)
         if checkpoint is not None:
             entry = checkpoint["entry"]
-            if entry["planning_classification"] != classification or entry["execution_policy"] != execution:
-                raise CanonicalQuestionCycleError("CHECKPOINT_SCHEDULING_MISMATCH:" + qid)
+            compatible = not (entry["planning_classification"] != classification
+                    or entry["execution_policy"] != execution
+                    or entry.get("definition") != _definition_receipt(
+                        question, definition, entry["result"]["implementation_status"])
+                    or entry.get("evaluation_identity") != identity)
             result = CanonicalQuestionResult.from_dict(entry["result"])
-            if (result.question_id != qid or result.snapshot_id != snapshot.snapshot_id
+            compatible = compatible and not (result.question_id != qid or result.snapshot_id != snapshot.snapshot_id
                     or result.snapshot_fingerprint != snapshot.snapshot_fingerprint
                     or result.investigation_epoch != snapshot.evidence_epoch
-                    or result.evaluation_identity_digest != (identity or {}).get("evaluation_identity_digest")):
-                raise CanonicalQuestionCycleError("CHECKPOINT_EVALUATION_AUTHORITY_MISMATCH:" + qid)
+                    or result.evaluation_identity_digest != (identity or {}).get("evaluation_identity_digest"))
+            if not compatible:
+                if checkpoint["authority"] == replay_authority:
+                    raise CanonicalQuestionCycleError("CHECKPOINT_EVALUATION_AUTHORITY_MISMATCH:" + qid)
+                checkpoint = None  # a historical receipt is stale for this question
+        if checkpoint is not None:
+            entry = checkpoint["entry"]
+            result = CanonicalQuestionResult.from_dict(entry["result"])
             results[qid] = result
             entries[qid] = entry
             deltas[qid] = checkpoint["delta"]
@@ -1382,20 +1419,8 @@ def run_canonical_question_cycle(
             "retained_result_epoch": (
                 result.investigation_epoch if retained else None),
             "waiting_on_question_ids": list(waiting_on_questions),
-            "definition": {
-                "question_version": f"{REGISTRY_VERSION}:{definition.definition_version}",
-                "title": question.title,
-                "question_text": question.description,
-                "purpose": definition.research_intent,
-                "evidence_requirements": [source.value for source in question.data_sources],
-                "required_fields": list(question.required_fields),
-                "depends_on": list(question.depends_on),
-                "registered_runner": (
-                    f"{question.runner_module}.{question.runner_function}"
-                    if question.runner_module and question.runner_function else None),
-                "scientific_owner_id": question.scientific_owner_id or None,
-                "implementation_status": result.implementation_status,
-            },
+            "definition": _definition_receipt(
+                question, definition, result.implementation_status),
             "evaluation_identity": identity,
             "stale_evaluation": (
                 None if classification != REQUIRES_REEVALUATION

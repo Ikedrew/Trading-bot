@@ -7,9 +7,13 @@ registry's requirement vocabulary without running an experiment.
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
+import hashlib
+import json
 import math
+import sys
 import time
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -35,6 +39,149 @@ def measure_normalization():
         yield measurement
     finally:
         _NORMALIZATION_TIMING.reset(token)
+
+
+# ─── Bounded, snapshot-scoped normalization reuse (Milestone 3, G1) ──────────
+# A G1 assessment evaluates 70 questions against one immutable frozen snapshot,
+# building a fresh per-question EvidenceSnapshot each time (bounded-memory
+# contract).  The pure function ``_normalise(record, source)`` is therefore
+# recomputed for the same immutable records across every question that shares a
+# source (``shadow_trades`` is used by 61 questions, ``decision_trace`` by 14).
+#
+# This context provides an OPT-IN, bounded, snapshot-partitioned reuse of that
+# pure result.  It is dormant unless a caller explicitly opens it, so no other
+# evaluation path (continuous cycle, individual runners) is affected.
+#
+# Safety invariants:
+#   * Key is content-derived (sha256 of canonical JSON), never object identity.
+#   * Partitioned by snapshot_id: a different snapshot opens a different context,
+#     so cached rows can never leak across snapshots.
+#   * Bounded: measured retained bytes and deterministic FIFO eviction.
+#   * Copy-on-store and copy-on-return: evaluators never share mutable rows with
+#     the cache or with each other; source evidence is never mutated.
+#   * ``_normalise`` resolution semantics are unchanged — the cache only stores
+#     and returns the exact value the function would otherwise compute.
+_NORMALIZATION_CACHE = ContextVar("normalization_cache", default=None)
+
+DEFAULT_NORMALIZATION_CACHE_MAX_ENTRIES = 300_000
+DEFAULT_NORMALIZATION_CACHE_MAX_BYTES = 512 * 1024 * 1024
+
+
+def _retained_bytes(value: Any, seen: set[int] | None = None) -> int:
+    """Measure Python-owned cache objects, counting shared references once."""
+    if seen is None:
+        seen = set()
+    if id(value) in seen:
+        return 0
+    seen.add(id(value))
+    size = sys.getsizeof(value)
+    if isinstance(value, dict):
+        size += sum(_retained_bytes(k, seen) + _retained_bytes(v, seen)
+                    for k, v in value.items())
+    elif isinstance(value, (tuple, list, set, frozenset)):
+        size += sum(_retained_bytes(item, seen) for item in value)
+    return size
+
+
+class _NormalizationCache:
+    """Deterministic FIFO-bounded content-keyed normalization store.
+
+    One instance is bound to exactly one snapshot_id.  Values are stored as
+    deep copies; callers always receive independent deep copies.
+    """
+
+    __slots__ = ("snapshot_id", "max_entries", "max_bytes", "bytes_used",
+                 "_store", "_sizes", "hits", "misses", "evictions", "oversize_skips")
+
+    def __init__(self, snapshot_id: str, max_entries: int,
+                 max_bytes: int = DEFAULT_NORMALIZATION_CACHE_MAX_BYTES):
+        self.snapshot_id = str(snapshot_id)
+        self.max_entries = max(1, int(max_entries))
+        self.max_bytes = max(0, int(max_bytes))
+        self.bytes_used = 0
+        self._store: "dict[tuple[str, str], dict[str, Any]]" = {}
+        self._sizes: dict[tuple[str, str], int] = {}
+        self.hits = 0
+        self.misses = 0
+        self.evictions = 0
+        self.oversize_skips = 0
+
+    @staticmethod
+    def _content_key(record: dict[str, Any], source: str) -> tuple[str, str]:
+        digest = hashlib.sha256(
+            json.dumps(record, sort_keys=True, separators=(",", ":"),
+                       default=str, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        return (source, digest)
+
+    def get_or_compute(self, record, source, compute):
+        key = self._content_key(record, source)
+        cached = self._store.get(key)
+        if cached is not None:
+            self.hits += 1
+            return deepcopy(cached)
+        self.misses += 1
+        value = compute(record, source)
+        # Store one authoritative deep copy and hand the caller an independent
+        # deep copy.  ``_normalise_uncached`` only shallow-copies the source
+        # record, so its nested structures are shared with the frozen snapshot;
+        # returning a deep copy guarantees a cache miss gives the same isolation
+        # as a cache hit and never lets an evaluator mutate shared state.
+        stored = deepcopy(value)
+        size = _retained_bytes((key, stored))
+        if size > self.max_bytes:
+            self.oversize_skips += 1
+            return deepcopy(stored)
+        while self._store and (len(self._store) >= self.max_entries or
+                               self.bytes_used + size > self.max_bytes):
+            oldest = next(iter(self._store))
+            del self._store[oldest]
+            self.bytes_used -= self._sizes.pop(oldest)
+            self.evictions += 1
+        self._store[key] = stored
+        self._sizes[key] = size
+        self.bytes_used += size
+        return deepcopy(stored)
+
+    def stats(self) -> dict[str, Any]:
+        total = self.hits + self.misses
+        return {
+            "snapshot_id": self.snapshot_id,
+            "max_entries": self.max_entries,
+            "max_bytes": self.max_bytes,
+            "bytes_used": self.bytes_used,
+            "entries": len(self._store),
+            "hits": self.hits,
+            "misses": self.misses,
+            "evictions": self.evictions,
+            "oversize_skips": self.oversize_skips,
+            "hit_rate": (self.hits / total) if total else 0.0,
+        }
+
+
+@contextmanager
+def normalization_cache(
+    snapshot_id: str,
+    *,
+    max_entries: int = DEFAULT_NORMALIZATION_CACHE_MAX_ENTRIES,
+    max_bytes: int = DEFAULT_NORMALIZATION_CACHE_MAX_BYTES,
+):
+    """Activate bounded, snapshot-scoped normalization reuse for its lifetime.
+
+    Nesting with a different snapshot_id is refused rather than silently
+    sharing rows across snapshots.
+    """
+    existing = _NORMALIZATION_CACHE.get()
+    if existing is not None and existing.snapshot_id != str(snapshot_id):
+        raise RuntimeError(
+            "NORMALIZATION_CACHE_SNAPSHOT_CONFLICT:"
+            + f"{existing.snapshot_id}!={snapshot_id}")
+    cache = existing or _NormalizationCache(snapshot_id, max_entries, max_bytes)
+    token = _NORMALIZATION_CACHE.set(cache)
+    try:
+        yield cache
+    finally:
+        _NORMALIZATION_CACHE.reset(token)
 
 
 def _timed_normalization(function):
@@ -578,23 +725,40 @@ def classify_authoritative_evidence_record(
 _record_epoch = classify_evidence_record
 
 
-@_timed_normalization
+_NORMALISE_FIELDS = frozenset(_JOIN_FIELDS) | frozenset(_FIELD_ALIASES) | frozenset({
+    "market_phase", "mfe_r", "mae_r", "exit_reason", "bars_held",
+    "trade_state_progression", "terminal_stage", "terminal_reason", "ev",
+    "policy_trade_allowed", "components", "p_success", "schema_version",
+    "rank_position", "selection_status", "rank_score", "result_ok", "retcode",
+    "action_type", "action_reason", "state", "overall_score", "confidence",
+    "selected", "candidate_id", "spread", "protection_status",
+    "broker_confirmed_sl", "broker_confirmed_tp", "requested_sl", "requested_tp",
+    "risk_classification", "risk_deviation", "actual_risk_R", "planned_risk_R",
+    "account_id", "broker", "broker_server", "broker_symbol", "order_ticket",
+    "deal_ticket", "entry_reference", "fill_price", "slippage_semantic",
+})
+
+
 def _normalise(record: dict[str, Any], source: str) -> dict[str, Any]:
+    """Resolve canonical V1 facts, reusing a bounded snapshot-scoped result
+    when a normalization cache context is active.
+
+    When no cache is active (the default for all non-G1 paths) this is exactly
+    the previous behaviour: compute via ``_normalise_uncached``.  When active,
+    the identical computed value is reused across question assessments; the
+    resolution semantics in ``_normalise_uncached`` are unchanged, and every
+    caller receives an independent deep copy.
+    """
+    cache = _NORMALIZATION_CACHE.get()
+    if cache is None:
+        return _normalise_uncached(record, source)
+    return cache.get_or_compute(record, source, _normalise_uncached)
+
+
+@_timed_normalization
+def _normalise_uncached(record: dict[str, Any], source: str) -> dict[str, Any]:
     result = dict(record)
-    fields = set(_JOIN_FIELDS)
-    fields.update(_FIELD_ALIASES)
-    fields.update({
-        "market_phase", "mfe_r", "mae_r", "exit_reason", "bars_held",
-        "trade_state_progression", "terminal_stage", "terminal_reason", "ev",
-        "policy_trade_allowed", "components", "p_success", "schema_version",
-        "rank_position", "selection_status", "rank_score", "result_ok", "retcode",
-        "action_type", "action_reason", "state", "overall_score", "confidence",
-        "selected", "candidate_id", "spread", "protection_status",
-        "broker_confirmed_sl", "broker_confirmed_tp", "requested_sl", "requested_tp",
-        "risk_classification", "risk_deviation", "actual_risk_R", "planned_risk_R",
-        "account_id", "broker", "broker_server", "broker_symbol", "order_ticket",
-        "deal_ticket", "entry_reference", "fill_price", "slippage_semantic",
-    })
+    fields = _NORMALISE_FIELDS
     for name in fields:
         value = _value(record, name)
         if _present(value):
@@ -604,9 +768,6 @@ def _normalise(record: dict[str, Any], source: str) -> dict[str, Any]:
                     "entry_time", "entry_timestamp", "opened_at", "bar_time",
                     "timestamp_decision_utc",
                 })):
-            # A present-but-unresolvable timestamp set is a conflict/invalid
-            # value, not permission to leave a convenient legacy top-level
-            # field visible to runners.
             for alias in ("entry_time", "entry_timestamp", "opened_at", "bar_time"):
                 result.pop(alias, None)
     r_value = _value(record, "r_multiple")

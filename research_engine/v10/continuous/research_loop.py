@@ -30,7 +30,7 @@ from research_engine.control_plane.governed_m5_candle_authority import (
     bind_m5_candle_authority,
     build_governed_m5_candle_authority,
 )
-from research_engine.control_plane.stage4_dataset_snapshot import canonical_json
+from research_engine.control_plane.stage4_dataset_snapshot import canonical_json, fingerprint
 from research_engine.registry.baseline_manifest import BASELINE_QUESTION_IDS
 from research_engine.lifecycle.generated_research_store import (
     GeneratedResearchStore,
@@ -785,13 +785,12 @@ def run_continuous_research_cycle(
         stale_questions = _stale_evaluation_questions(
             latest, question_state_dir=question_state_dir,
             registry_loader=question_registry_loader)
+        implementation_changed = False
         if canonical_projection and canonical_projection.get("replay_implementation_identity"):
             from research_engine.v10.continuous.canonical_question_cycle import _replay_implementation_identity
-            if (canonical_projection["replay_implementation_identity"] != _replay_implementation_identity()
-                    and not stale_questions):
-                return failed("QUESTIONS", ContinuousResearchLoopError(
-                    "REPLAY_IMPLEMENTATION_CHANGED_REQUIRES_GOVERNED_REVISION"),
-                    identity={"snapshot": _value(frontier, "snapshot_id")})
+            implementation_changed = (
+                canonical_projection["replay_implementation_identity"]
+                != _replay_implementation_identity())
             from dataclasses import asdict
             current_policy = (question_kwargs or {}).get("execution_policy") or execution_policy or ResearchExecutionPolicy()
             if canonical_projection.get("replay_policy_digest") not in (None, fingerprint(asdict(current_policy))):
@@ -857,6 +856,13 @@ def run_continuous_research_cycle(
             cycle_store.save(result, successful=True)
             progress("finish", "COMPLETED")
             return result
+        # A completed, identity-current read model may be retained without
+        # replaying any question checkpoint. If it was not retained, preserve
+        # the strict implementation revision gate before question execution.
+        if implementation_changed and not stale_questions:
+            return failed("QUESTIONS", ContinuousResearchLoopError(
+                "REPLAY_IMPLEMENTATION_CHANGED_REQUIRES_GOVERNED_REVISION"),
+                identity={"snapshot": _value(frontier, "snapshot_id")})
         if not all(str(_value(frontier, name) or "") for name in (
                 "snapshot_id", "fingerprint", "investigation_epoch")):
             return failed("FRONTIER", ContinuousResearchLoopError(

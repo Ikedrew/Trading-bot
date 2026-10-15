@@ -2,12 +2,17 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Any, Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
+import time
+from typing import Any, Callable, Mapping
 
 from research_engine.control_plane.data_governance_snapshot import (
     CurrentSnapshot, freeze_current_snapshot, validate_snapshot_manifest,
 )
-from research_engine.control_plane.evidence_resolver import EvidenceSnapshot, resolve_question_evidence
+from research_engine.control_plane.evidence_resolver import (
+    EvidenceSnapshot, normalization_cache, resolve_question_evidence,
+)
 from research_engine.experiments.experiment_base import build_report
 from research_engine.registry import data_governance_adjudication as A
 from research_engine.registry.definition_validator import (
@@ -30,6 +35,17 @@ EVALUATOR_GOVERNANCE_CONTRACT_VERSIONS = {
 }
 
 REPORT_FILENAME = "g1_dataset_suitability.json"
+_G1_PROGRESS = ContextVar("g1_assessment_progress", default=None)
+
+
+@contextmanager
+def g1_progress(callback: Callable[[dict[str, Any]], None]):
+    """Observe an evaluation without adding diagnostics to governed evidence."""
+    token = _G1_PROGRESS.set(callback)
+    try:
+        yield
+    finally:
+        _G1_PROGRESS.reset(token)
 _REQ_STATUSES = frozenset(A.G1_REQUIREMENT_STATUSES)
 _QUESTION_STATUSES = frozenset(A.G1_QUESTION_STATUSES)
 
@@ -134,70 +150,98 @@ def frozen_requirement_ids(question: Any) -> set[str]:
 
 
 def assess_g1(snapshot: CurrentSnapshot) -> list[dict[str, Any]]:
-    """Assess each canonical definition once without reading any G1 report/state."""
+    """Assess each canonical definition once without reading any G1 report/state.
+
+    All 70 questions evaluate against the same immutable frozen snapshot.  A
+    bounded, snapshot-scoped normalization cache (owned entirely by this call)
+    lets the pure ``_normalise`` result be reused across questions that share a
+    source, without changing resolution semantics, retaining merged
+    populations, or weakening the per-question ``EvidenceSnapshot`` memory
+    contract.  The cache is partitioned by ``snapshot.snapshot_id`` so it can
+    never leak across snapshots, and is released when this call returns.
+    """
     definitions = build_definitions_from_registry(REGISTRY)
     health = validate_all_definitions(definitions)
     assessments: list[dict[str, Any]] = []
-    for question in REGISTRY:
-        qid = question.id
-        # A question needs at most its declared sources.  A short-lived cache
-        # prevents G1 from retaining the complete record bodies of all sources.
-        evidence_snapshot = EvidenceSnapshot(loader=snapshot.records)
-        resolution = resolve_question_evidence(question, evidence_snapshot)
-        rows: list[dict[str, Any]] = []
-        science = health[qid]
-        science_blocked = science.has_errors or science.is_under_specified
-        rows.append(_row(
-            qid, "SCIENCE_CONTRACT", f"{qid}:science_contract", "FAIL" if science_blocked else "PASS",
-            "Frozen effective definition is blocked/under-specified" if science_blocked else "Frozen effective definition is internally resolvable",
-            snapshot, observed=science.to_dict(),
-        ))
-        source_state = {item.name: item for item in resolution.requirements if item.type == "dataset_presence"}
-        for source in dict.fromkeys(item.value for item in question.data_sources):
-            result = source_state.get(source)
-            passed = bool(result and result.satisfied is True)
-            rows.append(_row(qid, "SOURCE_AUTHORITY", f"{qid}:source:{source}", "PASS" if passed else "FAIL",
-                             result.reason if result else "Declared source was not resolved", snapshot, source, result.current if result else None))
-        fields = {item.name: item for item in resolution.requirements if item.type == "required_field"}
-        population = int(resolution.metrics.get("total_current_population", 0) or 0)
-        for field in question.required_fields:
-            result = fields.get(field)
-            if result is None or result.satisfied is None:
-                status = "UNKNOWN"
-            elif population == 0:
-                status = "PASS"  # declared schema path; emptiness belongs to sample sufficiency
+    started = time.perf_counter()
+    with normalization_cache(snapshot.snapshot_id) as cache:
+        for assessment_index, question in enumerate(REGISTRY, 1):
+            qid = question.id
+            # A question needs at most its declared sources.  A short-lived cache
+            # prevents G1 from retaining the complete record bodies of all sources.
+            evidence_snapshot = EvidenceSnapshot(loader=snapshot.records)
+            resolution = resolve_question_evidence(question, evidence_snapshot)
+            rows: list[dict[str, Any]] = []
+            science = health[qid]
+            science_blocked = science.has_errors or science.is_under_specified
+            rows.append(_row(
+                qid, "SCIENCE_CONTRACT", f"{qid}:science_contract", "FAIL" if science_blocked else "PASS",
+                "Frozen effective definition is blocked/under-specified" if science_blocked else "Frozen effective definition is internally resolvable",
+                snapshot, observed=science.to_dict(),
+            ))
+            source_state = {item.name: item for item in resolution.requirements if item.type == "dataset_presence"}
+            for source in dict.fromkeys(item.value for item in question.data_sources):
+                result = source_state.get(source)
+                passed = bool(result and result.satisfied is True)
+                rows.append(_row(qid, "SOURCE_AUTHORITY", f"{qid}:source:{source}", "PASS" if passed else "FAIL",
+                                 result.reason if result else "Declared source was not resolved", snapshot, source, result.current if result else None))
+            fields = {item.name: item for item in resolution.requirements if item.type == "required_field"}
+            population = int(resolution.metrics.get("total_current_population", 0) or 0)
+            for field in question.required_fields:
+                result = fields.get(field)
+                if result is None or result.satisfied is None:
+                    status = "UNKNOWN"
+                elif population == 0:
+                    status = "PASS"  # declared schema path; emptiness belongs to sample sufficiency
+                else:
+                    status = "PASS" if int(result.current or 0) == population else "FAIL"
+                rows.append(_row(qid, "FIELD_COVERAGE", f"{qid}:field:{field}", status,
+                                 result.reason if result else "Required field could not be assessed", snapshot, observed=result.current if result else None))
+            joins = [item for item in resolution.requirements if item.type == "join_integrity"]
+            if len(question.data_sources) < 2:
+                rows.append(_row(qid, "JOINABILITY", f"{qid}:join:not_applicable", "NOT_APPLICABLE",
+                                 "No multi-source join is declared", snapshot))
+            elif joins:
+                status = "FAIL" if any(item.satisfied is False for item in joins) else "UNKNOWN" if any(item.satisfied is None for item in joins) else "PASS"
+                rows.append(_row(qid, "JOINABILITY", f"{qid}:join:declared", status,
+                                 "; ".join(item.reason for item in joins), snapshot))
             else:
-                status = "PASS" if int(result.current or 0) == population else "FAIL"
-            rows.append(_row(qid, "FIELD_COVERAGE", f"{qid}:field:{field}", status,
-                             result.reason if result else "Required field could not be assessed", snapshot, observed=result.current if result else None))
-        joins = [item for item in resolution.requirements if item.type == "join_integrity"]
-        if len(question.data_sources) < 2:
-            rows.append(_row(qid, "JOINABILITY", f"{qid}:join:not_applicable", "NOT_APPLICABLE",
-                             "No multi-source join is declared", snapshot))
-        elif joins:
-            status = "FAIL" if any(item.satisfied is False for item in joins) else "UNKNOWN" if any(item.satisfied is None for item in joins) else "PASS"
-            rows.append(_row(qid, "JOINABILITY", f"{qid}:join:declared", status,
-                             "; ".join(item.reason for item in joins), snapshot))
-        else:
-            status = "INSUFFICIENT" if population == 0 else "PASS"
-            rows.append(_row(qid, "JOINABILITY", f"{qid}:join:declared", status,
-                             "Declared canonical join has zero rows" if population == 0 else "Declared canonical join resolved without reported conflict", snapshot))
-        samples = [item for item in resolution.requirements if item.type in {"coverage", "sample_size", "population_count", "unsupported"}]
-        if not question.validation_rules:
-            rows.append(_row(qid, "SAMPLE_SUFFICIENCY", f"{qid}:sample:not_applicable", "NOT_APPLICABLE",
-                             f"No frozen threshold; observed n={resolution.usable_count}", snapshot, observed=resolution.usable_count))
-        else:
-            for index, rule in enumerate(question.validation_rules):
-                result = samples[index] if index < len(samples) else None
-                status = "UNKNOWN" if result is None or result.satisfied is None else "PASS" if result.satisfied else "INSUFFICIENT"
-                rows.append(_row(qid, "SAMPLE_SUFFICIENCY", f"{qid}:sample:{index}:{rule.field}", status,
-                                 result.reason if result else "Frozen sample rule could not be assessed", snapshot, observed=result.current if result else None))
-        for source in dict.fromkeys(item.value for item in question.data_sources):
-            component = snapshot.component(source)
-            status = "PASS" if component and component["state"] == "CURRENT" else "FAIL"
-            rows.append(_row(qid, "CURRENT_PROVENANCE", f"{qid}:current:{source}", status,
-                             "Bound to immutable CURRENT snapshot component" if component else "No CURRENT snapshot component", snapshot, source))
-        assessments.append({"question_id": qid, "status": _question_status(rows), "requirements": rows})
+                status = "INSUFFICIENT" if population == 0 else "PASS"
+                rows.append(_row(qid, "JOINABILITY", f"{qid}:join:declared", status,
+                                 "Declared canonical join has zero rows" if population == 0 else "Declared canonical join resolved without reported conflict", snapshot))
+            samples = [item for item in resolution.requirements if item.type in {"coverage", "sample_size", "population_count", "unsupported"}]
+            if not question.validation_rules:
+                rows.append(_row(qid, "SAMPLE_SUFFICIENCY", f"{qid}:sample:not_applicable", "NOT_APPLICABLE",
+                                 f"No frozen threshold; observed n={resolution.usable_count}", snapshot, observed=resolution.usable_count))
+            else:
+                for index, rule in enumerate(question.validation_rules):
+                    result = samples[index] if index < len(samples) else None
+                    status = "UNKNOWN" if result is None or result.satisfied is None else "PASS" if result.satisfied else "INSUFFICIENT"
+                    rows.append(_row(qid, "SAMPLE_SUFFICIENCY", f"{qid}:sample:{index}:{rule.field}", status,
+                                     result.reason if result else "Frozen sample rule could not be assessed", snapshot, observed=result.current if result else None))
+            for source in dict.fromkeys(item.value for item in question.data_sources):
+                component = snapshot.component(source)
+                status = "PASS" if component and component["state"] == "CURRENT" else "FAIL"
+                rows.append(_row(qid, "CURRENT_PROVENANCE", f"{qid}:current:{source}", status,
+                                 "Bound to immutable CURRENT snapshot component" if component else "No CURRENT snapshot component", snapshot, source))
+            assessments.append({"question_id": qid, "status": _question_status(rows), "requirements": rows})
+            callback = _G1_PROGRESS.get()
+            if callback is not None:
+                from research_engine.v10.continuous.cycle_state import process_memory_bytes
+                rss, peak = process_memory_bytes()
+                try:
+                    callback({
+                        "phase": "G1_ASSESSMENT_COMPLETE",
+                        "assessment_index": assessment_index,
+                        "assessment_total": len(REGISTRY),
+                        "question_id": qid,
+                        "elapsed_seconds": round(time.perf_counter() - started, 3),
+                        "normalization_cache": cache.stats(),
+                        "process_rss_bytes": rss,
+                        "process_peak_rss_bytes": peak,
+                    })
+                except Exception:
+                    pass  # progress cannot change the governed result
     return assessments
 
 

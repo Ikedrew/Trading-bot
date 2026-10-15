@@ -12,10 +12,16 @@ from dataclasses import asdict, dataclass
 from datetime import date, datetime, timezone
 import json
 import os
+import random
 import time
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
+
+from botocore.exceptions import (
+    ConnectTimeoutError, ConnectionClosedError, EndpointConnectionError,
+    ReadTimeoutError,
+)
 
 from core.production_data_contract import (
     DATA_CONTRACT_VERSION,
@@ -54,6 +60,24 @@ _HEX64 = frozenset("0123456789abcdef")
 
 class InvestigationSnapshotError(RuntimeError):
     """A common investigation snapshot could not be frozen or verified."""
+
+
+def _transient_head_error_category(exc: Exception) -> str | None:
+    """Recognize only transport failures from the production HEAD operation."""
+    if not isinstance(exc, ResearchDataSourceError) or "head_object key='" not in str(exc):
+        return None
+    cause = exc.__cause__
+    for error_type, category in (
+        (ConnectTimeoutError, "CONNECT_TIMEOUT"),
+        (ReadTimeoutError, "READ_TIMEOUT"),
+        (ConnectionClosedError, "CONNECTION_CLOSED"),
+        (EndpointConnectionError, "ENDPOINT_CONNECTION"),
+        (TimeoutError, "TIMEOUT"),
+        (ConnectionError, "CONNECTION"),
+    ):
+        if isinstance(cause, error_type):
+            return category
+    return None
 
 
 def _is_sha256(value: Any) -> bool:
@@ -1070,8 +1094,20 @@ class SnapshotBoundDatasetReader:
         self, snapshot: InvestigationSnapshot,
         source: S3ResearchDataSource | None = None,
         *, immutable: bool = False,
+        progress_callback: Callable[[Mapping[str, Any]], None] | None = None,
+        deadline_seconds: float | None = None,
+        progress_interval_seconds: float = 10.0,
+        progress_interval_objects: int = 100,
+        head_workers: int = 8,
     ) -> None:
         started = time.perf_counter()
+        if deadline_seconds is not None and deadline_seconds <= 0:
+            raise ValueError("SNAPSHOT_LOAD_DEADLINE_MUST_BE_POSITIVE")
+        deadline_at = None if deadline_seconds is None else started + deadline_seconds
+        if progress_interval_seconds <= 0 or progress_interval_objects < 1:
+            raise ValueError("SNAPSHOT_LOAD_PROGRESS_INTERVAL_INVALID")
+        if not 1 <= head_workers <= 16:
+            raise ValueError("SNAPSHOT_HEAD_WORKERS_OUT_OF_BOUNDS")
         self.snapshot = snapshot
         self._source = source or get_default_source()
         self._bindings = {item.dataset: item for item in snapshot.datasets}
@@ -1081,36 +1117,199 @@ class SnapshotBoundDatasetReader:
         current_authority = _authority_material(self._source)
         if D.fingerprint(current_authority) != D.fingerprint(snapshot.source_authority):
             raise InvestigationSnapshotError("SOURCE_AUTHORITY_CHANGED")
+        total_objects = sum(len(binding.objects) for binding in snapshot.datasets
+                            if binding.presence != "ABSENT")
+        objects_completed = 0
+        objects_failed = 0
+        last_report_at = started
+        last_report_count = 0
+        initial_performance = self._source.performance_snapshot() if hasattr(
+            self._source, "performance_snapshot") else dict(getattr(
+                self._source, "performance", {}))
+
+        def report(dataset: str | None, *, force: bool = False,
+                   failed_object: str | None = None,
+                   failure_reason: str | None = None,
+                   deadline_exceeded: bool = False,
+                   head_retry_attempts: int | None = None,
+                   head_error_category: str | None = None) -> None:
+            nonlocal last_report_at, last_report_count
+            if progress_callback is None:
+                return
+            now = time.perf_counter()
+            if (not force and objects_completed != 1
+                    and objects_completed - last_report_count < progress_interval_objects
+                    and now - last_report_at < progress_interval_seconds):
+                return
+            elapsed = max(0.0, now - started)
+            performance = self._source.performance_snapshot() if hasattr(
+                self._source, "performance_snapshot") else dict(getattr(
+                    self._source, "performance", {}))
+            rate = objects_completed / elapsed if elapsed > 0 else 0.0
+            eta = ((total_objects - objects_completed) / rate
+                   if objects_completed >= 100 and elapsed >= 30.0 and rate > 0
+                   else None)
+            event = {
+                "phase": "SNAPSHOT_LOADING",
+                "dataset": dataset,
+                "objects_completed": objects_completed,
+                "objects_failed": objects_failed,
+                "total_objects": total_objects,
+                "elapsed_seconds": round(elapsed, 3),
+                "head_calls": int(performance.get("head_calls", 0)) - int(
+                    initial_performance.get("head_calls", 0)),
+                "head_failures": int(performance.get("head_failures", 0)) - int(
+                    initial_performance.get("head_failures", 0)),
+                "throughput_objects_per_second": round(rate, 4),
+                "estimated_remaining_seconds": None if eta is None else round(eta, 1),
+            }
+            if failed_object is not None:
+                event["failed_object"] = failed_object
+                event["failure_reason"] = failure_reason
+            if deadline_exceeded:
+                event["deadline_exceeded"] = True
+            if head_retry_attempts is not None:
+                event["head_retry_attempts"] = head_retry_attempts
+                event["head_error_category"] = head_error_category
+            try:
+                progress_callback(event)
+            except Exception:
+                pass  # diagnostics cannot change the scientific outcome
+            last_report_at = now
+            last_report_count = objects_completed
+
+        def check_deadline(dataset: str | None, *, object_key: str | None = None,
+                           cause: Exception | None = None) -> None:
+            if deadline_at is not None and time.perf_counter() >= deadline_at:
+                report(dataset, force=True, deadline_exceeded=True,
+                       failed_object=object_key,
+                       failure_reason="SNAPSHOT_LOAD_DEADLINE_EXCEEDED")
+                failure = InvestigationSnapshotError(
+                    "SNAPSHOT_LOAD_DEADLINE_EXCEEDED:"
+                    f"{objects_completed}/{total_objects}:dataset={dataset}"
+                    + ("" if object_key is None else f":key={object_key}"))
+                failure.object_key = object_key
+                if cause is not None:
+                    raise failure from cause
+                raise failure
+
+        def retry_batch_head(exc: Exception, attempt: int, key: str) -> float:
+            category = _transient_head_error_category(exc)
+            if category is None:
+                raise exc
+            check_deadline(name, object_key=key, cause=exc)
+            if attempt == 4:
+                failure = InvestigationSnapshotError(
+                    "SNAPSHOT_HEAD_RETRIES_EXHAUSTED:"
+                    f"dataset={name}:key={key}:"
+                    f"attempts={attempt}:category={category}:error={exc}")
+                failure.head_retry_attempts = attempt
+                failure.head_error_category = category
+                failure.object_key = key
+                raise failure from exc
+            delay = random.uniform(0.0, min(4.0, 0.5 * (2 ** (attempt - 1))))
+            if deadline_at is not None:
+                delay = min(delay, max(0.0, deadline_at - time.perf_counter()))
+            return delay
+
         self._cache: dict[str, list[dict[str, Any]]] = {}
+        report(None, force=True)
         for name, binding in self._bindings.items():
+            check_deadline(name)
             if binding.presence == "ABSENT":
                 self._cache[name] = _FrozenList() if immutable else []
                 continue
             rows: list[dict[str, Any]] = []
             observed: list[BoundObject] = []
-            for item in binding.objects:
-                object_rows = self._source.read_bound_objects(
-                    name, [item.to_dict()],
-                    expected_schema_version=binding.schema_version,
-                    start_date=snapshot.start_date, end_date=snapshot.end_date)
-                actual_guard_rows = 0
-                for row in object_rows:
-                    classification = classify_guard_cohort_record(
-                        name, row, item.identifier)
-                    if classification == GUARD_COHORT_AMBIGUOUS:
+            batch_authority = (getattr(self._source, "_verified_cache_directory", None)
+                               is not None and all(item.version_id not in (None, "", "null")
+                                                   for item in binding.objects))
+            for index, item in enumerate(binding.objects):
+                check_deadline(name, object_key=item.identifier)
+                if batch_authority and index % 128 == 0:
+                    batch = binding.objects[index:index + 128]
+                    try:
+                        headed = self._source.head_bound_objects(
+                            name, [obj.to_dict() for obj in batch],
+                            expected_schema_version=binding.schema_version,
+                            max_workers=head_workers,
+                            progress_callback=lambda _: report(name),
+                            retry_handler=retry_batch_head,
+                            deadline_check=lambda key: check_deadline(name, object_key=key))
+                        for expected, current in zip(batch, headed):
+                            for field in ("identifier", "version_id", "etag", "size",
+                                          "last_modified"):
+                                if current.get(field) != expected.to_dict().get(field):
+                                    failure = ResearchDataSourceError(
+                                        "VERIFIED_BODY_AUTHORITY_MISMATCH:"
+                                        f"{expected.identifier}:{field}")
+                                    failure.object_key = expected.identifier
+                                    raise failure
+                        check_deadline(name, object_key=item.identifier)
+                    except Exception as exc:
+                        objects_failed += 1
+                        report(name, force=True, failed_object=getattr(
+                            exc, "object_key", item.identifier),
+                               failure_reason=f"{type(exc).__name__}:{exc}",
+                               head_retry_attempts=getattr(exc, "head_retry_attempts", None),
+                               head_error_category=getattr(exc, "head_error_category", None))
+                        raise
+                try:
+                    for attempt in range(1, 5):
+                        check_deadline(name, object_key=item.identifier)
+                        try:
+                            object_rows = self._source.read_bound_objects(
+                                name, [item.to_dict()],
+                                expected_schema_version=binding.schema_version,
+                                start_date=snapshot.start_date, end_date=snapshot.end_date,
+                                _fresh_authority=batch_authority)
+                            break
+                        except Exception as exc:
+                            category = _transient_head_error_category(exc)
+                            if category is None:
+                                raise
+                            check_deadline(name, object_key=item.identifier, cause=exc)
+                            if attempt == 4:
+                                failure = InvestigationSnapshotError(
+                                    "SNAPSHOT_HEAD_RETRIES_EXHAUSTED:"
+                                    f"dataset={name}:key={item.identifier}:"
+                                    f"attempts={attempt}:category={category}:error={exc}")
+                                failure.head_retry_attempts = attempt
+                                failure.head_error_category = category
+                                raise failure from exc
+                            delay = random.uniform(0.0, min(4.0, 0.5 * (2 ** (attempt - 1))))
+                            if deadline_at is not None:
+                                delay = min(delay, max(0.0, deadline_at - time.perf_counter()))
+                            time.sleep(delay)
+                            check_deadline(name, object_key=item.identifier, cause=exc)
+                    actual_guard_rows = 0
+                    for row in object_rows:
+                        classification = classify_guard_cohort_record(
+                            name, row, item.identifier)
+                        if classification == GUARD_COHORT_AMBIGUOUS:
+                            raise InvestigationSnapshotError(
+                                "HISTORICAL_GUARD_REJECTION_UNVERIFIED:" + item.identifier)
+                        if classification == GUARD_COHORT_ELIGIBLE:
+                            actual_guard_rows += 1
+                        else:
+                            rows.append(row)
+                    if actual_guard_rows != item.historical_guard_rows:
                         raise InvestigationSnapshotError(
-                            "HISTORICAL_GUARD_REJECTION_UNVERIFIED:" + item.identifier)
-                    if classification == GUARD_COHORT_ELIGIBLE:
-                        actual_guard_rows += 1
-                    else:
-                        rows.append(row)
-                if actual_guard_rows != item.historical_guard_rows:
-                    raise InvestigationSnapshotError(
-                        "GUARD_COHORT_COUNT_CHANGED:" + item.identifier)
-                observed.append(BoundObject.from_metadata({
-                    **self._source.object_metadata(name)[0],
-                    "historical_guard_rows": actual_guard_rows,
-                }))
+                            "GUARD_COHORT_COUNT_CHANGED:" + item.identifier)
+                    observed.append(BoundObject.from_metadata({
+                        **self._source.object_metadata(name)[0],
+                        "historical_guard_rows": actual_guard_rows,
+                    }))
+                except Exception as exc:
+                    objects_failed += 1
+                    report(name, force=True, failed_object=item.identifier,
+                           failure_reason=f"{type(exc).__name__}:{exc}",
+                           head_retry_attempts=getattr(exc, "head_retry_attempts", None),
+                           head_error_category=getattr(exc, "head_error_category", None))
+                    raise
+                objects_completed += 1
+                report(name, force=objects_completed == total_objects)
+                check_deadline(name)
             malformed = self._source.malformed_report(name)
             if malformed and malformed.malformed_lines:
                 raise InvestigationSnapshotError(
@@ -1134,6 +1333,7 @@ class SnapshotBoundDatasetReader:
                 self._cache[name] = _FrozenList(rows)
             else:
                 self._cache[name] = rows
+            check_deadline(name)
         self.load_elapsed_seconds = time.perf_counter() - started
         self.immutable = immutable
 
@@ -1222,14 +1422,21 @@ class CycleSnapshotInputs:
         self.reuses = 0
         self.consumer_seconds = {}
 
-    def acquire(self, snapshot, *, cycle_id, source=None, consumer="unknown"):
+    def acquire(self, snapshot, *, cycle_id, source=None, consumer="unknown",
+                progress_callback=None, deadline_seconds=None,
+                progress_interval_seconds=10.0, progress_interval_objects=100):
         started = time.perf_counter()
         if self._closed or cycle_id != self.cycle_id:
             raise InvestigationSnapshotError("SHARED_INPUT_CYCLE_MISMATCH")
         authenticated = authenticate_snapshot_inputs(snapshot, source or (
             self._reader._source if self._reader is not None else get_default_source()))
         if self._reader is None:
-            self._reader = SnapshotBoundDatasetReader(authenticated, source=source, immutable=True)
+            self._reader = SnapshotBoundDatasetReader(
+                authenticated, source=source, immutable=True,
+                progress_callback=progress_callback,
+                deadline_seconds=deadline_seconds,
+                progress_interval_seconds=progress_interval_seconds,
+                progress_interval_objects=progress_interval_objects)
             self.constructions += 1
         else:
             reader = self._reader

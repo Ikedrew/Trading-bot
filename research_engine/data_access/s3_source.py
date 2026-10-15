@@ -499,6 +499,7 @@ class S3ResearchDataSource:
         self._read_objects: dict[tuple[str, str], dict[str, Any]] = {}
         self._headed_objects: dict[tuple[str, str], dict[str, Any]] = {}
         self.performance = {"list_calls": 0, "head_calls": 0, "head_retries": 0,
+                            "head_failures": 0,
                             "get_calls": 0,
                             "head_seconds_inclusive": 0.0,
                             "get_open_seconds_inclusive": 0.0,
@@ -710,6 +711,8 @@ class S3ResearchDataSource:
         expected_schema_version: str,
         max_workers: int = 16,
         progress_callback: Any | None = None,
+        retry_handler: Any | None = None,
+        deadline_check: Any | None = None,
     ) -> tuple[dict[str, Any], ...]:
         """Resolve exact current object versions without downloading bodies."""
         if expected_schema_version != current_schema(dataset):
@@ -757,26 +760,39 @@ class S3ResearchDataSource:
 
         def inspect(item: Mapping[str, Any]) -> dict[str, Any]:
             key = str(item["identifier"])
-            started = time.perf_counter()
-            try:
-                with self._head_counter_lock:
-                    self.performance["head_calls"] += 1
-                response = client.head_object(Bucket=self._bucket, Key=key)
-            except Exception as exc:
-                retries = int((getattr(exc, "response", None) or {}).get(
-                    "ResponseMetadata", {}).get("RetryAttempts", 0) or 0)
-                with self._head_counter_lock:
-                    self.performance["head_retries"] += retries
-                raise self._diagnose(exc, operation=f"head_object key='{key}'") from exc
-            else:
-                retries = int(response.get("ResponseMetadata", {}).get(
-                    "RetryAttempts", 0) or 0)
-                with self._head_counter_lock:
-                    self.performance["head_retries"] += retries
-            finally:
-                elapsed = time.perf_counter() - started
-                with self._head_counter_lock:
-                    self.performance["head_seconds_inclusive"] += elapsed
+            attempt = 0
+            while True:
+                if deadline_check is not None:
+                    deadline_check(key)
+                attempt += 1
+                started = time.perf_counter()
+                try:
+                    with self._head_counter_lock:
+                        self.performance["head_calls"] += 1
+                    response = client.head_object(Bucket=self._bucket, Key=key)
+                except Exception as exc:
+                    retries = int((getattr(exc, "response", None) or {}).get(
+                        "ResponseMetadata", {}).get("RetryAttempts", 0) or 0)
+                    with self._head_counter_lock:
+                        self.performance["head_retries"] += retries
+                        self.performance["head_failures"] += 1
+                    failure = self._diagnose(exc, operation=f"head_object key='{key}'")
+                    failure.object_key = key
+                    if retry_handler is None:
+                        raise failure from exc
+                    failure.__cause__ = exc
+                    delay = retry_handler(failure, attempt, key)
+                    time.sleep(delay)
+                else:
+                    retries = int(response.get("ResponseMetadata", {}).get(
+                        "RetryAttempts", 0) or 0)
+                    with self._head_counter_lock:
+                        self.performance["head_retries"] += retries
+                    break
+                finally:
+                    elapsed = time.perf_counter() - started
+                    with self._head_counter_lock:
+                        self.performance["head_seconds_inclusive"] += elapsed
             modified = response.get("LastModified")
             return {
                 **dict(item),
@@ -1053,7 +1069,8 @@ class S3ResearchDataSource:
         stream = None
         capture = None
         capture_path = None
-        cached = self._open_verified_body(dataset, expected_object) if strict else None
+        cached = self._open_verified_body(
+            dataset, expected_object, fresh_authority=fresh_authority) if strict else None
         if cached is None and strict and expected_object is not None:
             # Bounded cold-start discovery: reuse an existing verified entry
             # found from fresh S3 authority when no content digest is known yet.
@@ -1188,7 +1205,7 @@ class S3ResearchDataSource:
             separators=(",", ":")).encode()).hexdigest()
         return self._verified_cache_directory / (digest + ".cache")
 
-    def _open_verified_body(self, dataset, metadata):
+    def _open_verified_body(self, dataset, metadata, *, fresh_authority=False):
         identity = self._verified_body_identity(dataset, metadata)
         if self._verified_cache_directory is None or identity is None:
             return None
@@ -1205,22 +1222,31 @@ class S3ResearchDataSource:
             header = json.loads(header_line)
             if header != identity or path.stat().st_size - len(header_line) != int(metadata["byte_size"]):
                 raise ValueError("identity/size mismatch")
+        except Exception as exc:
+            if handle is not None:
+                handle.close()
+            raise ResearchDataSourceError("VERIFIED_BODY_CACHE_INVALID:" + str(path.name)) from exc
+        try:
             # Cached bytes do not grant authority or prove continued membership.
-            # Require a current authorized HEAD even for an immutable version.
-            current = self.head_bound_objects(dataset, [metadata],
-                expected_schema_version=current_schema(dataset), max_workers=1)[0]
+            # Keep HEAD failures distinct from invalid local cache bytes.
+            current = (self._headed_objects.get((dataset, str(metadata["identifier"])))
+                       if fresh_authority else None)
+            if current is None:
+                current = self.head_bound_objects(dataset, [metadata],
+                    expected_schema_version=current_schema(dataset), max_workers=1)[0]
             for field in ("identifier", "version_id", "etag", "size", "last_modified"):
                 if current.get(field) != metadata.get(field):
-                    raise ValueError("fresh object authority mismatch")
+                    raise ResearchDataSourceError(
+                        "VERIFIED_BODY_AUTHORITY_MISMATCH:" + str(path.name)
+                        + ":" + field)
             self.performance["verified_cache_hits"] += 1
             self.performance["verified_cache_bytes"] += int(metadata["byte_size"])
             return {"ETag": metadata["etag"], "ContentLength": metadata["size"],
                     "LastModified": metadata["last_modified"],
                     "VersionId": metadata["version_id"]}, handle
-        except Exception as exc:
-            if handle is not None:
-                handle.close()
-            raise ResearchDataSourceError("VERIFIED_BODY_CACHE_INVALID:" + str(path.name)) from exc
+        except Exception:
+            handle.close()
+            raise
 
     def _discovery_key_from_identity(self, identity):
         """Authority-only key derived from a full cache identity.
