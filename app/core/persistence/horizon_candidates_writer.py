@@ -1,0 +1,322 @@
+"""
+Horizon Candidates Persistence Writer — Records every evaluated horizon.
+
+Persists ALL horizon assessments from the horizon classifier's
+classify_horizons() — not merely the selected horizon. This preserves
+the complete candidate search space for research questions such as:
+    - Which horizons were considered for each opportunity?
+    - Which eligible horizon was selected and which were rejected?
+    - Why was each horizon eligible or ineligible?
+    - Does the selected horizon actually outperform rejected horizons?
+
+Storage:
+    Local: logs/horizon_candidates/{SYMBOL}/{YYYY-MM-DD}.jsonl
+    S3:    s3://trading-bot-v10-data/horizon_candidates/schema_version=horizon_candidates_v1/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
+
+SCHEMA: horizon_candidates_v1
+
+This module is PURELY OBSERVATIONAL. It does NOT:
+    - Affect horizon classification or eligibility
+    - Modify confidence calculations
+    - Change horizon selection
+    - Affect trading decisions, risk, or execution
+    - Gate or block any pipeline behaviour
+
+Design:
+    - Fire-and-forget. Never raises to caller.
+    - Local JSONL + fsync is canonical truth. S3 mirror is secondary.
+    - One record per evaluated horizon per classification.
+    - Persistence failure never affects trading.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+_LOCAL_DIR = "logs/horizon_candidates"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("horizon_candidates")
+_SCHEMA_VERSION = "horizon_candidates_v1"
+
+
+def persist_horizon_candidates(
+    *,
+    candidates: list[dict[str, Any]],
+    stage_identity: dict[str, Any] | None = None,
+) -> bool:
+    """
+    Persist a batch of horizon candidate records to local JSONL + S3 mirror.
+
+    Args:
+        candidates: List of candidate record dicts. Each must contain:
+            - candidate_id (str)
+            - symbol (str)
+            - bar_time (float)
+            - horizon (str)
+            - eligible (bool)
+            - confidence (float)
+            - Plus lineage fields and selection_status.
+
+    Returns:
+        True on success, False on failure. Never raises.
+    """
+    if not candidates:
+        if stage_identity:
+            try:
+                from core.lifecycle_evidence_obligations import (
+                    create_dataset_obligation, obligation_ledger,
+                )
+                symbol = str(stage_identity.get("symbol") or "UNKNOWN")
+                stage_id = str(
+                    stage_identity.get("canonical_opportunity_id")
+                    or stage_identity.get("entity_id") or ""
+                )
+                create_dataset_obligation(
+                    obligation_ledger(),
+                    event_id=(f"horizon-candidate-stage:{stage_id}:"
+                              f"{stage_identity.get('cycle_id', 0)}"),
+                    lifecycle_stage="HORIZON_CANDIDATE",
+                    dataset="horizon_candidates",
+                    identity={"candidate_id": "", "symbol": symbol},
+                    timestamp=str(stage_identity.get("bar_time") or ""),
+                    producer="core.persistence.horizon_candidates_writer.persist_horizon_candidates",
+                    trigger="HORIZON_CLASSIFIER_NO_ELIGIBLE_RECORDS",
+                    applicable=False,
+                )
+            except Exception as _obligation_exc:
+                logger.warning("[LIFECYCLE_OBLIGATION] empty horizon stage failed: %s",
+                               _obligation_exc)
+        return False
+
+    _ledger = None
+    _obligations = []
+    try:
+        from core.lifecycle_evidence_obligations import (
+            create_dataset_obligation, obligation_ledger,
+        )
+        _ledger = obligation_ledger()
+        for index, candidate in enumerate(candidates):
+            _candidate_id = str(candidate.get("candidate_id") or "")
+            _event_id = f"horizon-candidate:{_candidate_id or index}"
+            _obligations.append(create_dataset_obligation(
+                _ledger, event_id=_event_id, lifecycle_stage="HORIZON_CANDIDATE",
+                dataset="horizon_candidates",
+                identity={"candidate_id": _candidate_id,
+                          "symbol": str(candidate.get("symbol") or "UNKNOWN")},
+                timestamp=str(candidate.get("bar_time") or ""),
+                producer="core.persistence.horizon_candidates_writer.persist_horizon_candidates",
+                trigger="HORIZON_CLASSIFIER_REACHED",
+            ))
+    except Exception as _obligation_exc:
+        _ledger = None
+        _obligations = []
+        logger.warning("[LIFECYCLE_OBLIGATION] horizon candidate creation failed: %s",
+                       _obligation_exc)
+
+    try:
+        now = datetime.now(timezone.utc)
+        evaluated_at = now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+        # Group by symbol for efficient file writes
+        by_symbol: dict[str, list[dict[str, Any]]] = {}
+        for cand in candidates:
+            sym = str(cand.get("symbol", "UNKNOWN"))
+            by_symbol.setdefault(sym, []).append(cand)
+
+        for symbol, cands in by_symbol.items():
+            # Partition by date derived from bar_time
+            bar_time = float(cands[0].get("bar_time", 0.0) or 0.0)
+            if bar_time > 0:
+                date_str = datetime.fromtimestamp(
+                    bar_time, tz=timezone.utc
+                ).strftime("%Y-%m-%d")
+            else:
+                date_str = now.strftime("%Y-%m-%d")
+
+            path = Path(_LOCAL_DIR) / symbol / f"{date_str}.jsonl"
+            path.parent.mkdir(parents=True, exist_ok=True)
+
+            lines: list[str] = []
+            for cand in cands:
+                record = dict(cand)  # Copy — never mutate caller's data
+                record.setdefault("schema_version", _SCHEMA_VERSION)
+                record.setdefault("engine", "V10")
+                record["evaluated_at_utc"] = evaluated_at
+
+                # Round floats for stability (classifier already rounds
+                # confidence to 4dp — this is a no-op safety net)
+                if "confidence" in record:
+                    record["confidence"] = round(float(record["confidence"]), 4)
+
+                lines.append(
+                    json.dumps(record, separators=(",", ":"), default=str)
+                )
+
+            content = "\n".join(lines) + "\n"
+            from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+            try_prepare_local_jsonl_handoffs(
+                dataset="horizon_candidates", content=content,
+                symbol=symbol, partition_date=date_str, local_path=path,
+            )
+            fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+            try:
+                os.write(fd, content.encode("utf-8"))
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+
+            # S3 mirror (fire-and-forget)
+            from core.canonical_delivery import enqueue_canonical_batch
+            enqueue_canonical_batch(
+                dataset="horizon_candidates",
+                payloads=[json.loads(item) for item in lines],
+                symbol=symbol, partition_date=date_str,
+            )
+
+        _persisted = True
+
+    except Exception as exc:
+        logger.debug("[HORIZON_CANDIDATES_PERSIST] write_failed: %s", exc)
+        _persisted = False
+
+    if _ledger is not None:
+        try:
+            from core.lifecycle_evidence_obligations import record_producer_outcome
+            for obligation in _obligations:
+                record_producer_outcome(
+                    _ledger, obligation, succeeded=_persisted,
+                    observed_record_id=str(obligation.expected_identity.get("candidate_id") or ""),
+                    failure_reason="HORIZON_CANDIDATE_LOCAL_WRITE_FAILED",
+                    provenance={"local_path_authority": "LOCAL_ONLY"},
+                )
+        except Exception as _obligation_exc:
+            logger.warning("[LIFECYCLE_OBLIGATION] horizon candidate outcome failed: %s",
+                           _obligation_exc)
+    return _persisted
+
+
+def build_horizon_candidate_records(
+    *,
+    assessments: list,
+    selected_horizon: str = "",
+    symbol: str,
+    bar_time: float,
+    lineage: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Build serialisable candidate record dicts from HorizonAssessment objects.
+
+    Called with the classification result's assessments. Derives
+    selection_status DIRECTLY from existing runtime state — never
+    re-ranks, re-scores, or re-classifies anything.
+
+    Args:
+        assessments: List of HorizonAssessment objects (from
+            HorizonClassificationResult.assessments). Must each have
+            .horizon, .eligible, .confidence, .reasoning, .evidence.
+        selected_horizon: The horizon selected by the existing V10
+            pipeline (result.horizon.horizon_type). Empty string when
+            no V10 horizon selection occurred (legacy engine path).
+        symbol: Trading symbol.
+        bar_time: Bar close epoch seconds.
+        lineage: Optional dict with canonical IDs. Recognised keys:
+            canonical_opportunity_id, observation_id, decision_id,
+            correlation_id, cycle_id, entity_id.
+            When observation_id is absent it is computed from symbol+bar_time.
+            canonical_opportunity_id is never reconstructed here: it remains
+            null unless supplied by the upstream opportunity lineage.
+
+    Returns:
+        List of candidate record dicts — one per evaluated horizon.
+    """
+    lin = lineage or {}
+
+    # Observation identity exists before an opportunity and may be derived from
+    # the observed bar.  Opportunity identity, however, belongs to the upstream
+    # opportunity and must never be substituted or reconstructed downstream.
+    canonical_opp_id = str(lin.get("canonical_opportunity_id", "") or "")
+    observation_id = str(lin.get("observation_id", "") or "")
+    if not observation_id:
+        try:
+            from core.identity.canonical import mint_observation_id
+            observation_id = mint_observation_id(
+                symbol=symbol, bar_time=bar_time, timeframe="M5"
+            )
+        except Exception:
+            observation_id = ""
+
+    decision_id = str(lin.get("decision_id", "") or "")
+    correlation_id = str(lin.get("correlation_id", "") or "")
+    cycle_id = int(lin.get("cycle_id", 0) or 0)
+    entity_id = str(lin.get("entity_id", "") or "")
+
+    selected_upper = str(selected_horizon or "").upper()
+
+    records: list[dict[str, Any]] = []
+    for assessment in assessments:
+        horizon = str(getattr(assessment, "horizon", "") or "")
+        eligible = bool(getattr(assessment, "eligible", False))
+        confidence = float(getattr(assessment, "confidence", 0.0) or 0.0)
+        reasoning = str(getattr(assessment, "reasoning", "") or "")
+        evidence = dict(getattr(assessment, "evidence", {}) or {})
+
+        # Derive selection_status from existing runtime state only
+        if not eligible:
+            selection_status = "INELIGIBLE"
+        elif selected_upper and horizon.upper() == selected_upper:
+            selection_status = "SELECTED"
+        elif selected_upper:
+            selection_status = "REJECTED"
+        else:
+            # No V10 horizon selection occurred (legacy engine path) —
+            # the horizon was evaluated and eligible, but no selection
+            # took place to reject it from.
+            selection_status = "NOT_APPLICABLE"
+
+        # Deterministic candidate ID: unique per opportunity × horizon
+        candidate_id = f"{canonical_opp_id or observation_id}:{horizon}"
+
+        record: dict[str, Any] = {
+            "candidate_id": candidate_id,
+            "canonical_opportunity_id": canonical_opp_id,
+            "observation_id": observation_id,
+            "decision_id": decision_id,
+            "correlation_id": correlation_id,
+            "symbol": symbol,
+            "cycle_id": cycle_id,
+            "bar_time": bar_time,
+            "horizon": horizon,
+            "eligible": eligible,
+            "confidence": confidence,
+            "reasoning": reasoning,
+            "evidence": evidence,
+            "selection_status": selection_status,
+            "entity_id": entity_id or None,
+        }
+        records.append(record)
+
+    return records
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# S3 MIRROR
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _write_s3(symbol: str, date_str: str, content: str) -> None:
+    """Compatibility name for the governed durable handoff."""
+    from core.canonical_delivery import enqueue_canonical_jsonl
+    enqueue_canonical_jsonl(
+        dataset="horizon_candidates", content=content, symbol=symbol,
+        partition_date=date_str,
+    )

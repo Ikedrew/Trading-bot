@@ -1,0 +1,671 @@
+"""Feature-gated multi-account fan-out bridge for the live runtime (D boundary).
+
+Placed in the live scanner between the canonical EXECUTE decision and broker
+I/O:
+
+    live runtime
+    → canonical EXECUTE (unchanged, one decision)
+    → multi-account feature gate
+    → build_canonical_decision            (core.accounts.live_fanout)
+    → execute_fanned_out                  (core.accounts.live_fanout)
+    → prepare_account_routes              (core.accounts.fanout_orchestrator)
+    → per-account workers                 (core.accounts.execution_worker)
+
+When MULTI_ACCOUNT_FANOUT_ENABLED=true  the canonical decision is fanned out to
+per-account execution workers. When false the legacy single-account
+ExecutionOrchestrator path is used unchanged.
+
+This module NEVER re-evaluates strategy, opportunity validation, entries,
+SL/TP, horizons, scoring or risk methodology. The canonical decision is built
+from the existing OrderIntent and inherits its lineage verbatim
+(canonical_opportunity_id / correlation_id / decision_id / observation_id).
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import subprocess
+import sys
+from dataclasses import asdict
+from pathlib import Path
+from typing import Any, Callable
+
+log = logging.getLogger(__name__)
+
+ROOT = str(Path(__file__).resolve().parents[2])
+
+# Same pinned-account worker env isolation as core/accounts/manager.run_isolated:
+# no account/AWS/Discord secret crosses the process boundary, and no login
+# switching is ever possible (workers attach to the already-logged-in terminal).
+# MT5_TERMINAL_INVENTORY_TIMEOUT_SECONDS is a non-secret tunable and is
+# forwarded so the configured terminal-inventory budget reaches the execution
+# worker too (one inventory policy, configurable in the worker environment).
+_WORKER_ENV_KEYS = frozenset({
+    "PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "USERPROFILE",
+    "APPDATA", "LOCALAPPDATA", "PROGRAMFILES", "PROGRAMFILES(X86)",
+    "COMMONPROGRAMFILES", "COMSPEC", "SYSTEMDRIVE",
+    "MT5_TERMINAL_INVENTORY_TIMEOUT_SECONDS",
+})
+
+MULTI_ACCOUNT_FANOUT_ENABLED = "MULTI_ACCOUNT_FANOUT_ENABLED"
+
+
+def fanout_flag() -> bool:
+    """Read the feature flag the same way core/accounts/live_fanout does."""
+    raw = os.getenv(MULTI_ACCOUNT_FANOUT_ENABLED, "false")
+    return str(raw).strip().lower() in ("1", "true", "yes")
+
+
+def multi_account_fanout_enabled() -> bool:
+    """Feature gate — delegates to the completed fan-out module (D boundary)."""
+    from core.accounts.live_fanout import fanout_enabled
+    return fanout_enabled()
+
+
+# ─── ISOLATED PER-ACCOUNT WORKER (F) ──────────────────────────────────────────
+
+
+def _isolated_env() -> dict:
+    return {k: v for k, v in os.environ.items() if k.upper() in _WORKER_ENV_KEYS}
+
+
+def run_pinned_worker(account: Any, target: dict, order: dict) -> dict:
+    """Execute ONE account target in an isolated subprocess.
+
+    Only `order_send` in core/accounts/execution_worker.py may reach the
+    broker. The parent bot process never switches login or shares its own
+    MT5 session with another account's terminal.
+    """
+    payload = {"account": asdict(account), "target": target, "order": order}
+    child_env = _isolated_env()
+    child_env["PYTHONIOENCODING"] = "utf-8"
+    try:
+        child = subprocess.run(
+            [sys.executable, "-m", "core.accounts.execution_worker"],
+            input=json.dumps(payload), capture_output=True, encoding="utf-8",
+            timeout=25.0, cwd=ROOT, env=child_env,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+        )
+        if child.returncode:
+            return {"account_id": account.account_id, "executed": False,
+                    "status": "WORKER_FAILED", "comment": "WORKER_PROCESS_FAILED"}
+        response = json.loads(child.stdout or "{}")
+        if response.get("account_id") != account.account_id:
+            return {"account_id": account.account_id, "executed": False,
+                    "status": "WORKER_FAILED", "comment": "WORKER_IDENTITY_MISMATCH"}
+        return response
+    except subprocess.TimeoutExpired:
+        return {"account_id": account.account_id, "executed": False,
+                "status": "WORKER_TIMEOUT", "comment": "WORKER_TIMEOUT"}
+    except Exception:
+        return {"account_id": account.account_id, "executed": False,
+                "status": "WORKER_FAILED", "comment": "WORKER_READ_FAILED"}
+
+
+def _build_worker_payload(route_item: dict, canonical: Any) -> tuple[dict, dict]:
+    """Map a prepared account route to the worker's JSON contract.
+
+    Reuses the existing account_router builders (build_account_order_request /
+    target_state) so no execution request is invented here.
+    """
+    from core.accounts.account_router import build_account_order_request, target_state
+    from core import config as _cfg
+
+    target = route_item["target"]
+    broker_symbol = route_item.get("broker_symbol") or target.broker_symbol
+    target_dict = target_state(route_item)
+    target_dict["broker_symbol"] = broker_symbol
+    target_dict["pattern"] = getattr(target, "pattern", "")
+    target_dict["metadata"] = dict(getattr(target, "metadata", {}) or {})
+    order = build_account_order_request(item=route_item)
+    order.update({
+        "broker_symbol": broker_symbol,
+        "side": str(getattr(canonical, "side", "BUY")),
+        "deviation": int(getattr(_cfg, "MT5_DEVIATION", 20) or 20),
+        "magic": int(getattr(_cfg, "BOT_MAGIC", 713001) or 713001),
+        "comment": "multi-account",
+    })
+    return target_dict, order
+
+
+def _execute_one_for(canonical: Any) -> Callable[[dict], dict]:
+    """Return the route_executions `execute_one` callback for live fan-out."""
+
+    def _execute_one(route_item: dict) -> dict:
+        account = route_item["account_config"]
+        target, order = _build_worker_payload(route_item, canonical)
+        return run_pinned_worker(account, target, order)
+
+    return _execute_one
+# ─── CANONICAL DECISION → FAN-OUT → OUTCOMES ──────────────────────────────────
+
+
+def execute_multi_account_fanout(
+    *,
+    intent: Any,
+    symbol: str,
+    cycle_id: int,
+    decision_id: str,
+    correlation_id: str,
+    entity_id: str = "",
+    observation_id: str = "",
+    canonical_opportunity_id: str = "",
+    strategy_family: str = "",
+    bid: float = 0.0,
+    ask: float = 0.0,
+) -> Any:
+    """Fan out ONE canonical EXECUTE to per-account execution workers.
+
+    Returns an ExecutionOutcome-compatible object for the primary
+    (METAQUOTES) account so the existing live scanner post-execution block
+    keeps behaving unchanged. Secondary account outcomes are registered by the
+    existing D–F machinery (route_executions → accept_account_execution).
+    """
+    from core.accounts.config import load_accounts
+    from core.accounts.manager import diagnose
+    from core.accounts.live_fanout import build_canonical_decision, execute_fanned_out
+    from core import config as _cfg
+
+    canonical = build_canonical_decision(
+        intent=intent,
+        canonical_opportunity_id=canonical_opportunity_id,
+        correlation_id=correlation_id,
+        decision_id=decision_id,
+        observation_id=observation_id,
+    )
+
+    accounts = tuple(load_accounts())
+    reports = diagnose(accounts, timeout=25)
+    snapshots = {r["account_id"]: r for r in reports}
+    broker_symbols = {}
+    for account in accounts:
+        row = _find_symbol_row(snapshots.get(account.account_id, {}), canonical.canonical_symbol)
+        available = row is not None and row.get("status") == "available" and bool(row.get("broker_symbol"))
+        broker_symbols[account.account_id] = (row or {}).get("broker_symbol") if available else None
+
+    horizon_type = str((intent.metadata or {}).get("horizon", "SCALP") or "SCALP")
+
+    # Real dispatch timestamp (REPAIR: fan-out results previously persisted
+    # decision_ts_utc_ms=0). Mirrors the legacy orchestrator, which stamps
+    # utc_ms() at the execution boundary.
+    from core.clock import utc_ms as _utc_ms
+    _dispatch_ts = _utc_ms()
+
+    outcomes = execute_fanned_out(
+        decision=canonical,
+        accounts=accounts,
+        snapshots=snapshots,
+        broker_symbols=broker_symbols,
+        strategy_family=strategy_family or "",
+        horizon_type=horizon_type,
+        global_execution_enabled=bool(getattr(_cfg, "EXECUTION_ENABLED", True)),
+        execute_one=_execute_one_for(canonical),
+        before_dispatch=_record_route_obligations,
+        timeout=25.0,
+    )
+    _log_fanout_outcomes(symbol, canonical, outcomes)
+    _persist_account_results(outcomes, cycle_id=cycle_id, entity_id=entity_id,
+                             bid=bid, ask=ask, decision_ts_utc_ms=_dispatch_ts)
+    return build_primary_execution_outcome(outcomes)
+
+
+def _record_route_obligations(routes: list[dict]) -> None:
+    """Durably declare each routed account branch before isolated worker dispatch."""
+    from core.lifecycle_evidence_obligations import (
+        create_account_execution_obligations, obligation_ledger,
+    )
+    import uuid as _uuid
+
+    ledger = obligation_ledger()
+    for route in routes:
+        target = route.get("target")
+        if target is None:
+            log.critical("[LIFECYCLE_EVIDENCE_ROUTE_WITHOUT_TARGET] status=PRODUCER_FAILED")
+            continue
+        account_id = str(getattr(target, "account_id", "") or "")
+        correlation_id = str(getattr(target, "correlation_id", "") or "")
+        decision_id = str(getattr(target, "decision_id", "") or "")
+        account_execution_id = str(getattr(target, "account_execution_id", "") or "")
+        order_send_expected = bool(
+            route.get("eligibility", {}).get("eligible")
+            and route.get("execution_enabled")
+        )
+        attempt_id = str(_uuid.uuid4()) if order_send_expected else None
+        event_id = "account-execution:" + (
+            account_execution_id or f"{decision_id}:{account_id}")
+        try:
+            result_obligation, attempt_obligation = create_account_execution_obligations(
+                ledger, event_id=event_id,
+                identity={
+                    "decision_id": decision_id,
+                    "correlation_id": correlation_id,
+                    "account_id": account_id,
+                    "broker": str(getattr(target, "broker", "") or ""),
+                    "broker_server": str(getattr(target, "broker_server", "") or ""),
+                    "trade_id": str(getattr(target, "trade_id", "") or ""),
+                    "symbol": str(getattr(target, "canonical_symbol", "") or ""),
+                    "attempt_id": attempt_id,
+                },
+                timestamp=str(getattr(target, "decision_ts_utc", "") or ""),
+                order_send_expected=order_send_expected,
+                attempt_id=attempt_id,
+            )
+            route["_lifecycle_result_obligation_id"] = result_obligation.obligation_id
+            route["_lifecycle_attempt_obligation_id"] = attempt_obligation.obligation_id
+            route["_lifecycle_attempt_id"] = attempt_id
+        except Exception as exc:
+            log.critical(
+                "[LIFECYCLE_OBLIGATION_CREATE_FAILED] stage=ACCOUNT_EXECUTION_BRANCH account=%s error=%s",
+                account_id or "<missing>", type(exc).__name__, exc_info=True,
+            )
+
+
+def _find_symbol_row(snapshot: dict, canonical_symbol: str) -> dict | None:
+    for row in snapshot.get("symbols", []) or []:
+        if row.get("canonical_symbol") == canonical_symbol:
+            return row
+    return None
+
+
+def _log_fanout_outcomes(symbol: str, canonical: Any, outcomes: list[dict]) -> None:
+    for out in outcomes:
+        target = out.get("target")
+        account_id = getattr(target, "account_id", None) or out.get("account_id", "")
+        log.info(
+            "[MULTI_ACCOUNT_FANOUT] symbol=%s decision_id=%s account=%s "
+            "status=%s executed=%s account_execution_id=%s trade_id=%s "
+            "filling_mode=%s broker_sl=%s broker_tp=%s comment=%s",
+            symbol, canonical.decision_id, account_id, out.get("status", "?"),
+            bool(out.get("executed")),
+            getattr(target, "account_execution_id", "") if target else out.get("account_execution_id", ""),
+            getattr(target, "trade_id", "") if target else out.get("trade_id", ""),
+            out.get("filling_mode", "-"),
+            out.get("broker_sl", "-"), out.get("broker_tp", "-"),
+            str(out.get("comment", ""))[:80],
+        )
+def _persist_account_results(
+    outcomes: list[dict], *, cycle_id: int, entity_id: str,
+    bid: float, ask: float, decision_ts_utc_ms: int = 0,
+) -> None:
+    """Observational Phase-H persistence for every fan-out child attempt."""
+    for out in outcomes:
+        target = out.get("target")
+        if target is None:
+            log.critical(
+                "[LIFECYCLE_EVIDENCE_ORPHANED_ACCOUNT_OUTCOME] account=%s correlation_id=%s",
+                out.get("account_id", "<missing>"), out.get("correlation_id", "<missing>"),
+            )
+            continue
+        account_id = str(getattr(target, "account_id", "") or "")
+        correlation_id = str(getattr(target, "correlation_id", "") or "")
+        decision_id = str(getattr(target, "decision_id", "") or "")
+        account_execution_id = str(getattr(target, "account_execution_id", "") or "")
+        event_id = "account-execution:" + (account_execution_id or f"{decision_id}:{account_id}")
+        from core.lifecycle_evidence_obligations import (
+            ObligationStatus, obligation_ledger,
+        )
+        _ledger = obligation_ledger()
+        result_obligation = _ledger.get(str(out.get("_lifecycle_result_obligation_id") or ""))
+        attempt_obligation = _ledger.get(str(out.get("_lifecycle_attempt_obligation_id") or ""))
+        if result_obligation is None:
+            log.critical(
+                "[LIFECYCLE_OBLIGATION_MISSING] dataset=execution_results account=%s event=%s",
+                account_id, event_id,
+            )
+        if attempt_obligation is None:
+            log.critical(
+                "[LIFECYCLE_OBLIGATION_MISSING] dataset=execution_attempts account=%s event=%s",
+                account_id, event_id,
+            )
+        try:
+            from core.persistence.execution_result_writer import persist_execution_result
+            fill = out.get("fill_price") or 0.0
+            entry = float(target.entry)
+            _persisted = persist_execution_result(
+                symbol=getattr(target, "canonical_symbol", ""),
+                cycle_id=cycle_id,
+                result_ok=bool(out.get("ok")),
+                retcode=int(out.get("retcode", -1)),
+                deal=int(out.get("deal", 0) or 0),
+                order=int(out.get("order", 0) or 0),
+                comment=str(out.get("comment", "") or ""),
+                fill_price=float(fill) if fill else None,
+                side=str(out.get("lifecycle_side", "")),
+                volume=_outcome_volume(out),
+                entry_reference=entry,
+                # `sl`/`tp` = FINAL broker-normalised/submitted values when the
+                # worker reports them; `requested_sl`/`requested_tp` preserve
+                # the ORIGINAL canonical SL/TP untouched for diagnostics.
+                sl=float(out.get("broker_sl") or target.sl),
+                tp=float(out.get("broker_tp") or target.tp),
+                requested_sl=float(target.sl),
+                requested_tp=float(target.tp),
+                pattern=getattr(target, "pattern", ""),
+                decision_id=getattr(target, "decision_id", ""),
+                correlation_id=getattr(target, "correlation_id", ""),
+                entity_id=entity_id,
+                observation_id=getattr(target, "observation_id", ""),
+                canonical_opportunity_id=getattr(target, "canonical_opportunity_id", ""),
+                account_id=getattr(target, "account_id", ""),
+                broker=getattr(target, "broker", ""),
+                broker_server=getattr(target, "broker_server", ""),
+                position_ticket=int(out.get("order", 0) or 0),
+                broker_symbol=route_broker_symbol(out),
+                filling_mode=_outcome_filling_mode(out),
+                decision_ts_utc_ms=decision_ts_utc_ms,
+                slippage=abs(fill - entry) if fill and entry else 0.0,
+                slippage_measured=bool(fill and entry),
+                bid_at_execution=bid,
+                ask_at_execution=ask,
+                risk_distance=abs(entry - float(target.sl)),
+            )
+            if result_obligation is not None:
+                from core.lifecycle_evidence_obligations import (
+                    obligation_ledger, record_producer_outcome,
+                )
+                record_producer_outcome(
+                    obligation_ledger(), result_obligation,
+                    succeeded=bool(_persisted),
+                    observed_record_id=account_execution_id or correlation_id,
+                    failure_reason="EXECUTION_RESULT_LOCAL_PERSIST_FAILED",
+                    provenance={"account_id": account_id,
+                                "persistence_scope": "LOCAL_FSYNC",
+                                "s3_mirror_acknowledgement": "NOT_OBSERVED"},
+                )
+            if attempt_obligation is not None and not bool(out.get("executed")):
+                _outcome_status = str(out.get("status") or "")
+                _attempt_status = (
+                    ObligationStatus.NOT_APPLICABLE
+                    if _outcome_status in {"BLOCKED", "OBSERVED", "SKIPPED"}
+                    else ObligationStatus.AMBIGUOUS
+                )
+                _ledger.update(
+                    attempt_obligation.obligation_id, _attempt_status,
+                    failure_reason=(None if _attempt_status is ObligationStatus.NOT_APPLICABLE
+                                    else f"ORDER_SEND_STATE_UNKNOWN:{_outcome_status or 'UNKNOWN'}"),
+                    provenance={"account_id": account_id, "route_status": _outcome_status},
+                )
+        except Exception as exc:
+            log.exception("[EXECUTION_RESULT_OBLIGATION_HOOK_FAILED] account=%s", account_id)
+            if result_obligation is not None:
+                try:
+                    from core.lifecycle_evidence_obligations import (
+                        ObligationStatus, obligation_ledger,
+                    )
+                    obligation_ledger().update(
+                        result_obligation.obligation_id, ObligationStatus.PRODUCER_FAILED,
+                        failure_reason=f"EXECUTION_RESULT_WRITER_EXCEPTION:{type(exc).__name__}",
+                    )
+                except Exception:
+                    log.critical("[LIFECYCLE_OBLIGATION_LEDGER_FAILED] account=%s", account_id)
+    # REPAIR (evidence continuity): fan-out replaced the legacy execution
+    # boundary but stopped writing execution_attempts. Restore ONE
+    # correctly-attributed attempt record per account execution attempt that
+    # actually reached the broker (order_send). Local pre-flight blocks
+    # (BLOCKED/OBSERVED/worker failures) are not broker interactions.
+    _persist_account_attempts(outcomes, cycle_id=cycle_id)
+
+
+def _persist_account_attempts(outcomes: list[dict], *, cycle_id: int) -> None:
+    """One execution_attempt record per fan-out child that reached order_send.
+
+    Purely observational, fire-and-forget, never raises. Attempt records are
+    written ONLY for outcomes where the worker actually submitted an order
+    (executed=True → FILLED or broker REJECTED). Local pre-flight blocks are
+    not broker interactions and keep the attempts contract honest.
+    """
+    try:
+        from core.persistence.execution_attempts_writer import persist_execution_attempt
+    except Exception as exc:
+        log.exception("[EXECUTION_ATTEMPT_WRITER_UNAVAILABLE]")
+        for out in outcomes:
+            obligation_id = out.get("_lifecycle_attempt_obligation_id")
+            if obligation_id:
+                try:
+                    from core.lifecycle_evidence_obligations import (
+                        ObligationStatus, obligation_ledger,
+                    )
+                    obligation_ledger().update(
+                        obligation_id, ObligationStatus.PRODUCER_FAILED,
+                        failure_reason=f"ATTEMPT_WRITER_IMPORT_FAILED:{type(exc).__name__}",
+                    )
+                except Exception:
+                    log.critical("[LIFECYCLE_OBLIGATION_LEDGER_FAILED] dataset=execution_attempts")
+        return
+    for out in outcomes:
+        target = out.get("target")
+        obligation_id = out.get("_lifecycle_attempt_obligation_id")
+        if not obligation_id:
+            continue
+        from core.lifecycle_evidence_obligations import (
+            ObligationStatus, obligation_ledger, record_producer_outcome,
+        )
+        _ledger = obligation_ledger()
+        if not bool(out.get("executed")):
+            status = str(out.get("status") or "")
+            resolved = (ObligationStatus.NOT_APPLICABLE
+                        if status in {"BLOCKED", "OBSERVED", "SKIPPED"}
+                        else ObligationStatus.AMBIGUOUS)
+            try:
+                _ledger.update(
+                    obligation_id, resolved,
+                    failure_reason=(None if resolved is ObligationStatus.NOT_APPLICABLE
+                                    else f"ORDER_SEND_STATE_UNKNOWN:{status or 'UNKNOWN'}"),
+                    provenance={"route_status": status,
+                                "account_id": str(out.get("account_id") or "")},
+                )
+            except Exception:
+                log.exception("[EXECUTION_ATTEMPT_OBLIGATION_RESOLUTION_FAILED]")
+            continue
+        if target is None:
+            log.critical("[EXECUTION_ATTEMPT_OUTCOME_WITHOUT_TARGET] account=%s",
+                         out.get("account_id", "<unknown>"))
+            try:
+                _ledger.update(
+                    obligation_id, ObligationStatus.PRODUCER_FAILED,
+                    failure_reason="ATTEMPT_OUTCOME_TARGET_MISSING",
+                )
+            except Exception:
+                log.critical("[LIFECYCLE_OBLIGATION_LEDGER_FAILED] dataset=execution_attempts")
+            continue
+        try:
+            _persisted = persist_execution_attempt(
+                attempt_id=str(out.get("_lifecycle_attempt_id") or ""),
+                decision_id=getattr(target, "decision_id", ""),
+                canonical_opportunity_id=getattr(target, "canonical_opportunity_id", ""),
+                observation_id=getattr(target, "observation_id", ""),
+                correlation_id=getattr(target, "correlation_id", ""),
+                trade_id=getattr(target, "trade_id", ""),
+                symbol=getattr(target, "canonical_symbol", ""),
+                cycle_id=cycle_id,
+                action_type="ENTRY",
+                attempt_number=1,
+                retry_reason=None,
+                side=str(out.get("lifecycle_side", "")),
+                volume=_outcome_volume(out),
+                entry_reference=float(target.entry),
+                requested_sl=float(target.sl),
+                requested_tp=float(target.tp),
+                bid_at_attempt=float(out.get("lifecycle_bid", 0.0) or 0.0),
+                ask_at_attempt=float(out.get("lifecycle_ask", 0.0) or 0.0),
+                broker_ok=bool(out.get("ok")),
+                retcode=int(out.get("retcode", -1)),
+                deal=int(out.get("deal", 0) or 0),
+                order_ticket=int(out.get("order", 0) or 0),
+                comment=str(out.get("comment", "") or ""),
+                fill_price=(float(out.get("fill_price") or 0.0) or None),
+                # PHASE H: explicit per-account attribution
+                account_id=getattr(target, "account_id", ""),
+                broker=getattr(target, "broker", ""),
+                broker_server=getattr(target, "broker_server", ""),
+                position_ticket=int(out.get("order", 0) or 0),
+                broker_symbol=route_broker_symbol(out),
+            )
+            record_producer_outcome(
+                _ledger, _ledger.get(obligation_id),
+                succeeded=bool(_persisted),
+                observed_record_id=str(out.get("_lifecycle_attempt_id") or ""),
+                failure_reason="EXECUTION_ATTEMPT_LOCAL_PERSIST_FAILED",
+                provenance={"account_id": getattr(target, "account_id", ""),
+                            "persistence_scope": "LOCAL_FSYNC",
+                            "s3_mirror_acknowledgement": "NOT_OBSERVED"},
+            )
+        except Exception as exc:
+            log.exception("[EXECUTION_ATTEMPT_OBLIGATION_HOOK_FAILED] account=%s",
+                          getattr(target, "account_id", "<unknown>"))
+            try:
+                _ledger.update(
+                    obligation_id, ObligationStatus.PRODUCER_FAILED,
+                    failure_reason=f"EXECUTION_ATTEMPT_WRITER_EXCEPTION:{type(exc).__name__}",
+                )
+            except Exception:
+                log.critical("[LIFECYCLE_OBLIGATION_LEDGER_FAILED] account=%s",
+                             getattr(target, "account_id", "<unknown>"))
+
+
+def _outcome_filling_mode(out: dict) -> int | None:
+    """Numeric MT5 filling mode selected by the worker for this outcome."""
+    mode = out.get("filling_mode")
+    if not mode:
+        return None
+    from core.mt5_symbol_spec import FILLING_FOK, FILLING_IOC, FILLING_RETURN
+    mapping = {"IOC": FILLING_IOC, "FOK": FILLING_FOK, "RETURN": FILLING_RETURN}
+    value = mapping.get(str(mode).upper())
+    return int(value) if value is not None else None
+
+
+def route_broker_symbol(out: dict) -> str:
+    target = out.get("target")
+    if target is not None and getattr(target, "broker_symbol", None):
+        return target.broker_symbol
+    return str(out.get("broker_symbol", "") or "")
+
+
+def _outcome_volume(out: dict) -> float:
+    volume = out.get("volume")
+    if hasattr(volume, "volume"):
+        return float(volume.volume)
+    return float(volume or 0.0)
+
+
+# ─── PRIMARY OUTCOME ADAPTER ──────────────────────────────────────────────────
+
+
+class _FanoutResult:
+    """ExecutionResult-compatible view of one fan-out child outcome."""
+
+    __slots__ = ("ok", "retcode", "deal", "order", "comment",
+                 "fill_price", "price", "volume", "ownership")
+
+    def __init__(self, outcome: dict):
+        fill = outcome.get("fill_price") or 0.0
+        self.ok = bool(outcome.get("ok"))
+        self.retcode = int(outcome.get("retcode", -1))
+        self.deal = int(outcome.get("deal", 0) or 0)
+        self.order = int(outcome.get("order", 0) or 0)
+        self.comment = str(outcome.get("comment", "") or "")
+        self.fill_price = float(fill) if fill else None
+        self.price = float(fill) if fill else 0.0
+        self.volume = _outcome_volume(outcome)
+        self.ownership = _restore_ownership(outcome.get("ownership"))
+
+
+def _restore_ownership(raw):
+    if not raw or not isinstance(raw, dict):
+        return None
+    try:
+        from core.position_ownership import PositionOwnership
+        return PositionOwnership(**raw)
+    except Exception:
+        return None
+
+
+def primary_account_outcome(outcomes: list[dict], *, primary: str = "METAQUOTES"):
+    """Pick the primary (METAQUOTES) child; fall back to the first outcome."""
+    primary_out = None
+    first = None
+    for out in outcomes:
+        target = out.get("target")
+        account_id = getattr(target, "account_id", None) or out.get("account_id")
+        if first is None:
+            first = out
+        if account_id == primary:
+            primary_out = out
+            break
+    return primary_out if primary_out is not None else first
+
+
+def build_primary_execution_outcome(outcomes: list[dict]):
+    """Build an ExecutionOutcome for the existing single-account caller block.
+
+    executed=True only when the primary worker submitted an order; ok/result
+    mirror the primary fill. A local account block maps to executed=False with
+    the block reason — it must NOT mutate the canonical decision.
+    """
+    from execution.execution_orchestrator import ExecutionOutcome
+    from core.clock import utc_ms
+
+    primary = primary_account_outcome(outcomes)
+    if primary is None:
+        return ExecutionOutcome(executed=False, error="no_multi_account_outcome")
+    if primary.get("executed"):
+        result = _FanoutResult(primary)
+        return ExecutionOutcome(
+            executed=True,
+            ok=result.ok,
+            result=result,
+            decision_ts_utc_ms=utc_ms(),
+        )
+    reasons = str(primary.get("comment") or "")
+    if not reasons:
+        eligibility = primary.get("eligibility") or {}
+        reasons = ",".join(eligibility.get("reasons", []) or ["blocked"])
+    return ExecutionOutcome(executed=False, error=reasons or "execution_not_attempted")
+
+
+# ─── SINGLE EXECUTION ROUTE (feature gate) ────────────────────────────────────
+
+
+def dispatch_execution(
+    *,
+    intent: Any,
+    symbol: str,
+    cycle_id: int,
+    decision_id: str,
+    correlation_id: str,
+    entity_id: str = "",
+    observation_id: str = "",
+    canonical_opportunity_id: str = "",
+    strategy_family: str = "",
+    bid: float = 0.0,
+    ask: float = 0.0,
+    legacy_execute: Callable | None = None,
+):
+    """Execute the canonical decision through exactly ONE route.
+
+    fanout ON  → multi-account execution only (legacy never runs)
+    fanout OFF → legacy single-account execution only (fan-out never runs)
+
+    NO_TRADE / PATTERN_REJECT / RISK_BLOCK never reach this boundary — this
+    dispatch is reached after the canonical decision is EXECUTE and the
+    runtime guard chain has passed.
+    """
+    if multi_account_fanout_enabled():
+        return execute_multi_account_fanout(
+            intent=intent,
+            symbol=symbol,
+            cycle_id=cycle_id,
+            decision_id=decision_id,
+            correlation_id=correlation_id,
+            entity_id=entity_id,
+            observation_id=observation_id,
+            canonical_opportunity_id=canonical_opportunity_id,
+            strategy_family=strategy_family,
+            bid=bid,
+            ask=ask,
+        )
+    if legacy_execute is None:
+        raise RuntimeError("LEGACY_EXECUTION_UNAVAILABLE")
+    return legacy_execute()

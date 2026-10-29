@@ -1,0 +1,536 @@
+"""
+Protection Verification — Post-fill broker-side SL/TP confirmation.
+
+After a trade is filled, this module verifies that the broker ACTUALLY
+has SL/TP set on the position. If protection is missing or mismatched,
+it attempts correction and logs a CRITICAL event.
+
+PURPOSE:
+    "Does the broker actually have our stop loss?"
+
+CALLED:
+    Immediately after successful order_send + register_from_execution.
+    Before returning control to the main loop.
+
+GUARANTEES:
+    - Every filled trade is verified within seconds of fill
+    - Missing protection triggers immediate correction attempt
+    - All verification results are persisted for forensic analysis
+    - Never blocks trading on failure (fire-and-forget correction)
+    - Never modifies strategy, scoring, or decision logic
+
+STORAGE:
+    logs/protection_audit/{SYMBOL}/{YYYY-MM-DD}.jsonl
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import time
+from dataclasses import dataclass, asdict
+from datetime import datetime, timezone
+from enum import Enum
+from pathlib import Path
+from typing import Any
+
+import MetaTrader5 as mt5
+
+from core.mt5_timeout import mt5_call
+
+logger = logging.getLogger(__name__)
+
+_LOCAL_DIR = "logs/protection_audit"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("protection_audit")
+_SCHEMA_VERSION = "protection_audit_v1"
+_MAX_VERIFY_ATTEMPTS = 3
+_VERIFY_RETRY_DELAY_S = 0.5
+_SL_TP_TOLERANCE = 1e-6  # Price tolerance for SL/TP matching
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PROTECTION STATUS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ProtectionStatus(str, Enum):
+    """Outcome of post-fill protection verification."""
+    VERIFIED = "VERIFIED"                   # SL/TP confirmed on broker
+    CORRECTED = "CORRECTED"                 # SL/TP was missing, successfully applied
+    MISMATCH_CORRECTED = "MISMATCH_CORRECTED"  # SL/TP differed, successfully corrected
+    FAILED_UNPROTECTED = "FAILED_UNPROTECTED"  # SL/TP missing AND correction failed
+    FAILED_MISMATCH = "FAILED_MISMATCH"    # SL/TP mismatch AND correction failed
+    POSITION_NOT_FOUND = "POSITION_NOT_FOUND"  # Could not locate position on broker
+    VERIFICATION_ERROR = "VERIFICATION_ERROR"  # Exception during verification
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# VERIFICATION RESULT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@dataclass
+class ProtectionVerificationResult:
+    """Complete record of one protection verification attempt."""
+
+    # Identity
+    symbol: str
+    position_ticket: int
+    correlation_id: str
+
+    # What we requested
+    requested_sl: float
+    requested_tp: float
+
+    # What broker has
+    broker_confirmed_sl: float
+    broker_confirmed_tp: float
+
+    # Outcome
+    protection_status: str
+    protection_failure_reason: str
+
+    # Timing
+    verification_timestamp_utc: str
+    verification_latency_ms: int
+    attempts: int
+
+    # Correction (if attempted)
+    correction_attempted: bool
+    correction_success: bool
+    correction_detail: str
+
+    # PHASE H: Account-specific protection identity (default fields)
+    account_id: str = ""
+    broker: str = ""
+    broker_server: str = ""
+    broker_symbol: str = ""
+    trade_id: str = ""
+    decision_id: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CORE VERIFICATION FUNCTION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def verify_protection(
+    *,
+    symbol: str,
+    position_ticket: int,
+    requested_sl: float,
+    requested_tp: float,
+    correlation_id: str = "",
+    execution_module: Any = None,
+    ownership=None, lifecycle_router=None, magic: int = 713001,
+) -> ProtectionVerificationResult:
+    """
+    Verify that broker-side SL/TP protection exists on a filled position.
+
+    Called immediately after order fill. Queries MT5 for the actual position
+    state and compares against requested values.
+
+    If SL/TP are missing or mismatched:
+        1. Logs CRITICAL event
+        2. Attempts correction via position_modify_sl_tp
+        3. Re-verifies after correction
+
+    Args:
+        symbol: Trading pair
+        position_ticket: MT5 position ticket (deal ID from fill)
+        requested_sl: The SL we sent in order_send
+        requested_tp: The TP we sent in order_send
+        correlation_id: For forensic linking
+        execution_module: MT5Execution instance for correction attempts
+
+    Returns:
+        ProtectionVerificationResult with full audit trail
+    """
+    t0 = time.perf_counter()
+    now = datetime.now(timezone.utc)
+
+    # Default result (will be overwritten on success)
+    # PHASE H: extract account identity from ownership if available
+    _owner = ownership
+    result = ProtectionVerificationResult(
+        symbol=symbol,
+        position_ticket=position_ticket,
+        correlation_id=correlation_id,
+        requested_sl=requested_sl,
+        requested_tp=requested_tp,
+        broker_confirmed_sl=0.0,
+        broker_confirmed_tp=0.0,
+        protection_status=ProtectionStatus.VERIFICATION_ERROR.value,
+        protection_failure_reason="",
+        verification_timestamp_utc=now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+        verification_latency_ms=0,
+        attempts=0,
+        correction_attempted=False,
+        correction_success=False,
+        correction_detail="",
+        # PHASE H: Account-specific protection identity
+        account_id=_owner.account_id if _owner else "",
+        broker=_owner.broker if _owner else "",
+        broker_server=_owner.broker_server if _owner else "",
+        broker_symbol=_owner.broker_symbol if _owner else "",
+        trade_id=_owner.trade_id if _owner else "",
+        decision_id=_owner.decision_id if _owner else "",
+    )
+
+    _lifecycle_ledger = None
+    _protection_obligation = None
+    try:
+        from core.accounts.position_state import position_key
+        from core.lifecycle_evidence_obligations import (
+            create_filled_position_obligations, obligation_ledger,
+        )
+        _lifecycle_ledger = obligation_ledger()
+        _account_id = str(getattr(_owner, "account_id", "") or "")
+        _trade_id = position_key(_owner) if _owner is not None and _account_id else ""
+        _correlation_id = str(
+            correlation_id or getattr(_owner, "correlation_id", "") or "")
+        _event_account = _account_id or "MISSING_ACCOUNT"
+        _protection_obligation, _ = create_filled_position_obligations(
+            _lifecycle_ledger,
+            event_id=(f"filled-position:{_event_account}:{position_ticket}:"
+                      f"{symbol}:{_correlation_id}"),
+            identity={
+                "correlation_id": _correlation_id,
+                "account_id": _account_id,
+                "trade_id": _trade_id,
+                "position_ticket": position_ticket,
+                "symbol": symbol,
+                "broker": str(getattr(_owner, "broker", "") or ""),
+                "broker_server": str(getattr(_owner, "broker_server", "") or ""),
+                "canonical_opportunity_id": str(
+                    getattr(_owner, "canonical_opportunity_id", "") or ""),
+                "decision_id": str(getattr(_owner, "decision_id", "") or ""),
+            },
+            timestamp="",
+        )
+    except Exception as _obligation_exc:
+        _lifecycle_ledger = None
+        _protection_obligation = None
+        logger.warning("[LIFECYCLE_OBLIGATION] fill creation failed: %s",
+                       _obligation_exc)
+
+    def _persist_verification() -> bool:
+        persisted = _persist_result(result, symbol)
+        if _lifecycle_ledger is not None and _protection_obligation is not None:
+            try:
+                from core.lifecycle_evidence_obligations import record_producer_outcome
+                record_producer_outcome(
+                    _lifecycle_ledger, _protection_obligation,
+                    succeeded=persisted,
+                    observed_record_id=(
+                        f"{getattr(_owner, 'account_id', '') or 'MISSING_ACCOUNT'}:"
+                        f"{position_ticket}"
+                    ),
+                    failure_reason="PROTECTION_AUDIT_LOCAL_WRITE_FAILED",
+                    provenance={"local_path_authority": "LOCAL_ONLY"},
+                )
+            except Exception as _obligation_exc:
+                logger.warning("[LIFECYCLE_OBLIGATION] protection outcome update failed: %s",
+                               _obligation_exc)
+        return persisted
+
+    try:
+        # ─── QUERY BROKER FOR POSITION STATE ──────────────────────────
+        broker_sl, broker_tp, found, attempts, match_method = _query_broker_position(
+            position_ticket=position_ticket,
+            symbol=symbol, ownership=ownership, lifecycle_router=lifecycle_router, magic=magic,
+        )
+        result.attempts = attempts
+
+        if not found:
+            result.protection_status = ProtectionStatus.POSITION_NOT_FOUND.value
+            result.protection_failure_reason = (
+                f"Position ticket={position_ticket} not found on broker after {attempts} attempts"
+            )
+            logger.critical(
+                "[PROTECTION_CRITICAL] %s ticket=%d — POSITION NOT FOUND on broker",
+                symbol, position_ticket,
+            )
+            _persist_verification()
+            return result
+
+        result.broker_confirmed_sl = broker_sl
+        result.broker_confirmed_tp = broker_tp
+
+        # ─── CHECK SL PROTECTION ─────────────────────────────────────
+        sl_ok = _values_match(broker_sl, requested_sl, _SL_TP_TOLERANCE)
+        tp_ok = _values_match(broker_tp, requested_tp, _SL_TP_TOLERANCE)
+        sl_missing = broker_sl == 0.0 and requested_sl != 0.0
+        tp_missing = broker_tp == 0.0 and requested_tp != 0.0
+        sl_mismatch = not sl_ok and not sl_missing and requested_sl != 0.0
+        tp_mismatch = not tp_ok and not tp_missing and requested_tp != 0.0
+
+        if sl_ok and tp_ok:
+            # ─── PROTECTION VERIFIED ──────────────────────────────────
+            result.protection_status = ProtectionStatus.VERIFIED.value
+            result.verification_latency_ms = int((time.perf_counter() - t0) * 1000)
+            logger.info(
+                "[PROTECTION_VERIFIED] %s ticket=%d sl=%.5f tp=%.5f",
+                symbol, position_ticket, broker_sl, broker_tp,
+            )
+            _persist_verification()
+            return result
+
+        # ─── PROTECTION PROBLEM DETECTED ─────────────────────────────
+        if sl_missing or tp_missing:
+            problem = "SL_MISSING" if sl_missing else ""
+            if tp_missing:
+                problem = f"{problem}+TP_MISSING" if problem else "TP_MISSING"
+            logger.critical(
+                "[PROTECTION_CRITICAL] %s ticket=%d — %s | "
+                "requested_sl=%.5f broker_sl=%.5f requested_tp=%.5f broker_tp=%.5f",
+                symbol, position_ticket, problem,
+                requested_sl, broker_sl, requested_tp, broker_tp,
+            )
+        elif sl_mismatch or tp_mismatch:
+            problem = "SL_MISMATCH" if sl_mismatch else ""
+            if tp_mismatch:
+                problem = f"{problem}+TP_MISMATCH" if problem else "TP_MISMATCH"
+            logger.warning(
+                "[PROTECTION_MISMATCH] %s ticket=%d — %s | "
+                "requested_sl=%.5f broker_sl=%.5f requested_tp=%.5f broker_tp=%.5f",
+                symbol, position_ticket, problem,
+                requested_sl, broker_sl, requested_tp, broker_tp,
+            )
+
+        # ─── ATTEMPT CORRECTION ──────────────────────────────────────
+        result.correction_attempted = True
+        correction_ok = _attempt_correction(
+            symbol=symbol,
+            position_ticket=position_ticket,
+            target_sl=requested_sl,
+            target_tp=requested_tp,
+            execution_module=execution_module, ownership=ownership,
+        )
+        result.correction_success = correction_ok
+
+        if correction_ok:
+            # Re-verify after correction
+            broker_sl2, broker_tp2, found2, _, _ = _query_broker_position(
+                position_ticket=position_ticket,
+                symbol=symbol, ownership=ownership, lifecycle_router=lifecycle_router, magic=magic,
+            )
+            if found2:
+                result.broker_confirmed_sl = broker_sl2
+                result.broker_confirmed_tp = broker_tp2
+
+            if sl_missing or tp_missing:
+                result.protection_status = ProtectionStatus.CORRECTED.value
+                result.correction_detail = f"Protection restored: sl={broker_sl2:.5f} tp={broker_tp2:.5f}"
+            else:
+                result.protection_status = ProtectionStatus.MISMATCH_CORRECTED.value
+                result.correction_detail = f"Mismatch corrected: sl={broker_sl2:.5f} tp={broker_tp2:.5f}"
+
+            logger.info(
+                "[PROTECTION_CORRECTED] %s ticket=%d — sl=%.5f tp=%.5f",
+                symbol, position_ticket, broker_sl2, broker_tp2,
+            )
+        else:
+            # Correction failed — position remains at risk
+            if sl_missing or tp_missing:
+                result.protection_status = ProtectionStatus.FAILED_UNPROTECTED.value
+                result.protection_failure_reason = (
+                    f"SL/TP missing on broker AND correction failed. "
+                    f"broker_sl={broker_sl} broker_tp={broker_tp}"
+                )
+            else:
+                result.protection_status = ProtectionStatus.FAILED_MISMATCH.value
+                result.protection_failure_reason = (
+                    f"SL/TP mismatch AND correction failed. "
+                    f"requested_sl={requested_sl} broker_sl={broker_sl} "
+                    f"requested_tp={requested_tp} broker_tp={broker_tp}"
+                )
+
+            logger.critical(
+                "[PROTECTION_FAILED] %s ticket=%d — POSITION MAY BE UNPROTECTED | %s",
+                symbol, position_ticket, result.protection_failure_reason,
+            )
+
+            # ─── EMERGENCY: attempt to close unprotected position ─────
+            if sl_missing and execution_module is not None:
+                logger.critical(
+                    "[PROTECTION_EMERGENCY] %s ticket=%d — SL missing, correction failed. "
+                    "Position at unlimited risk.",
+                    symbol, position_ticket,
+                )
+                # Note: We do NOT auto-close here. That would be a strategy decision.
+                # Instead we escalate via Discord and leave the position for manual review.
+                _emit_discord_alert(symbol, position_ticket, result)
+
+    except Exception as exc:
+        result.protection_status = ProtectionStatus.VERIFICATION_ERROR.value
+        result.protection_failure_reason = f"Exception during verification: {type(exc).__name__}: {str(exc)[:200]}"
+        logger.error(
+            "[PROTECTION_ERROR] %s ticket=%d — verification exception: %s",
+            symbol, position_ticket, exc,
+        )
+
+    result.verification_latency_ms = int((time.perf_counter() - t0) * 1000)
+    _persist_verification()
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# INTERNAL HELPERS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _query_broker_position(*, position_ticket, symbol, volume=0., magic=713001,
+                           ownership=None, lifecycle_router=None):
+    from core.accounts.lifecycle import LifecycleRouter, legacy_owner
+    from core.accounts.worker import AccountReadError
+    router = lifecycle_router or LifecycleRouter()
+    if ownership is None:
+        from core.symbol_resolver import broker_symbol_for
+        ownership = legacy_owner(ticket=position_ticket, symbol=symbol,
+            broker_symbol=broker_symbol_for(symbol), mt5=mt5, accounts=router.accounts)
+    if ownership.position_ticket != position_ticket or ownership.canonical_symbol != symbol:
+        raise AccountReadError('POSITION_IDENTITY_MISMATCH')
+    for attempt, delay in enumerate((0., .5, 1.5, 3.), 1):
+        if delay:
+            time.sleep(delay)
+        positions = router.read(ownership, 'positions_get', magic=magic)
+        if positions:
+            if (len(positions) != 1
+                    or int(getattr(positions[0], "ticket", 0) or 0)
+                    != int(ownership.position_ticket)
+                    or str(getattr(positions[0], "symbol", "") or "")
+                    != str(ownership.broker_symbol or "")):
+                raise AccountReadError("POSITION_IDENTITY_MISMATCH")
+            pos = positions[0]
+            return float(pos.sl), float(pos.tp), True, attempt, 'account_ticket_match'
+    return 0., 0., False, 4, 'not_found'
+
+
+def _values_match(actual: float, expected: float, tolerance: float) -> bool:
+    """Check if two price values match within tolerance."""
+    if expected == 0.0:
+        return True  # No protection was requested
+    return abs(actual - expected) <= tolerance
+
+
+def _attempt_correction(
+    *,
+    symbol: str,
+    position_ticket: int,
+    target_sl: float,
+    target_tp: float,
+    execution_module: Any,
+    ownership=None,
+) -> bool:
+    """
+    Attempt to apply SL/TP to position via position_modify_sl_tp.
+
+    Returns True if correction succeeded.
+    """
+    if execution_module is None:
+        logger.warning(
+            "[PROTECTION_CORRECTION] No execution module — cannot correct ticket=%d",
+            position_ticket,
+        )
+        return False
+
+    try:
+        result = execution_module.position_modify_sl_tp(
+            symbol=symbol,
+            position_ticket=position_ticket,
+            sl=target_sl,
+            tp=target_tp,
+            ownership=ownership,
+        )
+        if result.ok:
+            logger.info(
+                "[PROTECTION_CORRECTION_OK] ticket=%d sl=%.5f tp=%.5f",
+                position_ticket, target_sl, target_tp,
+            )
+            return True
+        else:
+            logger.warning(
+                "[PROTECTION_CORRECTION_FAILED] ticket=%d retcode=%d comment=%s",
+                position_ticket, result.retcode, result.comment,
+            )
+            return False
+    except Exception as exc:
+        logger.error(
+            "[PROTECTION_CORRECTION_ERROR] ticket=%d error=%s",
+            position_ticket, exc,
+        )
+        return False
+
+
+def _emit_discord_alert(symbol: str, ticket: int, result: ProtectionVerificationResult) -> None:
+    """Send critical Discord alert for unprotected position."""
+    try:
+        from core import config
+        _dl = getattr(config, "_discord_logger", None)
+        if _dl is not None:
+            _dl.event("CRITICAL_PROTECTION_FAILURE", {
+                "symbol": symbol,
+                "ticket": ticket,
+                "status": result.protection_status,
+                "requested_sl": result.requested_sl,
+                "broker_sl": result.broker_confirmed_sl,
+                "requested_tp": result.requested_tp,
+                "broker_tp": result.broker_confirmed_tp,
+                "reason": result.protection_failure_reason,
+                "action_required": "MANUAL_REVIEW — position may be unprotected",
+            })
+    except Exception:
+        pass  # Discord failure must never affect the critical path
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PERSISTENCE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _persist_result(result: ProtectionVerificationResult, symbol: str) -> bool:
+    """Persist verification result locally and report local fsync success."""
+    try:
+        now = datetime.now(timezone.utc)
+        date_str = now.strftime("%Y-%m-%d")
+
+        path = Path(_LOCAL_DIR) / symbol / f"{date_str}.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        record = result.to_dict()
+        record["schema_version"] = _SCHEMA_VERSION
+        line = json.dumps(record, separators=(",", ":"), default=str)
+        from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+        try_prepare_local_jsonl_handoffs(
+            dataset="protection_audit", content=line + "\n", symbol=symbol,
+            partition_date=date_str, local_path=path,
+        )
+        fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+        try:
+            os.write(fd, (line + "\n").encode("utf-8"))
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+
+        from core.canonical_delivery import enqueue_canonical_delivery
+        enqueue_canonical_delivery(
+            dataset="protection_audit", payload=record, symbol=symbol,
+            partition_date=date_str,
+        )
+        return True
+    except Exception as exc:
+        logger.error("[PROTECTION_PERSIST_ERROR] %s", exc)
+        return False
+
+
+def _write_s3_protection_audit(symbol: str, date_str: str, line: str) -> None:
+    """Compatibility name for the governed durable handoff."""
+    from core.canonical_delivery import enqueue_canonical_jsonl
+    enqueue_canonical_jsonl(
+        dataset="protection_audit", content=line, symbol=symbol,
+        partition_date=date_str,
+    )

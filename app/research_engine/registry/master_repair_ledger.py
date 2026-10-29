@@ -1,0 +1,853 @@
+"""Canonical Master 70-Question Repair Ledger.
+
+Planning/consolidation artifact.  The ledger derives the strict structural
+baseline from frozen Wave-A findings.  It does not change the registry, runners,
+reports, resolvers, readiness, collection, or production behaviour.
+
+For every question the ledger still derives ``structurally_operational`` from
+that entry's own 18 gates; the headline counts are never hard-coded.  A repair
+wave whose exit gate has been implemented and proven is recorded with
+``implemented=True`` plus its implementation evidence, and its direct gain then
+belongs to the derived operational baseline instead of the outstanding plan.
+"""
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+from typing import Any
+
+from research_engine.registry.definition_validator import (
+    build_definitions_from_registry,
+    get_question_health,
+    validate_all_definitions,
+)
+from research_engine.registry.research_question_registry import REGISTRY
+from research_engine.registry.wave_a1_definitions import (
+    WAVE_A1_RESOLVED,
+    WAVE_A1_TARGETS,
+    WAVE_A1_UNRESOLVED_REASONS,
+)
+from research_engine.registry.wave_a2_definitions import (
+    WAVE_A2_RESOLVED,
+    WAVE_A2_TARGETS,
+    WAVE_A2_UNRESOLVED_REASONS,
+)
+from research_engine.registry.wave_a3_definitions import (
+    WAVE_A3_TARGETS,
+    WAVE_A3_UNRESOLVED_REASONS,
+)
+from research_engine.registry.wave_a4_definitions import (
+    WAVE_A4_TARGETS,
+    WAVE_A4_UNRESOLVED_REASONS,
+)
+from research_engine.registry.wave_a5_definitions import (
+    WAVE_A5_OWNERSHIP,
+    WAVE_A5_TARGETS,
+)
+from research_engine.registry.wave_a_no_runner_definitions import (
+    ALREADY_AVAILABLE,
+    DERIVABLE,
+    EXISTING_V1_CONTRACT_VIOLATION,
+    NEW_RESEARCH_EVIDENCE,
+    WAVE_A_NO_RUNNER_DESIGNS,
+    WAVE_A_NO_RUNNER_TARGETS,
+)
+
+
+PASS = "PASS"
+FAIL = "FAIL"
+PARTIAL = "PARTIAL"
+NOT_APPLICABLE = "NOT_APPLICABLE"
+HUMAN_DECISION_REQUIRED = "HUMAN_DECISION_REQUIRED"
+FUTURE_EVIDENCE_REQUIRED = "FUTURE_EVIDENCE_REQUIRED"
+ALLOWED_GATE_STATUSES = frozenset({
+    PASS,
+    FAIL,
+    PARTIAL,
+    NOT_APPLICABLE,
+    HUMAN_DECISION_REQUIRED,
+    FUTURE_EVIDENCE_REQUIRED,
+})
+STRUCTURAL_PASS_STATUSES = frozenset({PASS, NOT_APPLICABLE})
+
+
+@dataclass(frozen=True)
+class GateStatus:
+    canonical_identity: str
+    scientific_definition: str
+    unit_of_analysis: str
+    evidence_authority: str
+    join_contract: str
+    epoch_contract: str
+    multi_account_contract: str
+    repeated_measure_contract: str
+    leakage_contract: str
+    metric_contract: str
+    sufficiency_contract: str
+    runner: str
+    report_ownership: str
+    validity_contract: str
+    completion_contract: str
+    readiness_control: str
+    continuous_loop_eligibility: str
+    governance_contract: str
+
+    def values(self) -> tuple[str, ...]:
+        return tuple(asdict(self).values())
+
+
+@dataclass(frozen=True)
+class LedgerEntry:
+    canonical_question_id: str
+    registry_family: str
+    wave_a_category: str
+    current_definition_health: str
+    current_operational_state_if_known: str
+    gates: GateStatus
+    primary_blocker: str
+    primary_blocker_category: str
+    secondary_blockers: tuple[str, ...]
+    root_cause_cluster: str
+    evidence_gap_classification: str
+    human_semantic_decision_required: bool
+    dependency_ids_or_foundations: tuple[str, ...]
+    repair_actions: tuple[str, ...]
+    verification_gate: str
+    proposed_repair_wave: str
+    notes: str
+
+    @property
+    def structurally_operational(self) -> bool:
+        return all(value in STRUCTURAL_PASS_STATUSES for value in self.gates.values())
+
+    def to_dict(self) -> dict[str, Any]:
+        value = asdict(self)
+        value["structurally_operational"] = self.structurally_operational
+        return value
+
+
+@dataclass(frozen=True)
+class HumanSemanticDecision:
+    decision_id: str
+    affected_question_ids: tuple[str, ...]
+    exact_decision: str
+    available_options: tuple[str, ...]
+    consequences: tuple[str, ...]
+    recommended_default: str
+    implementation_blocked_until_decision: bool
+
+
+@dataclass(frozen=True)
+class RepairWave:
+    repair_wave_id: str
+    name: str
+    target_question_ids: tuple[str, ...]
+    root_cause: str
+    prerequisites: tuple[str, ...]
+    human_decision_ids: tuple[str, ...]
+    code_areas_expected_to_change: tuple[str, ...]
+    new_research_evidence_required: bool
+    direct_gain: tuple[str, ...]
+    unlocked_not_yet_operational: tuple[str, ...]
+    exit_gate: str
+    # An implemented wave's direct gain is already part of the derived
+    # operational baseline; its exit gate has been proven by focused tests.
+    implemented: bool = False
+    implementation_evidence: tuple[str, ...] = ()
+
+
+# Repair Wave RW1 (canonical ownership / legacy routing) is implemented and
+# verified, so the Wave-A complete D1/E2 definitions are no longer withheld from
+# the structural baseline.  Ownership itself is enforced at the canonical report
+# boundary by research_engine.control_plane.report_ownership and proven by
+# tests/test_rw1_report_ownership.py; every entry below still derives its own
+# structurally_operational value from its own gates.
+RW2_OPERATIONAL_IDS = frozenset({"M1", "M3", "M7", "M8", "M11"})
+# RW3 is structurally COMPLETE and HD04 is scientifically adjudicated: D2 (paired chronological calibration), D3 (paired
+# chronological predicted-EV gate validation), D4 (paired chronological
+# pre-decision score-threshold validation), D5 (paired chronological
+# rejected-opportunity counterfactual validation), and X5 (paired chronological
+# predicted-EV-vs-realised-R validation) all have real runners, unique reports,
+# and passing focused gates.
+D2_RW3_PROGRESS_IDS = frozenset({"D2", "D3", "D4", "D5", "X5"})
+# RW4 is COMPLETE: D6 (candidate rank-ordering vs realised-R validation),
+# PORT-1 (selected-vs-best-available selection competitiveness), OPP-1
+# (promoted-vs-rejected opportunity expectancy, missing outcomes excluded, one
+# conflict-rejecting canonical root), and P1 (leakage-safe counterfactual
+# promotion-policy evaluation) all have canonical runners, unique reports, and
+# passing focused gates.
+D6_RW4_PROGRESS_IDS = frozenset({"D6", "PORT-1", "OPP-1", "P1"})
+# RW5 complete: E3/S1 became operational in Repair 2B.1, S5 in Repair 2B.2,
+# and S6's strategy-adjusted horizon runner/report in Repair 2B.3.
+RW5_OPERATIONAL_PROGRESS_IDS = frozenset({"E3", "S1", "S5", "S6"})
+RW6_OPERATIONAL_IDS = frozenset({"S7"})
+# RW7 surgical progress: Repairs 4B.2/4B.3/4B.4 make X3, EXEC1, and X6 all
+# operational, closing the execution-semantics repair area.
+RW7_OPERATIONAL_PROGRESS_IDS = frozenset({"X3", "EXEC1", "X6"})
+# RW8 governed research progress: EX1, EX2, EX9, and the valid five-fold EX10
+# walk-forward evaluation are operational.
+RW8_OPERATIONAL_PROGRESS_IDS = frozenset({"EX1", "EX2", "EX9", "EX10"})
+# EX7 now has a valid sufficient governed HD09 interaction result.  EX5, EX6,
+# and EX8 have implemented machinery but remain WAITING_DATA on their frozen
+# level/coverage gates and therefore do not enter the operational baseline.
+RW8_HETEROGENEITY_OPERATIONAL_IDS = frozenset({"EX7"})
+RW9_OPERATIONAL_PROGRESS_IDS = frozenset({"R1", "R2", "R3", "R4", "R5"})
+# L3 now owns its HD11 runner/report and truthfully fails closed on the absent
+# historical weight-profile and mapping authorities.  Scientific blockage is a
+# valid governed result, not a structural implementation gap.
+RW10_OPERATIONAL_PROGRESS_IDS = frozenset({"L1", "L3", "L4"})
+RW11_DATA_GOVERNANCE_OPERATIONAL_IDS = frozenset({"G1", "G2"})
+RW12_RESEARCH_VALIDITY_OPERATIONAL_IDS = frozenset({"G3"})
+OPERATIONAL_IDS = (
+    frozenset(WAVE_A1_RESOLVED | WAVE_A2_RESOLVED)
+    | RW2_OPERATIONAL_IDS
+    | D2_RW3_PROGRESS_IDS
+    | D6_RW4_PROGRESS_IDS
+    | RW5_OPERATIONAL_PROGRESS_IDS
+    | RW6_OPERATIONAL_IDS
+    | RW7_OPERATIONAL_PROGRESS_IDS
+    | RW8_OPERATIONAL_PROGRESS_IDS
+    | RW8_HETEROGENEITY_OPERATIONAL_IDS
+    | RW9_OPERATIONAL_PROGRESS_IDS
+    | RW10_OPERATIONAL_PROGRESS_IDS
+    | RW11_DATA_GOVERNANCE_OPERATIONAL_IDS
+    | RW12_RESEARCH_VALIDITY_OPERATIONAL_IDS
+)
+
+
+
+HUMAN_SEMANTIC_DECISIONS = {
+    "HD01": HumanSemanticDecision(
+        "HD01", ("E3", "S1"),
+        "ADJUDICATED: E3 is the surviving canonical owner; S1 is an explicit superseded alias.",
+        ("E3 owner; S1 explicit alias/superseded identity", "S1 owner; E3 explicit alias/superseded identity"),
+        ("Preserves E-family ownership and routes S1 explicitly", "Preserves strategy-family ownership and routes E3 explicitly"),
+        "ADJUDICATED: E3 owns the result; S1 is an explicit superseded alias.", False,
+    ),
+    "HD02": HumanSemanticDecision(
+        "HD02", ("M1", "M3", "M7", "M11"),
+        "RW2 approved preserving predictive registry claims rather than narrowing them to descriptive/associative claims.",
+        ("Implement leakage-safe out-of-sample predictive evaluation", "Approve explicit registry narrowing"),
+        ("More implementation and chronological validation; preserves intent", "Less code, but changes canonical claim"),
+        "Preserve canonical intent and implement predictive evaluation (approved and implemented in RW2).", False,
+    ),
+    "HD03": HumanSemanticDecision(
+        "HD03", ("M8",),
+        "RW2 approved separate CURRENT market_context as the canonical phase-transition authority.",
+        ("Separate CURRENT market_context joined to outcomes", "Embedded shadow decision snapshot only"),
+        ("Preserves registry multi-source intent and needs a strict join", "Matches current runner but requires registry narrowing"),
+        "Use separate CURRENT market_context with a strict canonical-opportunity join (approved and implemented in RW2).", False,
+    ),
+    "HD04": HumanSemanticDecision(
+        "HD04", ("D2", "D3", "D4", "D5", "X5"),
+        "ADJUDICATED: freeze the versioned decision-time probability, EV, score, action/rejection, chronology, primary-horizon outcome, and question-specific inference contracts in decision_quality_adjudication.py.",
+        ("Versioned predictive/calibration contract with out-of-sample evaluation", "Narrow each claim to its current descriptive diagnostic"),
+        ("Preserves registry intent and blocks leakage", "Requires canonical wording changes and yields weaker claims"),
+        "ADJUDICATED: preserve canonical intent with strict persisted decision-time authority and fail-closed CURRENT evaluation.", False,
+    ),
+    "HD05": HumanSemanticDecision(
+        "HD05", ("P1",),
+        "ADJUDICATED: freeze deployed baseline-transition impact under promotion_impact_adjudication.py, with governed activation chronology, baseline-stamped PRE/POST populations, R-normalized expectancy, explicit trade-offs, and fail-closed authority.",
+        ("Full predeclared candidate-policy evaluation", "Narrow to current fixed in-sample scenarios"),
+        ("Answers the registry and needs broader metrics", "Cheaper but no longer answers promotion impact"),
+        "ADJUDICATED: evaluate actual verified deployed transitions; candidate experiments and approval alone cannot substitute.", False,
+    ),
+    "HD06": HumanSemanticDecision(
+        "HD06", ("S5", "S6"),
+        "Approve horizon/strategy adjustment estimators and provisional overall/cell thresholds.",
+        ("Cluster-aware adjusted model with proposed thresholds", "Alternative predeclared estimator/thresholds"),
+        ("Uses repeated horizons without pseudo-replication", "Acceptable only if equally explicit and cluster-safe"),
+        "ADJUDICATED: use the proposed cluster-aware contracts in the frozen no-runner design.", False,
+    ),
+    "HD07": HumanSemanticDecision(
+        "HD07", ("S7",),
+        "ADJUDICATED: use the predeclared opportunity-normalized cluster-aware full-factorial "
+        "StrategyFamily x horizon interaction, joint Wald omnibus test, one global Holm "
+        "follow-up family, and deterministic 150/30/minimum-2x2 sufficient-grid contract.",
+        (
+            "Approved HD07 contract in S7_HD07_ADJUDICATED_CONTRACT",
+            "Alternative predeclared interaction design (not selected)",
+        ),
+        (
+            "Supports bounded family-by-horizon interaction claims with controlled family-wise error",
+            "Would require a new explicit human adjudication while preserving opportunity clustering",
+        ),
+        "ADJUDICATED: use S7_HD07_ADJUDICATED_CONTRACT.", False,
+    ),
+    "HD08": HumanSemanticDecision(
+        "HD08", ("X6",),
+        "ADJUDICATED: use producer-measured absolute slippage as the primary endpoint; explicit result_ok failure rate and retcode mix as separate secondary endpoints; use fixed spread_atr_ratio bands and decision_trace_v1.v10_market_state.regime.volatility_state with the approved 100/30 and 30/10 sufficiency thresholds.",
+        ("Measured slippage primary; failures secondary", "Composite execution-quality endpoint"),
+        ("Direct producer authority and interpretable units", "Broader but requires approved weighting"),
+        "ADJUDICATED: use X6_HD08_ADJUDICATED_CONTRACT; no composite endpoint.", False,
+    ),
+    "HD09": HumanSemanticDecision(
+        "HD09", ("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10"),
+        "ADJUDICATED: preserve genuine path-based counterfactual intent using SHADOW_BASELINE_V1, "
+        "the closed nine-policy V1 vocabulary, opportunity-paired/clustered inference, and the "
+        "question-specific contracts in HD09_ADJUDICATED_CONTRACT.",
+        ("Implement versioned candidate exit-policy simulation", "Narrow questions to observational exit diagnostics"),
+        ("Preserves canonical policy intent and needs ordered path evaluation", "Retains current runners but changes scientific claims"),
+        "ADJUDICATED: use research_engine.registry.exit_policy_adjudication.HD09_ADJUDICATED_CONTRACT.", False,
+    ),
+    "HD10": HumanSemanticDecision(
+        "HD10", ("R1", "R2", "R3", "R4", "R5"),
+        "ADJUDICATED: preserve genuine risk-policy effectiveness and simulation intent using "
+        "RISK_POLICY_BASELINE_V1, distinct R1 global-effectiveness and R2 per-guard-attribution "
+        "estimands, the frozen R3-R5 V1 models, account-safe clustering, and the question-specific "
+        "contracts in HD10_ADJUDICATED_CONTRACT.",
+        ("Versioned risk-policy evaluation and simulation design", "Narrow to descriptive risk diagnostics"),
+        ("Answers effectiveness/value questions", "Cannot support improvement or optimality claims"),
+        "ADJUDICATED: use research_engine.registry.risk_policy_adjudication.HD10_ADJUDICATED_CONTRACT.",
+        False,
+    ),
+    "HD11": HumanSemanticDecision(
+        "HD11", ("L1", "L2", "L3", "L4", "L7"),
+        "ADJUDICATED: preserve genuine learning/adaptation intent using versioned chronological windows, intervention boundaries, architecture-validity criteria and schema_version A/B arms in HD11.",
+        ("Versioned chronological/adaptation contracts", "Narrow to existing pooled/count diagnostics"),
+        ("Preserves learning claims", "Removes temporal/adaptation meaning"),
+        "ADJUDICATED: use research_engine.registry.learning_adaptation_adjudication.HD11.", False,
+    ),
+    "HD12": HumanSemanticDecision(
+        "HD12", ("L6",),
+        "ADJUDICATED: validate each versioned learning cycle with frozen pre/post windows, per-cycle and per-cell sufficiency, E5 suitability gate and opportunity-clustered improvement test in HD12.",
+        ("Transparent component vector plus ordinal tiers", "Component vector only"),
+        ("Supports summaries but adds approved thresholds", "Avoids arbitrary scalar while remaining operational"),
+        "ADJUDICATED: use research_engine.registry.learning_adaptation_adjudication.HD12.", False,
+    ),
+    "HD13": HumanSemanticDecision(
+        "HD13", ("G1",),
+        "ADJUDICATED: assess all 70 canonical questions and the exact six-category requirement inventory using the frozen HD13 contract; preserve scientific blockage and explicit UNKNOWN separately from legitimate WAITING_DATA sample gaps.",
+        ("ALL-70 global suitability assessment", "Gate only P0 while reporting all 70"),
+        ("Complete canonical coverage with exhaustive requirement accounting", "Prioritises critical questions but lacks one global meaning"),
+        "ADJUDICATED: use research_engine.registry.data_governance_adjudication.HD13_VERSION; all-70 evaluation is nonrecursive and can COMPLETE with a valid UNSUITABLE result.", False,
+    ),
+    "HD14": HumanSemanticDecision(
+        "HD14", ("G2",),
+        "ADJUDICATED: use the exhaustive decision/outcome canonical-opportunity union, exact composite identity (entity_id, canonical_opportunity_id), four-way lineage taxonomy, readiness minimum D>=100, and point-estimate coverage threshold 50% from the frozen HD14 contract.",
+        ("Exhaustive union plus composite identity", "Another explicitly versioned strict identity"),
+        ("Prevents denominator drops, fallback joins, and account/horizon fanout", "Must prove equal determinism and reject ambiguity"),
+        "ADJUDICATED: use research_engine.registry.data_governance_adjudication.HD14_VERSION.", False,
+    ),
+    "HD15": HumanSemanticDecision(
+        "HD15", ("G3",),
+        "ADJUDICATED: assess exactly 69 non-G3 questions under the frozen categorical, fail-closed HD15 rule; unavailable L6 is an explicit missing required dependency that prevents positive trust but permits a valid completed negative assessment.",
+        ("Categorical fail-closed global result", "Weighted or scalar trust score"),
+        ("Deterministic transparent governance with no invented weights", "Rejected because no frozen scientific authority defines weights"),
+        "ADJUDICATED: use research_engine.registry.research_validity_adjudication.HD15_VERSION and option B for unavailable L6.", False,
+    ),
+}
+
+
+REPAIR_WAVES = {
+    "RW1": RepairWave(
+        "RW1", "Canonical ownership and legacy routing", ("D1", "E2"),
+        "Shared legacy/report identities let another canonical question inherit completion.", (), (),
+        ("canonical registry ownership metadata", "report resolver routing", "report validity/readiness ownership tests"),
+        False, ("D1", "E2"), ("E3", "S1", "R1", "R2", "L1", "L3"),
+        "Q1 and Q5 artifacts resolve only to D1 and E2; distinct questions cannot inherit their finding or completion state.",
+        implemented=True,
+        implementation_evidence=(
+            "research_engine/control_plane/report_ownership.py records the adjudicated canonical "
+            "ownership contract derived from Wave A5: q1_component_reward.json belongs to D1 and "
+            "q5_pattern_degradation.json belongs to E2.",
+            "The canonical report resolver (resolve_report_validity / load_report_for_question) and "
+            "the canonical report history resolver fail closed whenever a question is not the "
+            "artifact's canonical owner: L3 can no longer resolve D1's component-reward artifact and "
+            "L1 can no longer resolve E2's pooled-pattern artifact.",
+            "Legacy identities stay compatible only where they cannot transfer ownership: D1 still "
+            "accepts its historical Q1 identity on its own artifact and E2 still accepts Q5/Q24 on its "
+            "own artifact, while a shared legacy ID can no longer complete a scientifically distinct "
+            "canonical question.",
+            "Artifact metadata can no longer contradict canonical ownership silently; a conflicting "
+            "question_id fails closed as AMBIGUOUS_REPORT_MAPPING/INVALIDATED.",
+            "At RW1 completion L1 and L3 remained structurally non-operational and could not resolve "
+            "D1/E2 artifacts; subsequent dedicated repairs must create distinct runners and reports.",
+            "tests/test_rw1_report_ownership.py proves all 25 ownership, fail-closed, ledger-delta, and "
+            "scope-containment requirements.",
+        ),
+    ),
+    "RW2": RepairWave(
+        "RW2", "Market-context evidence and predictive semantics", ("M1", "M3", "M7", "M8", "M11"),
+        "Mapped calculations did not establish the registry's outcome/predictive or multi-source claims.", ("RW1",), (),
+        ("market research runners", "CURRENT context/outcome joins", "market reports/readiness"), False,
+        ("M1", "M3", "M7", "M8", "M11"), (),
+        "Each runner uses authoritative CURRENT context, opportunity-safe outcomes, declared cells and chronological later-unseen validation; COMPLETE enforces total, partition and cell sufficiency.",
+        implemented=True,
+        implementation_evidence=(
+            "research_engine/experiments/market_prediction_rw2.py implements one observation per canonical opportunity, CURRENT-only authority, fail-closed joins and chronological discovery/later validation for all five targets.",
+            "M8 requires canonical market_context and treats embedded snapshot context as consistency evidence only; M11 joins authoritative decision_trace context to shadow pattern/outcome evidence.",
+            "Unique versioned reports and registry sample rules prevent cross-completion and distinguish WAITING_DATA, BLOCKED and scientifically COMPLETE results.",
+            "Focused RW2 tests prove fanout/horizon collapse, missing-label preservation, chronology, leakage rejection, cell sufficiency and derived 31/70 ledger accounting.",
+        ),
+    ),
+    "RW3": RepairWave(
+        "RW3", "Prediction, calibration, and decision foundation", ("D2", "D3", "D4", "D5", "X5"),
+        "Pre-decision p_success/EV/score authorities, pairing, rejection taxonomy, and leakage-safe evaluation are unresolved.", ("RW1",), ("HD04",),
+        ("versioned prediction authority", "decision-to-outcome joins", "calibration/rejection runners and reports"), False,
+        ("D2", "D3", "D4", "D5", "X5"), (),
+        "Each RW3 runner pairs a versioned pre-decision authority to a subsequent CURRENT outcome at one-observation-per-canonical-opportunity, with account/horizon collapse, fail-closed conflicts, deterministic chronological discovery/later-unseen validation, and distinct WAITING_DATA/BLOCKED/COMPLETE states.",
+        implemented=True,
+        implementation_evidence=(
+            "D2 (d2_paired_calibration) pairs p_success to realised win/loss for chronological probability calibration; D3 (d3_predicted_ev_gate) defines the versioned predicted_ev_r_v1 R-unit EV and evaluates a leakage-safe EV gate.",
+            "D4 (d4_score_threshold_validation) validates the canonical pre-decision score_strategy threshold; D5 (d5_rejected_opportunity_validation) evaluates rejected opportunities against counterfactual shadow R under a producer-derived rejection taxonomy.",
+            "X5 (x5_predicted_ev_realised_r_validation) reuses D3's predicted_ev_r_v1 to test whether predicted EV corresponds/calibrates to subsequent realised R, with discovery-frozen calibration bins and separated ranking-vs-magnitude interpretation; production Stage-4 ev is never used.",
+            "Each target owns a unique versioned report and registry sample rule; focused RW3 tests prove fanout/horizon collapse, missing-outcome exclusion, chronology, conflict fail-closed, leakage rejection, sufficiency, and derived 36/70 ledger accounting.",
+        ),
+    ),
+    "RW4": RepairWave(
+        "RW4", "Selection, ranking, and promotion", ("D6", "PORT-1", "OPP-1", "P1"),
+        "Selection questions need complete definitions, uncontaminated outcomes, strict roots, and a declared promotion estimand.", ("RW3",), ("HD05",),
+        ("portfolio/opportunity definitions", "opportunity-selection join", "promotion-impact runner/report"), False,
+        ("D6", "PORT-1", "OPP-1", "P1"), (),
+        "Each RW4 runner evaluates its distinct selection/promotion question at one-observation-per-canonical-opportunity (or per valid cycle), with pre-outcome membership, missing outcomes excluded (never 0R), fail-closed conflicts, deterministic chronological discovery/validation, and unique report ownership.",
+        implemented=True,
+        implementation_evidence=(
+            "D6 (portfolio_ranking.run_portfolio_ranking) validates whether candidate rank ordering predicts realised R; PORT-1 (run_port_1) validates selected-vs-best-available competitiveness per valid cycle with a versioned regret tolerance.",
+            "OPP-1 (opportunity_selection.run_opp_1) compares promoted-vs-rejected opportunity expectancy with the missing->0.0 contamination eliminated and one conflict-rejecting canonical_opportunity_id root (no legacy fallback).",
+            "P1 (promotion_impact.run_promotion_impact) evaluates a leakage-safe counterfactual promotion policy: pre-outcome pattern-group treatment learned on discovery, frozen, and scored on later unseen validation opportunities with EV/win-rate/frequency/drawdown deltas; no in-sample selection leakage and no causal claim.",
+            "Each target owns a unique report; focused RW4 tests prove pre-outcome membership, canonical-opportunity dedup, missing-outcome exclusion, fail-closed conflicts, deterministic chronology, distinct D6/PORT-1/OPP-1/P1 ownership, and derived 40/70 ledger accounting.",
+        ),
+    ),
+    "RW5": RepairWave(
+        "RW5", "Strategy expectancy foundation", ("E3", "S1", "S5", "S6"),
+        "E3/S1 ownership and expectancy (2B.1), S5 horizon-adjusted family "
+        "expectancy (2B.2), and S6 strategy-adjusted horizon expectancy (2B.3) "
+        "are implemented.", ("RW1",), ("HD01", "HD06"),
+        ("canonical alias/owner routing", "strategy expectancy runners", "shadow repeated-measure helpers", "unique reports"), False,
+        ("E3", "S1", "S5", "S6"), ("S7",),
+        "E3/S1 ownership is explicit; S5 and S6 retain distinct marginal estimands, cluster horizons by opportunity, and enforce the same 100/30/20 cell rules.",
+        implemented=True,
+        implementation_evidence=(
+            "Repair 2B.1 established E3 as scientific owner and S1 as its governed superseded alias.",
+            "Repair 2B.2 implemented S5's horizon-adjusted strategy-family expectancy with opportunity-normalized weighted least squares and clustered sandwich uncertainty.",
+            "Repair 2B.3 implements horizon_expectancy.run_s6 and uniquely owned s6_horizon_expectancy.json for the dual strategy-adjusted horizon marginal estimand.",
+            "Focused S5/S6 tests prove CURRENT provenance, 100/30/20 sufficiency, opportunity clustering, distinct report ownership, readiness separation, and that S7 remains unimplemented.",
+        ),
+    ),
+    "RW6": RepairWave(
+        "RW6", "Strategy-horizon interaction", ("S7",),
+        "HD07 is adjudicated and S7's governed full-factorial interaction runner, unique report, readiness, and completion contracts are implemented.", ("RW5",), ("HD07",),
+        ("strategy-horizon interaction runner", "cell sufficiency", "S7 report/readiness"), False,
+        ("S7",), (),
+        "A sufficient 2x2 grid produces cluster-aware interaction contrasts and bounded claims; sparse cells remain explicitly insufficient.",
+        implemented=True,
+        implementation_evidence=(
+            "Repair 2B.4 implements strategy_horizon_interaction.run_s7 and uniquely owned s7_strategy_horizon_interaction.json.",
+            "Focused tests prove deterministic sufficient-grid selection, opportunity-normalized clustered inference, Wald omnibus testing, global Holm follow-ups, CURRENT provenance, and null-result completion.",
+        ),
+    ),
+    "RW7": RepairWave(
+        "RW7", "Execution authority and stability", ("X3", "EXEC1", "X6"),
+        "Execution questions conflate sources/semantics and X6 lacks a runner.", ("RW1",), ("HD08",),
+        ("execution runners", "strict result-context-trace joins", "measured-slippage authority", "execution reports/readiness"), False,
+        ("X3", "EXEC1", "X6"), (),
+        "Account-grained results use producer-measured fields, immutable pre-execution conditions, canonical symbol checks, correlation clustering, and unique completion/report ownership.",
+        implemented=True,
+        implementation_evidence=(
+            "Repair 4B.2 implements execution_protection_research.run_x3 with the adjudicated "
+            "measured-slippage and explicit-result_ok endpoints and uniquely owned w4_x3_session_quality.json.",
+            "Repair 4B.3 implements execution_protection_research.run_exec1 with the governed "
+            "EXECUTE-only cluster-weighted realization model and uniquely owned w4_exec1_execution_failures.json.",
+            "Repair 4B.4 implements execution_stability.run_x6 exactly from X6_HD08_ADJUDICATED_CONTRACT: "
+            "strict result-context-trace joins, producer-measured absolute slippage, canonical-symbol/session/"
+            "spread-band/volatility dimensions, 100/30 overall and 30/10 cell gates, cluster-aware Wald tests "
+            "with within-dimension Holm follow-ups, and uniquely owned x6_execution_stability.json.",
+        ),
+    ),
+    "RW8": RepairWave(
+        "RW8", "Exit counterfactual policy evaluation", ("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10"),
+        "Observational MFE/retention/category diagnostics cannot establish alternative exit-policy effects.", ("RW1",), ("HD09",),
+        ("ordered path authority", "versioned exit-policy representation", "counterfactual simulator", "policy reports/readiness"), False,
+        ("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10"), (),
+        "A deterministic ordered-path fixture reproduces baseline and candidate exits without lookahead; policy comparisons use opportunity/horizon clusters and out-of-sample completion rules.",
+    ),
+    "RW9": RepairWave(
+        "RW9", "Risk effectiveness and simulation", ("R1", "R2", "R3", "R4", "R5"),
+        "Global effectiveness, guard attribution, drawdown chronology, and model assumptions are conflated or unspecified.", ("RW1", "RW3"), ("HD10",),
+        ("risk evidence helpers", "separate R1/R2 runners/reports", "versioned risk simulation", "chronological drawdown evaluation"), False,
+        ("R1", "R2", "R3", "R4", "R5"), (),
+        "R1 and R2 have distinct estimands/owners; R3-R5 publish versioned assumptions and reproduce chronological scenario fixtures with no account fanout. Implementations must satisfy "
+        "research_engine.registry.risk_policy_adjudication.HD10_ADJUDICATED_CONTRACT version hd10_risk_policy_estimation_and_simulation_v1 (research-only; no runtime application authority).",
+        implemented=True,
+        implementation_evidence=(
+            "RW9.1 implements the governed canonical-opportunity risk evidence and chronological split foundation.",
+            "RW9.2 and RW9.3 implement distinct HD10 R1 global-effectiveness and R2 guard-attribution runners/reports.",
+            "RW9.4 implements distinct governed R3 ruin, R4 chronological drawdown, and R5 closed-vocabulary sizing runners/reports with a frozen digest chain.",
+        ),
+    ),
+    "RW10": RepairWave(
+        "RW10", "Learning chronology and architecture validation", ("L1", "L2", "L3", "L4", "L7"),
+        "Pooled/count diagnostics lack event chronology, change boundaries, valid before/after arms, or distinct report ownership.", ("RW1", "RW2", "RW5"), ("HD11",),
+        ("chronology/version boundary layer", "learning runners", "L1/L3 report separation", "A/B arm authority"), False,
+        ("L1", "L2", "L3", "L4", "L7"), (),
+        "Timestamped/versioned fixtures prove temporal order and arm assignment; drift, adaptation, and causal improvement remain separately labelled and uniquely reported. Implementations must satisfy research_engine.registry.learning_adaptation_adjudication.HD11 version hd11_learning_chronology_architecture_v1 (governance only; no runtime authority).",
+        implementation_evidence=(
+            "L1 is implemented by research_engine.experiments.pattern_degradation.run_l1 and uniquely owns l1_pattern_degradation.json; E2 retains legacy_canonical.run_q05 and q5_pattern_degradation.json unchanged.",
+            "L1 uses CURRENT completed PRIMARY_HORIZON_SIMULATION evidence, one canonical opportunity per observation, authoritative entry-time ordering, deterministic non-overlapping early/late windows, and the frozen 200/30/two-pattern gates.",
+            "L4 is implemented by research_engine.experiments.market_behaviour_stability.run_l4 and uniquely owns l4_market_behaviour_stability.json; legacy run_q17 and q17_drawdown_precursors.json remain unchanged and cannot complete L4.",
+            "L4 enforces the frozen same-symbol latest-preceding market-context join, canonical-opportunity grain, deterministic halves, four endpoints, one Holm family, and STABLE/MATERIAL_INSTABILITY completion semantics.",
+            "Focused L1/L4 tests prove their contracts, owned VALID_CURRENT completion, legacy separation, and the derived 60/70 baseline.",
+        ),
+    ),
+    "RW11": RepairWave(
+        "RW11", "Research-governance foundations", ("L6", "G1", "G2"),
+        "Confidence, dataset suitability, and lineage designs exist but have no operational runners or reports.",
+        ("RW2", "RW3", "RW4", "RW5", "RW6", "RW7", "RW8", "RW9", "RW10"),
+        ("HD12", "HD13", "HD14"),
+        ("immutable control-plane snapshot", "L6/G1/G2 runners", "strict lineage denominator", "unique governance reports"), False,
+        ("L6", "G1", "G2"), ("G3",),
+        "L6 scores every eligible conclusion, G1 assesses all 70 requirements, and G2 exhaustively classifies an opportunity-level lineage denominator without dashboard authority. L6 implementation must satisfy research_engine.registry.learning_adaptation_adjudication.HD12 version hd12_learning_cycle_confidence_v1 (governance only; PROPOSED design is not completion).",
+        implementation_evidence=(
+            "G1 is implemented by research_engine.experiments.dataset_suitability.run_g1 and uniquely owns g1_dataset_suitability.json under frozen HD13.",
+            "G2 is implemented by research_engine.experiments.lineage_coverage.run_g2 and uniquely owns g2_lineage_coverage.json under frozen HD14.",
+            "Both bind separate results to the shared immutable CURRENT snapshot manifest; L6 and G3 remain non-operational.",
+        ),
+    ),
+    "RW12": RepairWave(
+        "RW12", "Global research-validity assessment", ("G3",),
+        "G3 requires a nonrecursive implementation of the frozen categorical HD15 rule.", ("RW11",), ("HD15",),
+        ("G3 immutable snapshot aggregator", "global validity report", "human-governance boundary"), False,
+        ("G3",), (),
+        "A same-epoch snapshot covers all 69 non-self states plus represented G1/G2/L6 dependency states, rejects self-reference, distinguishes valid negative completion from evaluation failure, and cannot authorize production.",
+        implemented=True,
+        implementation_evidence=(
+            "research_engine.experiments.research_validity.run_g3 freezes exactly 69 canonical non-self QuestionState records and G1/G2/L6 dependency records into one digest-validated CURRENT snapshot.",
+            "G3 uniquely owns g3_research_validity.json; the report resolver invokes validate_g3_report before granting VALID_CURRENT and readiness completes only an owned validated COMPLETE report.",
+            "The categorical aggregation preserves WAITING_DATA, BLOCKED, NON_OPERATIONAL, REPORT_NOT_VALID_CURRENT, and UNKNOWN; missing L6 is MISSING_REQUIRED_DEPENDENCY and permits only a valid negative completion.",
+            "Focused G3 tests prove nonrecursion, tamper rejection, ownership isolation, valid-negative completion, runner discovery, and the derived 63/70 baseline.",
+        ),
+    ),
+}
+
+
+_ASSIGNMENTS: dict[str, tuple[str, str, str, str, tuple[str, ...], bool, str]] = {}
+
+
+def _assign(
+    ids: tuple[str, ...], wave: str, category: str, cluster: str,
+    blocker: str, dependencies: tuple[str, ...] = (), human: bool = False,
+    evidence_gap: str = DERIVABLE,
+) -> None:
+    for qid in ids:
+        _ASSIGNMENTS[qid] = (wave, category, cluster, blocker, dependencies, human, evidence_gap)
+
+
+# RW1 previously assigned D1/E2 to the blocked "report ownership" category.  The
+# canonical ownership repair is implemented and verified, so no blocked
+# assignment remains for them: D1/E2 are derived as structurally operational
+# directly from their gates.  See REPAIR_WAVES["RW1"].implementation_evidence.
+_assign(("M1", "M11"), "RW2", "runner mismatch", "MARKET_CONTEXT_PREDICTION",
+        "The mapped runner emits descriptive frequencies/dispersion rather than the registry outcome claim.", human=True)
+_assign(("M3", "M7"), "RW2", "prediction/calibration", "MARKET_CONTEXT_PREDICTION",
+        "The runner has no time-ordered out-of-sample predictive comparison.", human=True)
+_assign(("M8",), "RW2", "evidence authority", "MARKET_CONTEXT_PREDICTION",
+        "Registry multi-source market_context authority conflicts with the runner's embedded shadow snapshot.", human=True)
+_assign(("D2", "D3", "D4", "D5", "X5"), "RW3", "prediction/calibration", "PREDICTION_DECISION_FOUNDATION",
+        "Canonical versioned pre-decision probability/EV/score and leakage-safe outcome pairing are unresolved.", human=True)
+# PORT-1 was repaired in RW4.2 and is structurally operational (no assignment).
+# OPP-1 was repaired in RW4.3 and is structurally operational (no assignment).
+# P1 was repaired in RW4.4 and is structurally operational (no assignment).
+# S5, S6, and S7 are structurally operational after Repairs 2B.2/2B.3/2B.4.
+# X6 was repaired in Repair 4B.4 and is structurally operational (no assignment).
+_assign(("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10"), "RW8", "counterfactual design", "EXIT_COUNTERFACTUAL_FOUNDATION",
+        "The current observational diagnostic cannot establish the registry's alternative exit-policy claim.", human=True)
+_assign(("L1", "L2", "L4"), "RW10", "chronology", "LEARNING_CHRONOLOGY_FOUNDATION",
+        "The current runner lacks authoritative temporal/change ordering for the canonical learning claim.", human=True)
+_assign(("L7",), "RW10", "counterfactual design", "LEARNING_CHRONOLOGY_FOUNDATION",
+        "Chronological halves are not authoritative control/candidate A/B arms.", human=True)
+_assign(("L6",), "RW11", "evidence authority", "LEARNING_CYCLE_EVIDENCE_FOUNDATION",
+        "The HD12 runner/report exist, but CURRENT frozen per-cycle authority remains unavailable for scientific evaluation.", human=True)
+_assign(("G3",), "RW12", "no runner", "NO_RUNNER_GLOBAL_VALIDITY",
+        "The HD15-adjudicated global assessment has no runner, owned report, readiness integration, or CURRENT result.", ("G1", "G2", "L6"), False, NEW_RESEARCH_EVIDENCE)
+
+
+_QUESTION_ACTIONS = {
+    "M1": "Join authoritative H4 regime to one opportunity-safe outcome and implement the approved predictive evaluation with real sufficiency.",
+    "M3": "Replace dispersion-of-cell-means proxy with an out-of-sample H4-regime versus H4-regime-plus-phase comparison.",
+    "M7": "Implement time-ordered regime-only, phase-only, and combined predictive model comparison with clustered outcomes.",
+    "M8": "Implement the approved phase-transition authority and deterministic context-to-outcome join instead of silently substituting embedded fields.",
+    "M11": "Replace context/pattern dispersion proxy with the approved incremental prediction design and per-cell sufficiency.",
+    "D2": "Version p_success producer/meaning and calibrate one pre-decision prediction against one canonical outcome out of sample.",
+    "D3": "Define score and distance authorities plus EV units, then evaluate their incremental EV relationship without post-outcome inputs.",
+    "D4": "Choose one authoritative pre-decision score/threshold meaning and evaluate it on held-out canonical opportunities.",
+    "D5": "Define rejection taxonomy and pair every rejected opportunity with a valid shadow counterfactual outcome without account fanout.",
+    "X5": "Version pre-decision EV producer/inputs/units and compare it with measured execution outcomes through a strict correlation join.",
+    "D6": "Activate a complete definition for rank-position outcome prediction while retaining run_portfolio_ranking and d6_portfolio_ranking.json ownership.",
+    "PORT-1": "Activate a complete selected-versus-best cycle definition while retaining run_port_1 and port1_portfolio_selection.json ownership.",
+    "OPP-1": "Exclude missing outcomes from expectancy and replace legacy fallback joins with one conflict-rejecting canonical opportunity root.",
+    "P1": "Join declared decision evidence and evaluate candidate promotion effects on EV, win rate, drawdown, frequency, and risk under the approved design.",
+    "E3": "Implemented: E3 owns governed V10 StrategyFamily expectancy at canonical-opportunity grain.",
+    "S1": "Implemented: S1 is an explicit superseded alias projecting E3 without an independent finding.",
+    "S5": "Implemented: S5 owns the horizon-adjusted cluster-aware V10 strategy-family expectancy with the unique s5 report.",
+    "S6": "Implemented: S6 owns the strategy-adjusted cluster-aware horizon expectancy and unique s6 report.",
+    "S7": "Implemented: S7 owns the HD07 full-factorial clustered interaction analysis and unique s7 report.",
+    "X3": "Implement the adjudicated separate measured-slippage and explicit-result_ok rejection endpoints, clustered session comparisons, endpoint-specific 30/10 sufficiency, CURRENT provenance, and bounded completion.",
+    "EXEC1": "Implemented: EXEC1 owns the governed EXECUTE-only cluster-weighted successful-realization linear-probability model using continuous pre-execution spread_atr_ratio.",
+    "X6": "Implemented: X6 owns the HD08-adjudicated condition-stability analysis with strict result-context-trace joins, producer-measured absolute slippage, canonical-symbol/session/spread-band/volatility dimensions, and unique report ownership.",
+    "R1": "Implemented: R1 owns the governed HD10 global risk-effectiveness runner and r1_risk_layer_effectiveness.json.",
+    "R2": "Implemented: R2 owns the governed HD10 guard-exclusive attribution runner and r2_guard_attribution.json.",
+    "R3": "Implemented: R3 owns the governed HD10 ruin_model_v1 runner and r3_probability_of_ruin.json.",
+    "R4": "Implemented: R4 owns the governed HD10 chronological halt-threshold runner and r4_drawdown_threshold.json.",
+    "R5": "Implemented: R5 owns the governed HD10 closed-vocabulary sizing runner and r5_position_sizing.json.",
+    "L1": "Implemented: L1 owns the HD11 CURRENT primary-horizon chronological pattern-degradation runner and unique l1 report.",
+    "L4": "Implemented: L4 owns the HD11 CURRENT market-behaviour stability runner and unique l4 report.",
+    "L2": "Use actual versioned adaptation/change events and before/after chronological populations; do not call report count learning.",
+    "L3": "Implemented: L3 owns the HD11 three-subtest runner/report, treats Stage-4 n=95 as historical assurance only, and fails closed on absent weight-profile or mapping authority.",
+    "L7": "Assign control/candidate arms from authoritative version/change identity, not first-half/second-half chronology.",
+    "L6": "Implement the frozen immutable-snapshot per-conclusion confidence design and unique report.",
+    "G1": "Implement the frozen all-question evidence-suitability evaluator and unique report without dashboard evidence.",
+    "G2": "Implement the frozen strict opportunity-denominator lineage audit with no fallback joins or horizon/account inflation.",
+    "G3": "Implement the frozen HD15 nonrecursive same-epoch categorical assessment; represent unavailable L6 explicitly and never fabricate it.",
+}
+for _qid in ("EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10"):
+    _QUESTION_ACTIONS[_qid] = (
+        f"Implement { _qid } with a versioned candidate exit-policy, ordered path replay, baseline comparison, "
+        "opportunity/horizon clustering, leakage controls, and a unique policy report."
+    )
+
+
+def _wave_category(qid: str) -> str:
+    categories: list[str] = []
+    for name, targets in (
+        ("A1", WAVE_A1_TARGETS), ("A2", WAVE_A2_TARGETS),
+        ("A3", WAVE_A3_TARGETS), ("A4", WAVE_A4_TARGETS),
+        ("A5", WAVE_A5_TARGETS), ("NO_RUNNER_DESIGN", WAVE_A_NO_RUNNER_TARGETS),
+    ):
+        if qid in targets:
+            categories.append(name)
+    return "+".join(categories)
+
+
+def _frozen_note(qid: str) -> str:
+    for reasons in (
+        WAVE_A1_UNRESOLVED_REASONS, WAVE_A2_UNRESOLVED_REASONS,
+        WAVE_A3_UNRESOLVED_REASONS, WAVE_A4_UNRESOLVED_REASONS,
+    ):
+        if qid in reasons:
+            return reasons[qid]
+    if qid in WAVE_A_NO_RUNNER_DESIGNS:
+        return WAVE_A_NO_RUNNER_DESIGNS[qid].canonical_intent
+    relations = [item for pair, item in WAVE_A5_OWNERSHIP.items() if qid in pair]
+    if relations:
+        return " ".join(item.required_separation for item in relations)
+    return "Wave A established a complete scientific definition and aligned structural contract."
+
+
+def _operational_gates() -> GateStatus:
+    return GateStatus(*([PASS] * 18))
+
+
+def _blocked_gates(qid: str, category: str) -> GateStatus:
+    proposed = qid in WAVE_A_NO_RUNNER_TARGETS
+    execution_semantics_adjudicated = qid in {"X3", "EXEC1", "X6"}
+    future = qid == "G3"
+    runner_pass = qid in {"D1", "E2", "D6", "PORT-1", "L6"}
+    report_pass = qid in {"D6", "PORT-1", "L6"} or (
+        qid not in WAVE_A_NO_RUNNER_TARGETS
+        and qid not in {"D1", "E2", "E3", "S1", "R1", "R2", "L1", "L3"}
+    )
+    definition_pass = qid in {"D1", "E2"}
+    if qid == "G3":
+        # HD15 closes every scientific/governance design choice while preserving
+        # the real implementation gap.  FUTURE_EVIDENCE_REQUIRED plus absent
+        # runner/report/readiness keeps G3 structurally non-operational.
+        return GateStatus(
+            canonical_identity=PASS,
+            scientific_definition=PASS,
+            unit_of_analysis=PASS,
+            evidence_authority=FUTURE_EVIDENCE_REQUIRED,
+            join_contract=PASS,
+            epoch_contract=PASS,
+            multi_account_contract=PASS,
+            repeated_measure_contract=PASS,
+            leakage_contract=PASS,
+            metric_contract=PASS,
+            sufficiency_contract=PASS,
+            runner=FAIL,
+            report_ownership=FAIL,
+            validity_contract=PASS,
+            completion_contract=PASS,
+            readiness_control=FAIL,
+            continuous_loop_eligibility=FAIL,
+            governance_contract=PASS,
+        )
+    identity = HUMAN_DECISION_REQUIRED if qid in {"E3", "S1"} else PASS
+    if qid in {"X3", "EXEC1", "X6"}:
+        scientific = PASS
+    else:
+        scientific = PASS if definition_pass or qid in {"S7", "L6"} else (HUMAN_DECISION_REQUIRED if proposed else FAIL)
+    evidence = FUTURE_EVIDENCE_REQUIRED if future else (PASS if qid in {"D1", "E2", "D6", "PORT-1"} else PARTIAL)
+    governance = HUMAN_DECISION_REQUIRED if qid in {
+        "P1", "R1", "R2", "R3", "R4", "R5", "L2", "L7",
+        "EX1", "EX2", "EX5", "EX6", "EX7", "EX8", "EX9", "EX10", "G3",
+    } else NOT_APPLICABLE
+    return GateStatus(
+        canonical_identity=identity,
+        scientific_definition=scientific,
+        unit_of_analysis=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        evidence_authority=PASS if execution_semantics_adjudicated else evidence,
+        join_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        epoch_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        multi_account_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        repeated_measure_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        leakage_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        metric_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} or execution_semantics_adjudicated else PARTIAL,
+        sufficiency_contract=PASS if qid in {"D1", "E2"} or execution_semantics_adjudicated else FAIL,
+        runner=PASS if runner_pass else FAIL,
+        report_ownership=PASS if report_pass else FAIL,
+        validity_contract=PASS if qid in {"D1", "E2", "D6", "PORT-1"} else PARTIAL,
+        completion_contract=PASS if qid in {"D1", "E2"} else FAIL,
+        readiness_control=PARTIAL,
+        continuous_loop_eligibility=FAIL,
+        governance_contract=governance,
+    )
+
+
+def _verification(qid: str, wave: str) -> str:
+    if wave == "RW1":
+        return f"The canonical report for {qid} resolves only to {qid}; no distinct ID can inherit its validity, finding, or COMPLETE state."
+    if wave == "RW8":
+        return f"{qid} reproduces a deterministic ordered-path baseline/candidate fixture without lookahead and becomes COMPLETE only after declared policy sample/cell gates."
+    if wave == "RW11":
+        return f"{qid} emits its unique canonical governance report from one immutable CURRENT snapshot and truthfully distinguishes READY, WAITING_DATA, BLOCKED, and COMPLETE."
+    if wave == "RW12":
+        return "G3 consumes same-epoch canonical G1/G2/L6 dependency records, covers all 69 non-self states, permits valid negative completion for represented unavailable L6, rejects recursion, and has no production-approval path."
+    return (
+        f"The {qid} runner emits a unique report carrying canonical ID {qid}, uses the declared independent grain and strict CURRENT joins, "
+        "meets matching sample/cell rules, and cannot report COMPLETE when its canonical scientific criterion is unmet."
+    )
+
+
+_definitions = build_definitions_from_registry(REGISTRY)
+_health = validate_all_definitions(_definitions)
+_registry_ids = frozenset(question.id for question in REGISTRY)
+if _registry_ids != OPERATIONAL_IDS | frozenset(_ASSIGNMENTS):
+    missing = sorted(_registry_ids - OPERATIONAL_IDS - frozenset(_ASSIGNMENTS))
+    extra = sorted((OPERATIONAL_IDS | frozenset(_ASSIGNMENTS)) - _registry_ids)
+    raise RuntimeError(f"repair ledger coverage mismatch: missing={missing}, extra={extra}")
+
+
+MASTER_REPAIR_LEDGER: dict[str, LedgerEntry] = {}
+for _question in REGISTRY:
+    _qid = _question.id
+    if _qid in OPERATIONAL_IDS:
+        MASTER_REPAIR_LEDGER[_qid] = LedgerEntry(
+            canonical_question_id=_qid,
+            registry_family=_question.category.value,
+            wave_a_category=_wave_category(_qid),
+            current_definition_health=get_question_health(_health[_qid]),
+            current_operational_state_if_known="STRUCTURALLY_OPERATIONAL; current data state not sampled by this planning ledger",
+            gates=_operational_gates(),
+            primary_blocker="",
+            primary_blocker_category="",
+            secondary_blockers=(),
+            root_cause_cluster="NONE",
+            evidence_gap_classification=ALREADY_AVAILABLE,
+            human_semantic_decision_required=False,
+            dependency_ids_or_foundations=(),
+            repair_actions=(),
+            verification_gate="Frozen Wave-A definition, runner, report, validity, readiness, and completion contracts remain aligned.",
+            proposed_repair_wave="",
+            notes=_frozen_note(_qid),
+        )
+        continue
+
+    _wave, _category, _cluster, _blocker, _deps, _human, _gap = _ASSIGNMENTS[_qid]
+    _wave_item = REPAIR_WAVES[_wave]
+    _secondary = (
+        f"Gate failures remain in: {', '.join(name for name, value in asdict(_blocked_gates(_qid, _category)).items() if value not in STRUCTURAL_PASS_STATUSES)}.",
+    )
+    MASTER_REPAIR_LEDGER[_qid] = LedgerEntry(
+        canonical_question_id=_qid,
+        registry_family=_question.category.value,
+        wave_a_category=_wave_category(_qid),
+        current_definition_health=get_question_health(_health[_qid]),
+        current_operational_state_if_known="BLOCKED_STRUCTURAL",
+        gates=_blocked_gates(_qid, _category),
+        primary_blocker=_blocker,
+        primary_blocker_category=_category,
+        secondary_blockers=_secondary,
+        root_cause_cluster=_cluster,
+        evidence_gap_classification=_gap,
+        human_semantic_decision_required=_human,
+        dependency_ids_or_foundations=_deps or _wave_item.prerequisites,
+        repair_actions=(_QUESTION_ACTIONS[_qid],),
+        verification_gate=_verification(_qid, _wave),
+        proposed_repair_wave=_wave,
+        notes=_frozen_note(_qid),
+    )
+
+
+STRUCTURALLY_OPERATIONAL_IDS = frozenset(
+    qid for qid, entry in MASTER_REPAIR_LEDGER.items() if entry.structurally_operational
+)
+STRUCTURALLY_NON_OPERATIONAL_IDS = frozenset(MASTER_REPAIR_LEDGER) - STRUCTURALLY_OPERATIONAL_IDS
+
+
+def operational_baseline() -> tuple[int, int]:
+    """Return strict structural operational/non-operational counts."""
+    return len(STRUCTURALLY_OPERATIONAL_IDS), len(STRUCTURALLY_NON_OPERATIONAL_IDS)
+
+
+def blocker_counts() -> dict[str, int]:
+    """Count non-operational questions by their single primary blocker."""
+    counts: dict[str, int] = {}
+    for qid in STRUCTURALLY_NON_OPERATIONAL_IDS:
+        category = MASTER_REPAIR_LEDGER[qid].primary_blocker_category
+        counts[category] = counts.get(category, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def evidence_gap_counts() -> dict[str, int]:
+    """Count all questions by repair-evidence classification."""
+    counts = {
+        ALREADY_AVAILABLE: 0,
+        DERIVABLE: 0,
+        NEW_RESEARCH_EVIDENCE: 0,
+        EXISTING_V1_CONTRACT_VIOLATION: 0,
+    }
+    for entry in MASTER_REPAIR_LEDGER.values():
+        counts[entry.evidence_gap_classification] += 1
+    return counts
+
+
+def projected_operational_counts() -> tuple[tuple[str, int], ...]:
+    """Apply each outstanding direct gain exactly once in declared dependency order.
+
+    An implemented wave's direct gain is already part of the derived operational
+    baseline, so it is verified rather than re-applied.  This keeps the overall
+    count strictly derived from the 70 ledger entries instead of being hard-coded.
+    """
+    covered = set(STRUCTURALLY_OPERATIONAL_IDS)
+    result: list[tuple[str, int]] = []
+    for wave in REPAIR_WAVES.values():
+        wave_gain = set(wave.direct_gain)
+        if wave.implemented:
+            outstanding = wave_gain - covered
+            if outstanding:
+                raise RuntimeError(
+                    f"implemented wave {wave.repair_wave_id} direct gain is not operational: "
+                    f"{sorted(outstanding)}"
+                )
+        else:
+            # Progress already banked from a wave that is still partly
+            # outstanding (e.g. E3/S1 in Repair 2B.1, S5 in Repair 2B.2) is
+            # never double-counted; only the remaining gain is projected.
+            covered.update(wave_gain)
+        result.append((wave.repair_wave_id, len(covered)))
+    return tuple(result)
+
+
+def implemented_waves() -> tuple[str, ...]:
+    """Repair waves whose exit gate has been proven by focused implementation."""
+    return tuple(
+        wave.repair_wave_id for wave in REPAIR_WAVES.values() if wave.implemented
+    )
+
+
+def outstanding_operational_gain(wave_id: str) -> tuple[str, ...]:
+    """Direct gain of a wave that is still structurally non-operational."""
+    wave = REPAIR_WAVES[wave_id]
+    return tuple(
+        qid for qid in wave.direct_gain if qid in STRUCTURALLY_NON_OPERATIONAL_IDS
+    )

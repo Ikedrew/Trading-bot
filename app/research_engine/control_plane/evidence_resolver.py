@@ -1,0 +1,1563 @@
+"""Read-only, per-question CURRENT evidence resolution.
+
+The resolver loads each logical dataset at most once per snapshot, constructs
+the analytical population declared by a canonical question, and evaluates the
+registry's requirement vocabulary without running an experiment.
+"""
+from __future__ import annotations
+
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime
+import math
+from typing import Any, Callable, Mapping
+
+from research_engine.data_quality.classifier import DataEpoch, classify_record
+from core.production_data_contract import (
+    GOVERNED_EVIDENCE_SCHEMA_REGISTRY,
+    PRODUCTION_SCHEMA_REGISTRY,
+    current_schema,
+)
+
+
+_PHYSICAL_DATASETS = {
+    "execution_results_v1": "execution_results",
+    "protection_audit_v1": "protection_audit",
+    "execution_attempts_v1": "execution_attempts",
+    "risk_deviation_v1": "risk_deviation",
+}
+_CANONICAL_V1_SOURCES = frozenset({
+    "management_actions", "horizon_candidates", "strategy_candidates",
+    "portfolio_rankings", "portfolio_shadow", "execution_results_v1",
+    "execution_context", "protection_audit_v1", "execution_attempts_v1",
+    "risk_deviation_v1", "opportunities", "assessments",
+    "shadow_candidate", "shadow_candidate_evaluation",
+    # The strict provenance boundary normalises these versioned aliases to
+    # their physical production-contract dataset names before classification.
+    "execution_results", "protection_audit", "execution_attempts",
+    "risk_deviation",
+})
+_RUNNER_SUPPLEMENTAL_SOURCES: dict[str, tuple[str, ...]] = {}
+_JOIN_FIELDS = (
+    "canonical_opportunity_id", "entity_id", "correlation_id", "trade_id",
+    "cycle_id", "position_ticket",
+)
+_FIELD_ALIASES = {
+    "r_multiple": ("r_multiple", "pnl_r_multiple", "pnl_r", "r_multiple_realised"),
+    "pnl_r_multiple": ("pnl_r_multiple", "pnl_r", "r_multiple"),
+    "r_multiple_realised": ("r_multiple_realised", "live_r_multiple"),
+    "shadow_r_multiple": ("shadow_r_multiple", "pnl_r_multiple", "pnl_r"),
+    "live_r_multiple": ("live_r_multiple", "r_multiple_realised"),
+    "strategy": ("strategy", "strategy_id", "strategy_family", "selected_strategy"),
+    "pattern": ("pattern", "pattern_name"),
+    "score": ("score", "score_strategy", "overall_score", "signal_score"),
+    "trade_horizon": ("trade_horizon", "evaluated_horizon", "horizon"),
+    "evaluated_horizon": ("evaluated_horizon", "trade_horizon", "horizon"),
+    "h4_regime": ("h4_regime", "regime"),
+    "regime": ("regime", "h4_regime"),
+    # ``timestamp_decision_utc`` is the canonical decision-time timestamp on
+    # reconstructed shadow_runtime evidence.  It is resolved to the historic
+    # semantic name here, never copied into persisted source records.
+    "entry_time": (
+        "entry_time", "entry_timestamp", "opened_at", "bar_time",
+        "timestamp_decision_utc",
+    ),
+    "exit_timestamp": ("exit_timestamp", "closed_at", "exit_time"),
+    "session_state": ("session_state", "session"),
+    "slippage": ("slippage", "slippage_points"),
+    "position_size": ("position_size", "volume", "risk_fraction"),
+}
+_COVERAGE_FIELDS = {
+    "lineage_coverage": ("canonical_opportunity_id", "entity_id", "correlation_id"),
+    "outcome_coverage": ("r_multiple",),
+    "pattern_coverage": ("pattern",),
+    "strategy_coverage": ("strategy",),
+    "horizon_coverage": ("trade_horizon",),
+    "h4_regime_coverage": ("h4_regime",),
+    "market_phase_coverage": ("market_phase",),
+}
+_COUNT_RULES = frozenset({
+    "sample_size", "ranking_rows", "ranked_candidates", "ranking_cycles",
+    "assessed_opportunities", "max_action_type_sample_size",
+})
+
+
+@dataclass(frozen=True)
+class RequirementResult:
+    type: str
+    name: str
+    required: Any
+    current: Any
+    satisfied: bool | None
+    reason: str
+    blocking: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "type": self.type,
+            "name": self.name,
+            "required": self.required,
+            "current": self.current,
+            "satisfied": self.satisfied,
+            "reason": self.reason,
+            "blocking": self.blocking,
+        }
+
+
+@dataclass
+class DatasetSlice:
+    source: str
+    available: bool
+    records: list[dict[str, Any]] = field(default_factory=list)
+    current_records: list[dict[str, Any]] = field(default_factory=list)
+    transitional_count: int = 0
+    legacy_count: int = 0
+    error: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source": self.source,
+            "available": self.available,
+            "total_records": len(self.records),
+            "current_records": len(self.current_records),
+            "transitional_excluded": self.transitional_count,
+            "legacy_excluded": self.legacy_count,
+            "error": self.error,
+        }
+
+
+@dataclass
+class EvidenceResolution:
+    question_id: str
+    sources: list[dict[str, Any]]
+    usable_count: int | None
+    excluded_count: int
+    metrics: dict[str, Any]
+    requirements: list[RequirementResult]
+    error: str = ""
+    usable_records: list[dict[str, Any]] = field(default_factory=list, repr=False)
+    runner_artifacts: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    def requirements_dict(self) -> list[dict[str, Any]]:
+        return [item.to_dict() for item in self.requirements]
+
+
+class EvidenceSnapshot:
+    """Run-scoped dataset cache; no cache is persisted."""
+
+    def __init__(
+        self,
+        datasets: Mapping[str, list[dict[str, Any]]] | None = None,
+        loader: Callable[[str], list[dict[str, Any]]] | None = None,
+    ) -> None:
+        self._datasets = dict(datasets) if datasets is not None else None
+        self._loader = loader or self._load_live
+        self._cache: dict[str, DatasetSlice] = {}
+        self._population_cache: dict[
+            tuple[str, ...], tuple[list[dict[str, Any]], int, dict[str, Any]]
+        ] = {}
+        self._diagnostics_cache: dict[tuple[str, ...], dict[str, Any]] = {}
+        self._artifact_cache: dict[str, Any] = {}
+        self.load_counts: Counter[str] = Counter()
+
+    def generic_population(
+        self,
+        slices: list[DatasetSlice],
+    ) -> tuple[list[dict[str, Any]], int, dict[str, Any], tuple[str, ...]]:
+        """Return one immutable cycle-scoped generic analytical population.
+
+        Generic questions with the same ordered sources previously repeated the
+        expensive recursive normalisation work.  The cached rows are private to
+        the resolver; callers receive copies of usable rows before runner use.
+        """
+        key = tuple(dataset.source for dataset in slices)
+        cached = self._population_cache.get(key)
+        if cached is None:
+            # Bound cycle-lifetime retention.  A generic population can contain
+            # tens of thousands of wide nested rows; retaining every distinct
+            # source combination until question 70 caused multi-gigabyte RSS.
+            # Keep only the active family while preserving reuse for adjacent
+            # questions with the same governed source identity.
+            self._population_cache.clear()
+            self._diagnostics_cache.clear()
+            rows, ambiguous = _merge_population(slices)
+            cached = (rows, ambiguous, {})
+            self._population_cache[key] = cached
+        rows, excluded, metrics = cached
+        return rows, excluded, dict(metrics), key
+
+    def invariant_diagnostics(
+        self,
+        key: tuple[str, ...],
+        rows: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Cache diagnostics determined solely by an immutable population."""
+        cached = self._diagnostics_cache.get(key)
+        if cached is None:
+            cached = {
+                metric_name: _coverage(rows, fields)
+                for metric_name, fields in _COVERAGE_FIELDS.items()
+            }
+            cached["covered_days"] = _covered_days(rows)
+            cached["covered_sessions"] = len({
+                str(value)
+                for row in rows
+                if _present(value := _value(row, "session_state"))
+            })
+            self._diagnostics_cache[key] = cached
+        return dict(cached)
+
+    def governed_execution_evidence(
+        self,
+        by_source: Mapping[str, DatasetSlice],
+    ) -> Any:
+        """Build the strict execution join once from immutable snapshot rows."""
+        key = "governed_execution_evidence:decision_trace_required"
+        if key not in self._artifact_cache:
+            from research_engine.control_plane.execution_evidence import (
+                build_governed_execution_evidence,
+            )
+
+            self._artifact_cache[key] = build_governed_execution_evidence(
+                by_source["execution_results_v1"].current_records,
+                by_source["execution_context"].current_records,
+                by_source["decision_trace"].current_records,
+                require_decision_trace=True,
+                trusted_immutable_inputs=True,
+            )
+        return self._artifact_cache[key]
+
+    def governed_exit_evidence(self) -> Any:
+        """Build HD09 exit foundations once from immutable snapshot shadow rows.
+
+        The common investigation snapshot binds ``shadow_runtime`` but does not
+        bind the ``events_v1`` M5 OHLC candle stream.  The builders therefore
+        run against the bound shadow events only, and the resulting evidence
+        object carries an explicit ``missing_evidence`` entry for the absent
+        candle path rather than reopening storage.
+        """
+        key = "governed_exit_evidence:shadow_runtime_bound"
+        if key not in self._artifact_cache:
+            from research_engine.control_plane.governed_exit_evidence import (
+                build_governed_exit_evidence,
+            )
+
+            shadow = self.get("shadow_runtime")
+            self._artifact_cache[key] = build_governed_exit_evidence(
+                shadow.records if shadow.available else [], ()
+            )
+        return self._artifact_cache[key]
+
+    def governed_risk_evidence(self) -> Any:
+        """Build the HD10 risk population once from immutable snapshot rows.
+
+        R3/R4/R5 share one risk population: CURRENT ``decision_trace`` joined to
+        completed ``shadow_runtime`` lifecycles.  The legacy
+        ``research_shadow_trades`` loader is never consulted, so missing bound
+        outcomes fail closed inside the risk evidence builder rather than
+        reopening storage.
+        """
+        key = "governed_risk_evidence:decision_trace_and_shadow_runtime_bound"
+        if key not in self._artifact_cache:
+            from research_engine.control_plane.governed_meta_risk_evidence import (
+                build_governed_risk_evidence,
+            )
+
+            decision = self.get("decision_trace")
+            shadow = self.get("shadow_runtime")
+            self._artifact_cache[key] = build_governed_risk_evidence(
+                decision.records if decision.available else [],
+                shadow.records if shadow.available else [],
+            )
+        return self._artifact_cache[key]
+
+    def governed_lineage_population(self) -> Any:
+        """Build the HD14 G2 meta population once from immutable snapshot rows."""
+        key = "governed_lineage_population:decision_trace_and_shadow_runtime_bound"
+        if key not in self._artifact_cache:
+            from research_engine.control_plane.governed_meta_risk_evidence import (
+                build_governed_lineage_population,
+            )
+
+            decision = self.get("decision_trace")
+            shadow = self.get("shadow_runtime")
+            self._artifact_cache[key] = build_governed_lineage_population(
+                decision.records if decision.available else [],
+                shadow.records if shadow.available else [],
+            )
+        return self._artifact_cache[key]
+
+
+    def get(self, source: str) -> DatasetSlice:
+        if source in self._cache:
+            return self._cache[source]
+        self.load_counts[source] += 1
+        if self._datasets is not None:
+            if source not in self._datasets:
+                result = DatasetSlice(source=source, available=False, error="Dataset not supplied")
+                self._cache[source] = result
+                return result
+            records = list(self._datasets[source])
+        else:
+            try:
+                records = list(self._loader(source))
+            except Exception as exc:
+                result = DatasetSlice(
+                    source=source,
+                    available=False,
+                    error=f"{type(exc).__name__}: {exc}",
+                )
+                self._cache[source] = result
+                return result
+
+        current: list[dict[str, Any]] = []
+        transitional = 0
+        legacy = 0
+        for record in records:
+            epoch = _record_epoch(record, source)
+            if epoch == DataEpoch.CURRENT:
+                current.append(record)
+            elif epoch == DataEpoch.TRANSITIONAL:
+                transitional += 1
+            else:
+                legacy += 1
+        result = DatasetSlice(
+            source=source,
+            available=True,
+            records=records,
+            current_records=current,
+            transitional_count=transitional,
+            legacy_count=legacy,
+        )
+        self._cache[source] = result
+        return result
+
+    @staticmethod
+    def _load_live(source: str) -> list[dict[str, Any]]:
+        if source == "shadow_trades":
+            from research_engine.data_access.s3_source import get_default_source
+            from research_engine.data_access.shadow_runtime_ingestion import (
+                ingest_completed_shadow_trades,
+            )
+
+            return [
+                *ingest_completed_shadow_trades(),
+                *get_default_source().read_dataset("research_shadow_trades"),
+            ]
+        from research_engine.data_access.s3_source import get_default_source
+
+        return get_default_source().read_dataset(_PHYSICAL_DATASETS.get(source, source))
+
+
+def _recursive_value(record: Any, names: tuple[str, ...]) -> Any:
+    if not isinstance(record, dict):
+        return None
+    for name in names:
+        if name in record and _present(record[name]):
+            return record[name]
+    for value in record.values():
+        if isinstance(value, dict):
+            found = _recursive_value(value, names)
+            if _present(found):
+                return found
+    return None
+
+
+def _recursive_values(record: Any, names: frozenset[str]) -> list[Any]:
+    """Collect governed aliases without depending on dictionary traversal order."""
+    if not isinstance(record, dict):
+        return []
+    values = [
+        value for name, value in record.items()
+        if name in names and _present(value)
+    ]
+    for value in record.values():
+        if isinstance(value, dict):
+            values.extend(_recursive_values(value, names))
+    return values
+
+
+def _timestamp_identity(value: Any) -> float | str | None:
+    """Return a comparison identity for a valid instant, without rewriting it."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        numeric = float(value)
+        return numeric if math.isfinite(numeric) and numeric > 0 else None
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return None
+        return value.timestamp()
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            numeric = float(text)
+        except ValueError:
+            try:
+                parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            except ValueError:
+                return None
+            if parsed.tzinfo is None:
+                return None
+            return parsed.timestamp()
+        return numeric if math.isfinite(numeric) and numeric > 0 else None
+    return None
+
+
+def _entry_time(record: dict[str, Any]) -> Any:
+    """Resolve entry time fail-closed when legacy and canonical facts conflict."""
+    legacy_names = frozenset({"entry_time", "entry_timestamp", "opened_at", "bar_time"})
+    canonical_names = frozenset({"timestamp_decision_utc"})
+    legacy = _recursive_values(record, legacy_names)
+    canonical = _recursive_values(record, canonical_names)
+    candidates = [*legacy, *canonical]
+    if not candidates:
+        return None
+    identities = [_timestamp_identity(value) for value in candidates]
+    if any(identity is None for identity in identities):
+        return None
+    first = identities[0]
+    if any(identity != first for identity in identities[1:]):
+        return None
+    # Preserve an explicit supported entry_time representation when present;
+    # otherwise expose the canonical decision timestamp non-destructively.
+    return legacy[0] if legacy else canonical[0]
+
+
+def _value(record: dict[str, Any], field_name: str) -> Any:
+    if field_name == "slippage" and record.get("slippage_provenance") in {
+        "derived_compatibility", "unknown",
+    }:
+        return None
+    if field_name == "entry_time":
+        return _entry_time(record)
+    return _recursive_value(record, _FIELD_ALIASES.get(field_name, (field_name,)))
+
+
+def _present(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return value != ""
+    if isinstance(value, (list, dict)):
+        return bool(value)
+    return True
+
+
+def _known(value: Any) -> bool:
+    """Return whether a value is usable evidence, not an explicit placeholder."""
+    return _present(value) and not (
+        isinstance(value, str) and value.strip().upper() in {"UNKNOWN", "TRANSITIONAL"}
+    )
+
+
+def classify_evidence_record(record: dict[str, Any], source: str) -> DataEpoch:
+    """Classify one record using the control plane's authoritative epoch rules."""
+    explicit = _recursive_value(record, ("data_epoch", "epoch"))
+    if explicit:
+        value = str(explicit).upper()
+        if value == "TRANSITIONAL":
+            return DataEpoch.TRANSITIONAL
+        if value not in ("CURRENT", "CURRENT_ONLY", "SHADOW_TRADES_CURRENT"):
+            return DataEpoch.LEGACY
+    if source == "trade_truth":
+        identity = record.get("identity")
+        outcome = record.get("outcome")
+        is_canonical_v1 = (
+            record.get("schema_version") == current_schema("trade_truth")
+            and isinstance(identity, dict)
+            and isinstance(outcome, dict)
+            and _present(identity.get("trade_id"))
+            and _present(identity.get("correlation_id"))
+        )
+        return DataEpoch.CURRENT if is_canonical_v1 else classify_record(record)
+    if source == "decision_trace":
+        # decision_trace_v1 is a decision-time diagnostic authority, not a
+        # shadow lifecycle.  Requiring a shadow_trade_id here would make a
+        # valid trace permanently incapable of satisfying CURRENT provenance.
+        # Its canonical lineage root and entity identity are the applicable
+        # CURRENT contract; the strict provenance boundary separately verifies
+        # the physical schema identity before calling this classifier.
+        is_canonical_v1 = (
+            record.get("schema_version") == current_schema("decision_trace")
+            and _present(record.get("canonical_opportunity_id"))
+            and _present(record.get("entity_id"))
+        )
+        return DataEpoch.CURRENT if is_canonical_v1 else DataEpoch.LEGACY
+    if explicit:
+        return DataEpoch.CURRENT
+    if source in _CANONICAL_V1_SOURCES:
+        return DataEpoch.CURRENT
+    return classify_record(record)
+
+
+def canonical_evidence_source(source: str) -> str | None:
+    """Resolve a report-facing source name to a production-contract dataset."""
+    value = str(source or "").strip()
+    if not value:
+        return None
+    physical = _PHYSICAL_DATASETS.get(value, value)
+    if physical in PRODUCTION_SCHEMA_REGISTRY or physical in GOVERNED_EVIDENCE_SCHEMA_REGISTRY:
+        return physical
+    if value.endswith("_v1"):
+        candidate = value[:-3]
+        if (candidate in PRODUCTION_SCHEMA_REGISTRY
+                or candidate in GOVERNED_EVIDENCE_SCHEMA_REGISTRY):
+            return candidate
+    return None
+
+
+def authoritative_evidence_schema(source: str) -> str | None:
+    """Return the current production schema for a recognised evidence source."""
+    canonical = canonical_evidence_source(source)
+    return current_schema(canonical) if canonical is not None else None
+
+
+def classify_authoritative_evidence_record(
+    record: dict[str, Any],
+    source: str,
+    *,
+    schema: str | None = None,
+) -> DataEpoch | None:
+    """Strictly classify evidence supplied to the provenance boundary.
+
+    Unlike ``EvidenceSnapshot``, which obtains source identity from its loader,
+    this boundary may receive caller-supplied records.  It therefore requires
+    every record to carry the expected production schema before applying the
+    same epoch rules used by the control plane.  ``None`` means the source or
+    record is incompatible/unclassifiable.
+    """
+    canonical = canonical_evidence_source(source)
+    expected_schema = authoritative_evidence_schema(source)
+    if (
+        canonical is None
+        or expected_schema is None
+        or not isinstance(record, dict)
+        or (schema is not None and str(schema) != expected_schema)
+        or str(record.get("schema_version", "")) != expected_schema
+    ):
+        return None
+    return classify_evidence_record(record, canonical)
+
+
+# Private compatibility alias for existing internal/tests that imported it.
+_record_epoch = classify_evidence_record
+
+
+def _normalise(record: dict[str, Any], source: str) -> dict[str, Any]:
+    result = dict(record)
+    fields = set(_JOIN_FIELDS)
+    fields.update(_FIELD_ALIASES)
+    fields.update({
+        "market_phase", "mfe_r", "mae_r", "exit_reason", "bars_held",
+        "trade_state_progression", "terminal_stage", "terminal_reason", "ev",
+        "policy_trade_allowed", "components", "p_success", "schema_version",
+        "rank_position", "selection_status", "rank_score", "result_ok", "retcode",
+        "action_type", "action_reason", "state", "overall_score", "confidence",
+        "selected", "candidate_id", "spread", "protection_status",
+        "broker_confirmed_sl", "broker_confirmed_tp", "requested_sl", "requested_tp",
+        "risk_classification", "risk_deviation", "actual_risk_R", "planned_risk_R",
+        "account_id", "broker", "broker_server", "broker_symbol", "order_ticket",
+        "deal_ticket", "entry_reference", "fill_price", "slippage_semantic",
+    })
+    for name in fields:
+        value = _value(record, name)
+        if _present(value):
+            result.setdefault(name, value)
+        elif name == "entry_time" and _recursive_values(
+                record, frozenset({
+                    "entry_time", "entry_timestamp", "opened_at", "bar_time",
+                    "timestamp_decision_utc",
+                })):
+            # A present-but-unresolvable timestamp set is a conflict/invalid
+            # value, not permission to leave a convenient legacy top-level
+            # field visible to runners.
+            for alias in ("entry_time", "entry_timestamp", "opened_at", "bar_time"):
+                result.pop(alias, None)
+    r_value = _value(record, "r_multiple")
+    if _present(r_value):
+        result.setdefault("r_multiple", r_value)
+        if source == "shadow_trades":
+            result.setdefault("shadow_r_multiple", r_value)
+        if source == "trade_truth":
+            result.setdefault("live_r_multiple", r_value)
+            result.setdefault("r_multiple_realised", r_value)
+    if source == "execution_results_v1":
+        semantic = str(result.get("slippage_semantic") or "unknown")
+        slippage = result.get("slippage")
+        if semantic == "measured_execution_slippage" and _present(slippage):
+            result["slippage_provenance"] = "producer_measured"
+        else:
+            request = record.get("request") if isinstance(record.get("request"), dict) else {}
+            fill = record.get("fill") if isinstance(record.get("fill"), dict) else {}
+            entry_reference = record.get("entry_reference", request.get("entry_reference"))
+            fill_price = record.get("fill_price", fill.get("price"))
+            try:
+                derived = abs(float(fill_price) - float(entry_reference))
+            except (TypeError, ValueError):
+                result["slippage_provenance"] = "unknown"
+            else:
+                if math.isfinite(derived):
+                    result["derived_compatibility_slippage"] = derived
+                    result["slippage_provenance"] = "derived_compatibility"
+                else:
+                    result["slippage_provenance"] = "unknown"
+    return result
+
+
+def normalise_evidence_record(record: dict[str, Any], source: str) -> dict[str, Any]:
+    """Expose canonical V1 facts without mutating or flattening persisted evidence."""
+    return _normalise(record, source)
+
+
+def _lineage_consistent(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    for field_name in ("canonical_opportunity_id", "entity_id", "symbol"):
+        left_value = _value(left, field_name)
+        right_value = _value(right, field_name)
+        if _present(left_value) and _present(right_value) and str(left_value) != str(right_value):
+            return False
+    return True
+
+
+def _execution_result_grain(record: dict[str, Any]) -> tuple[str, str] | None:
+    for field_name in ("account_id", "order_ticket", "deal_ticket", "position_ticket"):
+        value = _value(record, field_name)
+        if _present(value) and str(value) != "0":
+            return field_name, str(value)
+    return None
+
+
+def join_execution_context_results(
+    results: list[dict[str, Any]],
+    contexts: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Join one execution context to one or many account-grained results."""
+    result_rows = [_normalise(row, "execution_results_v1") for row in results]
+    context_rows = [_normalise(row, "execution_context") for row in contexts]
+    results_by_correlation: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    contexts_by_correlation: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    missing_result_lineage = 0
+    for row in result_rows:
+        correlation_id = str(_value(row, "correlation_id") or "")
+        if correlation_id:
+            results_by_correlation[correlation_id].append(row)
+        else:
+            missing_result_lineage += 1
+    for row in context_rows:
+        correlation_id = str(_value(row, "correlation_id") or "")
+        if correlation_id:
+            contexts_by_correlation[correlation_id].append(row)
+
+    matched: list[dict[str, Any]] = []
+    results_without_context = missing_result_lineage
+    ambiguous = 0
+    for correlation_id, grouped_results in results_by_correlation.items():
+        grouped_contexts = contexts_by_correlation.get(correlation_id, [])
+        if not grouped_contexts:
+            results_without_context += len(grouped_results)
+            continue
+        if len(grouped_contexts) != 1:
+            ambiguous += len(grouped_results)
+            continue
+        context = grouped_contexts[0]
+        if len(grouped_results) > 1:
+            grains = [_execution_result_grain(row) for row in grouped_results]
+            if any(grain is None for grain in grains) or len(set(grains)) != len(grains):
+                ambiguous += len(grouped_results)
+                continue
+        for result in grouped_results:
+            if not _lineage_consistent(result, context):
+                ambiguous += 1
+                continue
+            matched.append({"result": result, "context": context})
+
+    contexts_without_results = sum(
+        len(grouped_contexts)
+        for correlation_id, grouped_contexts in contexts_by_correlation.items()
+        if correlation_id not in results_by_correlation
+    )
+    return {
+        "matched": matched,
+        "results_without_context": results_without_context,
+        "contexts_without_results": contexts_without_results,
+        "ambiguous": ambiguous,
+    }
+
+
+def _join_key(record: dict[str, Any]) -> tuple[str, str] | None:
+    for field_name in _JOIN_FIELDS:
+        value = _value(record, field_name)
+        if _present(value):
+            return field_name, str(value)
+    return None
+
+
+def _merge_population(slices: list[DatasetSlice]) -> tuple[list[dict[str, Any]], int]:
+    if not slices:
+        return [], 0
+    primary = [_normalise(record, slices[0].source) for record in slices[0].current_records]
+    excluded_ambiguous = 0
+    for dataset in slices[1:]:
+        index: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+        for raw in dataset.current_records:
+            record = _normalise(raw, dataset.source)
+            for field_name in _JOIN_FIELDS:
+                value = _value(record, field_name)
+                if _present(value):
+                    index[(field_name, str(value))].append(record)
+        merged: list[dict[str, Any]] = []
+        for row in primary:
+            matches: dict[int, dict[str, Any]] = {}
+            for field_name in _JOIN_FIELDS:
+                value = _value(row, field_name)
+                if not _present(value):
+                    continue
+                for match in index.get((field_name, str(value)), []):
+                    matches[id(match)] = match
+            if len(matches) == 1:
+                combined = dict(row)
+                for key, value in next(iter(matches.values())).items():
+                    if _present(value):
+                        combined.setdefault(key, value)
+                merged.append(combined)
+            elif len(matches) > 1:
+                excluded_ambiguous += 1
+            else:
+                merged.append(row)
+        primary = merged
+    return primary, excluded_ambiguous
+
+
+def _portfolio_candidates(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for ranking in records:
+        for candidate in ranking.get("candidates", []) or []:
+            row = dict(candidate)
+            row.setdefault("cycle_id", ranking.get("cycle_id"))
+            rows.append(_normalise(row, "portfolio_rankings"))
+    return rows
+
+
+def _horizon_comparable(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    no_lineage = 0
+    for raw in records:
+        row = _normalise(raw, "shadow_trades")
+        opp = _value(row, "canonical_opportunity_id")
+        if not _present(opp):
+            no_lineage += 1
+            continue
+        groups[str(opp)].append(row)
+    comparable: list[dict[str, Any]] = []
+    for opp, rows in groups.items():
+        primary = [row for row in rows if str(_value(row, "shadow_type") or "") == "PRIMARY_HORIZON_SIMULATION" and _present(_value(row, "r_multiple"))]
+        alternatives = [row for row in rows if str(_value(row, "shadow_type") or "") == "HORIZON_ALTERNATIVE" and _present(_value(row, "r_multiple"))]
+        if len(primary) == 1 and alternatives:
+            comparable.append({"canonical_opportunity_id": opp, "selected": primary[0], "alternatives": alternatives})
+    return comparable, {"opportunities_total": len(groups), "excluded_no_lineage": no_lineage}
+
+
+def _strat_pairs(candidate_records: list[dict[str, Any]], shadow_records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    outcomes: dict[str, list[Any]] = defaultdict(list)
+    for raw in shadow_records:
+        row = _normalise(raw, "shadow_trades")
+        if str(_value(row, "shadow_type") or "") != "PRIMARY_HORIZON_SIMULATION":
+            continue
+        opp = _value(row, "canonical_opportunity_id")
+        outcome = _value(row, "r_multiple")
+        if _present(opp) and _present(outcome):
+            outcomes[str(opp)].append(outcome)
+    pairs: list[dict[str, Any]] = []
+    excluded = 0
+    seen: set[str] = set()
+    for raw in candidate_records:
+        row = _normalise(raw, "strategy_candidates")
+        candidate_id = str(_value(row, "candidate_id") or "")
+        if not candidate_id or candidate_id in seen or _value(row, "selected") is not True:
+            continue
+        seen.add(candidate_id)
+        opp = str(_value(row, "canonical_opportunity_id") or "")
+        confidence = _value(row, "confidence")
+        if not opp or not _present(confidence) or len(outcomes.get(opp, [])) != 1:
+            excluded += 1
+            continue
+        row["r_multiple"] = outcomes[opp][0]
+        pairs.append(row)
+    return pairs, excluded
+
+
+def _opportunity_population(by_source: Mapping[str, DatasetSlice]) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
+    """Build OPP-1's governed canonical-opportunity denominator.
+
+    The authoritative population is defined by pre-outcome membership in
+    ``horizon_candidates`` joined to ``shadow_trades`` on
+    ``canonical_opportunity_id``.  The legacy ``opportunities`` and
+    ``assessments`` inputs are not denominator authorities.
+    """
+    from research_engine.experiments.opportunity_selection import (
+        build_opp1_observations,
+        classify_opportunity_membership,
+    )
+
+    horizons = by_source["horizon_candidates"].current_records
+    shadows = by_source["shadow_trades"].current_records
+    membership, membership_conflicts = classify_opportunity_membership(horizons)
+    observations, diagnostics = build_opp1_observations(horizons, shadows)
+    conflicts = set(diagnostics.get("conflicting_opportunities", ()))
+    missing_outcomes = int(diagnostics.get("missing_outcomes_excluded", 0) or 0)
+    candidate_count = len(membership) + len(membership_conflicts)
+
+    accepted = {
+        "SELECTED", "PROMOTED", "EXECUTED",
+        "REJECTED", "INELIGIBLE", "NOT_APPLICABLE",
+    }
+    classified_source_rows = sum(
+        1 for row in horizons
+        if _present(_value(row, "canonical_opportunity_id"))
+        and str(_value(row, "selection_status") or "").upper() in accepted
+    )
+    duplicate_rows = max(0, classified_source_rows - candidate_count)
+    outside_scope = max(0, len(horizons) - classified_source_rows)
+
+    rows = [
+        {
+            **row,
+            "opportunity_id": row["canonical_opportunity_id"],
+            "selection_status": row["group"],
+            "simulated_outcome.pnl_r_multiple": row["outcome_r"],
+        }
+        for row in observations
+    ]
+    exclusion_reasons = {
+        "AMBIGUOUS_OR_UNMATCHED_IDENTITY": len(conflicts),
+        "REQUIRED_RELATIONSHIP_ABSENT": missing_outcomes,
+    }
+    metrics = {
+        **diagnostics,
+        "opportunities_total": candidate_count,
+        "opportunities_with_outcomes": len(rows),
+        "assessed_opportunities": len(rows),
+        "candidate_inclusion_rule": (
+            "one CURRENT canonical_opportunity_id with deterministic promoted/rejected "
+            "horizon membership"
+        ),
+        "candidate_identity_rule": "canonical_opportunity_id",
+        "candidate_epoch_rule": "CURRENT",
+        "candidate_source_datasets": ("horizon_candidates", "shadow_trades"),
+        "candidate_reconstructed_evidence_participates": True,
+        "candidate_source_overlap_rule": "join; source rows are not additive",
+        "candidate_duplicate_rule": "collapse before denominator membership",
+        "candidate_join_rule": "canonical_opportunity_id; conflicts fail closed",
+        "duplicate_horizon_rows_collapsed": duplicate_rows,
+        "horizon_rows_outside_required_scope": outside_scope,
+        "accounting_candidate_records": candidate_count,
+        "accounting_exclusion_reason_counts": exclusion_reasons,
+    }
+    return rows, sum(exclusion_reasons.values()), metrics
+
+
+def _execution_population(
+    by_source: Mapping[str, DatasetSlice],
+) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
+    joined = join_execution_context_results(
+        by_source["execution_results_v1"].current_records,
+        by_source["execution_context"].current_records,
+    )
+    rows: list[dict[str, Any]] = []
+    for pair in joined["matched"]:
+        combined = dict(pair["result"])
+        for key, value in pair["context"].items():
+            if _present(value):
+                combined.setdefault(key, value)
+        rows.append(combined)
+    metrics = {
+        "execution_context_matches": len(rows),
+        "results_without_context": joined["results_without_context"],
+        "contexts_without_results": joined["contexts_without_results"],
+        "ambiguous_execution_lineage": joined["ambiguous"],
+    }
+    excluded = joined["results_without_context"] + joined["ambiguous"]
+    return rows, excluded, metrics
+
+
+def _exec1_population(
+    by_source: Mapping[str, DatasetSlice],
+    governed_evidence: Any | None = None,
+) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
+    """Resolve EXEC1 through the same strict three-component research join."""
+    from research_engine.control_plane.execution_evidence import (
+        build_governed_execution_evidence,
+    )
+
+    evidence = governed_evidence or build_governed_execution_evidence(
+        by_source["execution_results_v1"].current_records,
+        by_source["execution_context"].current_records,
+        by_source["decision_trace"].current_records,
+        require_decision_trace=True,
+    )
+    rows = []
+    for observation in evidence.observations:
+        rows.append({
+            **observation.result_fields,
+            "correlation_id": observation.cluster_id,
+            "result_ok": (
+                True if observation.status.value == "SUCCESS" else
+                False if observation.status.value == "FAILURE" else None
+            ),
+            "action": observation.action,
+            "spread_atr_ratio": observation.spread_atr_ratio,
+        })
+    excluded = sum(evidence.exclusion_accounting.values())
+    return rows, excluded, {
+        "governed_execution_results": evidence.account_result_count,
+        "distinct_correlation_id_decisions": evidence.distinct_decision_count,
+        "execution_exclusions": evidence.exclusion_accounting,
+    }
+
+
+def _x6_population(
+    by_source: Mapping[str, DatasetSlice],
+    governed_evidence: Any | None = None,
+) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
+    """Resolve X6 through the same strict three-component research join."""
+    from research_engine.control_plane.execution_evidence import (
+        build_governed_execution_evidence,
+    )
+
+    evidence = governed_evidence or build_governed_execution_evidence(
+        by_source["execution_results_v1"].current_records,
+        by_source["execution_context"].current_records,
+        by_source["decision_trace"].current_records,
+        require_decision_trace=True,
+    )
+    rows = []
+    for observation in evidence.observations:
+        rows.append({
+            **observation.result_fields,
+            "correlation_id": observation.cluster_id,
+            "result_ok": (
+                True if observation.status.value == "SUCCESS" else
+                False if observation.status.value == "FAILURE" else None
+            ),
+            "action": observation.action,
+            "spread_atr_ratio": observation.spread_atr_ratio,
+            "session_state": observation.session_state,
+            "volatility_state": observation.volatility_state,
+        })
+    excluded = sum(evidence.exclusion_accounting.values())
+    return rows, excluded, {
+        "governed_execution_results": evidence.account_result_count,
+        "distinct_correlation_id_decisions": evidence.distinct_decision_count,
+        "execution_exclusions": evidence.exclusion_accounting,
+    }
+
+
+
+def _management_outcome_for_action(
+    action: dict[str, Any],
+    indices: Mapping[str, Mapping[str, list[dict[str, Any]]]],
+) -> dict[str, Any] | None:
+    # trade_id is the lifecycle identity; canonical opportunity and correlation
+    # are deterministic fallbacks only when the stronger identity is absent.
+    for field_name in ("trade_id", "canonical_opportunity_id", "correlation_id"):
+        value = _value(action, field_name)
+        if not _present(value):
+            continue
+        matches = indices[field_name].get(str(value), [])
+        if len(matches) != 1:
+            return None
+        outcome = matches[0]
+        if not _lineage_consistent(action, outcome):
+            return None
+        for identity_name in ("trade_id", "canonical_opportunity_id", "correlation_id", "account_id"):
+            action_value = _value(action, identity_name)
+            outcome_value = _value(outcome, identity_name)
+            if (_present(action_value) and _present(outcome_value)
+                    and str(action_value) != str(outcome_value)):
+                return None
+        return outcome
+    return None
+
+
+def _management_population(
+    question_id: str,
+    by_source: Mapping[str, DatasetSlice],
+) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
+    actions = [
+        _normalise(row, "management_actions")
+        for row in by_source["management_actions"].current_records
+    ]
+    outcomes = [
+        _normalise(row, "trade_truth")
+        for row in by_source["trade_truth"].current_records
+    ]
+    if question_id == "MGMT-1":
+        return outcomes, 0, {"management_actions": len(actions), "outcomes": len(outcomes)}
+
+    indices: dict[str, dict[str, list[dict[str, Any]]]] = {
+        name: defaultdict(list)
+        for name in ("trade_id", "canonical_opportunity_id", "correlation_id")
+    }
+    for outcome in outcomes:
+        for field_name, index in indices.items():
+            value = _value(outcome, field_name)
+            if _present(value):
+                index[str(value)].append(outcome)
+
+    rows: list[dict[str, Any]] = []
+    excluded = 0
+    seen: set[tuple[str, str]] = set()
+    for action in actions:
+        outcome = _management_outcome_for_action(action, indices)
+        if outcome is None:
+            excluded += 1
+            continue
+        action_type = str(_value(action, "action_type") or "")
+        lifecycle_id = str(_value(outcome, "trade_id") or "")
+        dedup_key = (lifecycle_id, action_type)
+        if dedup_key in seen:
+            continue
+        seen.add(dedup_key)
+        combined = dict(action)
+        for key, value in outcome.items():
+            if _present(value):
+                combined.setdefault(key, value)
+        rows.append(combined)
+    counts = Counter(str(_value(row, "action_type") or "") for row in rows)
+    metrics = {
+        "management_actions": len(actions),
+        "outcomes": len(outcomes),
+        "matched_management_outcomes": len(rows),
+        "max_action_type_sample_size": max(counts.values(), default=0),
+    }
+    return rows, excluded, metrics
+
+
+def _population(
+    question: Any,
+    slices: list[DatasetSlice],
+    snapshot: EvidenceSnapshot | None = None,
+) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
+    by_source = {dataset.source: dataset for dataset in slices}
+    metrics: dict[str, Any] = {}
+    if question.id == "D2":
+        from research_engine.experiments.d2_paired_calibration import build_paired_observations
+
+        paired, diagnostics = build_paired_observations(
+            by_source["decision_trace"].current_records,
+            by_source["shadow_trades"].current_records,
+        )
+        if diagnostics.get("conflicting_opportunities"):
+            diagnostics["d2_blocker"] = (
+                "Conflicting D2 prediction, outcome, version, or chronology for "
+                f"{len(diagnostics['conflicting_opportunities'])} canonical opportunities"
+            )
+        rows = [
+            {
+                "canonical_opportunity_id": row["canonical_opportunity_id"],
+                "entry_time": row["timestamp"].isoformat(),
+                "p_success": row["p_success"],
+                "r_multiple": row["outcome_r"],
+                "model_version": row["model_version"],
+            }
+            for row in paired
+        ]
+        metrics.update(diagnostics)
+        return rows, max(0, diagnostics["prediction_opportunities"] - len(rows)), metrics
+    if question.id in {"M1", "M3", "M7", "M8", "M11"}:
+        from research_engine.experiments.market_prediction_rw2 import (
+            build_opportunity_observations,
+            join_decision_context,
+            join_market_context,
+        )
+
+        observations, diagnostics = build_opportunity_observations(
+            by_source["shadow_trades"].current_records
+        )
+        if question.id == "M8":
+            observations, joined = join_market_context(
+                observations, by_source["market_context"].current_records
+            )
+            diagnostics.update(joined)
+        elif question.id == "M11":
+            observations, joined = join_decision_context(
+                observations, by_source["decision_trace"].current_records
+            )
+            diagnostics.update(joined)
+        conflicts = (
+            tuple(diagnostics.get("ambiguous_opportunities", ()))
+            + tuple(diagnostics.get("market_context_conflicts", ()))
+            + tuple(diagnostics.get("decision_context_conflicts", ()))
+        )
+        if conflicts:
+            diagnostics["rw2_blocker"] = (
+                f"Ambiguous or conflicting canonical RW2 join for "
+                f"{len(set(conflicts))} opportunities"
+            )
+        rows = [
+            {
+                "canonical_opportunity_id": row.canonical_opportunity_id,
+                "entity_id": row.entity_id,
+                "entry_time": row.decision_time.isoformat(),
+                "h4_regime": row.h4_regime,
+                "market_phase": row.market_phase,
+                "h1_bias": row.h1_bias,
+                "pattern": row.pattern,
+                "phase_transition": row.phase_transition,
+                "r_multiple": row.outcome_r,
+            }
+            for row in observations
+        ]
+        metrics.update(diagnostics)
+        excluded = diagnostics.get("raw_shadow_rows", 0) - len(rows)
+        return rows, max(0, int(excluded)), metrics
+    if question.id == "D6":
+        rankings = by_source["portfolio_rankings"].current_records
+        rows = _portfolio_candidates(rankings)
+        metrics.update(ranking_rows=len(rankings), ranking_cycles=len(rankings), ranked_candidates=len(rows))
+        return rows, 0, metrics
+    if question.id == "PORT-1":
+        rankings = by_source["portfolio_rankings"].current_records
+        rows = [_normalise(row, "portfolio_rankings") for row in rankings]
+        metrics.update(ranking_rows=len(rows), ranking_cycles=len(rows), ranked_candidates=len(_portfolio_candidates(rankings)))
+        return rows, 0, metrics
+    if question.id == "HORIZON-1":
+        rows, extra = _horizon_comparable(by_source["shadow_trades"].current_records)
+        metrics.update(extra, matched_pairs=len(rows))
+        return rows, extra["excluded_no_lineage"], metrics
+    if question.id == "STRAT-1":
+        rows, excluded = _strat_pairs(
+            by_source["strategy_candidates"].current_records,
+            by_source["shadow_trades"].current_records,
+        )
+        metrics["matched_pairs"] = len(rows)
+        return rows, excluded, metrics
+    if question.id == "OPP-1":
+        return _opportunity_population(by_source)
+    if question.id == "X2":
+        rows = [
+            *[_normalise(row, "execution_results_v1") for row in by_source["execution_results_v1"].current_records],
+            *[_normalise(row, "execution_attempts_v1") for row in by_source["execution_attempts_v1"].current_records],
+        ]
+        return rows, 0, metrics
+    if question.id in {"X1", "X3"}:
+        return _execution_population(by_source)
+    if question.id == "EXEC1":
+        governed = snapshot.governed_execution_evidence(by_source) if snapshot else None
+        return _exec1_population(by_source, governed)
+    if question.id == "X6":
+        governed = snapshot.governed_execution_evidence(by_source) if snapshot else None
+        return _x6_population(by_source, governed)
+    if question.id == "PROT1":
+        rows = [
+            _normalise(row, "protection_audit_v1")
+            for row in by_source["protection_audit_v1"].current_records
+        ]
+        return rows, 0, metrics
+    if question.id in {"MGMT-1", "MGMT-2"}:
+        return _management_population(question.id, by_source)
+    rows, ambiguous = _merge_population(slices)
+    return rows, ambiguous, metrics
+
+
+_SPECIAL_POPULATION_QUESTIONS = frozenset({
+    "D2", "M1", "M3", "M7", "M8", "M11", "D6", "PORT-1",
+    "HORIZON-1", "STRAT-1", "OPP-1", "X1", "X2", "X3", "EXEC1",
+    "X6", "PROT1", "MGMT-1", "MGMT-2",
+})
+
+# HD09-governed exit questions.  Their scientific readiness is enforced by the
+# governed exit evaluator (SAMPLE_AND_READINESS_CONTRACT), not by the flat
+# registry required-fields vocabulary, so the resolver reports flat coverage
+# but must not preempt the governed evaluator with a blocking field gap.
+_HD09_EXIT_QUESTIONS = frozenset({"EX1", "EX2", "EX5", "EX6", "EX7", "EX9"})
+
+# HD10-governed risk questions (R3/R4/R5).  Their readiness is enforced by the
+# governed risk evaluator over the snapshot-bound RiskPolicyEvidence, never by
+# the flat registry required-fields vocabulary, so the resolver must not
+# preempt the governed evaluator with a blocking field gap or silently empty
+# the population on fields the risk runner derives itself (win_rate,
+# position_size).
+_GOVERNED_RISK_QUESTIONS = frozenset({"R3", "R4", "R5"})
+
+# HD14-governed meta question.  G2 evaluates the exact (entity_id,
+# canonical_opportunity_id) lineage denominator from the bound decision trace
+# and completed shadow lifecycles; its governed population is injected as a
+# dedicated artifact, not approximated by the generic merged population.
+_GOVERNED_META_QUESTIONS = frozenset({"G2"})
+
+
+
+def _coverage(rows: list[dict[str, Any]], fields: tuple[str, ...]) -> float:
+    if not rows:
+        return 0.0
+    present = sum(1 for row in rows if any(_known(_value(row, name)) for name in fields))
+    return round(present / len(rows), 4)
+
+
+def _compare(current: float, operator: str, required: float) -> bool | None:
+    operations = {
+        ">=": lambda: current >= required,
+        ">": lambda: current > required,
+        "<=": lambda: current <= required,
+        "<": lambda: current < required,
+        "==": lambda: current == required,
+        "!=": lambda: current != required,
+    }
+    return operations[operator]() if operator in operations else None
+
+
+def _covered_days(rows: list[dict[str, Any]]) -> int:
+    dates = set()
+    for row in rows:
+        value = _value(row, "entry_time") or _value(row, "timestamp")
+        if not value:
+            continue
+        try:
+            dates.add(datetime.fromisoformat(str(value).replace("Z", "+00:00")).date())
+        except ValueError:
+            continue
+    return len(dates)
+
+
+def _runner_artifacts(
+    question: Any,
+    snapshot: EvidenceSnapshot,
+    slices: list[DatasetSlice],
+) -> dict[str, Any]:
+    """Collect governed runner-injection artifacts for one question.
+
+    Execution questions (X6/EXEC1) receive the strict three-component execution
+    join; HD09 exit questions receive the governed exit foundations rebuilt from
+    the bound ``shadow_runtime`` events.  Both are derived deterministically from
+    the same immutable snapshot and never reopen storage.
+    """
+    artifacts: dict[str, Any] = {}
+    if question.id in {"X6", "EXEC1"}:
+        artifacts["governed_execution_evidence"] = snapshot.governed_execution_evidence(
+            {dataset.source: dataset for dataset in slices})
+    if question.id in _HD09_EXIT_QUESTIONS:
+        artifacts["governed_exit_evidence"] = snapshot.governed_exit_evidence()
+    if question.id in _GOVERNED_RISK_QUESTIONS:
+        artifacts["governed_risk_evidence"] = snapshot.governed_risk_evidence()
+    if question.id in _GOVERNED_META_QUESTIONS:
+        artifacts["governed_lineage_population"] = snapshot.governed_lineage_population()
+    return artifacts
+
+
+def resolve_question_evidence(question: Any, snapshot: EvidenceSnapshot) -> EvidenceResolution:
+    """Resolve one question from cached CURRENT evidence only."""
+    source_names = [source.value for source in question.data_sources]
+    source_names.extend(_RUNNER_SUPPLEMENTAL_SOURCES.get(question.id, ()))
+    slices = [snapshot.get(source) for source in dict.fromkeys(source_names)]
+    # RW2's two non-shadow authorities have canonical V1 schemas but are not
+    # shadow-shaped, so classify them strictly and locally.  This must not
+    # broaden epoch treatment for any unrelated question.
+    if question.id in {"M8", "M11", "D2"}:
+        authority_source = "market_context" if question.id == "M8" else "decision_trace"
+        adjusted: list[DatasetSlice] = []
+        for dataset in slices:
+            if dataset.source != authority_source or not dataset.available:
+                adjusted.append(dataset)
+                continue
+            current_rows: list[dict[str, Any]] = []
+            transitional = legacy = 0
+            for row in dataset.records:
+                explicit = _recursive_value(row, ("data_epoch", "epoch"))
+                value = str(explicit or "").upper()
+                if value == "TRANSITIONAL":
+                    transitional += 1
+                elif value in {"CURRENT", "CURRENT_ONLY"} or (
+                    not explicit and row.get("schema_version") == current_schema(authority_source)
+                ):
+                    current_rows.append(row)
+                else:
+                    legacy += 1
+            adjusted.append(DatasetSlice(
+                source=dataset.source,
+                available=True,
+                records=dataset.records,
+                current_records=current_rows,
+                transitional_count=transitional,
+                legacy_count=legacy,
+                error=dataset.error,
+            ))
+        slices = adjusted
+    source_dicts = [dataset.to_dict() for dataset in slices]
+    errors = [f"{dataset.source}: {dataset.error}" for dataset in slices if dataset.error and dataset.available is False]
+    requirements: list[RequirementResult] = []
+    for dataset in slices:
+        requirements.append(RequirementResult(
+            type="dataset_presence",
+            name=dataset.source,
+            required=True,
+            current=dataset.available,
+            satisfied=dataset.available,
+            reason=("Dataset loaded" if dataset.available else dataset.error or "Dataset unavailable"),
+            blocking=not dataset.available,
+        ))
+    if errors:
+        requirements.extend(
+            RequirementResult(
+                type="required_field",
+                name=field_name,
+                required="present",
+                current=None,
+                satisfied=None,
+                reason="Cannot evaluate field until required datasets load",
+                blocking=True,
+            )
+            for field_name in question.required_fields
+        )
+        for rule in question.validation_rules:
+            if rule.field in _COVERAGE_FIELDS:
+                requirement_type = "coverage"
+            elif rule.field == "sample_size":
+                requirement_type = "sample_size"
+            elif rule.field in _COUNT_RULES:
+                requirement_type = "population_count"
+            else:
+                requirement_type = "unsupported"
+            requirements.append(RequirementResult(
+                type=requirement_type,
+                name=rule.field,
+                required={"operator": rule.operator, "value": rule.threshold},
+                current=None,
+                satisfied=None,
+                reason="Cannot evaluate requirement until required datasets load",
+                blocking=requirement_type == "coverage",
+            ))
+        return EvidenceResolution(
+            question_id=question.id,
+            sources=source_dicts,
+            usable_count=None,
+            excluded_count=sum(len(item.records) for item in slices),
+            metrics={},
+            requirements=requirements,
+            error="; ".join(errors),
+        )
+
+    population_cache_key: tuple[str, ...] | None = None
+    if question.id in _SPECIAL_POPULATION_QUESTIONS:
+        rows, population_excluded, metrics = _population(question, slices, snapshot)
+    else:
+        rows, population_excluded, metrics, population_cache_key = (
+            snapshot.generic_population(slices)
+        )
+    base_count = len(rows)
+    if metrics.get("rw2_blocker") or metrics.get("d2_blocker"):
+        requirements.append(RequirementResult(
+            type="join_integrity",
+            name="canonical_opportunity_join",
+            required="unambiguous",
+            current="conflicting",
+            satisfied=False,
+            reason=str(metrics.get("rw2_blocker") or metrics.get("d2_blocker")),
+            blocking=True,
+        ))
+    metrics["total_current_population"] = base_count
+    metrics["transitional_excluded"] = sum(item.transitional_count for item in slices)
+    metrics["legacy_excluded"] = sum(item.legacy_count for item in slices)
+    metrics["ambiguous_or_unmatched_excluded"] = population_excluded
+    if population_cache_key is None:
+        for metric_name, fields in _COVERAGE_FIELDS.items():
+            metrics[metric_name] = _coverage(rows, fields)
+        metrics["covered_days"] = _covered_days(rows)
+        metrics["covered_sessions"] = len({
+            str(value)
+            for row in rows
+            if _present(value := _value(row, "session_state"))
+        })
+    else:
+        metrics.update(snapshot.invariant_diagnostics(population_cache_key, rows))
+
+    required_fields = (
+        ("selection_status", "simulated_outcome.pnl_r_multiple")
+        if question.id == "OPP-1"
+        else question.required_fields
+    )
+    missing_fields: list[str] = []
+    if question.id not in _GOVERNED_RISK_QUESTIONS:
+        for field_name in required_fields:
+            count = sum(1 for row in rows if _known(_value(row, field_name)))
+            satisfied = count > 0 if rows else False
+            reason = f"Required field {field_name!r} present in {count}/{base_count} CURRENT analytical rows"
+            requirements.append(RequirementResult(
+                type="required_field",
+                name=field_name,
+                required="present",
+                current=count,
+                satisfied=satisfied,
+                reason=reason,
+                blocking=(
+                    bool(rows) and not satisfied
+                    and question.id not in _HD09_EXIT_QUESTIONS
+                ),
+            ))
+            if not satisfied:
+                missing_fields.append(field_name)
+
+    from research_engine.data_quality.execution_sizing import eligible_for_fields
+    # The HD09-governed exit evaluator determines the ordered M5 OHLC bar path
+    # from the ``events_v1`` candle stream, not from the flat
+    # ``trade_state_progression`` registry field.  Sizing the governed exit
+    # population on that flat field would silently empty it and short-circuit
+    # the runner before the governed evaluator can surface its own (fail-closed)
+    # observation gap.
+    sizing_required_fields = (
+        tuple(f for f in required_fields if f != "trade_state_progression")
+        if question.id in _HD09_EXIT_QUESTIONS
+        else () if question.id in _GOVERNED_RISK_QUESTIONS
+        else required_fields
+    )
+    sizing_safe = (
+        list(rows)
+        if question.id in {"OPP-1"} or question.id in _GOVERNED_RISK_QUESTIONS
+        else [row for row in rows if eligible_for_fields(row, sizing_required_fields)]
+    )
+    metrics["excluded_sizing_quality"] = len(rows) - len(sizing_safe)
+    field_eligible = [
+        row for row in sizing_safe
+        if all(_known(_value(row, field_name)) for field_name in sizing_required_fields)
+    ]
+    metrics["excluded_missing_required_fields"] = len(sizing_safe) - len(field_eligible)
+    # Runners may treat their population as mutable working data.  Keep the
+    # cycle cache private and preserve the former per-question isolation.
+    usable = [dict(row) for row in field_eligible]
+    predicate_excluded = 0
+    if question.id == "EX2":
+        before_predicate = len(usable)
+        usable = [row for row in usable if float(_value(row, "mfe_r")) >= 0.5]
+        predicate_excluded = before_predicate - len(usable)
+    usable_count = len(usable)
+    metrics["total_eligible"] = usable_count
+    metrics["excluded_population_predicate"] = predicate_excluded
+
+    categorical = [
+        field_name for field_name in required_fields
+        if field_name in {"strategy", "pattern", "trade_horizon", "h4_regime", "market_phase", "session_state", "action_type"}
+    ]
+    if len(categorical) >= 2 and usable:
+        cells = Counter(tuple(str(_value(row, field_name)) for field_name in categorical) for row in usable)
+        metrics["valid_combinations"] = len(cells)
+        metrics["per_cell_min"] = min(cells.values())
+
+    if question.id == "OPP-1":
+        metrics["assessed_opportunities"] = len({
+            str(_value(row, "opportunity_id")) for row in usable
+            if _present(_value(row, "opportunity_id"))
+        })
+
+    for rule in question.validation_rules:
+        if rule.field in _COVERAGE_FIELDS:
+            current = metrics[rule.field]
+            requirement_type = "coverage"
+        elif rule.field in _COUNT_RULES:
+            current = usable_count if rule.field == "sample_size" else metrics.get(rule.field)
+            requirement_type = "sample_size" if rule.field == "sample_size" else "population_count"
+        else:
+            current = None
+            requirement_type = "unsupported"
+        satisfied = None if current is None else _compare(float(current), rule.operator, float(rule.threshold))
+        if current is None:
+            reason = f"Requirement {rule.field!r} is not implemented by the evidence resolver"
+        else:
+            reason = f"{rule.field}={current}; requires {rule.operator} {rule.threshold}"
+        requirements.append(RequirementResult(
+            type=requirement_type,
+            name=rule.field,
+            required={"operator": rule.operator, "value": rule.threshold},
+            current=current,
+            satisfied=satisfied,
+            reason=reason,
+            blocking=(
+                requirement_type == "coverage"
+                and satisfied is False
+                and question.id not in _GOVERNED_RISK_QUESTIONS
+            ),
+        ))
+
+    excluded = (
+        sum(item.transitional_count + item.legacy_count for item in slices)
+        + population_excluded
+        + (base_count - usable_count)
+    )
+    return EvidenceResolution(
+        question_id=question.id,
+        sources=source_dicts,
+        usable_count=usable_count,
+        excluded_count=excluded,
+        metrics=dict(sorted(metrics.items())),
+        requirements=requirements,
+        usable_records=usable,
+        runner_artifacts=_runner_artifacts(question, snapshot, slices),
+    )
+
+
+def resolve_question_population(
+    question: Any,
+    snapshot: EvidenceSnapshot,
+) -> list[dict[str, Any]]:
+    """Return the exact governed usable CURRENT population for a runner.
+
+    This is the record-bearing counterpart to ``resolve_question_evidence``.
+    It deliberately repeats the resolver's final eligibility predicates so a
+    research runner can consume the same population whose counts Gate 1
+    certified, instead of independently reloading or redefining it.
+    """
+    source_names = [source.value for source in question.data_sources]
+    source_names.extend(_RUNNER_SUPPLEMENTAL_SOURCES.get(question.id, ()))
+    slices = [snapshot.get(source) for source in dict.fromkeys(source_names)]
+    if any(not dataset.available for dataset in slices):
+        return []
+    if question.id in {"M8", "M11", "D2"}:
+        authority_source = "market_context" if question.id == "M8" else "decision_trace"
+        adjusted: list[DatasetSlice] = []
+        for dataset in slices:
+            if dataset.source != authority_source:
+                adjusted.append(dataset)
+                continue
+            current_rows: list[dict[str, Any]] = []
+            transitional = legacy = 0
+            for row in dataset.records:
+                explicit = _recursive_value(row, ("data_epoch", "epoch"))
+                value = str(explicit or "").upper()
+                if value == "TRANSITIONAL":
+                    transitional += 1
+                elif value in {"CURRENT", "CURRENT_ONLY"} or (
+                    not explicit and row.get("schema_version") == current_schema(authority_source)
+                ):
+                    current_rows.append(row)
+                else:
+                    legacy += 1
+            adjusted.append(DatasetSlice(
+                source=dataset.source,
+                available=True,
+                records=dataset.records,
+                current_records=current_rows,
+                transitional_count=transitional,
+                legacy_count=legacy,
+                error=dataset.error,
+            ))
+        slices = adjusted
+    rows, _, _ = _population(question, slices)
+    required_fields = (
+        ("selection_status", "simulated_outcome.pnl_r_multiple")
+        if question.id == "OPP-1"
+        else question.required_fields
+    )
+    from research_engine.data_quality.execution_sizing import eligible_for_fields
+    sizing_safe = (
+        list(rows)
+        if question.id == "OPP-1"
+        else [row for row in rows if eligible_for_fields(row, required_fields)]
+    )
+    usable = [
+        row for row in sizing_safe
+        if all(_known(_value(row, field_name)) for field_name in required_fields)
+    ]
+    if question.id == "EX2":
+        usable = [row for row in usable if float(_value(row, "mfe_r")) >= 0.5]
+    return usable

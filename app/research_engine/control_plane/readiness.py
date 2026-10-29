@@ -1,0 +1,212 @@
+"""Derive canonical readiness from resolved evidence and dependency state."""
+from __future__ import annotations
+
+from typing import Any, Mapping
+
+from research_engine.control_plane.evidence_resolver import EvidenceResolution
+from research_engine.control_plane.models import ReadinessStatus, ReportValidity, RunnerStatus
+
+
+def resolve_readiness(
+    question: Any,
+    evidence: EvidenceResolution,
+    runner_status: RunnerStatus,
+    report_validity: ReportValidity,
+    report_status: str,
+    dependency_states: Mapping[str, str],
+    report_finding: str = "",
+) -> tuple[ReadinessStatus, str]:
+    """Apply readiness precedence without executing the experiment."""
+    if runner_status == RunnerStatus.NO_RUNNER:
+        return ReadinessStatus.NO_RUNNER, "No canonical runner is declared"
+    if runner_status == RunnerStatus.ERROR:
+        return ReadinessStatus.ERROR, "Declared runner cannot be resolved safely"
+
+    for dependency in question.depends_on:
+        state = dependency_states.get(dependency, "UNKNOWN")
+        if state == "COMPLETE":
+            continue
+        if state == "ERROR":
+            return ReadinessStatus.ERROR, f"Dependency {dependency} is ERROR"
+        if state in ("INVALIDATED", "BLOCKED", "NO_RUNNER"):
+            return ReadinessStatus.BLOCKED, f"Dependency {dependency} is {state}"
+        if state == "UNKNOWN":
+            return ReadinessStatus.UNKNOWN, f"Dependency {dependency} readiness is UNKNOWN"
+        return ReadinessStatus.WAITING_DATA, f"Dependency {dependency} is not COMPLETE ({state})"
+
+    if report_validity == ReportValidity.VALID_CURRENT and report_status == "COMPLETE":
+        return ReadinessStatus.COMPLETE, "A VALID_CURRENT completed report exists"
+    if question.id == "G1":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No owned VALID_CURRENT exhaustive HD13 G1 report exists"
+        return ReadinessStatus.BLOCKED, "The CURRENT G1 report contains UNKNOWN or is not scientifically complete"
+    if question.id == "G2":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No owned VALID_CURRENT exhaustive HD14 G2 report exists"
+        if report_status == "INSUFFICIENT_DATA":
+            return ReadinessStatus.WAITING_DATA, "The CURRENT G2 denominator is below 100 eligible canonical opportunities"
+        return ReadinessStatus.BLOCKED, "The CURRENT G2 report has unresolved denominator accounting"
+    if question.id == "G3":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No owned VALID_CURRENT exhaustive HD15 G3 report exists"
+        if report_finding == "EVALUATION_UNKNOWN":
+            return ReadinessStatus.UNKNOWN, "The CURRENT G3 evaluation contains UNKNOWN canonical authority"
+        if report_status != "COMPLETE":
+            return ReadinessStatus.BLOCKED, (
+                "The CURRENT G3 report is EVALUATION_BLOCKED and cannot complete"
+            )
+        return ReadinessStatus.BLOCKED, "The CURRENT G3 report failed deterministic HD15 completion validation"
+    if question.id in {"EX1", "EX2", "EX9"}:
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return (
+                ReadinessStatus.BLOCKED,
+                f"No valid CURRENT governed {question.id} HD09 report exists",
+            )
+        if report_status == "WAITING_DATA":
+            return (
+                ReadinessStatus.WAITING_DATA,
+                f"The CURRENT {question.id} report has valid machinery but insufficient governed evidence",
+            )
+        if report_status == "BLOCKED":
+            return (
+                ReadinessStatus.BLOCKED,
+                f"The CURRENT {question.id} report failed HD09 authority, inference, family, or provenance validity",
+            )
+    if question.id in {"EX5", "EX6", "EX7", "EX8"}:
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, f"No valid CURRENT governed {question.id} HD09 report exists"
+        if report_status == "WAITING_DATA":
+            return ReadinessStatus.WAITING_DATA, (
+                f"The CURRENT {question.id} report has valid machinery but insufficient governed cell/level evidence"
+            )
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, (
+                f"The CURRENT {question.id} report failed HD09 dimension, inference, family, or provenance validity"
+            )
+    if question.id == "EX10":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No valid CURRENT governed EX10 HD09 walk-forward report exists"
+        if report_status == "WAITING_DATA":
+            return ReadinessStatus.WAITING_DATA, (
+                "The CURRENT EX10 report has valid machinery but insufficient five-fold governed evidence"
+            )
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, (
+                "The CURRENT EX10 report failed chronology, leakage, selection, inference, or provenance validity"
+            )
+    if question.id == "X3":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return (
+                ReadinessStatus.BLOCKED,
+                "No valid CURRENT governed X3 report exists",
+            )
+        if report_status == "INSUFFICIENT_DATA":
+            return (
+                ReadinessStatus.WAITING_DATA,
+                "The CURRENT X3 report has not met the 30 overall, 30/10 per-session, two-session, or estimability gates",
+            )
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, "The CURRENT X3 report failed governed execution-evidence authority"
+    if question.id == "EXEC1":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No valid CURRENT governed EXEC1 report exists"
+        if report_status == "INSUFFICIENT_DATA":
+            return (
+                ReadinessStatus.WAITING_DATA,
+                "The CURRENT EXEC1 report has not met its 30-row, 10-decision, variation, or estimability gates",
+            )
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, "The CURRENT EXEC1 report failed governed execution-evidence authority"
+    if question.id == "X6":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No valid CURRENT governed X6 report exists"
+        if report_status == "INSUFFICIENT_DATA":
+            return (
+                ReadinessStatus.WAITING_DATA,
+                "The CURRENT X6 report has not met the 100/30 overall, 30/10 per-cell, "
+                "two-comparable-cell, or estimability gates",
+            )
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, "The CURRENT X6 report failed governed execution-evidence authority"
+    if question.id == "L1":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No owned VALID_CURRENT governed L1 HD11 report exists"
+        if report_status == "WAITING_DATA":
+            return ReadinessStatus.WAITING_DATA, (
+                "The CURRENT L1 report has not met the 200 overall, 30 per-pattern/window, two-pattern gates"
+            )
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, (
+                "The CURRENT L1 report failed chronology, identity, epoch, conflict, inference, or provenance validity"
+            )
+    if question.id == "L4":
+        if report_validity != ReportValidity.VALID_CURRENT:
+            return ReadinessStatus.BLOCKED, "No owned VALID_CURRENT governed L4 HD11 report exists"
+        if report_status == "WAITING_DATA":
+            return ReadinessStatus.WAITING_DATA, (
+                "The CURRENT L4 report has not met the 100/window, 30/regime/window, or four-endpoint estimability gates"
+            )
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, (
+                "The CURRENT L4 report failed authority, join, chronology, conflict, inference, or provenance validity"
+            )
+    if question.id in {"M1", "M3", "M7", "M8", "M11", "D2"} and report_validity == ReportValidity.VALID_CURRENT:
+        if report_status == "WAITING_DATA":
+            return ReadinessStatus.WAITING_DATA, "The CURRENT RW2 report has not met chronological/sample/cell sufficiency"
+        if report_status == "BLOCKED":
+            return ReadinessStatus.BLOCKED, "The CURRENT RW2 report could not establish required authority, chronology, or join integrity"
+
+    if question.id in {"S5", "S6", "S7"} and report_validity == ReportValidity.VALID_CURRENT:
+        # Implementation-complete is distinct from scientific completion: a
+        # A CURRENT S5/S6 report below the 100/30/20 distinct canonical-opportunity
+        # gates stays WAITING_DATA, never a finding.
+        if report_status == "INSUFFICIENT_DATA":
+            return (
+                ReadinessStatus.WAITING_DATA,
+                (
+                    f"The CURRENT {question.id} report has not met the 150/30/minimum-2x2 "
+                    "distinct canonical-opportunity interaction gates"
+                    if question.id == "S7" else
+                    f"The CURRENT {question.id} report has not met the 100/30/20 distinct "
+                    "canonical-opportunity sufficiency gates"
+                ),
+            )
+        if report_status == "BLOCKED":
+            return (
+                ReadinessStatus.BLOCKED,
+                f"The CURRENT {question.id} report could not establish required evidence authority",
+            )
+
+    if evidence.error:
+        missing = all(
+            requirement.type != "dataset_presence"
+            or requirement.satisfied is True
+            or "not supplied" in requirement.reason.lower()
+            for requirement in evidence.requirements
+        )
+        if "not supplied" in evidence.error.lower() and missing:
+            return ReadinessStatus.BLOCKED, f"Required dataset unavailable: {evidence.error}"
+        return ReadinessStatus.ERROR, f"Evidence resolution failed: {evidence.error}"
+
+    unresolved = [item for item in evidence.requirements if item.satisfied is None]
+    if unresolved:
+        names = ", ".join(item.name for item in unresolved)
+        return ReadinessStatus.UNKNOWN, f"Unresolved evidence requirement(s): {names}"
+
+    blocking = [item for item in evidence.requirements if item.satisfied is False and item.blocking]
+    if blocking:
+        first = blocking[0]
+        return ReadinessStatus.BLOCKED, first.reason
+
+    unmet = [item for item in evidence.requirements if item.satisfied is False]
+    if unmet:
+        first = unmet[0]
+        if first.type == "required_field" and evidence.metrics.get("total_current_population", 0) > 0:
+            return ReadinessStatus.BLOCKED, first.reason
+        return ReadinessStatus.WAITING_DATA, first.reason
+
+    if evidence.usable_count == 0:
+        return ReadinessStatus.WAITING_DATA, "No eligible CURRENT records"
+    if evidence.usable_count is None:
+        return ReadinessStatus.UNKNOWN, "Usable CURRENT population cannot be resolved"
+    return ReadinessStatus.READY, f"All declared requirements pass on {evidence.usable_count} eligible CURRENT records"

@@ -1,0 +1,1465 @@
+"""
+Research Question Registry v2 — All research questions with structured requirements.
+
+Organised by category. Each question declares its data needs, validation rules,
+and dependencies so the audit system can compute READY/BLOCKED/WAITING status.
+
+Legacy Q1-Q25 IDs are mapped via legacy_ids field for traceability.
+"""
+
+from __future__ import annotations
+
+from research_engine.registry.research_question_models import (
+    DataSource,
+    QuestionCategory,
+    QuestionPriority,
+    ResearchQuestion,
+    ValidationRule,
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY E — SYSTEM EDGE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+E1 = ResearchQuestion(
+    id="E1",
+    category=QuestionCategory.SYSTEM_EDGE,
+    title="True system expectancy",
+    description="What is the true expectancy of the production decision pipeline measured by R-multiple per trade?",
+    required_fields=("entity_id", "pattern", "score", "r_multiple", "exit_reason"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need entity_id to link decision context to outcomes"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Nearly all records must have R-multiple"),
+    ),
+    runner_module="research_engine.experiments.expected_value",
+    runner_function="run",
+    report_filename="q19_expected_value.json",
+    legacy_ids=("Q19",),
+)
+
+E2 = ResearchQuestion(
+    id="E2",
+    category=QuestionCategory.SYSTEM_EDGE,
+    title="Pattern expectancy",
+    description="Which candlestick patterns contain positive expectancy across all conditions?",
+    required_fields=("pattern", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("pattern_coverage", ">=", 0.50, "At least 50% of records must have pattern"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Nearly all records must have outcome"),
+    ),
+    runner_module="research_engine.experiments.legacy_canonical",
+    runner_function="run_q05",
+    report_filename="q5_pattern_degradation.json",
+    legacy_ids=("Q5", "Q24"),
+)
+
+E3 = ResearchQuestion(
+    id="E3",
+    category=QuestionCategory.SYSTEM_EDGE,
+    title="Strategy expectancy",
+    description=("Which active non-NONE V10 StrategyFamily values contain "
+                 "positive expectancy on completed primary shadow outcomes?"),
+    required_fields=("strategy", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy field required (not combined with horizon)"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome data required"),
+        ValidationRule("sample_size", ">=", 50, "Shared report-validity floor"),
+    ),
+    runner_module="research_engine.experiments.strategy_expectancy",
+    runner_function="run_e3",
+    report_filename="e3_strategy_family_expectancy.json",
+)
+
+E4 = ResearchQuestion(
+    id="E4",
+    category=QuestionCategory.SYSTEM_EDGE,
+    title="Strategy × pattern combinations",
+    description="Which strategy × pattern combinations produce edge? (e.g. REVERSAL + TWEEZER_TOP)",
+    required_fields=("strategy", "pattern", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy required"),
+        ValidationRule("pattern_coverage", ">=", 0.50, "Pattern required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+    ),
+    depends_on=("E2", "E3"),
+    runner_module="research_engine.experiments.edge_depth",
+    runner_function="run_e4",
+    report_filename="e4_strategy_pattern_combinations.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY M — MARKET CONTEXT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+M1 = ResearchQuestion(
+    id="M1",
+    category=QuestionCategory.MARKET_CONTEXT,
+    title="H4 regime predicts outcomes",
+    description="Does H4 regime classification (TRENDING/RANGING/TRANSITIONAL) predict trade R-multiple?",
+    required_fields=("h4_regime", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("h4_regime_coverage", ">=", 0.80, "H4 regime must be populated in most records"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 60, "Distinct canonical opportunities required for chronological validation"),
+    ),
+    runner_module="research_engine.experiments.market_prediction_rw2",
+    runner_function="run_m1",
+    report_filename="m1_h4_regime_prediction_v1.json",
+    legacy_ids=("Q6", "Q23"),
+)
+
+M2 = ResearchQuestion(
+    id="M2",
+    category=QuestionCategory.MARKET_CONTEXT,
+    title="H4 regime edge by strategy",
+    description="Which H4 regimes produce edge for each strategy type?",
+    required_fields=("h4_regime", "strategy", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("h4_regime_coverage", ">=", 0.80, "H4 regime required"),
+        ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+    ),
+    depends_on=("M1", "E3"),
+    runner_module="research_engine.experiments.market_research",
+    runner_function="run_m2",
+    report_filename="m2_regime_strategy_edge.json",
+)
+
+M3 = ResearchQuestion(
+    id="M3",
+    category=QuestionCategory.MARKET_CONTEXT,
+    title="Phase improves prediction beyond regime",
+    description="Does market_phase (IMPULSE/PULLBACK/CONSOLIDATION/EXHAUSTION/REVERSAL) improve prediction beyond H4 regime alone?",
+    required_fields=("h4_regime", "market_phase", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("h4_regime_coverage", ">=", 0.80, "H4 regime required"),
+        ValidationRule("market_phase_coverage", ">=", 0.80, "Phase must be populated"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 90, "Distinct canonical opportunities required for chronological validation"),
+    ),
+    depends_on=("M1",),
+    runner_module="research_engine.experiments.market_prediction_rw2",
+    runner_function="run_m3",
+    report_filename="m3_phase_incremental_prediction_v1.json",
+)
+
+M4 = ResearchQuestion(
+    id="M4",
+    category=QuestionCategory.MARKET_CONTEXT,
+    title="Regime × phase × strategy edge",
+    description="Which regime × phase × strategy combinations produce edge?",
+    required_fields=("h4_regime", "market_phase", "strategy", "pattern", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("h4_regime_coverage", ">=", 0.80, "H4 regime required"),
+        ValidationRule("market_phase_coverage", ">=", 0.80, "Phase required"),
+        ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+    ),
+    depends_on=("M1", "M3", "E3"),
+    runner_module="research_engine.experiments.market_research",
+    runner_function="run_m4",
+    report_filename="m4_regime_phase_strategy.json",
+)
+
+M5 = ResearchQuestion(
+    id="M5",
+    category=QuestionCategory.MARKET_CONTEXT,
+    title="Phase transitions predict drawdown",
+    description=(
+        "Do rapid phase transitions predict subsequent realised strategy "
+        "drawdown in cumulative R? This is not account-equity or "
+        "mark-to-market drawdown."
+    ),
+    required_fields=("market_phase", "entry_time", "exit_timestamp", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P2,
+    validation_rules=(
+        ValidationRule("market_phase_coverage", ">=", 0.80, "Phase history required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Closed outcome R required"),
+    ),
+    runner_module="research_engine.experiments.market_temporal",
+    runner_function="run_m5",
+    report_filename="m5_phase_transitions_drawdown.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY D — DECISION QUALITY
+# ═══════════════════════════════════════════════════════════════════════════════
+
+D1 = ResearchQuestion(
+    id="D1",
+    category=QuestionCategory.DECISION_QUALITY,
+    title="Scoring components predict R",
+    description="Which of the 10 scoring components best predict actual R-multiple outcomes?",
+    required_fields=("score", "components", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES, DataSource.DECISION_TRACE),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need entity_id join to link scores to outcomes"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+    ),
+    runner_module="research_engine.experiments.component_reward",
+    runner_function="run",
+    report_filename="q1_component_reward.json",
+    legacy_ids=("Q1",),
+)
+
+D2 = ResearchQuestion(
+    id="D2",
+    category=QuestionCategory.DECISION_QUALITY,
+    title="Confidence calibration",
+    description="Is the system's predicted probability (p_success) calibrated to actual win rate?",
+    required_fields=("canonical_opportunity_id", "p_success", "r_multiple"),
+    data_sources=(DataSource.DECISION_TRACE, DataSource.SHADOW_TRADES),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need trace→outcome join"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 100, "Distinct paired canonical opportunities required for chronological calibration"),
+    ),
+    runner_module="research_engine.experiments.d2_paired_calibration",
+    runner_function="run_d2",
+    report_filename="d2_paired_probability_calibration_v1.json",
+    legacy_ids=("Q4", "Q20"),
+)
+
+D3 = ResearchQuestion(
+    id="D3",
+    category=QuestionCategory.DECISION_QUALITY,
+    title="EV filtering value",
+    description="Does the pre-decision predicted-EV (R units) gate relate to subsequent realised R?",
+    required_fields=("canonical_opportunity_id", "p_success", "r_multiple"),
+    data_sources=(DataSource.DECISION_TRACE, DataSource.SHADOW_TRADES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need trace→outcome join"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 100, "Distinct paired canonical opportunities required for chronological EV-gate validation"),
+    ),
+    runner_module="research_engine.experiments.d3_predicted_ev_gate",
+    runner_function="run_d3",
+    report_filename="d3_predicted_ev_gate_validation_v1.json",
+    legacy_ids=("Q21", "Q22"),
+)
+
+D4 = ResearchQuestion(
+    id="D4",
+    category=QuestionCategory.DECISION_QUALITY,
+    title="Pre-decision score threshold predictive validation",
+    description="Does the canonical pre-decision score (score_strategy) separate subsequent realised R, and is a discovery-selected threshold supported on later unseen data?",
+    required_fields=("canonical_opportunity_id", "score_strategy", "r_multiple"),
+    data_sources=(DataSource.DECISION_TRACE, DataSource.SHADOW_TRADES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need trace→outcome join"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 100, "Distinct paired canonical opportunities required for chronological score-threshold validation"),
+    ),
+    runner_module="research_engine.experiments.d4_score_threshold_validation",
+    runner_function="run_d4",
+    report_filename="d4_score_threshold_validation_v1.json",
+    legacy_ids=("Q2",),
+)
+
+D5 = ResearchQuestion(
+    id="D5",
+    category=QuestionCategory.DECISION_QUALITY,
+    title="Rejected-opportunity counterfactual validation",
+    description="Do rejected/no-trade canonical opportunities subsequently show counterfactual shadow outcomes indicating the rejection logic filters harmful or discards useful opportunities?",
+    required_fields=("canonical_opportunity_id", "terminal_stage", "r_multiple"),
+    data_sources=(DataSource.DECISION_TRACE, DataSource.SHADOW_TRADES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need rejection trace→shadow counterfactual join"),
+        ValidationRule("outcome_coverage", ">=", 0.50, "Counterfactual shadow outcomes for rejected opportunities"),
+        ValidationRule("sample_size", ">=", 100, "Distinct rejected canonical opportunities with paired outcomes required for chronological validation"),
+    ),
+    runner_module="research_engine.experiments.d5_rejected_opportunity_validation",
+    runner_function="run_d5",
+    report_filename="d5_rejected_opportunity_validation_v1.json",
+    legacy_ids=("Q3",),
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY S — STRATEGY AND HORIZON
+# ═══════════════════════════════════════════════════════════════════════════════
+
+S1 = ResearchQuestion(
+    id="S1",
+    category=QuestionCategory.STRATEGY_HORIZON,
+    title="Strategy expectancy by type",
+    description=("Superseded alias of E3: expectancy for each active non-NONE "
+                 "V10 StrategyFamily on completed primary shadow outcomes."),
+    required_fields=("strategy", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy values required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+    ),
+    depends_on=("E3",),
+    scientific_owner_id="E3",
+)
+
+S2 = ResearchQuestion(
+    id="S2",
+    category=QuestionCategory.STRATEGY_HORIZON,
+    title="Horizon affects expectancy",
+    description="Does trade horizon (SCALP/INTRADAY/EXTENDED) independently affect expectancy?",
+    required_fields=("trade_horizon", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("horizon_coverage", ">=", 0.50, "Separate horizon field required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+    ),
+    runner_module="research_engine.experiments.selection_research",
+    runner_function="run_s2",
+    report_filename="s2_horizon_expectancy.json",
+)
+
+S3 = ResearchQuestion(
+    id="S3",
+    category=QuestionCategory.STRATEGY_HORIZON,
+    title="Strategy × horizon combinations",
+    description="Which strategy × horizon combinations work? (e.g. REVERSAL+SCALP vs CONTINUATION+EXTENDED)",
+    required_fields=("strategy", "trade_horizon", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy required"),
+        ValidationRule("horizon_coverage", ">=", 0.50, "Separate horizon required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+    ),
+    depends_on=("S1", "S2"),
+    runner_module="research_engine.experiments.selection_research",
+    runner_function="run_s3",
+    report_filename="s3_strategy_horizon_combinations.json",
+)
+
+S4 = ResearchQuestion(
+    id="S4",
+    category=QuestionCategory.STRATEGY_HORIZON,
+    title="Strategies specialised for phases",
+    description="Are strategies specialised for certain market phases? (e.g. REVERSAL only in EXHAUSTION)",
+    required_fields=("strategy", "market_phase", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy required"),
+        ValidationRule("market_phase_coverage", ">=", 0.80, "Phase required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+    ),
+    depends_on=("E3", "M3"),
+    runner_module="research_engine.experiments.selection_research",
+    runner_function="run_s4",
+    report_filename="s4_strategy_phase_specialisation.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY X — EXECUTION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+X1 = ResearchQuestion(
+    id="X1",
+    category=QuestionCategory.EXECUTION,
+    title="Slippage model",
+    description="What is the real slippage model per symbol per session?",
+    required_fields=("correlation_id", "symbol", "slippage", "session_state"),
+    data_sources=(DataSource.EXECUTION_RESULTS, DataSource.EXECUTION_CONTEXT),
+    priority=QuestionPriority.P2,
+    validation_rules=(
+        ValidationRule("sample_size", ">=", 30, "Minimum measured slippage observations"),
+    ),
+    runner_module="research_engine.experiments.execution_protection_research",
+    runner_function="run_x1",
+    report_filename="w4_x1_slippage.json",
+    legacy_ids=("Q11",),
+)
+
+X2 = ResearchQuestion(
+    id="X2",
+    category=QuestionCategory.EXECUTION,
+    title="Broker failure patterns",
+    description="Are broker rejections/failures predictable by time, symbol, or market condition?",
+    required_fields=("retcode", "symbol", "result_ok"),
+    data_sources=(DataSource.EXECUTION_RESULTS, DataSource.EXECUTION_ATTEMPTS),
+    priority=QuestionPriority.P2,
+    validation_rules=(),
+    runner_module="research_engine.experiments.execution_protection_research",
+    runner_function="run_x2",
+    report_filename="w4_x2_broker_failures.json",
+    legacy_ids=("Q12",),
+)
+
+X3 = ResearchQuestion(
+    id="X3",
+    category=QuestionCategory.EXECUTION,
+    title="Session execution quality",
+    description="Which trading sessions produce the best execution quality (lowest slippage, fewest rejects)?",
+    required_fields=("correlation_id", "session_state", "slippage"),
+    data_sources=(DataSource.EXECUTION_CONTEXT, DataSource.EXECUTION_RESULTS),
+    priority=QuestionPriority.P2,
+    validation_rules=(
+        ValidationRule("sample_size", ">=", 30, "Minimum matched execution observations"),
+    ),
+    runner_module="research_engine.experiments.execution_protection_research",
+    runner_function="run_x3",
+    report_filename="w4_x3_session_quality.json",
+    legacy_ids=("Q9",),
+)
+
+X4 = ResearchQuestion(
+    id="X4",
+    category=QuestionCategory.EXECUTION,
+    title="Edge lost in execution",
+    description="How much theoretical edge (from shadow R) is lost during real execution?",
+    required_fields=("entity_id", "shadow_r_multiple", "live_r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES, DataSource.TRADE_TRUTH),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need shadow↔live outcome join"),
+    ),
+    runner_module="research_engine.experiments.shadow_validation",
+    runner_function="run",
+    report_filename="q16_shadow_validation.json",
+    legacy_ids=("Q16",),
+)
+X5 = ResearchQuestion(
+    id="X5",
+    category=QuestionCategory.EXECUTION,
+    title="Predicted-EV vs realised-R validation",
+    description="Does pre-decision predicted EV (predicted_ev_r_v1, R units) correspond to subsequent realised R at canonical-opportunity level, and does it persist on later unseen evidence?",
+    required_fields=("canonical_opportunity_id", "p_success", "r_multiple"),
+    data_sources=(DataSource.DECISION_TRACE, DataSource.SHADOW_TRADES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need trace→outcome join"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 100, "Distinct paired canonical opportunities required for chronological predicted-EV-vs-realised-R validation"),
+    ),
+    runner_module="research_engine.experiments.x5_predicted_ev_realised_r_validation",
+    runner_function="run_x5",
+    report_filename="x5_predicted_ev_realised_r_validation_v1.json",
+    legacy_ids=(),
+)
+
+EXEC1 = ResearchQuestion(
+    id="EXEC1",
+    category=QuestionCategory.EXECUTION,
+    title="Execution failures",
+    description="Do execution failures or adverse conditions degrade otherwise valid opportunities?",
+    required_fields=("correlation_id", "result_ok", "action", "spread_atr_ratio"),
+    data_sources=(
+        DataSource.EXECUTION_RESULTS,
+        DataSource.EXECUTION_CONTEXT,
+        DataSource.DECISION_TRACE,
+    ),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("sample_size", ">=", 30, "Minimum execution-result observations"),
+    ),
+    runner_module="research_engine.experiments.execution_protection_research",
+    runner_function="run_exec1",
+    report_filename="w4_exec1_execution_failures.json",
+    legacy_ids=(),
+)
+
+PROT1 = ResearchQuestion(
+    id="PROT1",
+    category=QuestionCategory.EXECUTION,
+    title="Protection integrity",
+    description="Are positions retaining the protection (SL/TP) the system intended?",
+    required_fields=("correlation_id", "protection_status"),
+    data_sources=(DataSource.PROTECTION_AUDIT,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("sample_size", ">=", 30, "Minimum protection-audit observations"),
+    ),
+    runner_module="research_engine.experiments.execution_protection_research",
+    runner_function="run_prot1",
+    report_filename="w4_prot1_protection_integrity.json",
+    legacy_ids=(),
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY L — SYSTEM LEARNING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+L1 = ResearchQuestion(
+    id="L1",
+    category=QuestionCategory.SYSTEM_LEARNING,
+    title="Pattern degradation",
+    description="Are patterns degrading in performance over time?",
+    required_fields=("pattern", "r_multiple", "entry_time"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P2,
+    validation_rules=(
+        ValidationRule("pattern_coverage", ">=", 0.50, "Pattern required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 200, "HD11 overall canonical-opportunity minimum"),
+    ),
+    runner_module="research_engine.experiments.pattern_degradation",
+    runner_function="run_l1",
+    report_filename="l1_pattern_degradation.json",
+    legacy_ids=(),
+)
+
+L2 = ResearchQuestion(
+    id="L2",
+    category=QuestionCategory.SYSTEM_LEARNING,
+    title="System improvement tracking",
+    description="Does the system improve after architecture changes? (compare pre/post periods)",
+    required_fields=("r_multiple", "entry_time", "schema_version"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P3,
+    validation_rules=(),
+    runner_module="research_engine.experiments.legacy_canonical",
+    runner_function="run_q15",
+    report_filename="q15_learning_velocity.json",
+    legacy_ids=("Q15",),
+)
+
+L3 = ResearchQuestion(
+    id="L3",
+    category=QuestionCategory.SYSTEM_LEARNING,
+    title="Architecture assumptions valid",
+    description="Are the scoring weight assumptions, regime classifications, and strategy mappings still correct?",
+    required_fields=("components", "strategy", "regime", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES, DataSource.DECISION_TRACE),
+    priority=QuestionPriority.P2,
+    validation_rules=(
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need decision context linked to outcomes"),
+        ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy required"),
+    ),
+    runner_module="research_engine.experiments.architecture_assumption_validity",
+    runner_function="run_l3",
+    report_filename="l3_architecture_assumption_validity.json",
+    legacy_ids=("Q1",),
+)
+
+L4 = ResearchQuestion(
+    id="L4",
+    category=QuestionCategory.SYSTEM_LEARNING,
+    title="Market behaviour drift",
+    description="Does market behaviour change over time in ways that invalidate strategy assumptions?",
+    required_fields=("regime", "r_multiple", "entry_time"),
+    data_sources=(DataSource.SHADOW_TRADES, DataSource.MARKET_CONTEXT),
+    priority=QuestionPriority.P3,
+    validation_rules=(
+        ValidationRule("h4_regime_coverage", ">=", 0.80, "Regime history required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+    ),
+    legacy_ids=(),
+    runner_module="research_engine.experiments.market_behaviour_stability",
+    runner_function="run_l4",
+    report_filename="l4_market_behaviour_stability.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADDITIONAL MARKET CONTEXT (M6–M8)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+M6 = ResearchQuestion(
+    id="M6",
+    category=QuestionCategory.MARKET_CONTEXT,
+    title="Market phase expectancy",
+    description="Which market phases (IMPULSE/PULLBACK/CONSOLIDATION/EXHAUSTION/REVERSAL) contain real edge?",
+    required_fields=("market_phase", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("market_phase_coverage", ">=", 0.80, "Phase must be populated"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+    ),
+    runner_module="research_engine.experiments.market_research",
+    runner_function="run_m6",
+    report_filename="m6_phase_expectancy.json",
+)
+
+M7 = ResearchQuestion(
+    id="M7",
+    category=QuestionCategory.MARKET_CONTEXT,
+    title="Regime + phase interaction",
+    description="Does combining regime and phase improve predictive power beyond either alone?",
+    required_fields=("h4_regime", "market_phase", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("h4_regime_coverage", ">=", 0.80, "H4 regime required"),
+        ValidationRule("market_phase_coverage", ">=", 0.80, "Phase required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 90, "Distinct canonical opportunities required for chronological validation"),
+    ),
+    depends_on=("M1", "M6"),
+    runner_module="research_engine.experiments.market_prediction_rw2",
+    runner_function="run_m7",
+    report_filename="m7_regime_phase_prediction_v1.json",
+)
+
+M8 = ResearchQuestion(
+    id="M8",
+    category=QuestionCategory.MARKET_CONTEXT,
+    title="Phase transition behaviour",
+    description="Do market phase transitions (e.g. IMPULSE→EXHAUSTION) predict future trade outcomes?",
+    required_fields=("market_phase", "entry_time", "r_multiple"),
+    data_sources=(DataSource.MARKET_CONTEXT, DataSource.SHADOW_TRADES),
+    priority=QuestionPriority.P2,
+    validation_rules=(
+        ValidationRule("market_phase_coverage", ">=", 0.80, "Phase history required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("sample_size", ">=", 60, "Distinct joined canonical opportunities required for chronological validation"),
+    ),
+    runner_module="research_engine.experiments.market_prediction_rw2",
+    runner_function="run_m8",
+    report_filename="m8_phase_transition_prediction_v1.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADDITIONAL STRATEGY & HORIZON (S5–S7)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+S5 = ResearchQuestion(
+    id="S5",
+    category=QuestionCategory.STRATEGY_HORIZON,
+    title="Strategy identity expectancy",
+    description=(
+        "Which active non-NONE V10 StrategyFamily values retain expectancy after "
+        "accounting for the evaluated trade horizon (SCALP/INTRADAY/EXTENDED) "
+        "under which outcomes were simulated?"
+    ),
+    required_fields=("strategy", "trade_horizon", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy required"),
+        ValidationRule("horizon_coverage", ">=", 0.50, "Evaluated horizon required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule(
+            "sample_size", ">=", 100,
+            "CURRENT horizon-simulation row floor; distinct canonical-opportunity "
+            "100/30/20 gates are enforced by the S5 runner",
+        ),
+    ),
+    runner_module="research_engine.experiments.strategy_identity_expectancy",
+    runner_function="run_s5",
+    report_filename="s5_strategy_identity_expectancy.json",
+)
+
+S6 = ResearchQuestion(
+    id="S6",
+    category=QuestionCategory.STRATEGY_HORIZON,
+    title="Horizon expectancy",
+    description=(
+        "Which canonical trade horizons (SCALP/INTRADAY/EXTENDED) retain "
+        "expectancy after accounting for the six active V10 StrategyFamily values?"
+    ),
+    required_fields=("strategy", "trade_horizon", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("horizon_coverage", ">=", 0.50, "Separate horizon field required"),
+        ValidationRule("strategy_coverage", ">=", 0.50, "Authoritative StrategyFamily required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule(
+            "sample_size", ">=", 100,
+            "CURRENT horizon-simulation row floor; distinct canonical-opportunity "
+            "100/30/20 gates are enforced by the S6 runner",
+        ),
+    ),
+    runner_module="research_engine.experiments.horizon_expectancy",
+    runner_function="run_s6",
+    report_filename="s6_horizon_expectancy.json",
+)
+
+S7 = ResearchQuestion(
+    id="S7",
+    category=QuestionCategory.STRATEGY_HORIZON,
+    title="Strategy × horizon interaction",
+    description="Are strategies profitable only at specific horizons? (e.g. REVERSAL works at SCALP but not EXTENDED)",
+    required_fields=("strategy", "trade_horizon", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("strategy_coverage", ">=", 0.50, "Authoritative StrategyFamily required"),
+        ValidationRule("horizon_coverage", ">=", 0.50, "Canonical evaluated horizon required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule(
+            "sample_size", ">=", 150,
+            "CURRENT row floor; the S7 runner enforces 150 distinct opportunities, "
+            "30 per included cell, and a deterministic sufficient 2x2 grid",
+        ),
+    ),
+    depends_on=("S5", "S6"),
+    runner_module="research_engine.experiments.strategy_horizon_interaction",
+    runner_function="run_s7",
+    report_filename="s7_strategy_horizon_interaction.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADDITIONAL EXECUTION — X6 (HD08-adjudicated execution stability, Repair 4B.4)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+X6 = ResearchQuestion(
+    id="X6",
+    category=QuestionCategory.EXECUTION,
+    title="Execution stability",
+    description="Under what conditions (symbol, session, spread, volatility) does execution quality degrade?",
+    required_fields=("correlation_id", "symbol", "slippage", "spread_atr_ratio"),
+    data_sources=(
+        DataSource.EXECUTION_RESULTS,
+        DataSource.EXECUTION_CONTEXT,
+        DataSource.DECISION_TRACE,
+    ),
+    priority=QuestionPriority.P2,
+    validation_rules=(
+        ValidationRule("sample_size", ">=", 100, "Minimum matched execution-result observations"),
+    ),
+    runner_module="research_engine.experiments.execution_stability",
+    runner_function="run_x6",
+    report_filename="x6_execution_stability.json",
+    legacy_ids=(),
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY R — RISK MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+R1 = ResearchQuestion(
+    id="R1",
+    category=QuestionCategory.RISK_MANAGEMENT,
+    title="Risk model effectiveness",
+    description="Does the risk layer (guards, daily loss limit, exposure) improve overall expectancy and survival?",
+    required_fields=("entity_id", "r_multiple", "terminal_stage"),
+    data_sources=(DataSource.DECISION_TRACE, DataSource.SHADOW_TRADES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need decision→outcome lineage"),
+        ValidationRule("outcome_coverage", ">=", 0.50, "Outcomes for both allowed and blocked trades"),
+    ),
+    runner_module="research_engine.experiments.r1_risk_layer_effectiveness",
+    runner_function="run_r1",
+    report_filename="r1_risk_layer_effectiveness.json",
+    legacy_ids=("Q10",),
+)
+
+R2 = ResearchQuestion(
+    id="R2",
+    category=QuestionCategory.RISK_MANAGEMENT,
+    title="Guard value analysis",
+    description="Did each individual guard (spread, correlation, regime, daily loss) improve final expectancy?",
+    required_fields=("entity_id", "terminal_stage", "terminal_reason", "r_multiple"),
+    data_sources=(DataSource.DECISION_TRACE, DataSource.SHADOW_TRADES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need trace→shadow join for counterfactual"),
+        ValidationRule("outcome_coverage", ">=", 0.50, "Shadow outcomes for rejected signals needed"),
+    ),
+    runner_module="research_engine.experiments.r2_guard_attribution",
+    runner_function="run_r2",
+    report_filename="r2_guard_attribution.json",
+    legacy_ids=("Q10",),
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADDITIONAL SYSTEM LEARNING (L5–L6)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+L5 = ResearchQuestion(
+    id="L5",
+    category=QuestionCategory.SYSTEM_LEARNING,
+    title="Model drift detection",
+    description="Do patterns, strategies, or market assumptions lose predictive power over time?",
+    required_fields=("pattern", "strategy", "r_multiple", "entry_time"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P2,
+    validation_rules=(
+        ValidationRule("pattern_coverage", ">=", 0.50, "Pattern required"),
+        ValidationRule("strategy_coverage", ">=", 0.50, "Strategy required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+    ),
+    depends_on=("L1", "L4", "E5"),
+    runner_module="research_engine.experiments.edge_depth",
+    runner_function="run_l5",
+    report_filename="l5_model_drift_detection.json",
+)
+
+L6 = ResearchQuestion(
+    id="L6",
+    category=QuestionCategory.SYSTEM_LEARNING,
+    title="Research confidence scoring",
+    description="How trustworthy is each research conclusion given dataset validity, coverage, and sample size?",
+    required_fields=("r_multiple", "pattern"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required for confidence assessment"),
+    ),
+    runner_module="research_engine.experiments.learning_cycle_validation",
+    runner_function="run_l6",
+    report_filename="l6_learning_cycle_validation.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY G — DATA GOVERNANCE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+G1 = ResearchQuestion(
+    id="G1",
+    category=QuestionCategory.DATA_GOVERNANCE,
+    title="Dataset completeness",
+    description="Is the current dataset suitable for the intended research questions? (field coverage, source type, sample size)",
+    required_fields=("r_multiple",),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.50, "At least half of records must have outcomes"),
+    ),
+    runner_module="research_engine.experiments.dataset_suitability",
+    runner_function="run_g1",
+    report_filename="g1_dataset_suitability.json",
+)
+
+G2 = ResearchQuestion(
+    id="G2",
+    category=QuestionCategory.DATA_GOVERNANCE,
+    title="Lineage coverage",
+    description="What percentage of canonical opportunities have valid decision-to-outcome lineage on (entity_id, canonical_opportunity_id)?",
+    required_fields=("entity_id", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES, DataSource.DECISION_TRACE),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("lineage_coverage", ">=", 0.50, "At least 50% lineage for this meta-question"),
+        ValidationRule("sample_size", ">=", 100, "At least 100 exhaustive eligible canonical opportunities"),
+    ),
+    runner_module="research_engine.experiments.lineage_coverage",
+    runner_function="run_g2",
+    report_filename="g2_lineage_coverage.json",
+)
+
+G3 = ResearchQuestion(
+    id="G3",
+    category=QuestionCategory.DATA_GOVERNANCE,
+    title="Research validity assessment",
+    description="Can research conclusions be trusted given current validation status, coverage percentages, and sample sizes?",
+    # Retained for HD13/G1 inventory compatibility only.  The effective HD15
+    # definition and G3 runner consume canonical control-plane state, never raw
+    # shadow fields.
+    required_fields=("r_multiple", "pattern"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.80, "Strong outcome coverage needed for validity assessment"),
+        ValidationRule("pattern_coverage", ">=", 0.50, "Pattern coverage needed"),
+    ),
+    runner_module="research_engine.experiments.research_validity",
+    runner_function="run_g3",
+    report_filename="g3_research_validity.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPANDED RISK MANAGEMENT (R3–R5)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+R3 = ResearchQuestion(
+    id="R3",
+    category=QuestionCategory.RISK_MANAGEMENT,
+    title="Probability of ruin",
+    description="Given the measured edge, win rate, variance and position sizing, what is the probability that this system eventually reaches catastrophic drawdown?",
+    required_fields=("r_multiple", "win_rate", "position_size"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Nearly all records must have R-multiple for variance estimation"),
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need full lifecycle for accurate win rate"),
+    ),
+    depends_on=("E1",),
+    runner_module="research_engine.experiments.probability_of_ruin",
+    runner_function="run_probability_of_ruin",
+    report_filename="r3_probability_of_ruin.json",
+)
+
+R4 = ResearchQuestion(
+    id="R4",
+    category=QuestionCategory.RISK_MANAGEMENT,
+    title="Drawdown halt threshold",
+    description="At what realised drawdown should the system automatically suspend trading because historical recovery probability becomes unacceptable?",
+    required_fields=("r_multiple", "entry_time"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Full outcome history required for drawdown modelling"),
+    ),
+    depends_on=("R3",),
+    runner_module="research_engine.experiments.drawdown_threshold",
+    runner_function="run_drawdown_threshold",
+    report_filename="r4_drawdown_threshold.json",
+)
+
+R5 = ResearchQuestion(
+    id="R5",
+    category=QuestionCategory.RISK_MANAGEMENT,
+    title="Position sizing optimisation",
+    description="What position sizing model (fixed risk, Kelly, half-Kelly, fractional Kelly, fixed lot, dynamic) maximises long-term growth while respecting acceptable drawdown?",
+    required_fields=("r_multiple", "win_rate"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Full outcome distribution required for Kelly calculation"),
+    ),
+    depends_on=("E1", "R3"),
+    runner_module="research_engine.experiments.position_sizing",
+    runner_function="run_position_sizing",
+    report_filename="r5_position_sizing.json",
+)
+RISK1 = ResearchQuestion(
+    id="RISK-1",
+    category=QuestionCategory.RISK_MANAGEMENT,
+    title="Risk control fidelity",
+    description="When the bot realises a loss, does the realised loss magnitude respect the 1-R planned-risk definition? How often do realised losses exceed the plan (ELEVATED/CRITICAL)?",
+    required_fields=("trade_id", "risk_classification", "risk_deviation",
+                     "actual_risk_R", "planned_risk_R"),
+    data_sources=(DataSource.RISK_DEVIATION,),
+    priority=QuestionPriority.P1,
+    validation_rules=(),
+    depends_on=(),
+    runner_module="research_engine.experiments.risk_research",
+    runner_function="run_risk1",
+    report_filename="w5_risk1_control_fidelity.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPANDED SYSTEM EDGE (E5)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+E5 = ResearchQuestion(
+    id="E5",
+    category=QuestionCategory.SYSTEM_EDGE,
+    title="Out-of-sample validation",
+    description="Does the measured edge survive on unseen market data using walk-forward testing with rolling windows?",
+    required_fields=("r_multiple", "entry_time", "pattern"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Full outcomes needed for walk-forward split"),
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need decision context to prevent lookahead"),
+    ),
+    depends_on=("E1",),
+    runner_module="research_engine.experiments.out_of_sample_validation",
+    runner_function="run_out_of_sample_validation",
+    report_filename="e5_out_of_sample.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPANDED DECISION QUALITY (D6)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+D6 = ResearchQuestion(
+    id="D6",
+    category=QuestionCategory.DECISION_QUALITY,
+    title="Portfolio ranking quality",
+    description="Does the portfolio ranker's ordering of candidates (by rank_position) match realised/shadow outcomes — i.e., do higher-ranked candidates genuinely outperform lower-ranked ones?",
+    required_fields=("cycle_id", "rank_position", "selection_status", "rank_score"),
+    data_sources=(DataSource.PORTFOLIO_RANKINGS, DataSource.SHADOW_TRADES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("ranking_rows", ">=", 10, "Need ranking cycles for rank distribution"),
+        ValidationRule("ranked_candidates", ">=", 30, "Need candidate rows for ranking analysis"),
+    ),
+    runner_module="research_engine.experiments.portfolio_ranking",
+    runner_function="run_portfolio_ranking",
+    report_filename="d6_portfolio_ranking.json",
+)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WAVE 6 — PORTFOLIO SELECTION (PORT-1)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+PORT_1 = ResearchQuestion(
+    id="PORT-1",
+    category=QuestionCategory.PORTFOLIO_SELECTION,
+    title="Portfolio selection quality",
+    description="Did the portfolio/ranking layer select the best available opportunity from the ranked candidate set? Evaluates whether the selected candidate's outcome is competitive with the best-ranked candidate in the same cycle.",
+    required_fields=("cycle_id", "rank_position", "selection_status", "rank_score"),
+    data_sources=(DataSource.PORTFOLIO_RANKINGS, DataSource.SHADOW_TRADES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("ranking_cycles", ">=", 5, "Need cycles with rankings for selection analysis"),
+    ),
+    runner_module="research_engine.experiments.portfolio_ranking",
+    runner_function="run_port_1",
+    report_filename="port1_portfolio_selection.json",
+)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WAVE 6 — OPPORTUNITY SELECTION (OPP-1)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+OPP_1 = ResearchQuestion(
+    id="OPP-1",
+    category=QuestionCategory.OPPORTUNITY_SELECTION,
+    title="Opportunity selection quality",
+    description="Were the opportunities promoted into the decision pipeline better than the opportunities rejected or filtered out?",
+    required_fields=("opportunity_id", "state", "overall_score"),
+    data_sources=(DataSource.SHADOW_TRADES, DataSource.HORIZON_CANDIDATES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("assessed_opportunities", ">=", 10, "Need opportunities with shadow outcomes"),
+    ),
+    runner_module="research_engine.experiments.opportunity_selection",
+    runner_function="run_opp_1",
+    report_filename="opp1_opportunity_selection.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPANDED SYSTEM LEARNING (L7)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+L7 = ResearchQuestion(
+    id="L7",
+    category=QuestionCategory.SYSTEM_LEARNING,
+    title="Shadow A/B validation",
+    description="Does a proposed strategy change outperform the currently promoted version when evaluated in shadow mode with statistical significance?",
+    required_fields=("r_multiple", "strategy", "schema_version"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Full outcomes needed for significance testing"),
+        ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy labels needed to separate control vs candidate"),
+    ),
+    depends_on=("E1", "E5"),
+    runner_module="research_engine.experiments.shadow_ab_validation",
+    runner_function="run_shadow_ab_validation",
+    report_filename="l7_shadow_ab_validation.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY P — PROMOTION INTELLIGENCE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+P1 = ResearchQuestion(
+    id="P1",
+    category=QuestionCategory.PROMOTION_INTELLIGENCE,
+    title="Promotion impact analysis",
+    description="If a specific recommendation is promoted into production, what measurable improvement in EV, win rate, drawdown, trade frequency, and risk is expected?",
+    required_fields=("r_multiple", "strategy", "pattern", "entry_time"),
+    data_sources=(DataSource.SHADOW_TRADES, DataSource.DECISION_TRACE),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Full outcomes needed for impact estimation"),
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need decision context for change modelling"),
+        ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy required for segmentation"),
+    ),
+    depends_on=("E1", "E5", "R3"),
+    runner_module="research_engine.experiments.promotion_impact",
+    runner_function="run_promotion_impact",
+    report_filename="p1_promotion_impact.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STRATEGY-CONTEXT ALIGNMENT (M9–M11)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+M9 = ResearchQuestion(
+    id="M9",
+    category=QuestionCategory.MARKET_CONTEXT,
+    title="Phase-appropriate pattern classification",
+    description="For each market phase (IMPULSE, PULLBACK, CONSOLIDATION, EXHAUSTION, REVERSAL), which patterns or behaviours actually belong there and produce positive expectancy?",
+    required_fields=("market_phase", "pattern", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("market_phase_coverage", ">=", 0.80, "Phase must be populated to stratify by phase"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+    ),
+    depends_on=("M6", "E2"),
+    runner_module="research_engine.experiments.m9_phase_pattern",
+    runner_function="run_m9_phase_pattern",
+    report_filename="m9_phase_pattern.json",
+)
+
+M10 = ResearchQuestion(
+    id="M10",
+    category=QuestionCategory.MARKET_CONTEXT,
+    title="Strategy family required per phase",
+    description="Does each market phase require a different strategy family (reversal, continuation, momentum, breakout) rather than different pattern weighting within one family?",
+    required_fields=("market_phase", "strategy", "pattern", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("market_phase_coverage", ">=", 0.80, "Phase required for stratification"),
+        ValidationRule("strategy_coverage", ">=", 0.50, "Clean strategy labels needed"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+    ),
+    depends_on=("M9", "S1"),
+    runner_module="research_engine.experiments.m10_strategy_family_per_phase",
+    runner_function="run_m10_strategy_family_per_phase",
+    report_filename="m10_strategy_family_per_phase.json",
+)
+
+M11 = ResearchQuestion(
+    id="M11",
+    category=QuestionCategory.MARKET_CONTEXT,
+    title="Context predictive value vs pattern",
+    description="Does market context (regime + phase + bias) provide more predictive value for trade outcomes than the pattern identity itself?",
+    required_fields=("h4_regime", "market_phase", "h1_bias", "pattern", "r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES, DataSource.DECISION_TRACE),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("h4_regime_coverage", ">=", 0.80, "Regime required"),
+        ValidationRule("market_phase_coverage", ">=", 0.80, "Phase required"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required"),
+        ValidationRule("lineage_coverage", ">=", 0.80, "Need decision context linked to outcomes"),
+        ValidationRule("sample_size", ">=", 120, "Distinct joined canonical opportunities required for chronological validation"),
+    ),
+    depends_on=("M1", "M9"),
+    runner_module="research_engine.experiments.market_prediction_rw2",
+    runner_function="run_m11",
+    report_filename="m11_context_vs_pattern_prediction_v1.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY EX — EXIT MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+EX1 = ResearchQuestion(
+    id="EX1",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Exit policy improves EV",
+    description="Does modifying exit policy (trailing stop, reduced TP, time-based) improve system expected value compared to the current max_bars timeout?",
+    required_fields=("pnl_r_multiple", "mfe_r", "mae_r", "exit_reason", "bars_held", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need R-multiple for almost all trades"),
+        ValidationRule("sample_size", ">=", 200, "Need sufficient trades for paired comparison"),
+    ),
+    runner_module="research_engine.experiments.exit_policy_governed",
+    runner_function="run_ex1",
+    report_filename="ex1_exit_efficiency.json",
+
+)
+
+EX2 = ResearchQuestion(
+    id="EX2",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Trailing stop improves MFE capture",
+    description="Does a trailing stop mechanism capture more of the available MFE than the current exit, using bar-by-bar sequential simulation?",
+    required_fields=("mfe_r", "pnl_r_multiple", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes for comparison"),
+        ValidationRule("sample_size", ">=", 200, "Need sufficient trades for statistical test"),
+    ),
+    runner_module="research_engine.experiments.exit_policy_governed",
+    runner_function="run_ex2",
+    report_filename="ex2_profit_retention.json",
+
+)
+
+EX3 = ResearchQuestion(
+    id="EX3",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Optimal TP distance",
+    description="What take-profit distance maximises expectancy? Tests TP at 0.25R through 3.0R using MFE data to determine reachability.",
+    required_fields=("mfe_r", "mae_r", "pnl_r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need R + MFE for simulation"),
+        ValidationRule("sample_size", ">=", 200, "Need sufficient sample per TP level"),
+    ),
+    runner_module="research_engine.experiments.exit_management",
+    runner_function="run_ex3",
+    report_filename="ex3_tp_distance.json",
+
+)
+
+EX4 = ResearchQuestion(
+    id="EX4",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Optimal SL distance",
+    description="Does the current SL distance preserve signal quality, or does widening/tightening SL improve outcomes?",
+    required_fields=("mae_r", "mfe_r", "pnl_r_multiple", "exit_reason"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcome data"),
+        ValidationRule("sample_size", ">=", 200, "Need per-SL-variant comparison"),
+    ),
+    runner_module="research_engine.experiments.exit_management",
+    runner_function="run_ex4",
+    report_filename="ex4_sl_distance.json",
+
+)
+
+EX5 = ResearchQuestion(
+    id="EX5",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Horizon changes optimal exit",
+    description="Does trade horizon (SCALP/INTRADAY/EXTENDED) require a different exit policy? Tests trailing parameters per horizon.",
+    required_fields=("trade_horizon", "mfe_r", "pnl_r_multiple", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("horizon_coverage", ">=", 0.50, "Need horizon field populated"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
+    ),
+    depends_on=("EX2",),
+    runner_module="research_engine.experiments.exit_policy_heterogeneity",
+    runner_function="run_ex5",
+    report_filename="ex5_horizon_exit.json",
+)
+
+EX6 = ResearchQuestion(
+    id="EX6",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Exit depends on strategy family",
+    description="Does each strategy family (REVERSAL/MOMENTUM/CONTINUATION) require a different exit policy?",
+    required_fields=("strategy", "pattern", "mfe_r", "pnl_r_multiple", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("strategy_coverage", ">=", 0.50, "Need strategy field for segmentation"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
+    ),
+    depends_on=("EX2",),
+    runner_module="research_engine.experiments.exit_policy_heterogeneity",
+    runner_function="run_ex6",
+    report_filename="ex6_strategy_exit.json",
+)
+
+EX7 = ResearchQuestion(
+    id="EX7",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Exit depends on market regime",
+    description="Does market regime (TRENDING/RANGING/TRANSITIONAL) require a different exit policy?",
+    required_fields=("h4_regime", "mfe_r", "pnl_r_multiple", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("h4_regime_coverage", ">=", 0.80, "Need regime for segmentation"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
+    ),
+    depends_on=("EX2",),
+    runner_module="research_engine.experiments.exit_policy_heterogeneity",
+    runner_function="run_ex7",
+    report_filename="ex7_regime_exit.json",
+)
+
+EX8 = ResearchQuestion(
+    id="EX8",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Exit depends on pattern type",
+    description="Do different candlestick patterns require different exit policies based on their MFE/MAE profiles?",
+    required_fields=("pattern", "mfe_r", "mae_r", "pnl_r_multiple", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P2,
+    validation_rules=(
+        ValidationRule("pattern_coverage", ">=", 0.50, "Need pattern field"),
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes"),
+    ),
+    depends_on=("EX2",),
+    runner_module="research_engine.experiments.exit_policy_heterogeneity",
+    runner_function="run_ex8",
+    report_filename="ex8_pattern_exit.json",
+)
+
+EX9 = ResearchQuestion(
+    id="EX9",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Exit reduces timeout losses",
+    description="Does the proposed exit policy reduce the timeout exit rate and convert timeout losses into captured profits?",
+    required_fields=("exit_reason", "bars_held", "mfe_r", "pnl_r_multiple", "trade_state_progression"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need exit_reason + outcome"),
+        ValidationRule("sample_size", ">=", 200, "Need sufficient trades"),
+    ),
+    runner_module="research_engine.experiments.exit_policy_governed",
+    runner_function="run_ex9",
+    report_filename="ex9_timeout_loss.json",
+)
+
+EX10 = ResearchQuestion(
+    id="EX10",
+    category=QuestionCategory.EXIT_MANAGEMENT,
+    title="Exit survives walk-forward",
+    description="Does the exit policy improvement hold on out-of-sample data using time-ordered walk-forward validation?",
+    required_fields=("pnl_r_multiple", "trade_state_progression", "entry_time"),
+    data_sources=(DataSource.SHADOW_TRADES,),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Need outcomes for train/test split"),
+        ValidationRule("sample_size", ">=", 200, "Need sufficient sample for temporal split"),
+    ),
+    depends_on=("EX1", "EX2"),
+    runner_module="research_engine.experiments.exit_policy_walk_forward",
+    runner_function="run_ex10",
+    report_filename="ex10_walk_forward.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY — TRADE MANAGEMENT (MGMT)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+MGMT1 = ResearchQuestion(
+    id="MGMT-1",
+    category=QuestionCategory.TRADE_MANAGEMENT,
+    title="Does trade management appear to help or harm outcomes?",
+    description="Observational association between management actions and realised outcomes. NOT causal.",
+    required_fields=("trade_id", "r_multiple_realised"),
+    data_sources=(DataSource.MANAGEMENT_ACTIONS, DataSource.TRADE_TRUTH),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required for managed/unmanaged comparison"),
+        ValidationRule("sample_size", ">=", 30, "Minimum for managed-vs-unmanaged comparison"),
+    ),
+    runner_module="research_engine.experiments.management_research",
+    runner_function="run_mgmt1",
+    report_filename="mgmt1_management_effectiveness.json",
+)
+
+MGMT2 = ResearchQuestion(
+    id="MGMT-2",
+    category=QuestionCategory.TRADE_MANAGEMENT,
+    title="Which management action types appear helpful, harmful, or neutral?",
+    description="Per-action-type outcome analysis (SLTP_MODIFY, PARTIAL_CLOSE, CLOSE). OBSERVATIONAL.",
+    required_fields=("action_type", "trade_id", "r_multiple_realised"),
+    data_sources=(DataSource.MANAGEMENT_ACTIONS, DataSource.TRADE_TRUTH),
+    priority=QuestionPriority.P0,
+    validation_rules=(
+        ValidationRule("outcome_coverage", ">=", 0.95, "Outcome required for action-type analysis"),
+        ValidationRule("max_action_type_sample_size", ">=", 15, "Minimum per action type"),
+    ),
+    runner_module="research_engine.experiments.management_research",
+    runner_function="run_mgmt2",
+    report_filename="mgmt2_action_type_analysis.json",
+)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CATEGORY — SELECTION QUALITY (Wave 3)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+HORIZON1 = ResearchQuestion(
+    id="HORIZON-1",
+    category=QuestionCategory.STRATEGY_HORIZON,
+    title="Was the selected horizon better than the alternatives?",
+    description=(
+        "Within-opportunity comparison: for each canonical opportunity with "
+        "simulated outcomes for the selected horizon AND >=1 alternative "
+        "horizon, was the selection supported by subsequent evidence? "
+        "Simulated counterfactuals on shadow-observed opportunities."
+    ),
+    required_fields=("canonical_opportunity_id", "evaluated_horizon",
+                     "shadow_type", "pnl_r_multiple"),
+    data_sources=(DataSource.SHADOW_TRADES, DataSource.HORIZON_CANDIDATES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("sample_size", ">=", 30,
+                       "Minimum comparable opportunities"),
+    ),
+    runner_module="research_engine.experiments.selection_research",
+    runner_function="run_horizon1",
+    report_filename="horizon1_selection_quality.json",
+)
+
+STRAT1 = ResearchQuestion(
+    id="STRAT-1",
+    category=QuestionCategory.STRATEGY_HORIZON,
+    title="Does strategy-ranking confidence predict outcome quality?",
+    description=(
+        "Ranking/monotonicity analysis of pre-decision strategy-selection "
+        "confidence against subsequent primary-horizon shadow outcomes. "
+        "NOT calibration (confidence is a relative score). Rejected "
+        "strategies have no simulated outcomes — selection optimality "
+        "cannot yet be proven."
+    ),
+    required_fields=("canonical_opportunity_id", "candidate_id",
+                     "confidence", "selected"),
+    data_sources=(DataSource.STRATEGY_CANDIDATES, DataSource.SHADOW_TRADES),
+    priority=QuestionPriority.P1,
+    validation_rules=(
+        ValidationRule("sample_size", ">=", 30,
+                       "Minimum matched confidence/outcome pairs"),
+    ),
+    runner_module="research_engine.experiments.selection_research",
+    runner_function="run_strat1",
+    report_filename="strat1_confidence_predictive_value.json",
+)
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# REGISTRY
+# ═══════════════════════════════════════════════════════════════════════════════
+
+REGISTRY: tuple[ResearchQuestion, ...] = (
+    # System Edge
+    E1, E2, E3, E4, E5,
+    # Market Context
+    M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11,
+    # Decision Quality
+    D1, D2, D3, D4, D5, D6,
+    # Strategy & Horizon
+    S1, S2, S3, S4, S5, S6, S7,
+    # Execution
+    X1, X2, X3, X4, X6,
+    # Risk Management
+    R1, R2, R3, R4, R5,
+    # Risk Management (Wave 5)
+    RISK1,
+    # System Learning
+    L1, L2, L3, L4, L5, L6, L7,
+    # Data Governance
+    G1, G2, G3,
+    # Promotion Intelligence
+    P1,
+    # Exit Management
+    EX1, EX2, EX3, EX4, EX5, EX6, EX7, EX8, EX9, EX10,
+    # Trade Management
+    MGMT1, MGMT2,
+        # Selection Quality (Wave 3)
+    HORIZON1, STRAT1,
+    # Execution + Protection (Wave 4)
+    X5, EXEC1, PROT1,
+    # Portfolio + Opportunity Selection (Wave 6)
+    PORT_1, OPP_1,
+)
+
+REGISTRY_BY_ID: dict[str, ResearchQuestion] = {q.id: q for q in REGISTRY}
+
+
+def get_question(question_id: str) -> ResearchQuestion | None:
+    """Look up a question by ID. Returns None if not found."""
+    return REGISTRY_BY_ID.get(question_id)
+
+
+def get_questions_by_category(category: QuestionCategory) -> list[ResearchQuestion]:
+    """Return all questions in a given category."""
+    return [q for q in REGISTRY if q.category == category]
+
+
+def get_questions_by_priority(priority: QuestionPriority) -> list[ResearchQuestion]:
+    """Return all questions at a given priority level."""
+    return [q for q in REGISTRY if q.priority == priority]

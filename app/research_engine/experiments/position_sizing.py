@@ -1,0 +1,65 @@
+"""Dedicated canonical R5 closed-vocabulary position-sizing runner."""
+from __future__ import annotations
+
+from typing import Any, Mapping
+
+from research_engine.control_plane.risk_policy_evidence import RiskPolicyEvidence
+from research_engine.experiments.risk_simulation_governed import (
+    R5_SCHEMA_VERSION,
+    RiskSimulationError,
+    analyse_r3,
+    analyse_r4,
+    analyse_r5,
+    persist_report,
+    validate_report,
+)
+from research_engine.registry.risk_policy_adjudication import (
+    R5_CONTRACT,
+    REPORT_OWNERSHIP,
+    SIZING_MODELS_V1,
+)
+
+REPORT_FILENAME = REPORT_OWNERSHIP["R5"]
+
+
+def run_position_sizing(
+    evidence: RiskPolicyEvidence | None = None,
+    r3_report: Mapping[str, Any] | None = None,
+    r4_report: Mapping[str, Any] | None = None,
+    *,
+    governed_risk_evidence: RiskPolicyEvidence | None = None,
+    persist: bool = True,
+) -> dict[str, Any]:
+    evidence = governed_risk_evidence or evidence
+    if evidence is None:
+        raise RiskSimulationError("GOVERNED_RISK_EVIDENCE_REQUIRED:R5")
+    if r3_report is None:
+        r3_report = analyse_r3(evidence)
+    if r4_report is None:
+        r4_report = analyse_r4(evidence, r3_report)
+    report = analyse_r5(evidence, r3_report, r4_report)
+    if persist:
+        persist_report(report, REPORT_FILENAME)
+    return report
+
+
+def validate_r5_report(report: Mapping[str, Any]) -> tuple[bool, str]:
+    valid, reason = validate_report(
+        report, question_id="R5", schema_version=R5_SCHEMA_VERSION, contract=R5_CONTRACT,
+    )
+    if not valid or report.get("status") != "COMPLETE":
+        return valid, reason
+    overall = report.get("overall")
+    if not isinstance(overall, Mapping):
+        return False, "R5 output missing"
+    vocabulary = tuple(model["model_id"] for model in SIZING_MODELS_V1)
+    if tuple(overall.get("model_vocabulary", ())) != vocabulary:
+        return False, "R5 closed sizing vocabulary mismatch"
+    models = overall.get("models")
+    if not isinstance(models, list) or tuple(item.get("model_id") for item in models) != vocabulary:
+        return False, "R5 model evaluation set mismatch"
+    if overall.get("selection_objective") != R5_CONTRACT["objective"]:
+        return False, "R5 geometric-growth objective mismatch"
+    if any("sharpe_approx" in item or "terminal_equity" in item for item in models):
+        return False, "R5 forbidden selection objective present"
+    return True, reason

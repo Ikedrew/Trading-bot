@@ -1,0 +1,225 @@
+"""
+ExecutionResult Persistence — records every broker execution attempt.
+
+Storage:
+    Local: logs/execution_results/{SYMBOL}/{YYYY-MM-DD}.jsonl
+    S3:    s3://trading-bot-data-mk1/execution_results/symbol={SYMBOL}/date={YYYY-MM-DD}/part-000.jsonl
+
+Every call to execution.execute() produces one record — regardless of success or failure.
+
+This module is PURELY OBSERVATIONAL. It does NOT:
+    - Affect trading decisions
+    - Modify execution logic
+    - Gate or block trades
+    - Retry failed orders
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+_LOCAL_DIR = "logs/execution_results"
+from core.config import NEW_RUNTIME_S3_BUCKET
+from core.production_data_contract import s3_base_prefix
+
+_S3_BUCKET = NEW_RUNTIME_S3_BUCKET
+_S3_PREFIX = s3_base_prefix("execution_results")
+from core.production_data_contract import current_schema as _current_schema
+_SCHEMA_VERSION = _current_schema("execution_results")
+
+
+def persist_execution_result(
+    *,
+    symbol: str,
+    cycle_id: int,
+    result_ok: bool,
+    retcode: int,
+    deal: int,
+    order: int,
+    comment: str,
+    fill_price: float | None = None,
+    # OrderIntent fields (what was attempted)
+    side: str = "",
+    volume: float = 0.0,
+    entry_reference: float = 0.0,
+    sl: float = 0.0,
+    tp: float = 0.0,
+    pattern: str = "",
+    # Linkage
+    decision_id: str = "",
+    correlation_id: str = "",
+    entity_id: str = "",
+    observation_id: str = "",
+    canonical_opportunity_id: str = "",
+    # PHASE H: Account identity for account-specific execution records
+    account_id: str = "",
+    broker: str = "",
+    broker_server: str = "",
+    position_ticket: int = 0,
+    broker_symbol: str = "",
+    # Execution metadata
+    decision_ts_utc_ms: int = 0,
+    slippage: float = 0.0,
+    slippage_measured: bool = False,
+    # Selected broker filling mode (diagnostic; MT5 ORDER_FILLING_* value).
+    # None when no order reached the broker (e.g. local pre-flight block).
+    filling_mode: int | None = None,
+    # Phase 3 Step 4: execution-moment market facts (additive; 0.0 = unknown).
+    # Derived from the live feed tick at the execution boundary — never invented.
+    bid_at_execution: float = 0.0,
+    ask_at_execution: float = 0.0,
+    risk_distance: float = 0.0,
+    # Protection verification (Phase 1 hardening)
+    requested_sl: float = 0.0,
+    broker_confirmed_sl: float = 0.0,
+    requested_tp: float = 0.0,
+    broker_confirmed_tp: float = 0.0,
+    protection_status: str = "",
+    protection_failure_reason: str = "",
+) -> bool:
+    """
+    Persist one execution attempt to local JSONL + S3.
+
+    Fire-and-forget. Never raises. Never affects trading.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        date_str = now.strftime("%Y-%m-%d")
+
+        record = {
+            "timestamp_utc": now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+            "timestamp_unix": round(now.timestamp(), 3),
+            "symbol": symbol,
+            "cycle_id": cycle_id,
+            # Execution result
+            "result_ok": result_ok,
+            "retcode": retcode,
+            "deal": deal,
+            "order_ticket": order,
+            "comment": comment,
+            "fill_price": fill_price,
+            "slippage": round(slippage, 6) if slippage_measured else None,
+            "slippage_semantic": (
+                "measured_execution_slippage" if slippage_measured else "unknown"
+            ),
+            # What was attempted
+            "side": side,
+            "volume": volume,
+            "entry_reference": entry_reference,
+            "sl": sl,
+            "tp": tp,
+            "pattern": pattern,
+            # Linkage
+            "decision_id": decision_id,
+            "correlation_id": correlation_id,
+            "entity_id": entity_id,
+            "observation_id": observation_id,
+            "canonical_opportunity_id": canonical_opportunity_id,
+            "decision_ts_utc_ms": decision_ts_utc_ms or None,
+            # Broker filling-mode negotiation evidence (additive diagnostic).
+            "filling_mode": filling_mode,
+            # Phase 3 Step 4/7: execution-moment facts + derived planned-risk
+            # geometry. This row is the ENTRY-FACTS snapshot for the trade:
+            # outcome fields (pnl/MFE/MAE/exit) are structurally absent here.
+            "bid_at_execution": bid_at_execution or None,
+            "ask_at_execution": ask_at_execution or None,
+            "spread_at_execution": round(
+                ask_at_execution - bid_at_execution, 8
+            ) if (ask_at_execution > 0 and bid_at_execution > 0) else None,
+            "risk_distance": round(risk_distance, 8) if risk_distance else None,
+            # Stage-qualified authority.  Legacy volume/sl/tp above are aliases
+            # for requested values, never fill/protection confirmation.
+            "request": {
+                "volume": volume or None,
+                "entry_reference": entry_reference or None,
+                "sl": (requested_sl or sl) or None,
+                "tp": (requested_tp or tp) or None,
+            },
+            "submission": {
+                "volume": volume or None,
+                "sl": sl or None,
+                "tp": tp or None,
+            },
+            "response": {
+                "retcode": retcode,
+                "comment": comment,
+                "order_id": order or None,
+                "deal_id": deal or None,
+            },
+            "fill": {
+                "price": fill_price,
+                "volume": volume if result_ok and deal else None,
+                "time": None,
+            },
+            "protection_confirmation": {
+                "broker_confirmed_sl": broker_confirmed_sl or None,
+                "broker_confirmed_tp": broker_confirmed_tp or None,
+                "source": "protection_verification" if protection_status else None,
+            },
+            "legacy_field_semantics": {
+                "volume": "requested_volume",
+                "sl": "submitted_sl",
+                "tp": "submitted_tp",
+                "signal_score": "not_present",
+            },
+            # PHASE H: Account identity (account-specific execution records)
+            "account_id": account_id or None,
+            "broker": broker or None,
+            "broker_server": broker_server or None,
+            "position_ticket": position_ticket or None,
+            "broker_symbol": broker_symbol or None,
+            # Protection verification (Phase 1 hardening)
+            "requested_sl": requested_sl,
+            "broker_confirmed_sl": broker_confirmed_sl,
+            "requested_tp": requested_tp,
+            "broker_confirmed_tp": broker_confirmed_tp,
+            "protection_status": protection_status,
+            "protection_failure_reason": protection_failure_reason,
+        }
+
+        record["schema_version"] = _SCHEMA_VERSION
+
+        # Local JSONL persistence
+        path = Path(_LOCAL_DIR) / symbol / f"{date_str}.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        line = json.dumps(record, separators=(",", ":"), default=str)
+        from core.canonical_delivery import try_prepare_local_jsonl_handoffs
+        try_prepare_local_jsonl_handoffs(
+            dataset="execution_results", content=line + "\n", symbol=symbol,
+            partition_date=date_str, local_path=path,
+        )
+        fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+        try:
+            os.write(fd, (line + "\n").encode("utf-8"))
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+
+        # S3 mirror
+        from core.canonical_delivery import enqueue_canonical_delivery
+        enqueue_canonical_delivery(
+            dataset="execution_results", payload=record, symbol=symbol,
+            partition_date=date_str,
+        )
+        return True
+
+    except Exception as exc:
+        logger.error("[EXECUTION_RESULT_PERSIST_FAILED] symbol=%s error=%s", symbol, type(exc).__name__)
+        return False
+
+
+def _write_s3(symbol: str, date_str: str, line: str) -> None:
+    """Compatibility name for the governed durable handoff."""
+    from core.canonical_delivery import enqueue_canonical_jsonl
+    enqueue_canonical_jsonl(
+        dataset="execution_results", content=line, symbol=symbol,
+        partition_date=date_str,
+    )

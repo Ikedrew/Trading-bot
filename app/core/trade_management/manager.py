@@ -1,0 +1,1202 @@
+"""Reactive trade state machine driven by price/time only."""
+
+from __future__ import annotations
+
+import logging
+import time
+import uuid
+from dataclasses import dataclass, field
+from typing import Any
+
+from core.trade_management.config import TradeManagementConfig
+from core.trade_management.events import (
+    TradeEvent,
+    TradeLifecycleEvent,
+    TradeLifecycleListener,
+)
+from core.trade_management.position import Position, PositionStatus
+from core.position_ownership import PositionOwnership
+from core.accounts.position_state import position_key
+from core.accounts.lifecycle import LifecycleRouter
+from core.trade_management.sl_tp_rules import (
+    check_exit_trigger,
+    maybe_break_even_sl,
+    maybe_trailing_sl,
+    update_mfe_extreme,
+    update_mae_extreme,
+)
+from risk.models import OrderIntent
+from execution.mt5_execution import ExecutionResult
+from strategy.signals import Side
+
+logger = logging.getLogger(__name__)
+
+# ─── RETRY QUEUE ──────────────────────────────────────────────────────────────
+
+_MAX_RETRIES = 5
+
+
+@dataclass
+class _SltpRetryEntry:
+    """A queued SL/TP modification that failed and needs retry."""
+    symbol: str
+    position_ticket: int
+    sl: float
+    tp: float
+    retry_count: int = 0
+    last_attempt_time: float = 0.0
+    # Observational lineage preserved for execution_attempts persistence
+    decision_id: str = ""
+    correlation_id: str = ""
+    cycle_id: int = 0
+    canonical_opportunity_id: str = ""
+    observation_id: str = ""
+    trade_id: str = ""
+    ownership: PositionOwnership | None = None
+    # PHASE H: Account-specific retry identity
+    account_id: str = ""
+    broker: str = ""
+    broker_server: str = ""
+    broker_symbol: str = ""
+
+
+@dataclass
+class _CloseRetryEntry:
+    """A queued position close that failed and needs retry."""
+    position_id: str
+    symbol: str
+    position_ticket: int
+    volume: float | None  # None = full close; float = partial close
+    kind: "TradeLifecycleEvent"
+    prices: tuple[float, float]
+    detail: dict[str, Any]
+    retry_count: int = 0
+    last_attempt_time: float = 0.0
+    # Observational lineage preserved for execution_attempts persistence
+    decision_id: str = ""
+    correlation_id: str = ""
+    cycle_id: int = 0
+    canonical_opportunity_id: str = ""
+    observation_id: str = ""
+    trade_id: str = ""
+    ownership: PositionOwnership | None = None
+    # PHASE H: Account-specific retry identity
+    account_id: str = ""
+    broker: str = ""
+    broker_server: str = ""
+    broker_symbol: str = ""
+
+
+def _lineage_from_pos(pos: "Position") -> dict:
+    """Extract observational lineage for a Position.
+
+    Returns the identity-linkage fields for execution_attempts persistence
+    (decision/correlation/cycle/opportunity/observation) plus the canonical
+    trade identity ``pos.position_id`` (``pos_{deal}``), which is the SAME
+    trade_id used downstream by the trade journal / trade-truth lifecycle.
+    Lineage fields fall back to empty when no trade_identity is available
+    (e.g. recovered positions); ``trade_id`` itself is always available from
+    the position.
+
+    Phase G/H: account-specific identity (account_id, broker, broker_server,
+    position_ticket, broker_symbol) is extracted from the position's ownership
+    so management-action records are account-scoped.
+    """
+    ti = getattr(pos, "trade_identity", None)
+    lineage: dict[str, Any] = {"trade_id": getattr(pos, "position_id", "") or ""}
+    if ti is not None:
+        lineage.update({
+            "decision_id": ti.decision_id or "",
+            "correlation_id": ti.correlation_id or "",
+            "cycle_id": int(ti.cycle_id) if ti.cycle_id else 0,
+            "canonical_opportunity_id": ti.canonical_opportunity_id or "",
+            "observation_id": ti.observation_id or "",
+        })
+    # Phase G/H: account-specific identity from ownership
+    # Note: position_ticket is NOT included here because it is already passed
+    # explicitly to execution methods (close_position, position_modify_sl_tp).
+    owner = getattr(pos, "ownership", None)
+    if owner is not None:
+        lineage.update({
+            "account_id": owner.account_id or "",
+            "broker": owner.broker or "",
+            "broker_server": owner.broker_server or "",
+            "broker_symbol": owner.broker_symbol or "",
+        })
+    return lineage
+
+
+def _persist_management_action(
+    *,
+    action_type: str,
+    action_reason: str,
+    symbol: str,
+    requested_sl: float | None = None,
+    requested_tp: float | None = None,
+    requested_volume: float | None = None,
+    lineage: dict[str, Any] | None = None,
+    position_ticket: int = 0,
+) -> None:
+    """Fire-and-forget persistence of one initiated management action.
+
+    PURELY OBSERVATIONAL — a persistence failure must never prevent or alter
+    the underlying management action. Lineage fields are propagated verbatim
+    from the caller (position identity / retry entry); nothing is invented.
+    """
+    try:
+        from core.persistence.management_actions_writer import persist_management_action
+        from core.lifecycle_evidence_obligations import (
+            ObligationStatus, obligation_ledger, record_producer_outcome,
+        )
+        _lineage = lineage or {}
+        _action_id = str(uuid.uuid4())
+        _ledger = obligation_ledger()
+        _has_exact_identity = bool(_lineage.get("account_id") and position_ticket > 0)
+        _obligation = _ledger.create(
+            lifecycle_event_id=f"management-action:{_action_id}",
+            lifecycle_stage="MANAGEMENT_ACTION",
+            expected_dataset="management_actions",
+            identity={
+                "management_action_id": _action_id,
+                "account_id": _lineage.get("account_id", ""),
+                "position_ticket": position_ticket,
+                "trade_id": _lineage.get("trade_id", ""),
+                "symbol": symbol,
+            },
+            originating_timestamp="", due_state="EXPECTED_NOW",
+            due_after="MANAGEMENT_ACTION_INITIATED", requirement_type="REQUIRED",
+            current_status=(ObligationStatus.NOT_YET_DUE if _has_exact_identity
+                            else ObligationStatus.PRODUCER_FAILED),
+            producer="core.persistence.management_actions_writer.persist_management_action",
+            producer_trigger="MANAGEMENT_ACTION_INITIATED",
+            failure_reason=(None if _has_exact_identity
+                            else "ACCOUNT_OR_POSITION_TICKET_MISSING"),
+        )
+        _persisted = persist_management_action(
+            management_action_id=_action_id,
+            trade_id=str(_lineage.get("trade_id", "") or ""),
+            decision_id=str(_lineage.get("decision_id", "") or ""),
+            canonical_opportunity_id=str(_lineage.get("canonical_opportunity_id", "") or ""),
+            observation_id=str(_lineage.get("observation_id", "") or ""),
+            correlation_id=str(_lineage.get("correlation_id", "") or ""),
+            cycle_id=int(_lineage.get("cycle_id", 0) or 0),
+            symbol=symbol,
+            action_type=action_type,
+            action_reason=action_reason,
+            requested_sl=requested_sl,
+            requested_tp=requested_tp,
+            requested_volume=requested_volume,
+            # PHASE H: Account-specific management identity
+            account_id=str(_lineage.get("account_id", "") or ""),
+            broker=str(_lineage.get("broker", "") or ""),
+            broker_server=str(_lineage.get("broker_server", "") or ""),
+            position_ticket=int(position_ticket or 0),
+            broker_symbol=str(_lineage.get("broker_symbol", "") or ""),
+        )
+        record_producer_outcome(
+            _ledger, _obligation, succeeded=bool(_persisted),
+            observed_record_id=_action_id,
+            failure_reason="MANAGEMENT_ACTION_LOCAL_WRITE_FAILED",
+            provenance={"local_path_authority": "LOCAL_ONLY"},
+        )
+    except Exception:
+        pass
+
+
+class TradeStateManager:
+    """
+    Owns open/partial positions for a single strategy session.
+    Call `on_price_update` on each poll/tick with the same cadence you receive quotes.
+    """
+
+    def __init__(
+        self,
+        config: TradeManagementConfig,
+        listener: TradeLifecycleListener | None = None,
+        *,
+        execution: Any | None = None,
+        lifecycle_router=None,
+    ) -> None:
+        self._cfg = config
+        self._listener = listener
+        self._execution = execution
+        self.lifecycle_router = lifecycle_router or LifecycleRouter()
+        if execution is not None:
+            execution.lifecycle_router = self.lifecycle_router
+        self._by_id: dict[str, Position] = {}
+        self._sltp_retry_queue: dict[str, _SltpRetryEntry] = {}  # keyed by position_ticket
+        self._close_retry_queue: dict[str, _CloseRetryEntry] = {}  # keyed by position_id
+
+    def positions_open(self) -> list[Position]:
+        return [p for p in self._by_id.values() if p.status in (PositionStatus.OPEN, PositionStatus.PARTIAL)]
+
+    def get_position(self, *, account_id: str, position_ticket: int):
+        self.lifecycle_router.account(account_id)
+        import json
+        return self._by_id.get(json.dumps([account_id, int(position_ticket)], separators=(',', ':')))
+
+    def add_position(self, pos):
+        self.lifecycle_router.validate(pos.ownership)
+        key = position_key(pos.ownership)
+        if pos.mt5_ticket != pos.ownership.position_ticket:
+            raise ValueError("POSITION_TICKET_MISMATCH")
+        if key in self._by_id:
+            return self._by_id[key]
+        pos.position_id = key
+        self._by_id[key] = pos
+        self._checkpoint(pos)
+        return pos
+
+    def _checkpoint(self, pos):
+        if not pos.ownership:
+            return
+        from core.accounts.position_state import save
+        try:
+            save(pos.ownership, status=pos.status.value, pattern=pos.pattern_tag,
+                 trade_horizon=pos.trade_horizon, sl=pos.stop_loss, tp=pos.take_profit,
+                 initial_sl=pos.initial_sl, initial_tp=pos.initial_tp)
+        except Exception as exc:
+            logger.error("[POSITION_CHECKPOINT_FAILED] account=%s error=%s", pos.account_id, exc)
+
+    def register_account_result(self, result, intent, *, magic):
+        """Consume an existing A?F success; never changes fan-out or submits entry."""
+        from dataclasses import replace
+        from core.trade_identity import TradeIdentity
+        execution = ExecutionResult.from_account_result(result)
+        if not execution.ok or not execution.ownership:
+            return None
+        owner = execution.ownership
+        target = result.get('target')
+        # The per-account size/SL/TP already computed by D?F remain authoritative.
+        if target is not None:
+            volume = result.get('volume')
+            volume = getattr(volume, 'volume', volume)
+            intent = replace(intent, symbol=owner.canonical_symbol,
+                volume=float(volume), sl=target.sl, tp=target.tp)
+        identity = TradeIdentity(correlation_id=owner.correlation_id or '',
+            decision_id=owner.decision_id or '', canonical_opportunity_id=owner.canonical_opportunity_id or '',
+            observation_id=getattr(target, 'observation_id', ''), cycle_id=0,
+            strategy='', pattern=intent.pattern, decision_ts_utc=0.)
+        return self.register_from_execution(intent, magic=magic, execution=execution,
+            entry_fill_price=execution.fill_price or intent.entry_reference, trade_identity=identity,
+            bid=float(result["lifecycle_bid"]), ask=float(result["lifecycle_ask"]))
+
+    def _resolve_config_for_position(self, pos: Position) -> TradeManagementConfig:
+        """
+        Resolve trade management config for a specific position's horizon.
+
+        Phase 3 architecture: every position resolves its management parameters
+        through HorizonManager.get_profile(position.trade_horizon). The profile
+        is the single source of truth for trade management behaviour.
+
+        Falls back to self._cfg (global config) if HorizonManager is unavailable.
+        This ensures backward compatibility with tests and legacy code paths.
+        """
+        try:
+            from core.horizon.horizon_manager import get_horizon_manager
+            _profile = get_horizon_manager().get_profile(
+                getattr(pos, "trade_horizon", "SCALP")
+            )
+            return TradeManagementConfig(
+                break_even_trigger_rr=_profile.break_even_trigger_rr,
+                break_even_buffer_rr=_profile.break_even_buffer_rr,
+                trailing_step=_profile.trailing_step,
+                trailing_start_rr=_profile.trailing_start_rr,
+                partial_tp_fraction=_profile.partial_tp_fraction,
+                partial_tp_path_fraction=_profile.partial_tp_path_fraction,
+                max_time_in_trade_seconds=_profile.max_time_in_trade_seconds,
+            )
+        except Exception:
+            # Fallback: use global config (backward compatibility)
+            return self._cfg
+
+    def register_from_execution(
+        self,
+        intent: OrderIntent,
+        *,
+        magic: int,
+        execution: ExecutionResult,
+        entry_fill_price: float,
+        open_time_s: float | None = None,
+        bid: float,
+        ask: float,
+        trade_identity: Any | None = None,
+    ) -> Position | None:
+        """
+        Call after a successful `place_market`; does not send orders.
+
+        Args:
+            intent: The OrderIntent that was executed.
+            magic: Bot magic number.
+            execution: Broker execution result.
+            entry_fill_price: Actual fill price from broker.
+            open_time_s: Open timestamp (defaults to now).
+            bid: Current bid price.
+            ask: Current ask price.
+            trade_identity: Immutable TradeIdentity from the originating decision.
+                           Carried by the Position for its entire lifecycle.
+        """
+
+        if not execution.ok:
+            return None
+
+        ts = open_time_s if open_time_s is not None else time.time()
+        owner = execution.ownership
+        if owner is None:
+            raise ValueError("MISSING_POSITION_OWNERSHIP")
+        self.lifecycle_router.validate(owner)
+        if owner.canonical_symbol != intent.symbol:
+            raise ValueError("POSITION_SYMBOL_MISMATCH")
+        pid = position_key(owner)
+        if pid in self._by_id:
+            return self._by_id[pid]
+        mfe0 = bid if intent.side is Side.BUY else ask
+        # MAE seed = same open-tick price on the tracked side as MFE (first
+        # observation). Observational only.
+        mae0 = mfe0
+
+        pos = Position(
+            position_id=pid,
+            symbol=intent.symbol,
+            side=intent.side,
+            magic=magic,
+            entry_price=entry_fill_price,
+            initial_sl=intent.sl,
+            initial_tp=intent.tp,
+            stop_loss=intent.sl,
+            take_profit=intent.tp,
+            volume=intent.volume,
+            open_time=ts,
+            status=PositionStatus.OPEN,
+            mt5_ticket=owner.position_ticket,
+            ownership=owner,
+            deal_id=execution.deal,
+            order_id=execution.order,
+            pattern_tag=intent.pattern,
+            trade_horizon=intent.metadata.get("horizon", "SCALP") if intent.metadata else "SCALP",
+            max_favourable_price=mfe0,
+            max_adverse_price=mae0,
+            trade_identity=trade_identity,
+        )
+        self.add_position(pos)
+        self._emit(
+            TradeLifecycleEvent.ON_TRADE_OPEN,
+            pos,
+            (bid, ask),
+            ts,
+            {"execution": execution},
+        )
+        return pos
+
+    def on_price_update(self, symbol: str, bid: float, ask: float, time_s: float | None = None) -> None:
+        """Update all tracked positions for `symbol`."""
+
+        ts = time_s if time_s is not None else time.time()
+        for pos in list(self._by_id.values()):
+            if pos.symbol != symbol:
+                continue
+            if pos.status == PositionStatus.CLOSED:
+                continue
+            try:
+                self._process_one_position(pos, bid, ask, ts)
+            except Exception as exc:
+                logger.error("[POSITION_MANAGEMENT_FAILED] account=%s ticket=%s error=%s",
+                             pos.account_id, pos.mt5_ticket, exc)
+
+    def _emit(
+        self,
+        kind: TradeLifecycleEvent,
+        position: Position,
+        prices: tuple[float, float],
+        ts: float,
+        detail: dict[str, Any],
+    ) -> None:
+        # Listener (Discord notifications)
+        if self._listener is not None:
+            self._listener.on_trade_event(TradeEvent(kind=kind, position=position, price_snapshot=prices, time_s=ts, detail=detail))
+
+        # ─── UNIFIED EVENT STREAM: TRADE_MANAGEMENT (Layer 9) ─────────
+        # Only emit meaningful state transitions (skip ON_PRICE_UPDATE noise)
+        if kind != TradeLifecycleEvent.ON_PRICE_UPDATE:
+            try:
+                from core.event_stream import emit_trade_management
+                emit_trade_management(position.symbol, {
+                    "action": kind.value,
+                    "position_id": position.position_id,
+                    "side": position.side.value if position.side else None,
+                    "entry_price": position.entry_price,
+                    "current_sl": position.stop_loss,
+                    "current_tp": position.take_profit,
+                    "initial_sl": position.initial_sl,
+                    "initial_tp": position.initial_tp,
+                    "volume": position.volume,
+                    "unrealised_pnl": getattr(position, "unrealised_pnl", None),
+                    "mfe": position.max_favourable_price,
+                    "bid": prices[0],
+                    "ask": prices[1],
+                    "detail": {k: str(v) for k, v in detail.items()} if detail else {},
+                }, source="trade_management")
+            except Exception:
+                pass  # Event emission must never affect trade management
+        # ─── END UNIFIED EVENT STREAM ─────────────────────────────────
+
+    def _push_stops_to_server_if_possible(self, pos: Position, action_reason: str = "") -> None:
+        if self._execution is None or pos.mt5_ticket is None or pos.mt5_ticket <= 0:
+            return
+        ticket = int(pos.mt5_ticket)
+        key = position_key(pos.ownership) if pos.ownership else pos.position_id
+        # Observational: persist the initiated management action BEFORE the
+        # broker call, so a rejected/failed modify still leaves a record.
+        _persist_management_action(
+            action_type="SLTP_MODIFY",
+            action_reason=action_reason,
+            symbol=pos.symbol,
+            requested_sl=pos.stop_loss,
+            requested_tp=pos.take_profit,
+            lineage=_lineage_from_pos(pos),
+            position_ticket=ticket,
+        )
+        result = self._execution.position_modify_sl_tp(
+            symbol=pos.symbol,
+            position_ticket=ticket,
+            sl=pos.stop_loss,
+            tp=pos.take_profit,
+            ownership=pos.ownership,
+            **_lineage_from_pos(pos),
+        )
+        if result.ok:
+            # Success — remove from retry queue if previously queued
+            self._sltp_retry_queue.pop(key, None)
+        else:
+            # Failed — queue for retry
+            entry = _SltpRetryEntry(
+                symbol=pos.symbol,
+                position_ticket=ticket,
+                sl=pos.stop_loss,
+                tp=pos.take_profit,
+                retry_count=0,
+                last_attempt_time=time.time(),
+                ownership=pos.ownership,
+            **_lineage_from_pos(pos),
+            )
+            self._sltp_retry_queue[key] = entry
+            logger.info(
+                "[SLTP_RETRY_QUEUED] ticket=%d symbol=%s sl=%.5f tp=%.5f reason=%s",
+                ticket, pos.symbol, pos.stop_loss, pos.take_profit, result.comment,
+            )
+
+    def drain_sltp_retry_queue(self) -> None:
+        """
+        Process pending SL/TP retry queue. Call once per tick cycle.
+        Non-blocking, idempotent, safe to call even when queue is empty.
+        """
+        if not self._sltp_retry_queue or self._execution is None:
+            return
+
+        completed: list[int] = []
+        for key, entry in list(self._sltp_retry_queue.items()):
+            ticket = entry.position_ticket
+            # Observational: each retried SLTP modify is its own management action.
+            _persist_management_action(
+                action_type="SLTP_MODIFY",
+                action_reason="SLTP_RETRY",
+                symbol=entry.symbol,
+                requested_sl=entry.sl,
+                requested_tp=entry.tp,
+                lineage={
+                    "trade_id": entry.trade_id,
+                    "decision_id": entry.decision_id,
+                    "correlation_id": entry.correlation_id,
+                    "cycle_id": entry.cycle_id,
+                    "canonical_opportunity_id": entry.canonical_opportunity_id,
+                    "observation_id": entry.observation_id,
+                    "account_id": entry.account_id,
+                    "broker": entry.broker,
+                    "broker_server": entry.broker_server,
+                    "broker_symbol": entry.broker_symbol,
+                },
+                position_ticket=entry.position_ticket,
+            )
+            result = self._execution.position_modify_sl_tp(
+                symbol=entry.symbol,
+                position_ticket=entry.position_ticket,
+                sl=entry.sl,
+                tp=entry.tp,
+                decision_id=entry.decision_id,
+                correlation_id=entry.correlation_id,
+                cycle_id=entry.cycle_id,
+                canonical_opportunity_id=entry.canonical_opportunity_id,
+                observation_id=entry.observation_id,
+                trade_id=entry.trade_id,
+                ownership=entry.ownership,
+            )
+            if result.ok:
+                completed.append(key)
+                logger.info(
+                    "[SLTP_RETRY_SUCCESS] ticket=%d symbol=%s sl=%.5f tp=%.5f attempts=%d",
+                    ticket, entry.symbol, entry.sl, entry.tp, entry.retry_count + 1,
+                )
+            else:
+                entry.retry_count += 1
+                entry.last_attempt_time = time.time()
+                if entry.retry_count >= _MAX_RETRIES:
+                    completed.append(key)
+                    logger.warning(
+                        "[SLTP_RETRY_FAILED_FINAL] ticket=%d symbol=%s sl=%.5f tp=%.5f attempts=%d reason=%s",
+                        ticket, entry.symbol, entry.sl, entry.tp, entry.retry_count, result.comment,
+                    )
+
+        for ticket in completed:
+            self._sltp_retry_queue.pop(ticket, None)
+
+    def _process_one_position(self, pos: Position, bid: float, ask: float, ts: float) -> None:
+        # Resolve trade management config for this position's horizon.
+        # Phase 3: each position gets its profile-specific parameters.
+        _cfg = self._resolve_config_for_position(pos)
+
+        # unrealised (directional in price space × volume; not normalised to account currency)
+        if pos.side is Side.BUY:
+            pos.unrealised_pnl = (bid - pos.entry_price) * pos.volume
+        else:
+            pos.unrealised_pnl = (pos.entry_price - ask) * pos.volume
+
+        _prev_mfe = pos.max_favourable_price
+        _prev_mae = pos.max_adverse_price
+        pos.max_favourable_price = update_mfe_extreme(pos.side, bid, ask, pos.max_favourable_price)
+        # Observational adverse-excursion telemetry (symmetric with MFE).
+        # Never consulted by exit/stop/close logic below.
+        pos.max_adverse_price = update_mae_extreme(pos.side, bid, ask, pos.max_adverse_price)
+
+        # Durable excursion checkpoint — persist ONLY when an extreme changed
+        # (not per tick). Fire-and-forget observational telemetry; never affects
+        # trading. Makes MFE/MAE survive a restart so final mfe_r/mae_r cover the
+        # full trade lifetime.
+        if pos.max_favourable_price != _prev_mfe or pos.max_adverse_price != _prev_mae:
+            try:
+                from core.trade_management.excursion_state import persist_excursion
+                persist_excursion(pos)
+            except Exception:
+                pass  # Excursion persistence must NEVER affect trade management
+
+        self._emit(TradeLifecycleEvent.ON_PRICE_UPDATE, pos, (bid, ask), ts, {})
+
+        # time-based exit
+        if _cfg.max_time_in_trade_seconds > 0:
+            age = ts - pos.open_time
+            if age >= _cfg.max_time_in_trade_seconds:
+                # If trailing stop is active (SL has moved beyond initial),
+                # allow the trailing mechanism to manage exit naturally.
+                # Otherwise close at market — thesis has expired.
+                _trailing_active = pos.stop_loss > pos.initial_sl if pos.side is Side.BUY else pos.stop_loss < pos.initial_sl
+                _horizon = getattr(pos, "trade_horizon", "SCALP")
+                logger.info(
+                    "[HORIZON_TIME_EXIT] symbol=%s horizon=%s duration_minutes=%.1f "
+                    "max_minutes=%.1f trailing_active=%s reason=MAX_HORIZON_DURATION_REACHED",
+                    pos.symbol, _horizon, age / 60.0,
+                    _cfg.max_time_in_trade_seconds / 60.0, _trailing_active,
+                )
+                # Emit structured event for observability
+                try:
+                    from core.event_stream import emit_trade_management
+                    emit_trade_management(pos.symbol, {
+                        "action": "HORIZON_TIME_EXIT",
+                        "position_id": pos.position_id,
+                        "horizon": _horizon,
+                        "duration_minutes": round(age / 60.0, 1),
+                        "max_duration_minutes": round(_cfg.max_time_in_trade_seconds / 60.0, 1),
+                        "trailing_active": _trailing_active,
+                        "reason": "MAX_HORIZON_DURATION_REACHED",
+                    }, source="trade_management")
+                except Exception:
+                    pass
+                self._close_local(pos, TradeLifecycleEvent.ON_MANAGEMENT_EXIT, (bid, ask), ts, {"reason": "max_time", "horizon": _horizon})
+                return
+
+        # dynamic stops (must run before exit checks that use updated SL)
+        new_sl = maybe_break_even_sl(
+            pos.side,
+            bid,
+            ask,
+            entry=pos.entry_price,
+            initial_sl=pos.initial_sl,
+            current_sl=pos.stop_loss,
+            trigger_rr=_cfg.break_even_trigger_rr,
+            buffer_rr=_cfg.break_even_buffer_rr,
+        )
+        if new_sl is not None and new_sl != pos.stop_loss:
+            _old_sl = pos.stop_loss
+            pos.stop_loss = new_sl
+            self._push_stops_to_server_if_possible(pos, action_reason="SL_MOVED_BREAKEVEN")
+            # ─── TRADE_MANAGEMENT: break-even SL move ─────────────────
+            try:
+                from core.event_stream import emit_trade_management
+                emit_trade_management(pos.symbol, {
+                    "action": "SL_MOVED_BREAKEVEN",
+                    "position_id": pos.position_id,
+                    "previous_sl": _old_sl,
+                    "new_sl": new_sl,
+                    "entry_price": pos.entry_price,
+                    "trigger_rr": _cfg.break_even_trigger_rr,
+                }, source="trade_management")
+            except Exception:
+                pass
+            # ─── END ──────────────────────────────────────────────────
+
+        trail = maybe_trailing_sl(
+            pos.side,
+            bid,
+            ask,
+            entry=pos.entry_price,
+            initial_sl=pos.initial_sl,
+            current_sl=pos.stop_loss,
+            mfe_extreme=pos.max_favourable_price,
+            trail_step=_cfg.trailing_step,
+            start_rr=_cfg.trailing_start_rr,
+        )
+        if trail is not None and trail != pos.stop_loss:
+            _old_sl = pos.stop_loss
+            pos.stop_loss = trail
+            self._push_stops_to_server_if_possible(pos, action_reason="SL_MOVED_TRAILING")
+            # ─── TRADE_MANAGEMENT: trailing SL move ───────────────────
+            try:
+                from core.event_stream import emit_trade_management
+                emit_trade_management(pos.symbol, {
+                    "action": "SL_MOVED_TRAILING",
+                    "position_id": pos.position_id,
+                    "previous_sl": _old_sl,
+                    "new_sl": trail,
+                    "entry_price": pos.entry_price,
+                    "mfe": pos.max_favourable_price,
+                }, source="trade_management")
+            except Exception:
+                pass
+            # ─── END ──────────────────────────────────────────────────
+
+        hit = check_exit_trigger(pos.side, bid, ask, pos.stop_loss, pos.take_profit)
+        if hit == "sl":
+            self._close_local(pos, TradeLifecycleEvent.ON_STOP_LOSS_HIT, (bid, ask), ts, {})
+            return
+        if hit == "tp":
+            self._close_local(pos, TradeLifecycleEvent.ON_TAKE_PROFIT_HIT, (bid, ask), ts, {})
+            return
+
+        # optional partial TP (same tick geometry as TP path)
+        if (
+            pos.status == PositionStatus.OPEN
+            and _cfg.partial_tp_fraction > 0
+            and _cfg.partial_tp_path_fraction > 0
+        ):
+            if self._maybe_partial(pos, bid, ask, ts, _cfg):
+                return
+
+    def _maybe_partial(self, pos: Position, bid: float, ask: float, ts: float, cfg: TradeManagementConfig | None = None) -> bool:
+        """
+        Attempt partial close at TP1 level.
+
+        Sends partial close to broker FIRST. Only updates local volume on broker
+        confirmation. If broker close fails, queues retry and leaves local state
+        unchanged.
+
+        Returns True if position was fully consumed (should not continue processing).
+        """
+        _c = cfg if cfg is not None else self._cfg
+        path = _c.partial_tp_path_fraction
+        frac = _c.partial_tp_fraction
+        entry, tp = pos.entry_price, pos.take_profit
+        if pos.side is Side.BUY:
+            trigger_px = entry + (tp - entry) * path
+            if bid < trigger_px:
+                return False
+        else:
+            trigger_px = entry - (entry - tp) * path
+            if ask > trigger_px:
+                return False
+
+        close_vol = pos.volume * min(1.0, frac)
+        if close_vol <= 0 or close_vol >= pos.volume:
+            return False
+
+        # ─── BROKER PARTIAL CLOSE ─────────────────────────────────────
+        if self._execution is not None and pos.mt5_ticket is not None and pos.mt5_ticket > 0:
+            # Observational: persist the initiated management action BEFORE the
+            # broker call, so a rejected/failed partial close still leaves a record.
+            _persist_management_action(
+                action_type="PARTIAL_CLOSE",
+                action_reason="PARTIAL_TP",
+                symbol=pos.symbol,
+                requested_volume=close_vol,
+                lineage=_lineage_from_pos(pos),
+                position_ticket=int(pos.mt5_ticket),
+            )
+            result = self._execution.close_position(
+                symbol=pos.symbol,
+                position_ticket=int(pos.mt5_ticket),
+                volume=close_vol,
+                ownership=pos.ownership,
+            **_lineage_from_pos(pos),
+            )
+            if not result.ok:
+                # Broker partial close failed — queue for retry, do NOT modify local state
+                self._queue_close_retry(
+                    pos=pos,
+                    volume=close_vol,
+                    kind=TradeLifecycleEvent.ON_PARTIAL_CLOSE,
+                    prices=(bid, ask),
+                    detail={"closed_volume": close_vol, "remaining_volume": pos.volume - close_vol},
+                )
+                return False
+        # ─── END BROKER PARTIAL CLOSE ─────────────────────────────────
+
+        # Broker confirmed (or no execution layer / no ticket) — update local state
+        pos.volume -= close_vol
+        pos.status = PositionStatus.PARTIAL
+        self._emit(
+            TradeLifecycleEvent.ON_PARTIAL_CLOSE,
+            pos,
+            (bid, ask),
+            ts,
+            {"closed_volume": close_vol, "remaining_volume": pos.volume},
+        )
+        return False
+
+    def _close_local(self, pos: Position, kind: TradeLifecycleEvent, prices: tuple[float, float], ts: float, detail: dict[str, Any]) -> None:
+        """
+        Close a position: sends close to broker FIRST, then updates local state.
+
+        If broker close fails, queues retry and leaves position OPEN locally.
+        If broker returns POSITION_NOT_FOUND, the position was already closed
+        server-side (SL/TP/manual) — treat as confirmed close.
+        If no execution layer or no ticket, falls through to local-only close
+        (DRY_RUN mode or positions without MT5 tickets).
+        """
+        # ─── BROKER CLOSE ─────────────────────────────────────────────
+        if self._execution is not None and pos.mt5_ticket is not None and pos.mt5_ticket > 0:
+            # Observational: persist the initiated management action BEFORE the
+            # broker call, so a rejected/failed close still leaves a record.
+            _close_action_reason = {
+                TradeLifecycleEvent.ON_STOP_LOSS_HIT: "stop_loss",
+                TradeLifecycleEvent.ON_TAKE_PROFIT_HIT: "take_profit",
+                TradeLifecycleEvent.ON_MANAGEMENT_EXIT: "management_exit",
+            }.get(kind, "")
+            _persist_management_action(
+                action_type="CLOSE",
+                action_reason=_close_action_reason,
+                symbol=pos.symbol,
+                lineage=_lineage_from_pos(pos),
+                position_ticket=int(pos.mt5_ticket),
+            )
+            result = self._execution.close_position(
+                symbol=pos.symbol,
+                position_ticket=int(pos.mt5_ticket),
+                volume=None,  # Full close
+                ownership=pos.ownership,
+            **_lineage_from_pos(pos),
+            )
+            if not result.ok:
+                # POSITION_NOT_FOUND means broker already closed it (server-side SL/TP/manual)
+                if result.comment == "POSITION_NOT_FOUND":
+                    logger.info(
+                        "[BROKER_CONFIRMED_CLOSED] ticket=%d symbol=%s reason=position_not_found "
+                        "interpretation=broker_server_side_close",
+                        pos.mt5_ticket, pos.symbol,
+                    )
+                    # Attempt to retrieve actual close details from MT5 history
+                    _broker_detail = self._query_broker_close_history(pos)
+                    if _broker_detail:
+                        detail = {**detail, **_broker_detail}
+                    # Fall through to mark CLOSED locally (below)
+                else:
+                    # Genuine failure — queue for retry, do NOT mark closed locally
+                    self._queue_close_retry(
+                        pos=pos,
+                        volume=None,
+                        kind=kind,
+                        prices=prices,
+                        detail=detail,
+                    )
+                    return
+            else:
+                # Successful broker close — query history for authoritative profit
+                _broker_detail = self._query_broker_close_history(pos)
+                if _broker_detail:
+                    detail = {**detail, **_broker_detail}
+        # ─── END BROKER CLOSE ─────────────────────────────────────────
+
+        # Broker confirmed (or position_not_found or no execution layer / no ticket)
+        pos.status = PositionStatus.CLOSED
+        pos.closed_time = ts
+        self._checkpoint(pos)
+        self._emit(kind, pos, prices, ts, detail)
+
+        # Enrich detail with close_reason for ON_TRADE_CLOSE event (used by journal persistence)
+        _close_detail = dict(detail)
+
+        # Map lifecycle event kind to close reason (authoritative — bot knows why it closed)
+        _lifecycle_reason_map = {
+            TradeLifecycleEvent.ON_STOP_LOSS_HIT: "stop_loss",
+            TradeLifecycleEvent.ON_TAKE_PROFIT_HIT: "take_profit",
+            TradeLifecycleEvent.ON_MANAGEMENT_EXIT: "management_exit",
+        }
+        _lifecycle_reason = _lifecycle_reason_map.get(kind, "")
+
+        # Lifecycle reason ALWAYS wins over generic broker reasons.
+        # Broker reason only used if lifecycle doesn't know (kind not in map)
+        # OR if broker provides a MORE specific reason (stop_loss, take_profit, stop_out).
+        _SPECIFIC_BROKER_REASONS = frozenset({"stop_loss", "take_profit", "stop_out"})
+        _broker_reason = _close_detail.get("reason", "")
+
+        if _lifecycle_reason:
+            # Bot already knows the reason — use it
+            _close_detail["reason"] = _lifecycle_reason
+        elif _broker_reason in _SPECIFIC_BROKER_REASONS:
+            # Broker provided a specific, trustworthy reason — keep it
+            pass  # already in _close_detail
+        elif _broker_reason:
+            # Generic broker reason (broker_close, expert_close, etc.) — keep as-is
+            pass
+        else:
+            _close_detail["reason"] = "unknown"
+
+        self._emit(TradeLifecycleEvent.ON_TRADE_CLOSE, pos, prices, ts, _close_detail)
+
+    def _query_broker_close_history(self, pos: Position) -> dict[str, Any] | None:
+        """
+        Query MT5 deal history to find actual close details for a position
+        that was closed server-side. Returns enriched detail dict or None.
+        Never raises.
+        """
+        try:
+            import MetaTrader5 as mt5
+            from core.mt5_timeout import mt5_call
+            from core.mt5_timestamp import normalize_mt5_timestamp
+            from datetime import datetime, timezone
+
+            self.lifecycle_router.validate(pos.ownership)
+            position_id = pos.ownership.position_ticket
+            deals = self.lifecycle_router.read(pos.ownership, "history_deals_get")
+
+            if not deals:
+                return None
+
+            # Restrict to THIS position's deals only. MT5 may return a broader
+            # set; deal.position_id is the authoritative per-position link.
+            own_deals = [
+                d for d in deals
+                if int(getattr(d, "position_id", 0) or 0) == position_id
+            ]
+            if not own_deals:
+                # If the broker build does not expose position_id, we cannot
+                # safely disambiguate — return None rather than guess a foreign
+                # deal (never fabricate broker truth).
+                return None
+
+            # Trade-level costs: aggregate commission/swap across ALL of this
+            # position's deals (entry + exit); MT5 charges commission per deal.
+            # Gross profit and exit reason come from the OUT deal.
+            _agg_commission = 0.0
+            _agg_swap = 0.0
+            _have_commission = False
+            _have_swap = False
+            for d in own_deals:
+                _c = getattr(d, "commission", None)
+                if _c is not None:
+                    _agg_commission += float(_c); _have_commission = True
+                _s = getattr(d, "swap", None)
+                if _s is not None:
+                    _agg_swap += float(_s); _have_swap = True
+
+            # Find the EXIT deal (entry=1 means exit in MT5 deal history)
+            for deal in own_deals:
+                if int(deal.entry) == 1:  # 1 = DEAL_ENTRY_OUT
+                    # ─── Use MT5 deal.reason (authoritative enum) ─────
+                    # MT5 DEAL_REASON constants:
+                    #   0 = CLIENT, 1 = MOBILE, 2 = WEB, 3 = EXPERT,
+                    #   4 = SL, 5 = TP, 6 = SO (stop out)
+                    _DEAL_REASON_MAP = {
+                        4: "stop_loss",       # DEAL_REASON_SL
+                        5: "take_profit",     # DEAL_REASON_TP
+                        6: "stop_out",        # DEAL_REASON_SO (genuine margin call)
+                        3: "expert_close",    # DEAL_REASON_EXPERT
+                        0: "client_close",    # DEAL_REASON_CLIENT
+                        1: "mobile_close",    # DEAL_REASON_MOBILE
+                        2: "web_close",       # DEAL_REASON_WEB
+                    }
+
+                    deal_reason_int = int(deal.reason) if hasattr(deal, "reason") else -1
+                    reason = _DEAL_REASON_MAP.get(deal_reason_int, "")
+
+                    # Fallback: parse comment if deal.reason unavailable or unknown
+                    _deal_comment = getattr(deal, "comment", "") or ""
+                    if not reason:
+                        comment = str(_deal_comment)
+                        if "[sl" in comment.lower():
+                            reason = "stop_loss"
+                        elif "[tp" in comment.lower():
+                            reason = "take_profit"
+                        else:
+                            reason = "broker_close"
+                    else:
+                        comment = str(_deal_comment)
+
+                    # Normalize broker timestamp to UTC
+                    exit_time_utc = normalize_mt5_timestamp(float(deal.time))
+
+                    return {
+                        "reason": reason,
+                        "broker_exit_price": float(deal.price),
+                        "broker_exit_time": exit_time_utc,
+                        "broker_profit": float(deal.profit),
+                        # Trade-level broker costs aggregated across this
+                        # position's deals (entry + exit). Raw MT5 signs are
+                        # preserved (commission is negative when it is a cost).
+                        # None only when the broker did not expose the field at
+                        # all (never fake 0.0).
+                        "broker_commission": round(_agg_commission, 4) if _have_commission else None,
+                        "broker_swap": round(_agg_swap, 4) if _have_swap else None,
+                        "broker_deal_id": int(deal.ticket),
+                        "broker_comment": comment,
+                        "broker_deal_reason": deal_reason_int,
+                    }
+            return None
+        except Exception:
+            return None
+
+    # ─── CLOSE RETRY INFRASTRUCTURE ───────────────────────────────────────────
+
+    def _queue_close_retry(
+        self,
+        pos: Position,
+        volume: float | None,
+        kind: TradeLifecycleEvent,
+        prices: tuple[float, float],
+        detail: dict[str, Any],
+    ) -> None:
+        """Queue a failed close/partial-close for retry."""
+        # Avoid duplicate queue entries for the same position
+        if pos.position_id in self._close_retry_queue:
+            return
+
+        entry = _CloseRetryEntry(
+            position_id=pos.position_id,
+            symbol=pos.symbol,
+            position_ticket=int(pos.mt5_ticket) if pos.mt5_ticket else 0,
+            volume=volume,
+            kind=kind,
+            prices=prices,
+            detail=dict(detail),
+            retry_count=0,
+            last_attempt_time=time.time(),
+            ownership=pos.ownership,
+            **_lineage_from_pos(pos),
+        )
+        self._close_retry_queue[pos.position_id] = entry
+        action = "PARTIAL_CLOSE" if volume is not None else "CLOSE"
+        logger.warning(
+            "[CLOSE_RETRY_QUEUED] action=%s position_id=%s symbol=%s ticket=%d volume=%s",
+            action, pos.position_id, pos.symbol,
+            entry.position_ticket, str(volume),
+        )
+
+    def drain_close_retry_queue(self) -> None:
+        """
+        Process pending close retry queue. Call once per tick cycle alongside
+        drain_sltp_retry_queue(). Non-blocking, idempotent, safe when empty.
+        """
+        if not self._close_retry_queue or self._execution is None:
+            return
+
+        completed: list[str] = []
+        for pid, entry in list(self._close_retry_queue.items()):
+            if entry.position_ticket <= 0:
+                # No valid ticket — cannot retry, abandon
+                completed.append(pid)
+                logger.warning(
+                    "[CLOSE_RETRY_ABANDONED] position_id=%s reason=no_valid_ticket",
+                    pid,
+                )
+                continue
+
+            # Observational: each retried close is its own management action
+            # (never collapsed with the originally initiated action).
+            _persist_management_action(
+                action_type="PARTIAL_CLOSE" if entry.volume is not None else "CLOSE",
+                action_reason="RETRY",
+                symbol=entry.symbol,
+                requested_volume=entry.volume,
+                lineage={
+                    "trade_id": entry.trade_id,
+                    "decision_id": entry.decision_id,
+                    "correlation_id": entry.correlation_id,
+                    "cycle_id": entry.cycle_id,
+                    "canonical_opportunity_id": entry.canonical_opportunity_id,
+                    "observation_id": entry.observation_id,
+                    "account_id": entry.account_id,
+                    "broker": entry.broker,
+                    "broker_server": entry.broker_server,
+                    "broker_symbol": entry.broker_symbol,
+                },
+                position_ticket=entry.position_ticket,
+            )
+            result = self._execution.close_position(
+                symbol=entry.symbol,
+                position_ticket=entry.position_ticket,
+                volume=entry.volume,
+                decision_id=entry.decision_id,
+                correlation_id=entry.correlation_id,
+                cycle_id=entry.cycle_id,
+                canonical_opportunity_id=entry.canonical_opportunity_id,
+                observation_id=entry.observation_id,
+                trade_id=entry.trade_id,
+                ownership=entry.ownership,
+            )
+
+            if result.ok:
+                completed.append(pid)
+                # Apply local state change now that broker confirmed
+                pos = self._by_id.get(pid)
+                if pos is not None:
+                    if entry.volume is None:
+                        # ─── Full close ─────────────────────────────────────
+                        # Broker honoured the retried close, so reconcile genuine
+                        # broker close facts using the SAME canonical mechanism as
+                        # the normal close path (_close_local → _query_broker_close_history)
+                        # — never a parallel accounting implementation. The merged
+                        # detail flows to the trade-close lifecycle event and then
+                        # into trade_journal / trade_truth exactly like a normal
+                        # close. When broker truth cannot be resolved, the original
+                        # detail is used unchanged (no monetary values fabricated).
+                        _broker_detail = self._query_broker_close_history(pos)
+                        _close_detail = dict(entry.detail)
+                        if _broker_detail:
+                            _close_detail.update(_broker_detail)
+                        # Preserve close reason/context for journal persistence
+                        if "reason" not in _close_detail:
+                            _reason_map = {
+                                TradeLifecycleEvent.ON_STOP_LOSS_HIT: "stop_loss",
+                                TradeLifecycleEvent.ON_TAKE_PROFIT_HIT: "take_profit",
+                                TradeLifecycleEvent.ON_MANAGEMENT_EXIT: "management_exit",
+                            }
+                            _close_detail["reason"] = _reason_map.get(entry.kind, "unknown")
+                        pos.status = PositionStatus.CLOSED
+                        pos.closed_time = time.time()
+                        self._emit(entry.kind, pos, entry.prices, time.time(), _close_detail)
+                        self._emit(TradeLifecycleEvent.ON_TRADE_CLOSE, pos, entry.prices, time.time(), _close_detail)
+                    else:
+                        # Partial close
+                        pos.volume -= entry.volume
+                        pos.status = PositionStatus.PARTIAL
+                        self._emit(TradeLifecycleEvent.ON_PARTIAL_CLOSE, pos, entry.prices, time.time(), entry.detail)
+
+                action = "PARTIAL_CLOSE" if entry.volume is not None else "CLOSE"
+                logger.info(
+                    "[CLOSE_RETRY_SUCCESS] action=%s position_id=%s symbol=%s attempts=%d",
+                    action, pid, entry.symbol, entry.retry_count + 1,
+                )
+            elif result.comment == "POSITION_NOT_FOUND":
+                # Broker confirms position no longer exists (server-side SL/TP/manual close)
+                completed.append(pid)
+                pos = self._by_id.get(pid)
+                if pos is not None:
+                    logger.info(
+                        "[BROKER_CONFIRMED_CLOSED_RETRY] position_id=%s symbol=%s ticket=%d "
+                        "reason=position_not_found interpretation=broker_server_side_close",
+                        pid, entry.symbol, entry.position_ticket,
+                    )
+                    # Query history for actual close details
+                    _broker_detail = self._query_broker_close_history(pos)
+                    _close_detail = dict(entry.detail)
+                    if _broker_detail:
+                        _close_detail.update(_broker_detail)
+                    if "reason" not in _close_detail:
+                        _close_detail["reason"] = "broker_close"
+
+                    pos.status = PositionStatus.CLOSED
+                    pos.closed_time = time.time()
+                    self._emit(entry.kind, pos, entry.prices, time.time(), _close_detail)
+                    self._emit(TradeLifecycleEvent.ON_TRADE_CLOSE, pos, entry.prices, time.time(), _close_detail)
+            else:
+                entry.retry_count += 1
+                entry.last_attempt_time = time.time()
+                if entry.retry_count >= _MAX_RETRIES:
+                    completed.append(pid)
+                    action = "PARTIAL_CLOSE" if entry.volume is not None else "CLOSE"
+                    logger.error(
+                        "[CLOSE_RETRY_FAILED_FINAL] action=%s position_id=%s symbol=%s "
+                        "ticket=%d attempts=%d reason=%s",
+                        action, pid, entry.symbol, entry.position_ticket,
+                        entry.retry_count, result.comment,
+                    )
+
+        for pid in completed:
+            self._close_retry_queue.pop(pid, None)
+
+    # ─── B5: CLOSED POSITION EVICTION ─────────────────────────────────────────
+
+    def evict_closed_positions(self) -> int:
+        """
+        Remove closed positions from _by_id after they are safely journaled.
+
+        Safety requirements:
+        - Position must be CLOSED
+        - closed_time must exist
+        - Eviction delay must have elapsed
+        - Position must be journaled (confirmed persisted)
+
+        Returns number of positions evicted.
+        """
+        try:
+            from core import config as _cfg
+            enabled = bool(getattr(_cfg, "POSITION_EVICTION_ENABLED", True))
+            delay = float(getattr(_cfg, "POSITION_EVICTION_DELAY_SECONDS", 3600))
+        except ImportError:
+            enabled = True
+            delay = 3600.0
+
+        if not enabled:
+            return 0
+
+        now = time.time()
+        to_evict: list[str] = []
+
+        for pid, pos in self._by_id.items():
+            # Only evict CLOSED positions
+            if pos.status != PositionStatus.CLOSED:
+                continue
+
+            # Must have closed_time
+            if pos.closed_time is None:
+                continue
+
+            # Delay must have elapsed
+            if now - pos.closed_time < delay:
+                continue
+
+            # Journal safety: verify position is persisted
+            try:
+                from core.trade_journal import is_already_journaled
+                trade_id = f"close_{pos.position_id}"
+                if not is_already_journaled(trade_id) and not is_already_journaled(pos.position_id):
+                    logger.debug(
+                        "[POSITION_EVICTION_SKIPPED] id=%s reason=not_journaled",
+                        pos.position_id,
+                    )
+                    continue
+            except ImportError:
+                # No journal module — allow eviction (journal not mandatory)
+                pass
+            except Exception:
+                # Journal check failed — skip eviction to be safe
+                continue
+
+            to_evict.append(pid)
+
+        # Perform eviction
+        for pid in to_evict:
+            pos = self._by_id.pop(pid, None)
+            if pos is not None:
+                logger.info(
+                    "[POSITION_EVICTED] id=%s symbol=%s closed_at=%.0f reason=memory_cleanup",
+                    pos.position_id, pos.symbol, pos.closed_time or 0,
+                )
+
+        return len(to_evict)

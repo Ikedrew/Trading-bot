@@ -1,0 +1,231 @@
+"""
+Scanner Initialization — Symbol resolution and per-symbol state creation.
+
+Handles all startup-only logic: resolving symbols, validating their existence
+in the MT5 terminal, creating per-symbol state objects, and recovering open
+positions from the broker.
+
+This module OWNS:
+    - Symbol list resolution (canonical → broker)
+    - Symbol universe visibility diagnostic
+    - Per-symbol state creation (_LiveSymbolState)
+    - Feed connection and symbol resolution
+    - Trade manager creation
+    - MTF cache creation
+    - Startup position recovery
+
+This module does NOT own:
+    - Runtime loop
+    - Trading decisions
+    - Execution
+    - Dependency wiring beyond state creation
+    - Shutdown handling
+
+Design: initialization only — called once at startup, returns list of states.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+from core import config
+from core.engine import EngineState
+from core.event_bus import EventState, TradeLifecycleLogger
+from core.state_persistence import load_engine_state
+from core.stale_monitor import StaleDataMonitor
+from core.trade_management import TradeStateManager
+from data.mt5_data import MT5DataFeed
+
+from core.runtime.runtime_utils import (
+    _build_risk_manager,
+    _build_trade_management_config,
+)
+
+logger = logging.getLogger(__name__)
+
+
+def _ensure_enabled_account_terminals():
+    """Ensure each enabled account's dedicated MT5 terminal (once per startup).
+
+    Opt-in via ``core.config.MT5_TERMINAL_MANAGER_ENABLED``. Runs BEFORE
+    batched position recovery, ensures/launches at most one terminal per
+    enabled account, verifies terminal/account readiness, and keeps account
+    failures strictly account-local so healthy accounts always continue.
+    """
+    from core import config as runtime_config
+    if not getattr(runtime_config, 'MT5_TERMINAL_MANAGER_ENABLED', False):
+        return {}
+    try:
+        from core.accounts.config import load_accounts
+        from core.accounts.terminal_manager import TerminalManager
+        statuses = TerminalManager().ensure_all(load_accounts())
+    except Exception as _tm_exc:  # terminal management never blocks startup
+        logger.warning('[TERMINAL_MANAGER] bootstrap failed: %s', _tm_exc)
+        return {}
+    for account_id, status in statuses.items():
+        if status.ok:
+            logger.info('[TERMINAL_MANAGER] account=%s pid=%s path=%s manager_launched=%s',
+                        account_id, status.pid, status.path, status.manager_launched)
+        else:
+            logger.warning('[TERMINAL_MANAGER] account=%s duplicate=%s reason=%s',
+                           account_id, status.duplicate, status.reason)
+    return statuses
+
+
+def initialize_symbol_states(
+    *,
+    symbols: list[str] | None,
+    execution: Any,
+) -> list[Any]:
+    """
+    Resolve symbols and create per-symbol state objects.
+
+    Args:
+        symbols: Optional explicit symbol list (overrides config).
+        execution: MT5Execution instance (passed to TradeStateManager).
+
+    Returns:
+        List of _LiveSymbolState objects. May be empty if all symbols failed.
+    """
+    from core.runtime.live_scanner import _LiveSymbolState
+
+    symbol_list = symbols or getattr(config, "CANONICAL_SYMBOLS", None) or getattr(config, "SYMBOLS", [])
+    _canonical_by_broker: dict[str, str] = {}
+
+    # ─── SYMBOL RESOLUTION (canonical → broker) ──────────────────────
+    _canonical_list = getattr(config, "CANONICAL_SYMBOLS", None)
+    if _canonical_list and not symbols:
+        from core.symbol_resolver import active_account_symbol_map, resolve_all
+        _explicit_map = active_account_symbol_map()
+        try:
+            _symbol_map = resolve_all(
+                _canonical_list, fail_mode="raise" if _explicit_map else "skip")
+            if _symbol_map:
+                symbol_list = list(_symbol_map.values())
+                _canonical_by_broker = {broker: canonical for canonical, broker in _symbol_map.items()}
+                logger.info(
+                    "[SYMBOL_RESOLUTION] resolved %d/%d canonical → broker: %s",
+                    len(_symbol_map), len(_canonical_list),
+                    {k: v for k, v in _symbol_map.items()},
+                )
+            else:
+                logger.warning("[SYMBOL_RESOLUTION] no symbols resolved — falling back to config.SYMBOLS")
+                symbol_list = getattr(config, "SYMBOLS", [])
+        except Exception as _res_exc:
+            if _explicit_map:
+                raise
+            logger.warning("[SYMBOL_RESOLUTION] resolver failed: %s — using config.SYMBOLS as-is", _res_exc)
+            symbol_list = getattr(config, "SYMBOLS", [])
+    # ─── END SYMBOL RESOLUTION ────────────────────────────────────────
+
+    # ─── SYMBOL UNIVERSE VISIBILITY (diagnostic) ─────────────────────
+    try:
+        import MetaTrader5 as _mt5_diag
+        _all_mt5_symbols = _mt5_diag.symbols_get()
+        if _all_mt5_symbols:
+            _mt5_names = {s.name for s in _all_mt5_symbols}
+            logger.info("[MT5_SYMBOLS_COUNT] total_available=%d", len(_mt5_names))
+            for sym_hint in symbol_list:
+                _exists = sym_hint in _mt5_names
+                if not _exists:
+                    logger.warning("[SYMBOL_EXISTS] %s = NOT_FOUND in MT5 terminal", sym_hint)
+                else:
+                    logger.info("[SYMBOL_EXISTS] %s = FOUND", sym_hint)
+        else:
+            logger.warning("[MT5_SYMBOLS_COUNT] symbols_get() returned None/empty — MT5 may not be connected")
+    except Exception as _diag_exc:
+        logger.warning("[MT5_SYMBOLS_DIAG] diagnostic failed: %s", _diag_exc)
+    # ─── END SYMBOL UNIVERSE VISIBILITY ───────────────────────────────
+
+    # ─── CREATE PER-SYMBOL STATE ──────────────────────────────────────
+    states: list[_LiveSymbolState] = []
+
+    for sym_hint in symbol_list:
+        try:
+            canonical = _canonical_by_broker.get(sym_hint, sym_hint)
+            # Force symbol activation in Market Watch before resolution
+            try:
+                import MetaTrader5 as _mt5_sel
+                _mt5_sel.symbol_select(sym_hint, True)
+            except Exception:
+                pass
+
+            feed = MT5DataFeed(sym_hint)
+            feed.connect()
+            resolved = feed.resolve_symbol()
+            logger.info("[SYMBOL_INIT] hint=%s → resolved=%s", sym_hint, resolved)
+
+            tm: TradeStateManager | None = None
+            if getattr(config, "TRADE_MANAGEMENT_ENABLED", True):
+                tm = TradeStateManager(
+                    _build_trade_management_config(),
+                    listener=TradeLifecycleLogger(),
+                    execution=execution,
+                )
+
+            # MTF: create TimeframeCache if enabled
+            _tf_cache = None
+            if getattr(config, "MTF_ENABLED", False):
+                from core.timeframes.cache import TimeframeCache
+                _tf_cache = TimeframeCache(symbol=canonical, feed=feed, config=config)
+
+            # Market Context: create builder if enabled
+            _mc_builder = None
+            if getattr(config, "MARKET_CONTEXT_ENABLED", False):
+                try:
+                    from core.market_context.builder import MarketContextBuilder
+                    _mc_builder = MarketContextBuilder(symbol=canonical)
+                except Exception:
+                    pass  # Market context unavailable — proceed without
+
+            states.append(_LiveSymbolState(
+                symbol=canonical,
+                broker_symbol=resolved,
+                feed=feed,
+                engine_state=load_engine_state(canonical) or EngineState(),
+                event_state=EventState(),
+                risk=_build_risk_manager(),
+                trade_manager=tm,
+                stale_monitor=StaleDataMonitor(canonical, config),
+                tf_cache=_tf_cache,
+                market_context_builder=_mc_builder,
+            ))
+
+            # D3: Register this symbol's manager for lifecycle ownership.
+            # Recovery itself is batched once after ALL symbols are created
+            # (see below) so each enabled account uses exactly ONE lifecycle
+            # worker subprocess for the complete symbol set.
+            if tm is not None:
+                from core.accounts.lifecycle_registration import attach_manager
+                attach_manager(canonical, tm)
+
+            logger.info("[LIVE_SCANNER] initialized symbol=%s", resolved)
+        except Exception as exc:
+            logger.error(
+                "[SYMBOL_INIT_FAIL] hint=%s → %s: %s (type=%s)",
+                sym_hint, type(exc).__name__, exc, type(exc).__qualname__,
+            )
+            continue
+
+    # D3 (terminal manager): ensure each enabled account's dedicated MT5
+    # terminal exactly ONCE per startup, before batched recovery. Account
+    # failures are isolated and never block reaching LIVE.
+    _ensure_enabled_account_terminals()
+
+    # D3 (batched): recover open broker positions across the WHOLE symbol set
+    # with ONE lifecycle worker subprocess per enabled account — a single
+    # verified MT5 initialize/recover/shutdown per account instead of one worker
+    # per account × symbol. Capability decisions stay per (account, symbol);
+    # account/symbol failures are isolated and never block reaching LIVE.
+    try:
+        from core.runtime.startup_recovery import recover_positions_batch
+        _recovery_trade_managers = {
+            st.symbol: st.trade_manager for st in states if st.trade_manager is not None}
+        if _recovery_trade_managers:
+            recover_positions_batch(magic=config.BOT_MAGIC,
+                                    trade_managers=_recovery_trade_managers)
+    except Exception as _batch_exc:
+        logger.warning("[STARTUP_RECOVERY_ERROR] batch error=%s", _batch_exc)
+
+    return states

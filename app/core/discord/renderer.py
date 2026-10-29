@@ -1,0 +1,735 @@
+"""
+Discord V2 Renderer — Routes events to human-question categories.
+
+Categories:
+    LIVE_MARKET:  Market state updates (H4, H1, M15, regime, context)
+    OPPORTUNITY:  Decision lifecycle (detected → assessed → executed/rejected)
+    EXECUTION:    Trade lifecycle (attempt → fill → modify → close)
+    SYSTEM:       Infrastructure events (startup, shutdown, errors, kill switch)
+
+This module does NOT send messages to Discord.
+It classifies events and builds structured render instructions
+that future phases will deliver to Discord channels.
+
+Design:
+    - Pure function: event_type + data → (category, card)
+    - No side effects, no I/O, no state
+    - Testable in isolation
+"""
+
+from __future__ import annotations
+
+from enum import Enum
+from typing import Any
+
+from core.discord.cards import (
+    build_market_card,
+    build_opportunity_card,
+    build_execution_card,
+    build_system_card,
+)
+from core.live_market_state import read_live_market_state
+
+
+class Category(str, Enum):
+    """Discord V2 channel categories — one per human question."""
+    LIVE_MARKET = "LIVE_MARKET"
+    OPPORTUNITY = "OPPORTUNITY"
+    EXECUTION = "EXECUTION"
+    SYSTEM = "SYSTEM"
+    UNKNOWN = "UNKNOWN"
+
+
+# ─── EVENT → CATEGORY ROUTING ─────────────────────────────────────────────────
+
+_CATEGORY_MAP: dict[str, Category] = {
+    # LIVE_MARKET: "What's the market doing?"
+    "MARKET_CONTEXT": Category.LIVE_MARKET,
+    "H4_CONTEXT": Category.LIVE_MARKET,
+    "HTF_CONTEXT_BUNDLE": Category.LIVE_MARKET,
+    "MARKET_SNAPSHOT": Category.LIVE_MARKET,
+    "BOT_STATE": Category.LIVE_MARKET,
+
+    # OPPORTUNITY: "What opportunities happened?"
+    "TRADE_DECISION": Category.OPPORTUNITY,
+    "DECISION_REJECTED": Category.OPPORTUNITY,
+    "OPPORTUNITY_LIFECYCLE": Category.OPPORTUNITY,
+
+    # EXECUTION: "What trades happened?"
+    "ORDER_ATTEMPT": Category.EXECUTION,
+    "ORDER_FILLED": Category.EXECUTION,
+    "ORDER_MODIFIED": Category.EXECUTION,
+    "TRADE_CLOSED": Category.EXECUTION,
+    "TRADE_RESULT": Category.EXECUTION,
+    "RISK_BLOCK": Category.EXECUTION,
+    "RISK_CHECK": Category.EXECUTION,
+    "EXPOSURE_UPDATE": Category.EXECUTION,
+
+    # SYSTEM: "Is the machine alive?"
+    "SYSTEM_STARTUP": Category.SYSTEM,
+    "SYSTEM_SHUTDOWN": Category.SYSTEM,
+    "KILL_SWITCH": Category.SYSTEM,
+    "ERROR": Category.SYSTEM,
+    "HEARTBEAT": Category.SYSTEM,
+    "PNL_UPDATE": Category.SYSTEM,
+    "DRAWDOWN_UPDATE": Category.SYSTEM,
+    "DAILY_REPORT": Category.SYSTEM,
+}
+
+
+def classify_event(event_type: str) -> Category:
+    """Classify an event_type into a Discord V2 category."""
+    return _CATEGORY_MAP.get(event_type, Category.UNKNOWN)
+
+
+# ─── RENDERER ──────────────────────────────────────────────────────────────────
+
+class DiscordRenderer:
+    """
+    Discord V2 rendering entry point.
+
+    Accepts an event, classifies it, and builds a structured card.
+    For LIVE_MARKET events, manages the card lifecycle (create vs edit).
+
+    Usage:
+        renderer = DiscordRenderer()
+        result = renderer.render("ORDER_FILLED", {"symbol": "EURUSD", ...})
+    """
+
+    def __init__(self) -> None:
+        self._state: "DiscordState | None" = None
+        self._client: "DiscordBotClient | None" = None
+
+    def _ensure_initialized(self) -> None:
+        """Lazy-initialize state and client on first use."""
+        if self._state is None:
+            from core.discord.state import DiscordState
+            self._state = DiscordState()
+            self._state.load()
+        if self._client is None:
+            from core.discord.bot_client import DiscordBotClient
+            self._client = DiscordBotClient()
+
+    def render(self, event_type: str, data: dict[str, Any] | None = None) -> dict[str, Any] | None:
+        """
+        Render an event into a Discord V2 card structure.
+
+        Intelligence layer:
+            - LIVE_MARKET: accumulates state, edits card
+            - OPPORTUNITY: filtered (only strategy-matched or deeper)
+            - EXECUTION: always sent
+            - SYSTEM: health-card events edit; critical events send new
+        """
+        category = classify_event(event_type)
+        if category == Category.UNKNOWN:
+            return None
+
+        # ─── NOISE FILTER: suppress events that don't belong in Discord ───
+        if self._should_suppress(category, event_type, data or {}):
+            return None
+
+        card = self._build_card(category, event_type, data or {})
+
+        # Live market cards: accumulate state + edit
+        if category == Category.LIVE_MARKET:
+            return self._handle_live_market(event_type, data or {}, card)
+
+        # System health events: some edit card, some send new message
+        if category == Category.SYSTEM:
+            return self._handle_system(event_type, data or {}, card)
+
+        # Opportunity + Execution: send new messages
+        return self._handle_standard_event(category, event_type, card)
+
+    def _should_suppress(self, category: Category, event_type: str, data: dict[str, Any]) -> bool:
+        """
+        Intelligence filter: suppress events that are noise for humans.
+
+        Suppressed (S3 only, not Discord):
+            - PIPELINE_DROP (no pattern = nothing happened)
+            - EXPOSURE_UPDATE (internal state)
+            - RISK_CHECK where result is not a block
+            - PNL_UPDATE / DRAWDOWN_UPDATE as discrete events (folded into health card)
+            - DECISION_REJECTED at early stages (opportunity/strategy)
+        """
+        # Events completely removed from Discord
+        if event_type == "PIPELINE_DROP":
+            return True
+        if event_type == "EXPOSURE_UPDATE":
+            return True
+        if event_type == "RISK_CHECK":
+            result = data.get("result", "")
+            if result == "APPROVED" or result != "REJECTED":
+                return True
+
+        # PNL/DRAWDOWN handled by health card edit, not new message
+        # (They'll be routed to _handle_system which edits the card)
+        # Don't suppress here — let _handle_system manage them
+
+        # Opportunity filtering: only show meaningful near-misses
+        if event_type == "DECISION_REJECTED":
+            stage = data.get("stage") or data.get("terminal_stage") or ""
+            # Only send if reached risk stage or deeper
+            _deep_stages = ("risk", "execution", "ev_policy", "data_validation", "swing")
+            if not any(s in stage.lower() for s in _deep_stages):
+                return True
+
+        # OPPORTUNITY_LIFECYCLE: show all in opportunity_flow (no filtering)
+        # The flow channel shows the complete funnel including early rejections
+        if event_type == "OPPORTUNITY_LIFECYCLE":
+            return False  # Never suppress — flow channel shows everything
+
+        return False
+
+    def _handle_live_market(self, event_type: str, data: dict[str, Any], card: dict[str, Any]) -> dict[str, Any]:
+        """
+        Handle live market card by reading from live_market_state snapshot.
+
+        Pure presentation layer: reads the complete latest snapshot for the
+        symbol and renders the card from that snapshot. No incremental
+        event-state accumulation. Compares against previous render to
+        suppress cosmetic edits.
+
+        Currently limited to EURUSD (V2 live market pilot).
+        """
+        self._ensure_initialized()
+        symbol = card.get("symbol") or data.get("symbol") or ""
+
+        if not symbol:
+            return {
+                "category": Category.LIVE_MARKET.value,
+                "event_type": event_type,
+                "card": card,
+                "action": "skip",
+                "reason": "no_symbol",
+            }
+
+        # Check symbol is configured for live market
+        try:
+            from core import config as _cfg
+            _configured_symbols = set(getattr(_cfg, "DISCORD_LIVE_CHANNELS", {}).keys())
+        except Exception:
+            _configured_symbols = set()
+
+        if _configured_symbols and symbol not in _configured_symbols:
+            return {
+                "category": Category.LIVE_MARKET.value,
+                "event_type": event_type,
+                "card": card,
+                "action": "skip",
+                "reason": "not_configured",
+            }
+
+        # ─── READ SNAPSHOT (single source of truth) ───────────────────
+        try:
+            snapshot = read_live_market_state(symbol)
+        except Exception:
+            snapshot = None
+
+        if not snapshot:
+            return {
+                "category": Category.LIVE_MARKET.value,
+                "event_type": event_type,
+                "card": card,
+                "action": "skip",
+                "reason": "no_snapshot_available",
+            }
+
+        # ─── BUILD CARD FROM SNAPSHOT ─────────────────────────────────
+        market = snapshot.get("market", {})
+        opp = snapshot.get("opportunity", {})
+        strat = snapshot.get("strategy", {})
+        entry = snapshot.get("entry", {})
+        risk = snapshot.get("risk", {})
+
+        card_data = {
+            "symbol": symbol,
+            "regime": market.get("regime"),
+            "h4_trend": market.get("h4_trend"),
+            "h4_trend_strength": market.get("h4_trend_strength"),
+            "h1_bos": market.get("h1_bos_direction"),
+            "h1_structural_clarity": market.get("h1_structural_clarity"),
+            "location_type": market.get("location_type"),
+            "range_position": market.get("range_position"),
+            "m5_momentum": market.get("m5_momentum"),
+            "volatility_state": market.get("volatility_state"),
+            "opportunity_state": opp.get("state"),
+            "opportunity_type": opp.get("opportunity_type"),
+            "opportunity_quality": opp.get("overall_quality"),
+            "strategy": strat.get("family"),
+            "strategy_confidence": strat.get("confidence"),
+            "entry_status": entry.get("status"),
+            "entry_price": entry.get("price"),
+            "stop_price": entry.get("stop"),
+            "target_price": entry.get("target"),
+            "expected_rr": entry.get("expected_rr"),
+            "risk_approved": risk.get("approved"),
+            "position_size": risk.get("position_size"),
+        }
+        rendered_card = build_market_card("MARKET_CONTEXT", card_data)
+
+        # ─── OBSERVATION IDENTITY TRACKING ────────────────────────────
+        from datetime import datetime, timezone
+        now_str = datetime.now(timezone.utc).strftime("%H:%M")
+
+        identity = snapshot.get("identity", {})
+        current_obs_id = identity.get("observation_id", "")
+        trade_id = identity.get("trade_id", "")
+
+        # Update observation_id for traceability (but don't reset timeline for it)
+        self._state.set_observation_id(symbol, current_obs_id)
+
+        _TRACKED_FIELDS = {
+            "regime": "Regime",
+            "h4_trend": "H4 Trend",
+            "h1_bos_direction": "H1 BOS",
+            "location_type": "Location",
+            "m5_momentum": "M5",
+            "volatility_state": "Volatility",
+            "strategy": "Strategy",
+            "entry_status": "Entry",
+            "opportunity_state": "Opportunity",
+            "risk_approved": "Risk",
+        }
+
+        previous_state = self._state.get_market_state(symbol)
+        new_fields = rendered_card.get("fields", {})
+        timeline_entries = []
+
+        # Detect which fields changed (these are MEANINGFUL — gate already filtered noise)
+        has_meaningful_change = False
+        for field_key, label in _TRACKED_FIELDS.items():
+            new_val = new_fields.get(field_key)
+            old_val = previous_state.get(field_key)
+            if new_val and new_val != old_val:
+                has_meaningful_change = True
+                if old_val:
+                    timeline_entries.append({"time": now_str, "text": f"{label} \u2192 **{new_val}**"})
+                else:
+                    timeline_entries.append({"time": now_str, "text": f"{label}: **{new_val}**"})
+
+        # Reset timeline on major lifecycle transitions (not observation_id change)
+        opp_state = new_fields.get("opportunity_state", "")
+        prev_opp = previous_state.get("opportunity_state", "")
+        if opp_state in ("WATCHING", "VALID") and prev_opp in ("INVALID", "", None):
+            # Opportunity went from nothing/invalid to active — new meaningful observation
+            self._state.reset_timeline(symbol)
+            timeline_entries.insert(0, {"time": now_str, "text": "New opportunity detected"})
+            has_meaningful_change = True
+
+        # Trade ID tracking
+        prev_trade = self._state._live_cards.get(symbol, {}).get("trade_id", "")
+        if trade_id and trade_id != prev_trade:
+            has_meaningful_change = True
+            timeline_entries.append({"time": now_str, "text": f"Trade opened \u2192 **{trade_id}**"})
+            if symbol in self._state._live_cards:
+                self._state._live_cards[symbol]["trade_id"] = trade_id
+
+        # First render for this symbol
+        if not previous_state:
+            has_meaningful_change = True
+            if not timeline_entries:
+                timeline_entries.append({"time": now_str, "text": "Monitoring started"})
+
+        if not has_meaningful_change:
+            return {
+                "category": Category.LIVE_MARKET.value,
+                "event_type": event_type,
+                "card": rendered_card,
+                "action": "skip",
+                "reason": "no_meaningful_change",
+            }
+
+        # Append timeline entries and persist
+        if timeline_entries:
+            self._state.append_timeline(symbol, timeline_entries)
+
+        # Inject timeline + multi-opportunity data into card for rendering
+        rendered_card["fields"]["_timeline"] = self._state.get_timeline(symbol)
+        rendered_card["fields"]["_active_opportunities"] = self._state.get_active_opportunities(symbol)
+        rendered_card["fields"]["_terminal_opportunities"] = self._state.get_terminal_opportunities(symbol)
+        # Identity: use most recent active opportunity if available
+        latest_opp = self._state.get_opportunity(symbol)
+        if latest_opp.get("opportunity_id"):
+            rendered_card["fields"]["_identity"] = {
+                "opportunity_id": latest_opp.get("opportunity_id", ""),
+                "entity_id": latest_opp.get("entity_id", ""),
+                "observation_id": latest_opp.get("observation_id", ""),
+            }
+        else:
+            rendered_card["fields"]["_identity"] = identity
+
+        # Update tracked state for next comparison
+        self._state.merge_market_state(symbol, new_fields)
+        self._state.save()
+
+        # ─── DELIVER (edit existing or create new) ────────────────────
+        existing = self._state.get_live_card(symbol)
+
+        if existing and existing.get("message_id"):
+            channel_id = existing.get("channel_id", "")
+            message_id = existing.get("message_id", "")
+
+            try:
+                self._client.edit_message(channel_id, message_id, rendered_card)
+            except Exception:
+                pass
+
+            self._state.set_live_card(symbol, channel_id=channel_id, message_id=message_id)
+
+            return {
+                "category": Category.LIVE_MARKET.value,
+                "event_type": event_type,
+                "card": rendered_card,
+                "action": "edit",
+                "message_id": message_id,
+            }
+        else:
+            try:
+                from core import config as _cfg
+                channels = getattr(_cfg, "DISCORD_LIVE_CHANNELS", {})
+                channel_id = channels.get(symbol, "")
+            except Exception:
+                channel_id = ""
+
+            new_message_id = None
+            try:
+                new_message_id = self._client.send_message(channel_id, rendered_card)
+            except Exception:
+                pass
+
+            if new_message_id:
+                self._state.set_live_card(symbol, channel_id=channel_id, message_id=new_message_id)
+                self._state.save()
+
+            return {
+                "category": Category.LIVE_MARKET.value,
+                "event_type": event_type,
+                "card": rendered_card,
+                "action": "create",
+                "channel_id": channel_id,
+                "message_id": new_message_id or "",
+            }
+
+    def _handle_system(self, event_type: str, data: dict[str, Any], card: dict[str, Any]) -> dict[str, Any]:
+        """
+        Handle system events: health-card updates vs critical new messages.
+
+        Editable health card events (update existing card):
+            HEARTBEAT, PNL_UPDATE, DRAWDOWN_UPDATE, SYSTEM_STARTUP, SYSTEM_SHUTDOWN
+
+        New message events (critical, always post):
+            ERROR, KILL_SWITCH, DAILY_REPORT
+        """
+        self._ensure_initialized()
+
+        # These events UPDATE the system health card (no new message)
+        _HEALTH_CARD_EVENTS = {"HEARTBEAT", "PNL_UPDATE", "DRAWDOWN_UPDATE", "SYSTEM_STARTUP", "SYSTEM_SHUTDOWN"}
+
+        if event_type in _HEALTH_CARD_EVENTS:
+            return self._update_system_health_card(event_type, data, card)
+
+        # Critical events: send new message to system channel
+        return self._handle_standard_event(Category.SYSTEM, event_type, card)
+
+    def _update_system_health_card(self, event_type: str, data: dict[str, Any], card: dict[str, Any]) -> dict[str, Any]:
+        """Edit the persistent system health card."""
+        existing = self._state.get_system_health()
+
+        if existing:
+            channel_id = existing.get("channel_id", "")
+            message_id = existing.get("message_id", "")
+            try:
+                self._client.edit_message(channel_id, message_id, card)
+            except Exception:
+                pass
+            self._state.set_system_health(channel_id=channel_id, message_id=message_id)
+            return {
+                "category": Category.SYSTEM.value,
+                "event_type": event_type,
+                "card": card,
+                "action": "health_update",
+                "message_id": message_id,
+            }
+        else:
+            # Create new health card
+            channel_id = ""
+            try:
+                from core import config as _cfg
+                channels = getattr(_cfg, "DISCORD_V2_CHANNELS", {})
+                channel_id = channels.get("system", "")
+            except Exception:
+                pass
+
+            new_id = None
+            try:
+                new_id = self._client.send_message(channel_id, card)
+            except Exception:
+                pass
+
+            if new_id:
+                self._state.set_system_health(channel_id=channel_id, message_id=new_id)
+                self._state.save()
+
+            return {
+                "category": Category.SYSTEM.value,
+                "event_type": event_type,
+                "card": card,
+                "action": "health_create",
+                "message_id": new_id or "",
+            }
+
+    def _handle_standard_event(self, category: Category, event_type: str, card: dict[str, Any]) -> dict[str, Any]:
+        """
+        Handle non-LIVE_MARKET events: send to consolidated channel.
+
+        Routes:
+            OPPORTUNITY → "opportunities" channel
+            EXECUTION   → "executions" channel
+            SYSTEM      → "system" channel
+
+        Attempts delivery via bot_client. Fire-and-forget.
+        """
+        self._ensure_initialized()
+
+        # Map category to channel config key
+        _CATEGORY_TO_CHANNEL = {
+            Category.OPPORTUNITY: "opportunities",
+            Category.EXECUTION: "executions",
+            Category.SYSTEM: "system",
+        }
+        channel_key = _CATEGORY_TO_CHANNEL.get(category, "")
+
+        # OPPORTUNITY_LIFECYCLE updates the live market card (not a separate message)
+        if event_type == "OPPORTUNITY_LIFECYCLE":
+            return self._handle_opportunity_lifecycle(card)
+
+        # Look up channel ID from config
+        channel_id = ""
+        if channel_key:
+            try:
+                from core import config as _cfg
+                channels = getattr(_cfg, "DISCORD_V2_CHANNELS", {})
+                channel_id = channels.get(channel_key, "")
+            except Exception:
+                pass
+
+        # Attempt delivery (placeholder — logs intention)
+        try:
+            self._client.send_message(channel_id, card)
+        except Exception:
+            pass  # Delivery failure must not crash renderer
+
+        return {
+            "category": category.value,
+            "event_type": event_type,
+            "card": card,
+            "action": "send",
+            "channel": channel_key,
+        }
+
+    def _handle_opportunity_lifecycle(self, card: dict[str, Any]) -> dict[str, Any]:
+        """
+        Handle OPPORTUNITY_LIFECYCLE by updating the live market card.
+
+        Multi-opportunity model:
+        1. Finds or creates the opportunity by opportunity_id in the collection
+        2. Updates that specific opportunity's state
+        3. Appends a timeline entry to that opportunity's own timeline
+        4. Re-renders and edits the existing live market card
+        """
+        self._ensure_initialized()
+        from datetime import datetime, timezone
+
+        symbol = card.get("symbol") or ""
+        if not symbol:
+            return {
+                "category": Category.OPPORTUNITY.value,
+                "event_type": "OPPORTUNITY_LIFECYCLE",
+                "card": card,
+                "action": "skip",
+                "reason": "no_symbol",
+            }
+
+        fields = card.get("fields", {})
+        lifecycle_state = fields.get("lifecycle_state") or ""
+        opp_id = fields.get("opportunity_id", "")
+        now_str = datetime.now(timezone.utc).strftime("%H:%M")
+
+        if not opp_id:
+            return {
+                "category": Category.OPPORTUNITY.value,
+                "event_type": "OPPORTUNITY_LIFECYCLE",
+                "card": card,
+                "action": "skip",
+                "reason": "no_opportunity_id",
+            }
+
+        # ─── Update opportunity in collection ─────────────────────────
+        opp_data = {
+            "opportunity_id": opp_id,
+            "entity_id": fields.get("entity_id", ""),
+            "observation_id": fields.get("observation_id", ""),
+            "cycle_id": fields.get("cycle_id", ""),
+            "lifecycle_state": lifecycle_state,
+            "pattern": fields.get("pattern", ""),
+            "direction": fields.get("direction", ""),
+            "strategy": fields.get("strategy", ""),
+            "strategy_confidence": fields.get("strategy_confidence", 0.0),
+            "overall_score": fields.get("score", 0.0),
+            "rejection_reason": fields.get("reason", ""),
+            "rejection_stage": fields.get("stage", ""),
+            "entry_price": fields.get("entry_price", 0.0),
+            "stop_price": fields.get("stop_price", 0.0),
+            "target_price": fields.get("target_price", 0.0),
+            "position_size": fields.get("position_size", 0.0),
+            "outcome_trade_id": fields.get("outcome_trade_id", ""),
+        }
+
+        self._state.update_opportunity(symbol, opp_data)
+
+        # ─── Append timeline entry to THIS opportunity ────────────────
+        _STATE_LABELS = {
+            "DETECTED": "Detected",
+            "WATCHING": "Watching",
+            "VALID": "Valid",
+            "ASSESSED": "Assessed",
+            "REJECTED": "Rejected",
+            "EXECUTED": "Executed",
+            "INVALID": "Invalid",
+            "EXPIRED": "Expired",
+        }
+        timeline_text = _STATE_LABELS.get(lifecycle_state, lifecycle_state)
+
+        # Add context for strategy/entry/rejection
+        if lifecycle_state == "ASSESSED" and opp_data.get("strategy"):
+            timeline_text = f"Strategy \u2192 {opp_data['strategy']}"
+        elif lifecycle_state == "REJECTED" and opp_data.get("rejection_reason"):
+            timeline_text = f"Rejected: {opp_data['rejection_reason'][:50]}"
+        elif lifecycle_state == "EXECUTED":
+            timeline_text = "Executed"
+
+        self._state.append_opportunity_timeline(
+            symbol, opp_id, [{"time": now_str, "text": timeline_text}]
+        )
+
+        # Also update observation_id for traceability
+        if opp_data.get("observation_id"):
+            self._state.set_observation_id(symbol, opp_data["observation_id"])
+
+        self._state.save()
+
+        # ─── Re-render the live card ──────────────────────────────────
+        rendered_card = self._build_live_card_with_opportunities(symbol)
+
+        # ─── DELIVER (edit existing or create new) ────────────────────
+        existing = self._state.get_live_card(symbol)
+
+        if existing and existing.get("message_id"):
+            channel_id = existing.get("channel_id", "")
+            message_id = existing.get("message_id", "")
+            try:
+                self._client.edit_message(channel_id, message_id, rendered_card)
+            except Exception:
+                pass
+            return {
+                "category": Category.OPPORTUNITY.value,
+                "event_type": "OPPORTUNITY_LIFECYCLE",
+                "card": rendered_card,
+                "action": "edit",
+                "message_id": message_id,
+            }
+        else:
+            channel_id = ""
+            try:
+                from core import config as _cfg
+                channels = getattr(_cfg, "DISCORD_LIVE_CHANNELS", {})
+                channel_id = channels.get(symbol, "")
+            except Exception:
+                pass
+
+            new_message_id = None
+            try:
+                new_message_id = self._client.send_message(channel_id, rendered_card)
+            except Exception:
+                pass
+
+            if new_message_id:
+                self._state.set_live_card(symbol, channel_id=channel_id, message_id=new_message_id)
+                self._state.save()
+
+            return {
+                "category": Category.OPPORTUNITY.value,
+                "event_type": "OPPORTUNITY_LIFECYCLE",
+                "card": rendered_card,
+                "action": "create",
+                "message_id": new_message_id or "",
+            }
+
+    def _build_live_card_with_opportunities(self, symbol: str) -> dict[str, Any]:
+        """Build a complete live market card with all opportunities injected."""
+        try:
+            snapshot = read_live_market_state(symbol)
+        except Exception:
+            snapshot = {}
+
+        market = (snapshot or {}).get("market", {})
+        opp_snap = (snapshot or {}).get("opportunity", {})
+        strat = (snapshot or {}).get("strategy", {})
+        entry = (snapshot or {}).get("entry", {})
+        risk = (snapshot or {}).get("risk", {})
+
+        card_data = {
+            "symbol": symbol,
+            "regime": market.get("regime"),
+            "h4_trend": market.get("h4_trend"),
+            "h4_trend_strength": market.get("h4_trend_strength"),
+            "h1_bos": market.get("h1_bos_direction"),
+            "h1_structural_clarity": market.get("h1_structural_clarity"),
+            "location_type": market.get("location_type"),
+            "range_position": market.get("range_position"),
+            "m5_momentum": market.get("m5_momentum"),
+            "volatility_state": market.get("volatility_state"),
+            "opportunity_state": opp_snap.get("state"),
+            "opportunity_type": opp_snap.get("opportunity_type"),
+            "opportunity_quality": opp_snap.get("overall_quality"),
+            "strategy": strat.get("family"),
+            "strategy_confidence": strat.get("confidence"),
+            "entry_status": entry.get("status"),
+            "entry_price": entry.get("price"),
+            "stop_price": entry.get("stop"),
+            "target_price": entry.get("target"),
+            "expected_rr": entry.get("expected_rr"),
+            "risk_approved": risk.get("approved"),
+            "position_size": risk.get("position_size"),
+        }
+        rendered_card = build_market_card("MARKET_CONTEXT", card_data)
+
+        # Inject multi-opportunity data
+        rendered_card["fields"]["_active_opportunities"] = self._state.get_active_opportunities(symbol)
+        rendered_card["fields"]["_terminal_opportunities"] = self._state.get_terminal_opportunities(symbol)
+
+        # Identity: use most recent active opportunity
+        latest_opp = self._state.get_opportunity(symbol)
+        rendered_card["fields"]["_identity"] = {
+            "opportunity_id": latest_opp.get("opportunity_id", ""),
+            "entity_id": latest_opp.get("entity_id", ""),
+            "observation_id": latest_opp.get("observation_id", ""),
+        }
+
+        # Keep symbol-level timeline for market state changes
+        rendered_card["fields"]["_timeline"] = self._state.get_timeline(symbol)
+
+        return rendered_card
+
+    def _build_card(self, category: Category, event_type: str, data: dict[str, Any]) -> dict[str, Any]:
+        """Route to the appropriate card builder."""
+        if category == Category.LIVE_MARKET:
+            return build_market_card(event_type, data)
+        elif category == Category.OPPORTUNITY:
+            return build_opportunity_card(event_type, data)
+        elif category == Category.EXECUTION:
+            return build_execution_card(event_type, data)
+        elif category == Category.SYSTEM:
+            return build_system_card(event_type, data)
+        return {"type": "unknown", "event_type": event_type, "data": data}
