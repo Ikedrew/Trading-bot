@@ -429,9 +429,9 @@ class MT5DataFeed:
         Resolve symbol hint to exact MT5 symbol name.
 
         Resolution order:
-            1. Exact match (case-sensitive) against available symbols
-            2. Case-insensitive exact match
-            3. Fail with ValueError (no fuzzy/substring matching)
+            1. Explicit account-specific mapping
+            2. Exact match (case-sensitive)
+            3. Case-insensitive exact match
 
         Never silently resolves ambiguous symbols.
         """
@@ -441,39 +441,78 @@ class MT5DataFeed:
 
         hint = self._symbol_hint
 
-        # 1. Exact match (case-sensitive)
+        from core.symbol_resolver import (
+            active_account_symbol_map,
+            resolve_broker_symbol,
+        )
+
+        # Explicit account mapping takes priority over terminal name matches.
+        explicit = active_account_symbol_map().get(hint)
+        if explicit:
+            if not any(s.name == explicit for s in symbols):
+                raise ValueError(
+                    f"Configured broker symbol {explicit!r} for {hint!r} "
+                    "is not available in MT5."
+                )
+            if not mt5.symbol_select(explicit, True):
+                raise RuntimeError(
+                    f"symbol_select failed for {explicit}: {mt5.last_error()}"
+                )
+            self._broker_symbol = explicit
+            logger.debug(
+                "[DATA_SYMBOL] requested=%s resolved=%s match=account_mapping",
+                hint, explicit,
+            )
+            return explicit
+
+        # Exact match.
         for s in symbols:
             if s.name == hint:
                 if not mt5.symbol_select(s.name, True):
-                    raise RuntimeError(f"symbol_select failed for {s.name}: {mt5.last_error()}")
-                logger.debug("[DATA_SYMBOL] requested=%s resolved=%s match=exact", hint, s.name)
+                    raise RuntimeError(
+                        f"symbol_select failed for {s.name}: {mt5.last_error()}"
+                    )
                 self._broker_symbol = s.name
+                logger.debug(
+                    "[DATA_SYMBOL] requested=%s resolved=%s match=exact",
+                    hint, s.name,
+                )
                 return s.name
 
-        # 2. Case-insensitive exact match
+        # Case-insensitive exact match.
         hint_upper = hint.upper()
         for s in symbols:
             if s.name.upper() == hint_upper:
                 if not mt5.symbol_select(s.name, True):
-                    raise RuntimeError(f"symbol_select failed for {s.name}: {mt5.last_error()}")
-                logger.debug("[DATA_SYMBOL] requested=%s resolved=%s match=case_insensitive", hint, s.name)
+                    raise RuntimeError(
+                        f"symbol_select failed for {s.name}: {mt5.last_error()}"
+                    )
                 self._broker_symbol = s.name
+                logger.debug(
+                    "[DATA_SYMBOL] requested=%s resolved=%s match=case_insensitive",
+                    hint, s.name,
+                )
                 return s.name
 
-        # 3. No match — fail explicitly
-        from core.symbol_resolver import resolve_broker_symbol
+        # Existing resolver fallback.
         try:
             resolved = resolve_broker_symbol(hint)
             self._broker_symbol = resolved
-            logger.debug("[DATA_SYMBOL] requested=%s resolved=%s match=configured", hint, resolved)
+            logger.debug(
+                "[DATA_SYMBOL] requested=%s resolved=%s match=configured",
+                hint, resolved,
+            )
             return resolved
         except ValueError:
             pass
 
-        logger.error("[DATA_SYMBOL] resolution failed requested=%s available_count=%d", hint, len(symbols))
+        logger.error(
+            "[DATA_SYMBOL] resolution failed requested=%s available_count=%d",
+            hint, len(symbols),
+        )
         raise ValueError(
-            f"Symbol {hint!r} not found in MT5 (exact match required). "
-            f"Available symbols: {len(symbols)} total. Check config.SYMBOLS for typos."
+            f"Symbol {hint!r} not found in MT5. "
+            f"Available symbols: {len(symbols)} total. Check account symbol mapping."
         )
 
     def copy_rates_closed(
